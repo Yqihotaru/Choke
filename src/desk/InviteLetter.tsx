@@ -517,7 +517,6 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
             label="先以游客身份入座"
           />
         </div>
-        <p className="invite-paper__hint">游客不用 osu! 登录，直接进桌面试玩；没有本体卡，卡包和进度仍会保存在这个账号里。</p>
       </>
     )
   } else if (!user.onboarded) {

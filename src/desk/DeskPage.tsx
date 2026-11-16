@@ -1019,7 +1019,7 @@ export function DeskPage() {
     showToast(`已收入卡册 ×${opening.cards.length}`)
   }
 
-  const visibleItems = items.filter((item) => !(item.card?.isHero && !user?.hero))
+  const visibleItems = user ? items.filter((item) => !(item.card?.isHero && !user.hero)) : []
   const stowedItems = items.filter((item) => item.stowed)
   const poolPacks =
     packState && packState.userId === user?.id
@@ -1063,26 +1063,28 @@ export function DeskPage() {
       <header className="desk-topbar">
         <div className="desk-topbar__main">
           <img className="desk-topbar__brand" src="/brand/choke-lockup-horizontal-light.svg" alt="Choke!" />
-          <div className="desk-topbar__actions">
-            <button
-              type="button"
-              className="desk-button"
-              onClick={quickCollectAll}
-              disabled={!items.some((it) => it.kind === "card" || it.kind === "pack")}
-            >
-              快速收卡
-            </button>
-            <button
-              type="button"
-              className="desk-button"
-              onClick={() => {
-                reset()
-                stowInvite(false)
-              }}
-            >
-              重置桌面
-            </button>
-          </div>
+          {user && (
+            <div className="desk-topbar__actions">
+              <button
+                type="button"
+                className="desk-button"
+                onClick={quickCollectAll}
+                disabled={!items.some((it) => it.kind === "card" || it.kind === "pack")}
+              >
+                快速收卡
+              </button>
+              <button
+                type="button"
+                className="desk-button"
+                onClick={() => {
+                  reset()
+                  stowInvite(false)
+                }}
+              >
+                重置桌面
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
