@@ -1,0 +1,127 @@
+$ErrorActionPreference = "Stop"
+$root = Split-Path -Parent $PSScriptRoot
+Set-Location $root
+
+function Read-EnvValue([string]$key) {
+  if (-not (Test-Path ".env")) { return $null }
+  $pattern = "^\s*" + [regex]::Escape($key) + "\s*="
+  $line = Get-Content ".env" -ErrorAction SilentlyContinue |
+    Where-Object { $_ -match $pattern } |
+    Select-Object -First 1
+  if (-not $line) { return $null }
+  return ($line -replace $pattern, "").Trim().Trim([char]34).Trim([char]39)
+}
+
+function Get-Port([string]$value, [int]$fallback) {
+  if (-not $value) { return $fallback }
+  try {
+    $uri = [uri]$value
+    if ($uri.Port -gt 0 -and $uri.Port -ne 80 -and $uri.Port -ne 443) { return $uri.Port }
+  } catch {}
+  return $fallback
+}
+
+function Test-Url([string]$url) {
+  try {
+    $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 2
+    return $response.StatusCode -ge 200
+  } catch {
+    return $false
+  }
+}
+
+function Test-Port([int]$port) {
+  return [bool](Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue)
+}
+
+if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
+  Write-Host "[Choke!] pnpm was not found."
+  Write-Host "Install Node.js and pnpm first, then run this file again."
+  exit 1
+}
+
+if (-not (Test-Path "node_modules")) {
+  Write-Host "[Choke!] Installing dependencies..."
+  & pnpm install
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "[Choke!] pnpm install failed."
+    exit 1
+  }
+}
+
+if (-not (Test-Path ".env")) {
+  Write-Host "[Choke!] WARNING: .env not found."
+  Write-Host "[Choke!] Copy .env.example to .env and fill OSU_CLIENT_SECRET / SESSION_SECRET,"
+  Write-Host "[Choke!] otherwise osu! login will fail."
+  Write-Host "[Choke!] WEB_BASE_URL will fall back to http://localhost:5173."
+  Write-Host ""
+}
+
+# Read ports from .env so the web server and the osu! redirect stay in sync.
+$webBase = Read-EnvValue "WEB_BASE_URL"
+$apiBase = Read-EnvValue "API_BASE_URL"
+$webPort = Get-Port $webBase 5173
+$apiPort = Get-Port $apiBase 3100
+if (-not $apiBase) {
+  $portValue = Read-EnvValue "PORT"
+  if ($portValue -match "^\d+$") { $apiPort = [int]$portValue }
+}
+
+$apiUrl = "http://localhost:$apiPort"
+$webUrl = "http://localhost:$webPort"
+
+Write-Host "[Choke!] API : $apiUrl/health"
+Write-Host "[Choke!] Web : $webUrl/"
+
+if (-not (Test-Url "$apiUrl/health")) {
+  if (-not (Test-Port $apiPort)) {
+    # PGlite leaves postmaster.pid behind after an unclean shutdown or a hard
+    # restart. Removing it is safe only when nothing is listening on the API port.
+    $pgDir = Read-EnvValue "PG_DATA_DIR"
+    if (-not $pgDir) { $pgDir = ".data\pg" }
+    if (-not [System.IO.Path]::IsPathRooted($pgDir)) {
+      $pgDir = Join-Path $root "apps\api\$pgDir"
+    }
+    $lock = Join-Path $pgDir "postmaster.pid"
+    if (Test-Path $lock) {
+      Write-Host "[Choke!] Removing stale PGlite lock: $lock"
+      Remove-Item $lock -Force -ErrorAction SilentlyContinue
+    }
+  } else {
+    Write-Host "[Choke!] Port $apiPort is occupied but /health is not responding."
+    Write-Host "[Choke!] Not touching the database; stop the process using that port first."
+  }
+  Write-Host "[Choke!] Starting API in a new window..."
+  Write-Host "[Choke!] First start can take 20-30s while PGlite loads the card database."
+  Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "pnpm dev:api" -WorkingDirectory $root
+} else {
+  Write-Host "[Choke!] API is already running."
+}
+
+if (-not (Test-Url "$webUrl/")) {
+  if (-not (Test-Port $webPort)) {
+    Write-Host "[Choke!] Starting web in a new window..."
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "pnpm exec vite --port $webPort --host localhost --strictPort" -WorkingDirectory $root
+  } else {
+    Write-Host "[Choke!] Port $webPort is occupied; web may already be running."
+  }
+} else {
+  Write-Host "[Choke!] Web is already running."
+}
+
+Write-Host "[Choke!] Waiting for the web server..."
+$deadline = (Get-Date).AddSeconds(120)
+while ((Get-Date) -lt $deadline) {
+  if (Test-Url "$webUrl/") {
+    Start-Process $webUrl
+    break
+  }
+  Start-Sleep -Milliseconds 500
+}
+
+Write-Host ""
+Write-Host "[Choke!] API : $apiUrl/health"
+Write-Host "[Choke!] Web : $webUrl/"
+Write-Host "[Choke!] Close the API and Web windows to stop."
+Write-Host ""
+Start-Sleep -Seconds 2

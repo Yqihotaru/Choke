@@ -8,6 +8,7 @@ import { deckRoutes } from "./routes/decks"
 import { marketRoutes } from "./routes/market"
 import { packRoutes } from "./routes/packs"
 import { progressionRoutes } from "./routes/progression"
+import { client } from "./db/client"
 
 const app = Fastify({ logger: true })
 
@@ -24,3 +25,22 @@ app.get("/health", async () => ({ ok: true, data: { status: "up" } }))
 
 const port = Number(process.env.PORT ?? 3100)
 await app.listen({ port, host: "0.0.0.0" })
+
+// PGlite keeps its WAL in the data directory. Closing it on Ctrl+C / a normal
+// process signal keeps the next startup from finding an invalid checkpoint.
+let closing = false
+async function shutdown(signal: string) {
+  if (closing) return
+  closing = true
+  app.log.info({ signal }, "shutting down")
+  try {
+    await app.close()
+  } finally {
+    await client.close().catch((error) => app.log.warn({ err: error }, "close database failed"))
+  }
+  process.exit(0)
+}
+
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"] as const) {
+  process.once(signal, () => void shutdown(signal))
+}
