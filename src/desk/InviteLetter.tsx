@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import { createPortal, flushSync } from "react-dom"
 
 import { cellScale, type DeskDrawerHandle } from "./DeskDrawer"
+import { GuestLoginButton } from "./GuestLoginButton"
 import {
   ACHIEVEMENTS,
   INVITE_OPEN_EVENT,
@@ -511,7 +512,12 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
           <a className="invite-paper__btn" href="/auth/osu">
             用 osu! 登录
           </a>
+          <GuestLoginButton
+            className="invite-paper__btn invite-paper__btn--ghost"
+            label="先以游客身份入座"
+          />
         </div>
+        <p className="invite-paper__hint">游客不用 osu! 登录，直接进桌面试玩；没有本体卡，卡包和进度仍会保存在这个账号里。</p>
       </>
     )
   } else if (!user.onboarded) {

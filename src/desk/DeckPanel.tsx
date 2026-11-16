@@ -22,6 +22,7 @@ import {
 } from "./drag"
 import { Pages, useBook, usePageCache } from "./BookPages"
 import { FitArea } from "./FitArea"
+import { GuestLoginButton } from "./GuestLoginButton"
 import { useDeskCardIds } from "./presence"
 import "./deck-panel.css"
 
@@ -197,9 +198,12 @@ export const DeckPanel = memo(function DeckPanel({ userId }: { userId: string | 
         right={
           <div className="bk-empty">
             <span>登录后编辑卡组</span>
-            <a className="bk-btn bk-btn--main" href="/auth/osu">
-              用 osu! 登录
-            </a>
+            <div className="login-actions">
+              <a className="bk-btn bk-btn--main" href="/auth/osu">
+                用 osu! 登录
+              </a>
+              <GuestLoginButton className="bk-btn bk-btn--ghost" />
+            </div>
           </div>
         }
       />

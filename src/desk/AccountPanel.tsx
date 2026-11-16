@@ -6,6 +6,7 @@ import { faceFromDef } from "@/card/def"
 
 import type { ApiUserCard } from "./api"
 import { Pages } from "./BookPages"
+import { GuestLoginButton } from "./GuestLoginButton"
 import "./account-panel.css"
 
 export function AccountPanel({
@@ -30,6 +31,7 @@ export function AccountPanel({
   onOpenBackpack?: () => void
 }) {
   const [avatarError, setAvatarError] = useState(false)
+  const isGuest = !!userId?.startsWith("guest-")
 
   if (!username) {
     return (
@@ -37,9 +39,12 @@ export function AccountPanel({
         left={
           <>
             <p className="account-text">用 osu! 登录后，抽到的卡和保底进度都会绑定到你的账号。</p>
-            <a className="bk-btn bk-btn--main account-action" href="/auth/osu">
-              用 osu! 登录
-            </a>
+            <div className="login-actions">
+              <a className="bk-btn bk-btn--main account-action" href="/auth/osu">
+                用 osu! 登录
+              </a>
+              <GuestLoginButton className="bk-btn bk-btn--ghost account-action" />
+            </div>
           </>
         }
         right={<div className="bk-empty">登录后，这里会显示你的本体卡。</div>}
@@ -87,7 +92,7 @@ export function AccountPanel({
           <div className="bk-list">
             <div className="bk-row account-row">
               <span>登录状态</span>
-              <b>已连接 osu!</b>
+              <b>{isGuest ? "游客账户（未绑定 osu!）" : "已连接 osu!"}</b>
             </div>
             <div className="bk-row account-row">
               <span>osu! 主页</span>
@@ -100,7 +105,7 @@ export function AccountPanel({
                   打开 ›
                 </a>
               ) : (
-                <b>演示账号</b>
+                <b>{isGuest ? "未绑定" : "演示账号"}</b>
               )}
             </div>
           </div>
@@ -148,11 +153,21 @@ export function AccountPanel({
           <div className="account-hero">
             <span className="bk-label">我的本体卡</span>
             <div className="account-hero__face bk-slot">?</div>
-            <b className="account-hero__name">还没有获得</b>
-            <p className="bk-note">本体卡在背包的「神秘卡包」里。开启后才会进入卡册和桌面。</p>
-            <button type="button" className="bk-btn bk-btn--main" onClick={onOpenBackpack}>
-              去背包开神秘卡包
-            </button>
+            <b className="account-hero__name">{isGuest ? "游客没有本体卡" : "还没有获得"}</b>
+            <p className="bk-note">
+              {isGuest
+                ? "本体卡来自 osu! 账号数据。用 osu! 登录后会生成你的本体卡；游客期间的卡包和进度不会转移。"
+                : "本体卡在背包的「神秘卡包」里。开启后才会进入卡册和桌面。"}
+            </p>
+            {isGuest ? (
+              <a className="bk-btn bk-btn--main" href="/auth/osu">
+                用 osu! 登录
+              </a>
+            ) : (
+              <button type="button" className="bk-btn bk-btn--main" onClick={onOpenBackpack}>
+                去背包开神秘卡包
+              </button>
+            )}
           </div>
         )
       }

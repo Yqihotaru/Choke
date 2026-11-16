@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto"
+
 import { and, eq, getTableColumns } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 
@@ -16,7 +18,7 @@ import { db } from "../db/client"
 import { cards, userCards, users } from "../db/schema"
 import { invalidatePublicCardCache } from "./cards"
 import { heroCardDef } from "../hero"
-import { grantStarterPacks } from "../packs/inventory"
+import { addPacks, grantStarterPacks } from "../packs/inventory"
 import { heroIndex, heroPersonalBonus, heroStatsFromOsu } from "../../../../src/pool/hero"
 
 /** 登录时把 /me/osu 写成 hero-{id} 卡定义，并放进该用户的卡册 */
@@ -66,6 +68,39 @@ export async function authRoutes(app: FastifyInstance) {
   app.get("/auth/osu", async (_request, reply) => {
     const state = createState()
     return reply.redirect(authorizeUrl(state))
+  })
+
+  /**
+   * 游客账号：跳过 osu! OAuth，直接创建一个 guest-xxxx 用户并进入桌面。
+   * 没有 osuId，所以没有本体卡；只发普通卡包，神秘卡包依赖 osu! 数据，不发放。
+   */
+  app.get("/auth/guest", async (request, reply) => {
+    const suffix = randomBytes(6).toString("hex")
+    const userId = `guest-${suffix}`
+
+    const [user] = await db
+      .insert(users)
+      .values({
+        id: userId,
+        username: `游客 ${suffix.slice(0, 4).toUpperCase()}`,
+        onboarded: true,
+        heroBonus: 0,
+      })
+      .returning()
+
+    if (!user) throw new Error("游客账号写入失败")
+
+    await addPacks(userId, { normal: 30 })
+    request.log.info({ userId }, "guest account created")
+
+    reply.setCookie(COOKIE_NAME, makeSession(userId), {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30,
+    })
+
+    return reply.redirect(`${WEB_BASE}/`)
   })
 
   app.get("/auth/osu/callback", async (request, reply) => {

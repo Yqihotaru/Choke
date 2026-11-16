@@ -534,6 +534,13 @@
 .bk-btn--main:hover:not(:disabled) {
   background: #ff80b9;
 }
+/* 登录入口并排：osu! 主按钮 + 游客次按钮 */
+.login-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
 .bk-btn--ghost {
   background: transparent;
   color: var(--bk-dim);

@@ -596,7 +596,7 @@ export function DeskPage() {
   const spawnPack = async () => {
     const meta = POOL_META[pool]
     if (!user) {
-      showToast("请先用 osu! 登录")
+      showToast("请先登录（osu! 或游客）")
       return
     }
     try {
@@ -915,7 +915,7 @@ export function DeskPage() {
     if (item.kind === "pack") {
       if (openingBusy.current) return
       if (!user) {
-        showToast("请先用 osu! 登录")
+        showToast("请先登录（osu! 或游客）")
         return
       }
 

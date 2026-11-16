@@ -4,6 +4,7 @@ import { battlePower } from "@/card/data"
 
 import { fetchDeck, toFace, type ApiDeck } from "./api"
 import { Pages } from "./BookPages"
+import { GuestLoginButton } from "./GuestLoginButton"
 import "./battle-panel.css"
 
 export function BattlePanel({
@@ -35,9 +36,12 @@ export function BattlePanel({
         right={
           <div className="bk-empty">
             <span>登录后开始战斗</span>
-            <a className="bk-btn bk-btn--main" href="/auth/osu">
-              用 osu! 登录
-            </a>
+            <div className="login-actions">
+              <a className="bk-btn bk-btn--main" href="/auth/osu">
+                用 osu! 登录
+              </a>
+              <GuestLoginButton className="bk-btn bk-btn--ghost" />
+            </div>
           </div>
         }
       />

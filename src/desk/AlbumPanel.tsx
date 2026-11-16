@@ -10,6 +10,7 @@ import { Pages, useBook, usePageCache } from "./BookPages"
 import { CardDetail } from "./CardDetail"
 import { FitArea } from "./FitArea"
 import { ALBUM_HOVER_EVENT, startCardPointerDrag, toDeskCard } from "./drag"
+import { GuestLoginButton } from "./GuestLoginButton"
 import { useDeskCardIds } from "./presence"
 import { RARITY_COLOR } from "./rarity"
 import "./album-panel.css"
@@ -91,9 +92,12 @@ export const AlbumPanel = memo(function AlbumPanel({ userId }: { userId: string 
         left={
           <>
             <p className="bk-note">登录后查看卡册。</p>
-            <a className="bk-btn bk-btn--main album-login" href="/auth/osu">
-              用 osu! 登录
-            </a>
+            <div className="login-actions">
+              <a className="bk-btn bk-btn--main album-login" href="/auth/osu">
+                用 osu! 登录
+              </a>
+              <GuestLoginButton className="bk-btn bk-btn--ghost album-login" />
+            </div>
           </>
         }
         right={<div className="bk-empty album-fill">还没有登录</div>}

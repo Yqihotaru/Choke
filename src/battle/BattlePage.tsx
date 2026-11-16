@@ -6,6 +6,7 @@ import {
   ELEMENT_LABEL,
 } from "@/card/data"
 import { fetchDeck, toFace, type ApiDeck } from "@/desk/api"
+import { GuestLoginButton } from "@/desk/GuestLoginButton"
 
 import { cloneBattle, createBattle, endTurn, enemyDamageTier, playSkill, raiseDefense, teamHpOf } from "./engine"
 import type { BattleState } from "./types"
@@ -68,6 +69,7 @@ export function BattlePage() {
           <h1>需要先登录</h1>
           <p>战斗读取你账号里保存的 7 张主队卡。</p>
           <a href="/auth/osu">用 osu! 登录</a>
+          <GuestLoginButton className="battle-guest" label="以游客身份进入" />
         </div>
       </div>
     )

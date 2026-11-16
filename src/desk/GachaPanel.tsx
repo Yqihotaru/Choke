@@ -13,6 +13,7 @@ import {
   toDeskCard,
   type GachaOpenDetail,
 } from "./drag"
+import { GuestLoginButton } from "./GuestLoginButton"
 import { PackArt } from "./opening/PackArt"
 import { POOL_META, RARITY_COLOR } from "./rarity"
 import type { PackPool } from "./types"
@@ -315,9 +316,12 @@ export function GachaPanel({
           <div className="bk-empty">
             <b>登录后开包</b>
             <span>抽到的卡和保底进度会直接写入你的账号。</span>
-            <a className="bk-btn bk-btn--main" href="/auth/osu">
-              用 osu! 登录
-            </a>
+            <div className="login-actions">
+              <a className="bk-btn bk-btn--main" href="/auth/osu">
+                用 osu! 登录
+              </a>
+              <GuestLoginButton className="bk-btn bk-btn--ghost" />
+            </div>
           </div>
         ) : loading || cards.length > 0 ? (
           <>

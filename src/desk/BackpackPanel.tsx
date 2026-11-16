@@ -13,6 +13,7 @@ import {
 } from "./api"
 import { Pages } from "./BookPages"
 import { PACKS_CHANGED_EVENT, BACKPACK_HOVER_EVENT } from "./drag"
+import { GuestLoginButton } from "./GuestLoginButton"
 import { INVITE_OPEN_EVENT } from "./invite"
 import { PackArt } from "./opening/PackArt"
 import type { PackPool } from "./types"
@@ -156,9 +157,12 @@ export function BackpackPanel({
         left={
           <>
             <p className="bk-note">卡包库存、神秘卡包和你的本体卡都放在这里。</p>
-            <a className="bk-btn bk-btn--main" href="/auth/osu">
-              用 osu! 登录
-            </a>
+            <div className="login-actions">
+              <a className="bk-btn bk-btn--main" href="/auth/osu">
+                用 osu! 登录
+              </a>
+              <GuestLoginButton className="bk-btn bk-btn--ghost" />
+            </div>
           </>
         }
         right={<div className="bk-empty">登录后查看背包</div>}
