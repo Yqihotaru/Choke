@@ -1,243 +1,127 @@
 # Choke!
 
-把 osu! 玩家数据做成卡牌：用 osu! 账号登录，开包抽卡，在卡册里收藏和查看卡牌。
+把 osu! 玩家数据做成卡牌：登录、开包、收藏、组卡、打一场。
 
-**当前状态：M1 可用（账号 + 卡池 + 抽卡 + 收藏）。** 验收口径是“能注册、能抽、能看卡”；完整手工验收步骤见 [Design/M1-验收清单.md](Design/M1-验收清单.md)。战斗、经济（任务 / 市场 / 通行证）还没有纳入 M1 验收范围。
+> 非盈利同人项目，与 osu! 官方无关。
 
-## 桌面交互
+## 现在能玩什么
 
-- 桌面卡包和抽卡面板使用同一套撕包、翻卡动画；面板可开启“跳过动画”。开完可单张拖到桌面、全部放到桌面或存入卡册。
-- 卡册、卡组里的卡也可以拖到桌面：来源卡会暂时变暗并标记“在桌面”，拖回去后恢复。
-- 桌面上的卡可以直接拖进右侧卡组槽位，槽位会高亮并自动保存；放进去后桌面卡会被移走。
-- 点桌面物件打开对应的双页书本，用索引签切换功能；可拖动标题栏或书皮移动书本，按 Esc、点 × 或双击桌面空白处合上。物件和卡包支持 Tab 聚焦、Enter / 空格激活。
-- 物件、卡和卡包可拖动摆放，布局保存在本地。卡拖回卡册会从桌面移除；卡包拖回背包会恢复库存。“快速收卡”可批量收回，未登录或归还失败的卡包留在桌面。
-- 红色发牌按钮从背包取出一个当前卡池的卡包；按钮下方的下拉框可切换卡池。
-- 点桌沿抽屉把手或向上拖拉开抽屉，把物件或邀请函拖入收纳；点抽屉内物件仍可使用，拖出放回桌面。收纳状态保存在本地，“重置桌面”恢复默认摆放。卡册或背包收起时，把卡或卡包拖到抽屉即可归还。
-- 卡组 1–7 张都可以进入战斗，0 张时才会拦截。
-- 桌面上的卡包如果在背包里已经没有库存，点开会提示并自动从桌面移除。
-- 桌面卡包拖回背包会恢复库存；从背包发到桌面时会先预扣一个卡包，开包使用一次性 token。
-- 桌面“发牌”会先检查背包库存；没有对应卡包时按钮禁用，不会凭空生成卡包。
-- 新抽到的卡固定从 Lv.1 / 0 命座开始；桌面卡面不再随机生成等级。
-- 账号面板显示 osu! 头像、稳定的 `CHOKE ID #xxxxxx` 数字 ID 和精华余额。
+- osu! OAuth 登录 / 游客账号
+- 桌面、抽卡、卡册、卡组、背包、市场、图鉴
+- 回合制 PvE 原型（AP、Combo、防御、敌方意图）
+- 卡牌等级、命座、熔卡、闪卡、精华
 
-## 闪卡、精华与市场
+还没完成：战斗奖励结算、任务/日常、赛季、PvP、自动化测试。
 
-- 开包时每张卡都有独立闪卡概率，卡包越好概率越高；闪卡只是实例外观，不改变稀有度。
-- 分解重复卡会获得精华，闪卡分解获得 3 倍精华；精华只能用于给卡镀闪。
-- 卡牌详情可以用精华镀闪（外观）；经验仍只来自熔卡。
-- 市场用金币上架、下架和购买卡牌；购买后 `user_card` 所有权直接转给买家。
+## 快速启动
 
-## 技术栈
+### Windows
 
-| 层 | 选型 |
-|---|---|
-| 前端 | React 19 + Vite 8 + Tailwind CSS 4 + shadcn/ui + framer-motion |
-| 后端 | Fastify 5 + TypeScript |
-| 数据 | Drizzle ORM + PGlite（本地嵌入式 PostgreSQL，数据目录 `apps/api/.data/pg`） |
-| 登录 | osu! OAuth 2（authorization code），首次登录自动建号 |
-| 包管理 | pnpm workspace（`apps/*`） |
+双击 `start-choke.bat`。它会读取 `.env`，启动 API 和前端，并打开浏览器。
 
-> 本地 M1 用 PGlite，不依赖独立 PostgreSQL 服务；它单进程单连接，不适合多实例部署。正式部署再换 PostgreSQL 16。
-
-## 目录
-
-```
-.
-├─ src/                     # 前端（Vite root），入口在根目录
-│  ├─ desk/                 # / 桌面、卡册、卡组、开包、市场、关于
-│  └─ pool/                 # 卡池构建与 lab 页面
-├─ apps/api/                # Fastify API
-│  ├─ src/auth/             # osu! OAuth、session、鉴权
-│  ├─ src/gacha/            # 六池权重、服务端 RNG、60 抽保底
-│  ├─ src/routes/           # auth / cards / packs / decks / market / progression
-│  ├─ src/db/               # Drizzle schema + PGlite 建表
-│  ├─ samples/              # 仓库跟踪的 7 张示例卡
-│  └─ data/                 # 全量卡池（gitignore）
-├─ data/                    # rankings.json 等同步产物（gitignore）
-├─ scripts/                 # sync-osu / sync-rankings / build-cards
-└─ Design/                  # 需求、规则、验收文档
-```
-
-注意：当前前端仍在仓库根目录的 `src/`，没有 `apps/web`；需求文档里的 `apps/web` 是目标结构。
-
-## 环境要求
-
-- **Node.js 22.12+**（或 24 LTS；本次验证使用 v24.22.1）
-- **pnpm 9+**（lockfile 为 9.0；本次验证使用 12.16.1）
-- Windows / macOS / Linux 均可；Windows 可直接用 `start-choke.bat`
-- 一个可用的 osu! OAuth 应用（见下一节）
-
-```bash
-node -v
-pnpm -v
-pnpm install
-```
-
-## 配置 `.env`
-
-在**仓库根目录**创建 `.env`：
-
-```bash
-# Windows
-copy .env.example .env
-
-# macOS / Linux
-cp .env.example .env
-```
-
-API 会从 `apps/api` 的工作目录向上查找 `.env`，根目录这份会被读到。`.env` 已被 gitignore；不要把密钥写成 `VITE_` 前缀，否则会被打进前端包。
-
-| 变量 | 示例值 | 默认值 | 必填 | 说明 |
-|---|---|---|---|---|
-| `OSU_CLIENT_ID` | `74418` | 无 | **是** | osu! OAuth 应用的 Client ID |
-| `OSU_CLIENT_SECRET` | `replace-with-your-osu-client-secret` | 无 | **是** | osu! OAuth 应用的 Client Secret，不要提交 |
-| `SESSION_SECRET` | 一段长随机字符串 | 回退到 `OSU_CLIENT_SECRET`；两者都没填时每次启动用随机值（重启后登录全部失效） | **建议显式配置** | 用于签名 session cookie；改掉后旧登录全部失效 |
-| `API_BASE_URL` | `http://localhost:3100` | `http://localhost:3100` | 改端口时必填 | OAuth 回调的 base；**末尾不要带斜杠** |
-| `WEB_BASE_URL` | `http://localhost:5173` | `http://localhost:5173` | 前端不是 5173 时必填 | 登录成功后跳转的前端地址 |
-| `PG_DATA_DIR` | `./.data/pg` | `./.data/pg` | 可选 | PGlite 数据目录；**相对 `apps/api` 的工作目录解析** |
-| `PORT` | `3100` | `3100` | 可选 | API 监听端口；改它必须同时改 `API_BASE_URL` 和 `vite.config.ts` 的代理目标 |
-
-开发时最省事的组合是只填 `OSU_CLIENT_ID`、`OSU_CLIENT_SECRET`、`SESSION_SECRET`，其余保持默认。
-
-### osu! OAuth 回调地址
-
-在 <https://osu.ppy.sh/home/account/edit#new-oauth-application> 创建或修改应用：
-
-- **Callback URL 必须精确填写**：`http://localhost:3100/auth/osu/callback`
-- 不能留空，不能带结尾斜杠，不能写成 `127.0.0.1`，端口必须是 `3100`
-- 当前使用的应用 `client_id` 是 `74418`；如果换成自己的应用，同时改 `OSU_CLIENT_ID` 和 `OSU_CLIENT_SECRET`
-
-登录流程是 `GET /auth/osu` → osu! 授权 → 回调 `http://localhost:3100/auth/osu/callback` → 建号并写 session → 跳回 `WEB_BASE_URL/`（桌面）。没登录或还没领新手礼包时，桌面底边会弹上来一封邀请函：拆开后可以用 osu! 登录、领取新手礼包（30 普通卡包 + 1 神秘卡包），已领过则是“返回桌面”。旧的 `/intro` 引导页已删除，访问会落到桌面。
-
-### 游客账号
-
-所有登录入口（邀请函、账号页、卡册、背包、卡组、战斗、开包、独立战斗页）旁边都有「游客账户」入口，走 `GET /auth/guest`：
-
-- 直接创建一个 `guest-xxxx` 账号并写 session，不需要 osu! OAuth
-- 自动完成引导，发放 30 个普通卡包；不发放神秘卡包（本体卡依赖 osu! 数据）
-- 游客没有本体卡，卡包、卡册、卡组、金币和市场照常可用
-- 数据保存在本地 PGlite 数据库；用 osu! 登录会切换到另一个账号，游客进度不会转移
-- 如果 osu! 登录打不开，先用游客入口确认前端和 API 是否正常
-
-## 快速启动（两个终端）
-
-首次准备：
+### 手动
 
 ```bash
 pnpm install
-copy .env.example .env
-# 编辑 .env：填 OSU_CLIENT_SECRET、SESSION_SECRET；OSU_CLIENT_ID 默认 74418
+cp .env.example .env   # Windows: copy .env.example .env
+pnpm dev:api           # API  → http://localhost:3100
+pnpm dev               # Web  → http://localhost:5173
 ```
 
-导入 7 张示例卡（**此时不要启动 API**，PGlite 单进程不能同时被两个进程打开）：
+前端端口以 `.env` 里的 `WEB_BASE_URL` 为准。本地用 5207 时：
 
 ```bash
-pnpm import:sample
-```
-
-终端 A 启动 API：
-
-```bash
-pnpm dev:api
-# 等价于 pnpm --filter @choke/api run dev
-# 健康检查：http://localhost:3100/health
-```
-
-终端 B 启动前端：
-
-```bash
-pnpm dev
-# Vite 默认 http://localhost:5173
-```
-
-打开 <http://localhost:5173/>，点开桌面底边弹上来的邀请函，点“用 osu! 登录”，授权后回到桌面。
-
-Windows 也可以双击 `start-choke.bat`，它会分别打开 API 和前端两个窗口，并自动打开浏览器。脚本固定使用 5173 / 3100。
-
-### 使用 5207 等其它前端端口
-
-本地常用 `5207`，此时必须让 `WEB_BASE_URL` 指向实际地址，否则登录成功后会跳到 5173：
-
-```bash
-# .env
-WEB_BASE_URL=http://localhost:5207
-
-# 终端 B
 pnpm dev -- --port 5207 --strictPort
 ```
 
-改完 `.env` 要重启 API。OAuth 回调仍然固定为 `http://localhost:3100/auth/osu/callback`。
-
-## 全量卡池
-
-仓库只跟踪 `apps/api/samples/sample-cards.json`（7 张）。全量卡池和排行榜数据都被 gitignore：
-
-- `data/rankings.json`：排行榜同步产物，当前约 147 MB
-- `apps/api/data/choke-cards.json`：构建产物，当前约 90 MB
-
-先准备 `data/rankings.json`（可复用已有文件，或重新同步）：
-
-```bash
-pnpm sync:rankings -- --min-pp 2000 --active
+```env
+WEB_BASE_URL=http://localhost:5207
 ```
 
-构建并导入：
+改完 `.env` 要重启 API。
+
+## 环境
+
+- Node.js 22.12+
+- pnpm 9+
+- 一个 osu! OAuth 应用（只影响 osu! 登录，游客登录不需要）
+
+`.env` 最少填：
+
+```env
+OSU_CLIENT_ID=74418
+OSU_CLIENT_SECRET=...
+SESSION_SECRET=...
+WEB_BASE_URL=http://localhost:5207
+```
+
+osu! 应用的 Callback URL 必须是：
+
+```text
+http://localhost:3100/auth/osu/callback
+```
+
+如果 osu! 登录打不开，先用登录入口旁的「游客账户」确认前端和 API 是否正常。
+
+## 卡池数据
+
+仓库只带 7 张示例卡。全量卡池不进 git：
+
+```text
+apps/api/data/choke-cards.json   # 约 90 MB
+```
+
+导入（**先停 API**，PGlite 单进程）：
 
 ```bash
-# 读 data/rankings.json，写 apps/api/data/choke-cards.json
-pnpm build:cards
+pnpm import:sample   # 7 张示例卡
+pnpm import:cards    # 全量卡池
+```
 
-# 停掉 API 后再导入；--replace 会先清空 cards 表
+## 数据库
+
+数据在 `apps/api/.data/pg`。PGlite 是单进程单连接，不要同时开两个 API 或一边跑 API 一边导入。
+
+如果启动报 `invalid checkpoint` / `PANIC: could not locate a valid checkpoint record`，说明数据库在关机时被写坏了。直接删掉数据目录再导入即可（源卡池文件还在）：
+
+```bash
+rm -rf apps/api/.data/pg     # Windows: Remove-Item -Recurse -Force apps/api/.data/pg
 pnpm import:cards
 ```
 
-单独指定文件时，注意 pnpm 的 `import` 是内置命令，必须写 `run import`：
+## 目录
 
-```bash
-pnpm --filter @choke/api run import -- samples/sample-cards.json
-pnpm --filter @choke/api run import -- data/choke-cards.json --replace
+```text
+src/                前端（Vite root）
+  desk/             桌面、卡册、卡组、背包、抽卡、市场、账号
+  battle/           回合制 PvE 原型
+  card/             卡面、卡牌定义、养成
+  pool/             卡池构建与实验室
+apps/api/           Fastify API + PGlite
+  src/routes/       auth / cards / packs / decks / market / progression
+  samples/          7 张示例卡
+  data/             全量卡池（gitignore）
+scripts/            同步排行榜、构建卡池、启动脚本
+Design/             设计文档（部分早于当前实现，以代码为准）
 ```
 
-`--replace` 只清空 `cards` 静态定义表，不会删除 `user_cards`；如果全量卡定义和旧数据不一致，已有卡册可能指向不存在的卡，个人库建议先备份 `apps/api/.data/pg`。
+## 常用命令
 
-## M1 手工验收
+```bash
+pnpm dev:api         # API
+pnpm dev             # 前端
+pnpm build           # 前端构建
+pnpm typecheck       # 前端类型检查
+pnpm import:cards    # 导入全量卡池
+pnpm sync:rankings   # 同步排行榜
+pnpm build:cards     # 由 rankings 生成 choke-cards.json
+```
 
-完整清单、curl 命令和负向用例在 [Design/M1-验收清单.md](Design/M1-验收清单.md)。最短路径：
+## 文档
 
-1. **登录**：打开 `/`，拆开桌上的邀请函，点“用 osu! 登录”，完成 osu! 授权，右上角显示用户名。
-2. **抽卡**：打开“抽卡”，选“普通”，点“开 5 张”，完成撕包、翻卡（或开启“跳过动画”），确认保底进度更新。
-3. **看卡**：点桌面的“卡册”，刚抽到的卡在列表里；点任意卡打开详情。
-4. **桌面开包**：在桌面点“发牌”，点桌上的卡包开包，结束后把卡拖进卡册（或点“快速收卡”），再到卡册确认。
-5. **负向检查**：退出登录后卡册显示“登录后查看卡册”入口；未登录直接请求 `GET /users/:id/cards` 应返回 401。
+- `Design/前后端需求清单 v0.1.md`：功能范围和里程碑
+- `Design/经济与养成系统 v0.2.md`：经济、养成、卡包
+- `Design/卡牌数值与战斗机制 v0.1.md`：回合制战斗
+- `Design/M1-验收清单.md`：早期验收记录
 
-## 常见问题
-
-**登录后跳到了 5173，但我跑的是 5207**
-`WEB_BASE_URL` 还是默认值。改成实际前端地址（如 `http://localhost:5207`）并重启 API。OAuth 回调本身仍是 3100。
-
-**osu! 报 `redirect_uri` 不匹配**
-去 osu! 应用页把 Callback URL 精确改成 `http://localhost:3100/auth/osu/callback`；同时确认 `API_BASE_URL` 没有结尾斜杠、`PORT` 是 3100。
-
-**登录成功但接口仍然 401 / 浏览器没有 cookie**
-统一用 `http://localhost`，不要一会儿 `localhost` 一会儿 `127.0.0.1`，两者 cookie 不共享。cookie 名是 `choke_session`，`httpOnly` + `SameSite=Lax`，30 天有效。改过 `SESSION_SECRET` 会让旧 cookie 全部失效，重新登录即可。
-
-**能不能同时跑 API 和导入脚本？**
-不能。PGlite 是单进程单连接，导入前先停 API；也不要让两个 API 实例共用同一个 `PG_DATA_DIR`。多实例部署要等换 PostgreSQL。
-
-**卡池文件在哪？为什么克隆后只有 7 张卡**
-`apps/api/data/choke-cards.json` 和 `data/rankings.json` 都被 gitignore，仓库只跟踪 7 张样本。按“全量卡池”一节构建、导入即可。
-
-**`pnpm --filter @choke/api import ...` 报 pnpm 参数错误**
-`import` 是 pnpm 的内置命令。用根脚本 `pnpm import:sample` / `pnpm import:cards`，或写成 `pnpm --filter @choke/api run import -- ...`。
-
-**抽卡报“卡池里没有 X 档的卡”**
-当前库没有对应稀有度的卡。先 `pnpm import:sample` 或导入全量卡池；导入时 API 要停着。
-
-**3100 被占用**
-M1 建议保持 3100。非要改端口，需要同时改 `PORT`、`API_BASE_URL`、`vite.config.ts` 里 `/api` 和 `/auth` 的代理目标，以及 osu! 应用的回调地址。
-
-## M1 边界
-
-当前可用：osu! OAuth 登录 / 首次登录建号、六池抽卡、服务端 RNG、60 抽保底、桌面开包落库、卡册筛选/排序/分页、卡牌详情、`/users/:userId/...` 的 session 鉴权（越权 403、未登录 401）。
-
-**不在 M1 验收范围**：战斗 PVE、任务、市场、通行证、经济账本、PvP、自动化测试 / CI。这些仍按需求文档的后续里程碑推进。
+PR #3 的实时边线战斗在独立 worktree 试验，不在 `master`。
