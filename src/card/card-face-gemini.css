@@ -1,0 +1,1246 @@
+/* =========================================================
+   卡面 v3 — 实体明丽典藏版（Paper & Prism）
+   · 2:3 比例（100cqw × 150cqw），内部尺寸全走 cqw。
+   · 外层模拟现代实体 TCG 3cqw 印刷安全边（银灰/象牙/金箔/全息）。
+   · C–Radiant 使用浅色细腻纹理卡纸（印刷友好、不沉闷）；
+     Prismatic（0.5%）独占深色全息暗晶卡基作为终极彩头。
+   · 头像居中扩大为 40cqw 专辑视窗，名字与排名叠入画框底部磨砂坞。
+   ========================================================= */
+
+.cfg {
+  container: cfg / inline-size;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 4% / 2.667%;
+  isolation: isolate;
+  user-select: none;
+  color: var(--ink);
+  font-family: var(--font-heading), var(--font-cn), var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.18),
+    0 2px 4px rgb(0 0 0 / 0.14),
+    0 10px 22px -6px rgb(0 0 0 / 0.32);
+
+  /* 默认卡纸（明亮珍珠浅灰纸） */
+  --rim: #e4e6eb;
+  --stock: #f2f1ec;
+  --grain-blend: multiply;
+  --grain-op: 0.55;
+  --lamp-hi: rgb(255 255 255 / 0.65);
+  --lamp-lo: rgb(0 0 0 / 0.05);
+  --edge-hi: rgb(255 255 255 / 0.85);
+  --edge-lo: rgb(0 0 0 / 0.16);
+
+  /* 墨色与结构底 */
+  --ink: #1b1d24;
+  --ink-dim: #646975;
+  --line: rgb(27 29 36 / 0.12);
+  --surface: rgb(255 255 255 / 0.64);
+  --surface-border: rgb(255 255 255 / 0.88);
+  --dock-bg: rgb(255 255 255 / 0.78);
+  --dock-ink: #16181e;
+  --dock-dim: #545966;
+
+  /* 烫印默认线 */
+  --foil: linear-gradient(120deg, #8e939e, #a8adb8);
+  --foil-pos: calc(var(--mx) * 100%) calc(var(--my) * 100%);
+  --accent: #5c6370;
+
+  /* 画窗与资源色 */
+  --window-bg: #dce2ea;
+  --motif-color: rgb(27 29 36 / 0.24);
+  --ap: #d97706;
+  --mp: #2563eb;
+
+  /* 闪卡在亮底卡纸上的混合控制 */
+  --foil-film-blend: overlay;
+  --foil-film-op: 0.34;
+  --foil-dodge-op: 0.18;
+  --foil-glitter-op: 0.55;
+
+  /* 几何尺寸 */
+  --hair: max(0.28cqw, 0.5px);
+  --rule: max(0.45cqw, 0.8px);
+  --bezel-in: 2.8cqw;
+  --bezel-gap: 0.9cqw;
+}
+
+/* =========================================================
+   1. 卡纸与印刷边
+   ========================================================= */
+
+.cfg__stock,
+.cfg__sheen,
+.cfg__foil {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cfg__bezel,
+.cfg__sheen,
+.cfg__seal,
+.cfg__emblem,
+.cfg__rarity,
+.cfg__foil > i {
+  --foil-pos: calc(var(--mx) * 100%) calc(var(--my) * 100%);
+  transition:
+    --mx 0.55s ease-out,
+    --my 0.55s ease-out;
+}
+
+.cfg[data-lit]
+  :is(.cfg__bezel, .cfg__sheen, .cfg__seal, .cfg__emblem, .cfg__rarity, .cfg__foil > i) {
+  transition: none;
+}
+
+.cfg__bezel::before,
+.cfg__bezel::after,
+.cfg__seal::before,
+.cfg__seal::after,
+.cfg__sheen::before,
+.cfg__sheen::after {
+  --mx: inherit;
+  --my: inherit;
+}
+
+/* 外层印刷安全边 + 内层纹理纸芯 */
+.cfg__stock {
+  background:
+    linear-gradient(
+      135deg,
+      var(--lamp-hi),
+      transparent 42%,
+      transparent 62%,
+      var(--lamp-lo)
+    ),
+    url("./tex/grain.svg") 0 0 / 220px 220px,
+    var(--rim);
+  background-blend-mode: normal, var(--grain-blend), normal;
+  box-shadow:
+    inset 0.25cqw 0.25cqw 0 var(--edge-hi),
+    inset -0.25cqw -0.25cqw 0 var(--edge-lo);
+}
+
+/* 内卡纸块：从外边往内缩 2.8cqw，做出真正的实体卡片印刷边 */
+.cfg__stock::before {
+  content: "";
+  position: absolute;
+  inset: var(--bezel-in);
+  border-radius: 2cqw;
+  background:
+    linear-gradient(
+      145deg,
+      rgb(255 255 255 / 0.38),
+      transparent 48%,
+      rgb(0 0 0 / 0.04)
+    ),
+    url("./tex/grain.svg") 0 0 / 220px 220px,
+    var(--stock);
+  background-blend-mode: normal, var(--grain-blend), normal;
+  box-shadow: 0 0 0 var(--hair) rgb(0 0 0 / 0.08);
+}
+
+.cfg__sheen {
+  display: none;
+}
+
+/* =========================================================
+   2. 烫印细框
+   ========================================================= */
+
+.cfg__bezel {
+  position: absolute;
+  inset: var(--bezel-in);
+  pointer-events: none;
+}
+
+.cfg__bezel::before,
+.cfg__bezel::after,
+.cfg__seal::before,
+.cfg__seal::after {
+  content: "";
+  position: absolute;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+.cfg__bezel::before {
+  inset: 0;
+  padding: var(--rule);
+  border-radius: 2cqw;
+}
+
+.cfg__bezel::after {
+  inset: var(--bezel-gap);
+  padding: var(--hair);
+  border-radius: 1.3cqw;
+  opacity: 0.45;
+}
+
+.cfg__bezel::before,
+.cfg__bezel::after,
+.cfg__seal::before,
+.cfg__seal::after,
+.cfg__emblem,
+.cfg__rarity {
+  background-image: var(--foil);
+  background-size: 260% 260%;
+  background-position: var(--foil-pos);
+}
+
+.cfg__content {
+  position: relative;
+  z-index: 2;
+  position: absolute;
+  inset: calc(var(--bezel-in) + var(--bezel-gap) + 0.8cqw);
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================================
+   3. 顶栏：紧凑徽记 / 品阶 / Lv / MOD 三槽
+   ========================================================= */
+
+.cfg__head {
+  flex: 0 0 11.4cqw;
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  padding: 0 1.2cqw;
+}
+
+.cfg__seal {
+  position: relative;
+  flex: 0 0 9.4cqw;
+  height: 9.4cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.cfg__seal::before {
+  inset: 0;
+  padding: var(--rule);
+  border-radius: 50%;
+}
+
+.cfg__seal::after {
+  inset: 0.9cqw;
+  padding: var(--hair);
+  border-radius: 50%;
+  opacity: 0.45;
+}
+
+.cfg__emblem {
+  width: 5cqw;
+  height: 5cqw;
+  mask: url("./tex/emblem-c.svg") center / contain no-repeat;
+}
+
+.cfg[data-rarity="UC"] .cfg__emblem {
+  mask-image: url("./tex/emblem-uc.svg");
+}
+.cfg[data-rarity="R"] .cfg__emblem {
+  mask-image: url("./tex/emblem-r.svg");
+}
+.cfg[data-rarity="E"] .cfg__emblem {
+  mask-image: url("./tex/emblem-e.svg");
+}
+.cfg[data-rarity="L"] .cfg__emblem {
+  mask-image: url("./tex/emblem-l.svg");
+}
+.cfg[data-rarity="Radiant"] .cfg__emblem {
+  mask-image: url("./tex/emblem-radiant.svg");
+}
+.cfg[data-rarity="Prismatic"] .cfg__emblem {
+  mask-image: url("./tex/emblem-prismatic.svg");
+}
+
+.cfg__grade {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.8cqw;
+}
+
+.cfg__rarity {
+  font-size: 2.7cqw;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.cfg__lv {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8cqw;
+}
+
+.cfg__lv i {
+  font-style: normal;
+  font-size: 3cqw;
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+.cfg__lv b {
+  font-size: 5.8cqw;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.cfg__hero {
+  align-self: center;
+  margin-left: 1cqw;
+  padding: 0.45cqw 1.1cqw;
+  border-radius: 0.7cqw;
+  background: var(--ink);
+  color: var(--stock);
+  font-style: normal;
+  font-size: 2.2cqw;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.cfg__mods {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 1cqw;
+}
+
+.cfg__mod {
+  width: 7.4cqw;
+  height: 6.4cqw;
+  display: grid;
+  place-items: center;
+  border: var(--hair) solid var(--line);
+  border-radius: 1cqw;
+  background: var(--surface);
+  color: var(--ink-dim);
+  font-size: 2.9cqw;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.cfg__mod--on {
+  border-color: color-mix(in srgb, var(--mod) 50%, transparent);
+  background: color-mix(in srgb, var(--mod) 16%, var(--surface));
+  color: var(--ink);
+}
+
+/* =========================================================
+   4. 音游舞台画幅：居中专辑视窗头像 + osu! 轨迹底纹 + 底部磨砂坞
+   ========================================================= */
+
+.cfg__art {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  margin: 1.2cqw 0.8cqw 1.8cqw;
+}
+
+.cfg__window {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 2.2cqw;
+  background: var(--window-bg);
+  box-shadow:
+    inset 0 0 0 var(--hair) var(--line),
+    0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+.cfg__banner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 没有 Banner 时：利用头像自身主色晕染出柔和的氛围渐变 */
+.cfg__banner--blur {
+  filter: blur(4cqw) saturate(1.25) brightness(0.96);
+  scale: 1.45;
+  opacity: 0.72;
+}
+
+/* 程序化 osu! 打击圆与滑条底纹 */
+.cfg__motif {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 78%;
+  color: var(--motif-color);
+  pointer-events: none;
+}
+
+.cfg__motif--subtle {
+  opacity: 0.38;
+  color: rgb(255 255 255 / 0.55);
+}
+
+/* 居中放大的 40cqw 专辑式头像框 */
+.cfg__stage {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 2.4cqw 0;
+}
+
+.cfg__avatar {
+  width: 40cqw;
+  max-height: 100%;
+  aspect-ratio: 1;
+  padding: 1.3cqw;
+  border-radius: 3.2cqw;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.1),
+    0 2px 5px rgb(0 0 0 / 0.12),
+    0 12px 24px -6px rgb(0 0 0 / 0.28);
+}
+
+.cfg__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 2.1cqw;
+}
+
+.cfg__avatar:empty::after {
+  content: "";
+  display: block;
+  height: 100%;
+  border-radius: 2.1cqw;
+  background: rgb(0 0 0 / 0.06);
+}
+
+/* 底部磨砂名牌坞：名字、命座、国家排名、PP 一体化 */
+.cfg__dock {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1cqw;
+  margin: 0 1.4cqw 1.4cqw;
+  padding: 2cqw 2.4cqw;
+  border-radius: 1.6cqw;
+  background: var(--dock-bg);
+  color: var(--dock-ink);
+  backdrop-filter: blur(10px) saturate(1.25);
+  box-shadow:
+    inset 0 0 0 var(--hair) rgb(255 255 255 / 0.65),
+    0 2px 8px rgb(0 0 0 / 0.08);
+}
+
+.cfg__dock-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.8cqw;
+}
+
+.cfg__name-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.cfg__name {
+  display: block;
+  margin: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: calc(var(--name-size, 7.6cqw) * 0.88);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfg__stars {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.35cqw;
+}
+
+.cfg__star {
+  width: 4cqw;
+  height: 4cqw;
+  mask: url("./tex/star-fill.svg") center / contain no-repeat;
+}
+
+.cfg__star[data-state="empty"] {
+  mask-image: url("./tex/star-line.svg");
+  background: color-mix(in srgb, var(--dock-dim) 45%, transparent);
+}
+
+.cfg__star[data-state="copper"] {
+  background: linear-gradient(135deg, #f59e0b, #d97706 58%, #92400e);
+}
+
+.cfg__star[data-state="prism"] {
+  background: linear-gradient(135deg, #2dd4bf, #60a5fa 50%, #f472b6);
+}
+
+.cfg__meta {
+  display: flex;
+  align-items: center;
+  gap: 1.4cqw;
+  font-size: 3.1cqw;
+  color: var(--dock-dim);
+}
+
+.cfg__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 1cqw;
+}
+
+.cfg__meta-item b {
+  font-weight: 700;
+  color: var(--dock-ink);
+}
+
+.cfg__meta-item i {
+  font-style: normal;
+  font-size: 2.6cqw;
+  font-weight: 600;
+}
+
+.cfg__dot {
+  opacity: 0.45;
+}
+
+.cfg__flag {
+  width: 4.2cqw;
+  height: 3cqw;
+  object-fit: cover;
+  border-radius: 0.35cqw;
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.16);
+}
+
+/* =========================================================
+   5. 技能行：透明纸质条 + 左侧 2.5px 属性色标
+   ========================================================= */
+
+.cfg__skills {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1cqw;
+  padding: 0 0.8cqw;
+}
+
+.cfg__skill {
+  position: relative;
+  height: 9.6cqw;
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  padding: 0 1.8cqw 0 2.2cqw;
+  border-radius: 1.3cqw;
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 var(--hair) var(--surface-border),
+    0 1px 2px rgb(0 0 0 / 0.04);
+  overflow: hidden;
+}
+
+/* 左侧属性色带 */
+.cfg__skill::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1.4cqw;
+  bottom: 1.4cqw;
+  width: 0.9cqw;
+  border-radius: 0 1cqw 1cqw 0;
+  background: var(--el);
+}
+
+.cfg__el {
+  flex: 0 0 6.4cqw;
+  height: 6.4cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 1cqw;
+  background: color-mix(in srgb, var(--el) 14%, transparent);
+  color: color-mix(in srgb, var(--el) 84%, var(--ink));
+}
+
+.cfg__el svg {
+  width: 4.4cqw;
+  height: 4.4cqw;
+}
+
+.cfg__skill-name {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 4.8cqw;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfg__cost {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1.1cqw;
+}
+
+.cfg__ap,
+.cfg__mp {
+  width: 6.4cqw;
+  height: 6.4cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 3.9cqw;
+  font-weight: 800;
+}
+
+.cfg__ap {
+  background: var(--ap);
+  color: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.16);
+}
+
+.cfg__mp {
+  border: var(--rule) solid var(--mp);
+  background: color-mix(in srgb, var(--mp) 12%, transparent);
+  color: var(--mp);
+}
+
+.cfg__passive {
+  height: 5.2cqw;
+  display: grid;
+  place-items: center;
+  padding: 0 1.6cqw;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  color: var(--ink-dim);
+  font-size: 2.7cqw;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+/* =========================================================
+   6. 底栏：实体 TCG 印刷微标（职业 / BP / 印记 / 编号）
+   ========================================================= */
+
+.cfg__foot {
+  flex: 0 0 8.8cqw;
+  display: flex;
+  align-items: center;
+  gap: 1.6cqw;
+  margin-top: 1.2cqw;
+  padding: 0 1.2cqw;
+}
+
+.cfg__job {
+  flex: 0 0 6.8cqw;
+  height: 6.8cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 1cqw;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 var(--hair) var(--line);
+  color: var(--ink);
+}
+
+.cfg__job svg {
+  width: 4.4cqw;
+  height: 4.4cqw;
+}
+
+.cfg__bp {
+  flex: 0 0 auto;
+  height: 6.4cqw;
+  display: flex;
+  align-items: center;
+  gap: 1cqw;
+  padding: 0 1.8cqw;
+  border-radius: 99px;
+  border: var(--hair) solid color-mix(in srgb, var(--bp) 42%, var(--line));
+  background: color-mix(in srgb, var(--bp) 12%, var(--surface));
+  color: color-mix(in srgb, var(--bp) 76%, var(--ink));
+}
+
+.cfg__bp i {
+  font-style: normal;
+  font-size: 2.5cqw;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.cfg__bp b {
+  font-size: 4.2cqw;
+  font-weight: 800;
+}
+
+.cfg__imprint {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-dim);
+  font-size: 1.8cqw;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.72;
+}
+
+.cfg__no {
+  flex: 0 0 auto;
+  color: var(--ink-dim);
+  font-size: 2.8cqw;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* =========================================================
+   7. 七档稀有度：明丽浅色实体纸感逐级升华到黑曜全息
+   C 石灰白 / UC 鼠尾草 / R 冰川蓝 / E 雾紫花纹
+   L 香槟白金烫印 / Radiant 珍珠贝母 / Prismatic 全息暗晶
+   ========================================================= */
+
+/* C：素雅象牙灰纸，哑光墨 */
+.cfg[data-rarity="C"] {
+  --rim: #e4e5e8;
+  --stock: #f2f1ed;
+  --window-bg: #dde1e6;
+  --ink: #22252c;
+  --ink-dim: #6c727e;
+  --foil: linear-gradient(#7c828f, #7c828f);
+}
+
+/* UC：浅鼠尾草绿纸，哑光翠墨 */
+.cfg[data-rarity="UC"] {
+  --rim: #d7e2db;
+  --stock: #e8f0eb;
+  --window-bg: #cfe0d6;
+  --ink: #1a2d24;
+  --ink-dim: #4c6c5d;
+  --foil: linear-gradient(#2f7d57, #2f7d57);
+}
+
+/* R：冰川银蓝纸，钢蓝冷银烫印 */
+.cfg[data-rarity="R"] {
+  --rim: #d5dfec;
+  --stock: #e8eff8;
+  --window-bg: #cddbee;
+  --ink: #172336;
+  --ink-dim: #4b6182;
+  --foil: linear-gradient(
+    115deg,
+    #2d5488 0%,
+    #5789ca 18%,
+    #a8cbff 34%,
+    #356099 54%,
+    #6395d4 74%,
+    #2d5488 100%
+  );
+}
+
+/* E：雾紫珍珠纸，带压纹边带与紫晶烫印 */
+.cfg[data-rarity="E"] {
+  --rim: #dcd6ea;
+  --stock: #eeeaf6;
+  --window-bg: #d7cee8;
+  --ink: #241936;
+  --ink-dim: #655282;
+  --bezel-gap: 1.8cqw;
+  --foil: linear-gradient(
+    115deg,
+    #5a3796 0%,
+    #8c62d0 18%,
+    #d4b8ff 34%,
+    #653fa3 54%,
+    #966ed8 74%,
+    #5a3796 100%
+  );
+}
+
+.cfg[data-rarity="E"] .cfg__stock::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--bezel-in) + var(--rule));
+  padding: calc(var(--bezel-gap) - var(--rule));
+  border-radius: 1.7cqw;
+  background: repeating-linear-gradient(
+    135deg,
+    rgb(101 63 163 / 0.14) 0 0.35cqw,
+    transparent 0.35cqw 0.9cqw
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+/* L：香槟象牙卡纸 + 24K 烫金边（实体礼盒级高雅质感） */
+.cfg[data-rarity="L"] {
+  --rim: #e6dfd0;
+  --stock: #f6f1e6;
+  --window-bg: #e4dac5;
+  --ink: #241d12;
+  --ink-dim: #75664c;
+  --line: rgb(138 101 28 / 0.22);
+  --surface: rgb(255 253 248 / 0.72);
+  --dock-bg: rgb(255 252 245 / 0.84);
+  --rule: max(0.55cqw, 1px);
+  --foil: linear-gradient(
+    112deg,
+    #966c1a 0%,
+    #c79b36 16%,
+    #f6de8a 30%,
+    #b68627 48%,
+    #d8ae48 68%,
+    #f8e49b 82%,
+    #966c1a 100%
+  );
+}
+
+/* Radiant：珍珠白卡纸 + 铂金全息外边 + 纸面贝母珠光 */
+.cfg[data-rarity="Radiant"] {
+  --rim: #e2e6ee;
+  --stock: #f3f5fa;
+  --window-bg: #d9e1ef;
+  --ink: #181c26;
+  --ink-dim: #5c6578;
+  --rule: max(0.6cqw, 1.1px);
+  --foil: linear-gradient(
+    112deg,
+    #707989 0%,
+    #b6becb 16%,
+    #ffffff 30%,
+    #96a0b2 48%,
+    #cfd5e0 68%,
+    #ffffff 84%,
+    #707989 100%
+  );
+}
+
+.cfg[data-rarity="Radiant"] .cfg__sheen,
+.cfg[data-rarity="Prismatic"] .cfg__sheen {
+  display: block;
+}
+
+.cfg__sheen::before,
+.cfg__sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.cfg[data-rarity="Radiant"] .cfg__sheen::before {
+  background: linear-gradient(
+    calc(118deg + (var(--mx) - 0.5) * 50deg),
+    rgb(255 182 214),
+    rgb(174 214 255) 24%,
+    rgb(176 250 218) 46%,
+    rgb(255 234 176) 68%,
+    rgb(218 186 255) 86%,
+    rgb(255 182 214)
+  );
+  background-size: 240% 240%;
+  background-position: var(--foil-pos);
+  mix-blend-mode: overlay;
+  opacity: 0.38;
+}
+
+.cfg[data-rarity="Radiant"] .cfg__sheen::after {
+  background: radial-gradient(
+    60% 44% at calc(var(--mx) * 100%) calc(var(--my) * 100%),
+    rgb(255 255 255 / 0.45),
+    transparent 70%
+  );
+}
+
+/* Prismatic：终极彩头独占的“暗夜全息棱镜卡” */
+.cfg[data-rarity="Prismatic"] {
+  --rim: #252236;
+  --stock: #161522;
+  --grain-blend: screen;
+  --lamp-hi: rgb(255 255 255 / 0.1);
+  --lamp-lo: rgb(0 0 0 / 0.45);
+  --edge-hi: rgb(255 255 255 / 0.2);
+  --edge-lo: rgb(0 0 0 / 0.65);
+
+  --ink: #f5f3fc;
+  --ink-dim: #aba6c2;
+  --line: rgb(255 255 255 / 0.14);
+  --surface: rgb(255 255 255 / 0.08);
+  --surface-border: rgb(255 255 255 / 0.16);
+  --dock-bg: rgb(18 17 30 / 0.74);
+  --dock-ink: #f6f4ff;
+  --dock-dim: #b5b0cc;
+  --window-bg: #1e1c2e;
+  --motif-color: rgb(255 255 255 / 0.18);
+
+  --foil-film-blend: screen;
+  --foil-film-op: 0.18;
+  --foil-dodge-op: 0.18;
+
+  --rule: max(0.65cqw, 1.2px);
+  --bezel-gap: 1.8cqw;
+  --foil: linear-gradient(
+    112deg,
+    #7d6cff 0%,
+    #c58cff 14%,
+    #ff8cc8 28%,
+    #ffb36b 42%,
+    #f3e06a 56%,
+    #6fe3b8 70%,
+    #6cc4ff 84%,
+    #7d6cff 100%
+  );
+}
+
+.cfg[data-rarity="Prismatic"] .cfg__avatar {
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.9), rgb(215 208 255 / 0.85));
+}
+
+.cfg[data-rarity="Prismatic"] .cfg__dock {
+  box-shadow:
+    inset 0 0 0 var(--hair) rgb(255 255 255 / 0.2),
+    0 4px 12px rgb(0 0 0 / 0.35);
+}
+
+.cfg[data-rarity="Prismatic"] .cfg__sheen::before {
+  background: repeating-linear-gradient(
+    calc(118deg + (var(--mx) - 0.5) * 40deg),
+    hsl(350 92% 70%) 0,
+    hsl(28 96% 68%) 6.5cqw,
+    hsl(56 96% 66%) 13cqw,
+    hsl(112 76% 66%) 19.5cqw,
+    hsl(172 86% 60%) 26cqw,
+    hsl(206 96% 70%) 32.5cqw,
+    hsl(256 92% 76%) 39cqw,
+    hsl(302 86% 74%) 45.5cqw,
+    hsl(350 92% 70%) 52cqw
+  );
+  background-size: 300% 300%;
+  background-position: var(--foil-pos);
+  mix-blend-mode: screen;
+  opacity: 0.16;
+}
+
+.cfg[data-rarity="Prismatic"] .cfg__sheen::after {
+  background:
+    radial-gradient(
+      56% 42% at calc(var(--mx) * 100%) calc(var(--my) * 100%),
+      rgb(255 255 255 / 0.14),
+      transparent 70%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgb(255 255 255 / 0.05) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgb(255 255 255 / 0.035) 0 1px,
+      transparent 1px 4px
+    );
+}
+
+/* =========================================================
+   8. 闪卡：叠在最上面的镭射折射膜（自适应亮/暗卡基）
+   ========================================================= */
+
+.cfg__foil > i {
+  position: absolute;
+  inset: 0;
+  --foil-angle: calc(118deg + (var(--mx) - 0.5) * 36deg);
+  --spectrum: repeating-linear-gradient(
+    var(--foil-angle),
+    hsl(350 92% 62%) 0,
+    hsl(28 96% 60%) 7cqw,
+    hsl(56 96% 58%) 14cqw,
+    hsl(112 76% 56%) 21cqw,
+    hsl(172 86% 50%) 28cqw,
+    hsl(206 96% 60%) 35cqw,
+    hsl(256 92% 68%) 42cqw,
+    hsl(302 86% 66%) 49cqw,
+    hsl(350 92% 62%) 56cqw
+  );
+  --at-light: calc(var(--mx) * 100%) calc(var(--my) * 100%);
+  --at-far: calc((1 - var(--mx)) * 100%) calc((1 - var(--my)) * 100%);
+}
+
+.cfg__foil-film {
+  background: var(--spectrum);
+  background-size: 300% 300%;
+  background-position: var(--at-light);
+  mask: linear-gradient(
+      var(--foil-angle),
+      transparent 28%,
+      #000 46%,
+      #000 54%,
+      transparent 72%
+    )
+    var(--at-far) / 250% 250%;
+  mix-blend-mode: var(--foil-film-blend);
+  opacity: var(--foil-film-op);
+}
+
+.cfg__foil-dodge {
+  background: var(--spectrum);
+  background-size: 300% 300%;
+  background-position: var(--at-far);
+  mask: radial-gradient(
+    46% 32% at var(--at-light),
+    #000,
+    rgb(0 0 0 / 0.3) 55%,
+    transparent
+  );
+  mix-blend-mode: color-dodge;
+  opacity: var(--foil-dodge-op);
+}
+
+.cfg__foil-glitter {
+  background: var(--spectrum);
+  background-size: 300% 300%;
+  background-position: calc(var(--my) * 100%) calc(var(--mx) * 100%);
+  mask-image:
+    url("./tex/glitter.svg"),
+    radial-gradient(40% 28% at var(--at-light), #000, transparent);
+  mask-size:
+    220px 220px,
+    100% 100%;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  opacity: var(--foil-glitter-op);
+}
+
+.cfg__foil-glitter--b {
+  background: #fff;
+  mask-image:
+    url("./tex/glitter-b.svg"),
+    radial-gradient(30% 22% at var(--at-far), #000, transparent);
+  mask-size:
+    260px 260px,
+    100% 100%;
+  opacity: 0.42;
+}
+
+.cfg__foil-glare {
+  background: radial-gradient(
+    44% 30% at var(--at-light),
+    rgb(255 255 255 / 0.3),
+    rgb(255 255 255 / 0.06) 45%,
+    transparent 75%
+  );
+  mix-blend-mode: overlay;
+}
+
+.cfg__foil > .cfg__foil-sweep {
+  inset: -10% -60%;
+  background: linear-gradient(
+    105deg,
+    transparent 43%,
+    hsl(190 100% 62% / 0.14) 46.5%,
+    hsl(300 100% 78% / 0.2) 50%,
+    hsl(45 100% 62% / 0.14) 53.5%,
+    transparent 57%
+  );
+  transform: translateX(-62%);
+  animation: cf-foil-sweep 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: calc(var(--seed, 0) * -0.07s);
+}
+
+@keyframes cf-foil-sweep {
+  0%,
+  74% {
+    transform: translateX(-62%);
+  }
+  100% {
+    transform: translateX(62%);
+  }
+}
+
+.cfg:not([data-sweep-visible]) .cfg__foil-sweep {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cfg {
+    transition: none;
+  }
+  .cfg__foil > .cfg__foil-sweep {
+    display: none;
+  }
+}
+
+/* =========================================================
+   9. 战斗态：只留大头像画幅和放大的技能行
+   ========================================================= */
+
+.cfg[data-mode="battle"] {
+  --bezel-in: 2.2cqw;
+  --bezel-gap: 0.8cqw;
+}
+
+.cfg[data-mode="battle"] :is(.cfg__head, .cfg__dock, .cfg__foot),
+.cfg[data-mode="battle"] .cfg__bezel::after {
+  display: none;
+}
+
+.cfg[data-mode="battle"] .cfg__art {
+  margin: 0 0 2.4cqw;
+}
+
+.cfg[data-mode="battle"] .cfg__avatar {
+  width: 54cqw;
+  padding: 1.6cqw;
+}
+
+.cfg[data-mode="battle"] .cfg__skills {
+  gap: 1.4cqw;
+  padding: 0;
+}
+
+.cfg[data-mode="battle"] .cfg__skill {
+  height: 15.2cqw;
+  gap: 2cqw;
+  padding: 0 1.6cqw 0 2.2cqw;
+}
+
+.cfg[data-mode="battle"] .cfg__el {
+  flex-basis: 10.6cqw;
+  height: 10.6cqw;
+}
+
+.cfg[data-mode="battle"] .cfg__el svg {
+  width: 7.4cqw;
+  height: 7.4cqw;
+}
+
+.cfg[data-mode="battle"] .cfg__skill-name {
+  font-size: 8cqw;
+}
+
+.cfg[data-mode="battle"] :is(.cfg__ap, .cfg__mp) {
+  width: 10.4cqw;
+  height: 10.4cqw;
+  font-size: 6.4cqw;
+}
+
+.cfg[data-mode="battle"] .cfg__passive {
+  height: 7.8cqw;
+  padding: 0 1.8cqw;
+  font-size: 4cqw;
+}
+
+/* =========================================================
+   10. 小尺寸自适应
+   ========================================================= */
+
+@container cfg (max-width: 170px) {
+  .cfg__rarity,
+  .cfg__meta,
+  .cfg__stars,
+  .cfg__imprint,
+  .cfg__hero {
+    display: none;
+  }
+
+  .cfg__lv b {
+    font-size: 7.4cqw;
+  }
+
+  .cfg__mod {
+    width: 5cqw;
+    height: 4.5cqw;
+    font-size: 0;
+  }
+
+  .cfg__avatar {
+    width: 48cqw;
+  }
+
+  .cfg__dock {
+    margin: 0 1cqw 1cqw;
+    padding: 1.4cqw 1.8cqw;
+  }
+
+  .cfg__no {
+    margin-left: auto;
+  }
+}
+
+@container cfg (max-width: 120px) {
+  .cfg__no {
+    display: none;
+  }
+}
+
+/* =========================================================
+   11. 布局参考线（卡面实验室用）
+   ========================================================= */
+
+.cfg--guides::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent calc(50% - 0.5px),
+    rgb(255 59 107 / 0.4) calc(50% - 0.5px),
+    rgb(255 59 107 / 0.4) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
+}
+
+.cfg--guides .cfg__content {
+  outline: 1px dashed #ff3b6b;
+}
+
+.cfg--guides :is(.cfg__head, .cfg__art, .cfg__skills, .cfg__foot) {
+  outline: 1px dashed rgb(59 130 246 / 0.6);
+  outline-offset: -1px;
+}
+
+.cfg--guides :is(.cfg__seal, .cfg__lv, .cfg__mods, .cfg__avatar, .cfg__dock, .cfg__job, .cfg__bp, .cfg__no) {
+  outline: 1px dotted rgb(255 196 0 / 0.8);
+  outline-offset: 2px;
+}

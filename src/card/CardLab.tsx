@@ -2,11 +2,18 @@ import { useEffect, useState, type ReactNode } from "react"
 
 import { CardFace } from "./CardFace"
 import { CardFaceV1 } from "./CardFaceV1"
+import { CardFaceGemini } from "./CardFaceGemini"
 import { DEMO_CARDS, RARITY_LABEL, makeCard } from "./data"
 import type { CardFaceData, CardFaceMode } from "./types"
 import "./card-lab.css"
 
-type FaceStyle = "current" | "v1"
+type FaceStyle = "current" | "v1" | "gemini"
+
+const FACE_LABEL: Record<FaceStyle, string> = {
+  current: "当前版",
+  v1: "星章版 860820f",
+  gemini: "Gemini v3",
+}
 
 function FaceView({
   style,
@@ -19,11 +26,9 @@ function FaceView({
   mode?: CardFaceMode
   className?: string
 }) {
-  return style === "v1" ? (
-    <CardFaceV1 card={card} mode={mode} className={className} />
-  ) : (
-    <CardFace card={card} mode={mode} className={className} />
-  )
+  if (style === "v1") return <CardFaceV1 card={card} mode={mode} className={className} />
+  if (style === "gemini") return <CardFaceGemini card={card} mode={mode} className={className} />
+  return <CardFace card={card} mode={mode} className={className} />
 }
 
 const HERO_SKILLS = [
@@ -62,9 +67,10 @@ const SOLO_SKILL: CardFaceData = makeCard({
 export function CardLab() {
   const [bg, setBg] = useState<"dark" | "light">("dark")
   const params = new URLSearchParams(window.location.search)
-  const [faceStyle, setFaceStyle] = useState<FaceStyle>(
-    params.get("style") === "v1" ? "v1" : "current",
-  )
+  const [faceStyle, setFaceStyle] = useState<FaceStyle>(() => {
+    const value = params.get("style")
+    return value === "v1" || value === "gemini" ? value : "current"
+  })
   const embed = params.get("embed") === "1"
 
   useEffect(() => {
@@ -113,17 +119,24 @@ export function CardLab() {
           <div className="lab__eyebrow">CHOKE! · CARD FACE</div>
           <h1 className="lab__title">卡面实验室 v0.1</h1>
           <p className="lab__sub">
-            2:3 竖版 · 统一黑卡纸 · 稀有度看线条颜色和工艺 · BP 是唯一战力数字
+            2:3 竖版 · 当前 / 星章版 / Gemini v3 三版对比 · 稀有度看材质和工艺 · BP 是唯一战力数字
           </p>
         </div>
         <div className="lab__actions">
-          <button
-            type="button"
-            className="lab__toggle"
-            onClick={() => setFaceStyle((v) => (v === "current" ? "v1" : "current"))}
-          >
-            {faceStyle === "current" ? "切到星章版" : "切到当前版"}
-          </button>
+          <label className="lab__face-select">
+            <span>卡面</span>
+            <select
+              className="lab__toggle"
+              value={faceStyle}
+              onChange={(e) => setFaceStyle(e.target.value as FaceStyle)}
+            >
+              {(Object.keys(FACE_LABEL) as FaceStyle[]).map((key) => (
+                <option key={key} value={key}>
+                  {FACE_LABEL[key]}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             className="lab__toggle"
@@ -136,7 +149,7 @@ export function CardLab() {
 
       <Section
         label="版本对比"
-        note="左：当前 handoff 材料版。右：星章版（860820f），左上角是星形稀有度徽章，下面有独立命座星条。"
+        note="左：当前 handoff 材料版。中：星章版（860820f）。右：Gemini v3（Paper & Prism，浅色卡纸 + 居中头像 + 磨砂名牌坞）。"
       >
         <div className="lab__row lab__row--baseline">
           <div className="lab__slot" style={{ width: 220 }}>
@@ -147,10 +160,17 @@ export function CardLab() {
             <CardFaceV1 card={DEMO_CARDS[4]} />
             <span className="lab__tag">星章版 · 860820f</span>
           </div>
+          <div className="lab__slot" style={{ width: 220 }}>
+            <CardFaceGemini card={DEMO_CARDS[4]} />
+            <span className="lab__tag">Gemini v3 · Paper &amp; Prism</span>
+          </div>
         </div>
       </Section>
 
-      <Section label="七档材质" note="石墨墨 / 翡翠墨 / 烫钢蓝 / 烫紫+压纹 / 烫金 / 烫铂+珠光 / 镭射线+镭射纸；把鼠标移到卡上看反光">
+      <Section
+        label="七档材质"
+        note="当前/星章：黑卡纸 + 稀有度工艺。Gemini v3：浅色卡纸 + 稀有度边框，Prismatic 独占深色卡基。把鼠标移到卡上看反光。"
+      >
         <div className="lab__row">
           {DEMO_CARDS.map((card) => (
             <div className="lab__slot" style={{ width: 200 }} key={card.id}>
@@ -161,7 +181,7 @@ export function CardLab() {
         </div>
       </Section>
 
-      <Section label="闪卡" note="任何稀有度都能叠的一层淡镭射膜；只有迎着光的地方出彩带和碎闪，静止时偶尔扫一道光">
+      <Section label="闪卡" note="三版都支持闪卡；Gemini v3 在浅色卡纸上用 overlay 混合，效果比深色版更淡。">
         <div className="lab__row">
           {DEMO_CARDS.map((card) => (
             <div className="lab__slot" style={{ width: 200 }} key={card.id}>

@@ -83,6 +83,19 @@
   gap: 8px;
 }
 
+.lab__face-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lab-dim);
+  font-size: 12px;
+}
+
+.lab__face-select select {
+  appearance: auto;
+  cursor: pointer;
+}
+
 .lab__toggle:hover {
   border-color: color-mix(in srgb, var(--lab-ink) 40%, transparent);
 }
