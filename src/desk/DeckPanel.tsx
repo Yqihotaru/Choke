@@ -277,14 +277,20 @@ export const DeckPanel = memo(function DeckPanel({
   const firstEmpty = deck.slots.findIndex((slot) => !slot.card)
   const targetSlot = pickerSlot ?? (firstEmpty >= 0 ? firstEmpty : null)
   const tutorialDeckStep = tutorial.tutorialStep === "deck-view"
+  const pickerRows = currentResult?.rows ?? []
+  const tutorialCanConfirm = filled > 0 || pickerRows.length > 0
 
   /** 教程专用：空卡组用右页前几张卡一键填满；已有卡就直接确认出战 */
   const confirmTutorialDeck = async () => {
     if (!userId || !deck || saving) return
-    const ids = (currentResult?.rows ?? [])
-      .slice(0, 7)
-      .map((row) => row.userCardId)
-    if (filled === 0 && ids.length > 0) {
+    if (filled === 0 && pickerRows.length === 0) {
+      setNotice("右页还在加载卡牌，或你还没有卡；先去抽一包再上阵。")
+      return
+    }
+
+    let readyDeck = filled > 0
+    const ids = pickerRows.slice(0, 7).map((row) => row.userCardId)
+    if (!readyDeck && ids.length > 0) {
       const slots = deck.slots.map((_, index) => ids[index] ?? null)
       setSaving(true)
       setNotice(null)
@@ -297,12 +303,18 @@ export const DeckPanel = memo(function DeckPanel({
             minute: "2-digit",
           })
         )
+        readyDeck = next.slots.some((slot) => slot.card)
       } catch (reason) {
         setNotice(reason instanceof Error ? reason.message : "保存失败")
         return
       } finally {
         setSaving(false)
       }
+    }
+
+    if (!readyDeck) {
+      setNotice("卡组还是空的，请先放入至少 1 张卡。")
+      return
     }
     emitTutorialEvent("deck-confirmed")
   }
@@ -435,10 +447,16 @@ export const DeckPanel = memo(function DeckPanel({
                   type="button"
                   className="bk-btn bk-btn--main"
                   data-tutorial-id="deck-tutorial-confirm"
-                  disabled={saving}
+                  disabled={saving || !tutorialCanConfirm}
                   onClick={() => void confirmTutorialDeck()}
                 >
-                  {saving ? "上阵中…" : "一键上阵，去战斗"}
+                  {saving
+                    ? "上阵中…"
+                    : tutorialCanConfirm
+                      ? "一键上阵，去战斗"
+                      : currentResult
+                        ? "没有可上阵的卡"
+                        : "加载卡牌…"}
                 </button>
               ) : filled === 0 ? (
                 <button type="button" className="bk-btn bk-btn--main" disabled>

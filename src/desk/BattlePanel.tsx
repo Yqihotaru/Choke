@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 
+import { TUTORIAL_ENEMY_HP } from "@/battle/engine"
 import { battlePower } from "@/card/data"
 import { useTutorialProgress } from "@/tutorial/store"
 
@@ -69,13 +70,16 @@ export function BattlePanel({
     0
   )
   const tutorialBattleStep = tutorial.tutorialStep === "battle-view"
+  const enemyHp = tutorialBattleStep ? TUTORIAL_ENEMY_HP : 24000
 
   const enemy = (
     <div className="bk-box battle-enemy">
-      <span className="bk-label">练习对手</span>
+      <span className="bk-label">
+        {tutorialBattleStep ? "教学对手" : "练习对手"}
+      </span>
       <b className="battle-enemy__name">谱面幽灵</b>
       <div className="bk-stat">
-        <b>24,000</b>
+        <b>{enemyHp.toLocaleString("en-US")}</b>
         <span>敌人 HP</span>
       </div>
     </div>
@@ -150,16 +154,31 @@ export function BattlePanel({
             个子职业分池，卡组不满 7 张也可以出战。
           </p>
           {tutorialBattleStep ? (
-            <>
-              <p className="bk-note">教学战 · 不计排名，不会掉 pp。</p>
-              <a
-                className="bk-btn bk-btn--main bk-btn--block battle-start"
-                data-tutorial-id="battle-tutorial-start"
-                href="/battle?tutorial=1"
-              >
-                进入教学对战
-              </a>
-            </>
+            cards.length > 0 ? (
+              <>
+                <p className="bk-note">教学战 · 不计排名，不会掉 pp。</p>
+                <a
+                  className="bk-btn bk-btn--main bk-btn--block battle-start"
+                  data-tutorial-id="battle-tutorial-start"
+                  href="/battle?tutorial=1"
+                >
+                  进入教学对战
+                </a>
+              </>
+            ) : (
+              <>
+                <p className="bk-note">
+                  教学战至少需要 1 张卡，先去卡组上阵再回来。
+                </p>
+                <button
+                  type="button"
+                  className="bk-btn bk-btn--main bk-btn--block"
+                  onClick={onOpenDeck}
+                >
+                  去卡组上阵
+                </button>
+              </>
+            )
           ) : (
             <a
               className="bk-btn bk-btn--main bk-btn--block battle-start"

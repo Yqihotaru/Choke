@@ -7,7 +7,7 @@ import {
 } from "@/card/data"
 import { fetchDeck, toFace, type ApiDeck } from "@/desk/api"
 import { GuestLoginButton } from "@/desk/GuestLoginButton"
-import { advanceTutorial, useTutorialProgress } from "@/tutorial/store"
+import { advanceTutorial, grantExp, useTutorialProgress } from "@/tutorial/store"
 
 import { TUTORIAL_ENEMY_HP, cloneBattle, createBattle, endTurn, enemyDamageTier, playSkill, raiseDefense, teamHpOf } from "./engine"
 import type { BattleState } from "./types"
@@ -33,6 +33,7 @@ export function BattlePage() {
     tutorialMode && progress.tutorialStep === "battle-result"
   const tutorialBattle = tutorialRun || tutorialFinished
   const rewarded = useRef(false)
+  const normalRewarded = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -77,6 +78,14 @@ export function BattlePage() {
     advanceTutorial("battle-result", 70)
   }, [battle, tutorialRun])
 
+  // 普通 PvE 也给玩家等级经验，保证教程后仍能继续升级
+  useEffect(() => {
+    if (tutorialBattle || !battle || normalRewarded.current) return
+    if (battle.phase !== "won" && battle.phase !== "lost") return
+    normalRewarded.current = true
+    grantExp(battle.phase === "won" ? 20 : 8)
+  }, [battle, tutorialBattle])
+
   if (loading) return <div className="battle-page battle-page--center">加载中…</div>
   if (!user) {
     return (
@@ -111,6 +120,7 @@ export function BattlePage() {
 
   const start = () => {
     setActionError(null)
+    normalRewarded.current = false
     setBattle(
       createBattle(
         cards.map((card) => ({
@@ -120,6 +130,19 @@ export function BattlePage() {
         })),
         { tutorial: tutorialRun },
       ),
+    )
+  }
+
+  if (tutorialFinished && !battle) {
+    return (
+      <div className="battle-page battle-page--center">
+        <div className="battle-gate">
+          <span>TUTORIAL · CLEARED</span>
+          <h1>教学战已经完成了</h1>
+          <p>回桌面继续教程结算吧。</p>
+          <a href="/">回桌面</a>
+        </div>
+      </div>
     )
   }
 

@@ -7,7 +7,7 @@
  * - 推进时发多少经验、下一步是谁
  *
  * 业务组件不需要知道“现在是第几步”，只需要在关键动作发生时
- * emitTutorialEvent("pack-opened" / "deck-confirmed" / "battle-finished")。
+ * emitTutorialEvent("pack-opened" / "deck-confirmed")。
  */
 
 export const TUTORIAL_STEPS = [
@@ -31,8 +31,7 @@ export type TutorialStep = (typeof TUTORIAL_STEPS)[number]
 /** 真正会显示台词 / 遮罩的步骤（idle 和 done 不显示） */
 export type TutorialPlayableStep = Exclude<TutorialStep, "idle" | "done">
 
-export type TutorialEventType =
-  "pack-opened" | "deck-confirmed" | "battle-finished"
+export type TutorialEventType = "pack-opened" | "deck-confirmed"
 
 export type TutorialMood = "idle" | "happy" | "smug" | "serious"
 
@@ -51,7 +50,9 @@ export interface TutorialContext {
 }
 
 export type TutorialTarget =
-  string | string[] | ((context: TutorialContext) => string | null)
+  | string
+  | string[]
+  | ((context: TutorialContext) => string | string[] | null)
 
 export interface TutorialScript {
   /** 高亮目标；不传 = 全屏遮罩（纯对话步骤） */

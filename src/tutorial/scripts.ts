@@ -1,3 +1,4 @@
+import { MARKET_UNLOCK_LEVEL } from "./constants"
 import type { TutorialPlayableStep, TutorialScript } from "./types"
 
 /** 只用来显示“第几步 / 共几步”，顺序必须和流程一致 */
@@ -61,7 +62,8 @@ export const TUTORIAL_SCRIPTS = {
 
   "gacha-open": {
     // 有库存时高亮「开 5 张」；库存为空时 GachaPanel 会换成「领取新手卡包」
-    target: ["gacha-open-button", "gacha-restock"],
+    target: ({ bookOpen }) =>
+      bookOpen ? ["gacha-open-button", "gacha-restock"] : "packs-entry",
     advanceOn: "event",
     event: "pack-opened",
     next: "album",
@@ -123,7 +125,8 @@ export const TUTORIAL_SCRIPTS = {
   },
 
   "deck-view": {
-    target: "deck-tutorial-confirm",
+    target: ({ bookOpen }) =>
+      bookOpen ? "deck-tutorial-confirm" : "deck-entry",
     advanceOn: "event",
     event: "deck-confirmed",
     exp: 80,
@@ -153,10 +156,10 @@ export const TUTORIAL_SCRIPTS = {
   },
 
   "battle-view": {
-    target: "battle-tutorial-start",
+    target: ({ bookOpen }) =>
+      bookOpen ? "battle-tutorial-start" : "battle-entry",
+    // 战斗页自己负责推进到 battle-result；这里只等待玩家从书里进入战斗
     advanceOn: "event",
-    event: "battle-finished",
-    exp: 70,
     next: "battle-result",
     lines: [
       {
@@ -196,7 +199,7 @@ export const TUTORIAL_SCRIPTS = {
       },
       {
         mood: "serious",
-        text: "继续做任务、打对战升级。到 Lv.6，市场木箱就会自己开锁。",
+        text: `继续做任务、打对战升级。到 Lv.${MARKET_UNLOCK_LEVEL}，市场木箱就会自己开锁。`,
       },
       {
         mood: "happy",

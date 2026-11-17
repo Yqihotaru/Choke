@@ -130,7 +130,6 @@ interface DialogueProps {
   levelFlash: number | null
   targetMissing: boolean
   onComplete: () => void
-  onEnsureStarter?: () => void | Promise<void>
   onFinish?: (reason: "complete" | "skip") => void
 }
 
@@ -140,7 +139,6 @@ function TutorialDialogue({
   levelFlash,
   targetMissing,
   onComplete,
-  onEnsureStarter,
   onFinish,
 }: DialogueProps) {
   const [lineIndex, setLineIndex] = useState(0)
@@ -148,6 +146,9 @@ function TutorialDialogue({
   const typedRef = useRef<TypedTextHandle>(null)
   const line = script.lines[Math.min(lineIndex, script.lines.length - 1)]
   const waitingForTarget = script.advanceOn !== "continue" && targetMissing
+  // 事件/经验步骤不能靠“跳过这一步”伪造完成，只能完整跳过教程
+  const canSkipStep =
+    waitingForTarget && script.advanceOn === "click" && !script.exp
 
   const advanceLine = useCallback(() => {
     if (typedRef.current?.isTyping()) {
@@ -163,14 +164,30 @@ function TutorialDialogue({
 
   const confirmSkip = () => {
     skipTutorial()
-    void onEnsureStarter?.()
     requestTutorialCloseBook()
     setConfirmingSkip(false)
     onFinish?.("skip")
   }
 
   return (
-    <div className="tut-dialog__box" onClick={advanceLine}>
+    <div
+      className="tut-dialog__box"
+      onClick={advanceLine}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return
+        if (
+          event.target instanceof Element &&
+          event.target.closest("button, a, input, textarea, select")
+        ) {
+          return
+        }
+        event.preventDefault()
+        advanceLine()
+      }}
+      role="document"
+      tabIndex={0}
+      aria-label="教程对话，按回车或空格继续"
+    >
       <header className="tut-dialog__head">
         <span className="tut-dialog__speaker">{TUTORIAL_CHARACTER.name}</span>
         <span className="tut-dialog__step">
@@ -209,7 +226,7 @@ function TutorialDialogue({
                 ? "完成教程"
                 : "继续"}
           </button>
-        ) : waitingForTarget ? (
+        ) : canSkipStep ? (
           <>
             <span className="tut-dialog__hint is-warn">找不到目标…</span>
             <button
@@ -223,6 +240,10 @@ function TutorialDialogue({
               跳过这一步
             </button>
           </>
+        ) : waitingForTarget ? (
+          <span className="tut-dialog__hint is-warn">
+            没找到目标，请打开对应界面；或使用“跳过教程”
+          </span>
         ) : (
           <span className="tut-dialog__hint">
             {lineIndex < script.lines.length - 1
@@ -271,6 +292,7 @@ export function TutorialOverlay({
 }: Props) {
   const progress = useTutorialProgress(userId)
   const script = scriptOf(progress.tutorialStep)
+  const visible = !!userId && !!script && !suspended
 
   const [hole, setHole] = useState<HoleRect | null>(null)
   const [targetMissing, setTargetMissing] = useState(false)
@@ -280,6 +302,7 @@ export function TutorialOverlay({
   const ensured = useRef(false)
   const lastLevel = useRef(progress.level)
   const stepRef = useRef(progress.tutorialStep)
+  const fireTimer = useRef<number | null>(null)
 
   useEffect(() => {
     stepRef.current = progress.tutorialStep
@@ -332,7 +355,7 @@ export function TutorialOverlay({
     if (next === "done") onFinish?.("complete")
   }, [script, progress.tutorialStep, onFinish])
 
-  // 业务事件推进：pack-opened / deck-confirmed / battle-finished
+  // 业务事件推进：pack-opened / deck-confirmed
   useEffect(() => {
     if (!script || script.advanceOn !== "event" || !script.event) return
     const onEvent = (event: Event) => {
@@ -363,6 +386,15 @@ export function TutorialOverlay({
       )
       if (!element || !element.isConnected) continue
       if (element.matches(":disabled, [aria-disabled='true']")) continue
+      if (
+        element.closest(
+          "[inert], [data-preload], .is-stowed, [aria-hidden='true']"
+        )
+      ) {
+        continue
+      }
+      const style = window.getComputedStyle(element)
+      if (style.visibility === "hidden" || style.display === "none") continue
       const rect = element.getBoundingClientRect()
       if (rect.width < 2 || rect.height < 2) continue
       return id
@@ -375,12 +407,15 @@ export function TutorialOverlay({
     if (!script || script.advanceOn !== "click") return
     const stepAtClick = progress.tutorialStep
     const fire = () => {
-      window.setTimeout(() => {
+      if (fireTimer.current) window.clearTimeout(fireTimer.current)
+      fireTimer.current = window.setTimeout(() => {
+        fireTimer.current = null
         if (stepRef.current !== stepAtClick) return
         completeStep()
       }, 60)
     }
     const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return
       const element =
         event.target instanceof Element
           ? event.target.closest<HTMLElement>("[data-tutorial-id]")
@@ -404,6 +439,10 @@ export function TutorialOverlay({
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true)
       document.removeEventListener("keydown", onKeyDown, true)
+      if (fireTimer.current) {
+        window.clearTimeout(fireTimer.current)
+        fireTimer.current = null
+      }
     }
   }, [script, progress.tutorialStep, resolveTargetId, completeStep])
 
@@ -455,7 +494,7 @@ export function TutorialOverlay({
     return () => window.cancelAnimationFrame(frame)
   }, [script, suspended, resolveTargetId])
 
-  if (!userId || !script || suspended) return null
+  if (!visible || !script) return null
 
   const vw = window.innerWidth
   const vh = window.innerHeight
@@ -572,7 +611,6 @@ export function TutorialOverlay({
           levelFlash={levelFlash}
           targetMissing={targetMissing}
           onComplete={completeStep}
-          onEnsureStarter={onEnsureStarter}
           onFinish={onFinish}
         />
       </div>

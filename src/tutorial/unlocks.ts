@@ -1,5 +1,6 @@
 import type { PanelId } from "@/desk/DeskBook"
 
+import { MARKET_UNLOCK_LEVEL } from "./constants"
 import type { PlayerProgress } from "./types"
 
 /** 桌面上会出现锁的模块：九个书本章节 + 发牌按钮 + 邀请函 */
@@ -20,7 +21,7 @@ export const MODULE_UNLOCK_LEVEL: Record<ModuleId, number> = {
   codex: 3,
   invite: 3,
   button: 3,
-  market: 6,
+  market: MARKET_UNLOCK_LEVEL,
 }
 
 /**
@@ -56,7 +57,9 @@ export function lockHintOf(
 ): string {
   const need = MODULE_UNLOCK_LEVEL[id]
   if (AFTER_TUTORIAL.includes(id) && !progress.tutorialDone) {
-    return "先完成新手教程解锁"
+    return progress.level < need
+      ? `需要 Lv.${need} + 完成新手教程`
+      : "先完成新手教程解锁"
   }
   if (progress.level < need) {
     const gap = need - progress.level

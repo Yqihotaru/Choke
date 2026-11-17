@@ -61,6 +61,14 @@ export const users = pgTable("users", {
   essence: integer("essence").notNull().default(0),
   /** 市场用金币 */
   coins: integer("coins").notNull().default(100),
+  /** 玩家等级 / 教程进度（由前端同步，市场等服务端校验） */
+  playerLevel: integer("player_level").notNull().default(1),
+  playerExp: integer("player_exp").notNull().default(0),
+  tutorialStep: text("tutorial_step").notNull().default("idle"),
+  tutorialDone: boolean("tutorial_done").notNull().default(false),
+  progressUpdatedAt: bigint("progress_updated_at", { mode: "number" }).notNull().default(0),
+  /** 回归玩家补发的一次性教程包 */
+  tutorialPackClaimed: boolean("tutorial_pack_claimed").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 })
 

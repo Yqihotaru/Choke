@@ -8,6 +8,7 @@ import { deckRoutes } from "./routes/decks"
 import { marketRoutes } from "./routes/market"
 import { packRoutes } from "./routes/packs"
 import { progressionRoutes } from "./routes/progression"
+import { progressRoutes } from "./routes/progress"
 import { client } from "./db/client"
 
 const app = Fastify({ logger: true })
@@ -20,6 +21,7 @@ await app.register(cardRoutes)
 await app.register(deckRoutes)
 await app.register(marketRoutes)
 await app.register(progressionRoutes)
+await app.register(progressRoutes)
 
 app.get("/health", async () => ({ ok: true, data: { status: "up" } }))
 

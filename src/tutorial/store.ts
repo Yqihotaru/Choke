@@ -231,6 +231,24 @@ export function useTutorialProgress(ownerId: string | null) {
   useEffect(() => {
     hydrate(ownerId)
     void pullProgress(ownerId)
+
+    const onStorage = (event: StorageEvent) => {
+      if (!ownerId || event.key !== storageKey(ownerId) || !event.newValue) return
+      try {
+        const next = normalize(
+          JSON.parse(event.newValue) as Partial<PlayerProgress>,
+          ownerId,
+        )
+        if (next.updatedAt > current.updatedAt) {
+          current = next
+          emit()
+        }
+      } catch {
+        // 忽略其他标签页写坏的存档
+      }
+    }
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
   }, [ownerId])
 
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)

@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
 import { MARKET_MAX_PRICE } from "../../../../src/card/economy"
+import { MARKET_UNLOCK_LEVEL } from "../../../../src/tutorial/constants"
 import { requireSelf } from "../auth/guard"
 import { db } from "../db/client"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
@@ -18,6 +19,16 @@ const cardColumns = {
 
 const paramsSchema = z.object({ userId: z.string() })
 const listingParams = z.object({ userId: z.string(), listingId: z.coerce.number().int().positive() })
+
+/** 市场是等级门槛功能：上架和购买都要服务端校验，不能只靠前端藏按钮 */
+async function marketAllowed(userId: string) {
+  const [row] = await db
+    .select({ level: users.playerLevel, done: users.tutorialDone })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+  return !!row && row.done && row.level >= MARKET_UNLOCK_LEVEL
+}
 
 async function loadCard(userId: string, userCardId: number) {
   const [row] = await db
@@ -134,6 +145,15 @@ export async function marketRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await marketAllowed(userId))) {
+      return reply.code(403).send({
+        ok: false,
+        error: {
+          code: "market_locked",
+          message: `市场达到 Lv.${MARKET_UNLOCK_LEVEL} 解锁后才能上架`,
+        },
+      })
+    }
     const body = z
       .object({
         userCardId: z.number().int().positive(),
@@ -238,6 +258,15 @@ export async function marketRoutes(app: FastifyInstance) {
     const params = listingParams.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await marketAllowed(userId))) {
+      return reply.code(403).send({
+        ok: false,
+        error: {
+          code: "market_locked",
+          message: `市场达到 Lv.${MARKET_UNLOCK_LEVEL} 解锁后才能购买`,
+        },
+      })
+    }
 
     const [listing] = await db
       .select({

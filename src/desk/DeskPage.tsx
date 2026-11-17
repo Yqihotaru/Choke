@@ -263,6 +263,7 @@ export function DeskPage() {
   const settleTimer = useRef<number | null>(null)
   const openingBusy = useRef(false)
   const userIdRef = useRef(user?.id)
+  const starterGrant = useRef<Promise<void> | null>(null)
   useLayoutEffect(() => {
     userIdRef.current = user?.id
   }, [user?.id])
@@ -385,19 +386,50 @@ export function DeskPage() {
     toastTimer.current = window.setTimeout(() => setToast(null), 1600)
   }, [])
 
-  /** 教程开场确认新手礼包：osu! 新号走 /auth/onboard，游客只刷新库存 */
-  const ensureStarter = useCallback(async () => {
-    if (!user) return
-    if (!user.onboarded) {
-      try {
-        await fetch("/auth/onboard", { method: "POST", credentials: "include" })
-      } catch {
-        showToast("新手礼包领取失败，请刷新重试")
+  /**
+   * 教程开场确认新手礼包：
+   * - osu! 新号走 /auth/onboard
+   * - 已领过礼包但 0 普通包的老玩家走 /auth/tutorial-pack
+   * - 同一个页面里的并发调用共享同一个 Promise，避免重复发奖
+   */
+  const ensureStarter = useCallback(() => {
+    if (!user) return undefined
+    if (starterGrant.current) return starterGrant.current
+
+    const task = (async () => {
+      if (!user.onboarded) {
+        try {
+          await fetch("/auth/onboard", {
+            method: "POST",
+            credentials: "include",
+          })
+        } catch {
+          showToast("新手礼包领取失败，请刷新重试")
+        }
       }
-    }
-    refreshUser()
-    refreshPacks()
-    window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+
+      try {
+        const res = await fetch("/auth/tutorial-pack", {
+          method: "POST",
+          credentials: "include",
+        })
+        const payload = (await res.json().catch(() => null)) as
+          | { ok?: boolean; data?: { granted?: boolean } }
+          | null
+        if (payload?.data?.granted) showToast("已补发 1 个新手卡包")
+      } catch {
+        // 老玩家补包失败不阻塞教程；抽卡面板会显示“领取新手卡包”重试
+      }
+
+      refreshUser()
+      refreshPacks()
+      window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+    })().finally(() => {
+      starterGrant.current = null
+    })
+
+    starterGrant.current = task
+    return task
   }, [user, refreshPacks, refreshUser, showToast])
 
   const finishTutorial = useCallback(
@@ -425,6 +457,18 @@ export function DeskPage() {
     window.addEventListener(TUTORIAL_CLOSE_BOOK_EVENT, handler)
     return () => window.removeEventListener(TUTORIAL_CLOSE_BOOK_EVENT, handler)
   }, [])
+
+  // 教程目标如果被收进抽屉，先放回桌面，避免遮罩高亮一个看不见的位置
+  useEffect(() => {
+    if (progress.tutorialDone) return
+    const needed: DeskObjectId[] = ["packs", "album", "deck", "battle"]
+    for (const id of needed) {
+      const item = items.find((entry) => entry.object === id && entry.stowed)
+      if (item) {
+        unstow(item.id, OBJECT_META[id].x, OBJECT_META[id].y)
+      }
+    }
+  }, [progress.tutorialStep, progress.tutorialDone, items, unstow])
 
   const itemsRef = useRef(items)
   useEffect(() => {
@@ -1613,7 +1657,7 @@ export function DeskPage() {
           slotRef={setInviteSlot}
         />
 
-        {(!user || progress.tutorialDone) && (
+        {(!user || isModuleUnlocked("invite", progress)) && (
           <InviteLetter
             user={
               user
@@ -1630,7 +1674,7 @@ export function DeskPage() {
             onStow={stowInvite}
             drawer={drawerRef}
             drawerSlot={inviteSlot}
-            forceVisible={!user || progress.tutorialDone}
+            forceVisible={!user || isModuleUnlocked("invite", progress)}
           />
         )}
 

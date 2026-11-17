@@ -18,7 +18,7 @@ import { db } from "../db/client"
 import { cards, userCards, users } from "../db/schema"
 import { invalidatePublicCardCache } from "./cards"
 import { heroCardDef } from "../hero"
-import { addPacks, grantStarterPacks } from "../packs/inventory"
+import { addPacks, getPackCounts, grantStarterPacks } from "../packs/inventory"
 import { heroIndex, heroPersonalBonus, heroStatsFromOsu } from "../../../../src/pool/hero"
 
 /** 登录时把 /me/osu 写成 hero-{id} 卡定义，并放进该用户的卡册 */
@@ -219,7 +219,14 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(401).send({ ok: false, error: { code: "unauthorized", message: "用户不存在" } })
     }
 
-    await db.update(users).set({ onboarded: true }).where(eq(users.id, userId))
+    // 条件更新保证并发点击“领取/跳过”时只有一个请求真正发礼包
+    const claimed = await db
+      .update(users)
+      .set({ onboarded: true })
+      .where(and(eq(users.id, userId), eq(users.onboarded, false)))
+      .returning({ id: users.id })
+    const starterGranted = claimed.length > 0
+
     if (user.osuId != null) {
       await db
         .update(cards)
@@ -228,13 +235,70 @@ export async function authRoutes(app: FastifyInstance) {
       invalidatePublicCardCache()
     }
 
-    if (!user.onboarded) {
+    if (starterGranted) {
       await grantStarterPacks(userId)
     }
 
     return {
       ok: true,
-      data: { onboarded: true, heroBonus: user.heroBonus, starterGranted: !user.onboarded },
+      data: { onboarded: true, heroBonus: user.heroBonus, starterGranted },
+    }
+  })
+
+  /**
+   * 回归玩家补包：已经领过 30 包但已经花完时，教程第一步会卡住。
+   * 只在“普通包为 0 且从未补发过”时发 1 包，避免无限刷包。
+   */
+  app.post("/auth/tutorial-pack", async (request, reply) => {
+    const userId = readSession(request.cookies[COOKIE_NAME])
+    if (!userId) {
+      return reply
+        .code(401)
+        .send({ ok: false, error: { code: "unauthorized", message: "未登录" } })
+    }
+    const [user] = await db
+      .select({
+        onboarded: users.onboarded,
+        tutorialPackClaimed: users.tutorialPackClaimed,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+    if (!user) {
+      return reply
+        .code(401)
+        .send({ ok: false, error: { code: "unauthorized", message: "用户不存在" } })
+    }
+    if (!user.onboarded) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "onboarding_required", message: "先完成账号引导" },
+      })
+    }
+
+    const counts = await getPackCounts(userId)
+    if (counts.normal > 0 || user.tutorialPackClaimed) {
+      return { ok: true, data: { granted: false, packs: counts } }
+    }
+
+    const claimed = await db
+      .update(users)
+      .set({ tutorialPackClaimed: true })
+      .where(
+        and(
+          eq(users.id, userId),
+          eq(users.tutorialPackClaimed, false),
+        ),
+      )
+      .returning({ id: users.id })
+    if (claimed.length === 0) {
+      return { ok: true, data: { granted: false, packs: counts } }
+    }
+
+    await addPacks(userId, { normal: 1 })
+    return {
+      ok: true,
+      data: { granted: true, packs: await getPackCounts(userId) },
     }
   })
 

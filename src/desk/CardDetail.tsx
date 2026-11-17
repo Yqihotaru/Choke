@@ -21,6 +21,9 @@ import {
   meltExpOf,
 } from "@/card/progression"
 
+import { useTutorialProgress } from "@/tutorial/store"
+import { isModuleUnlocked, unlockLevelOf } from "@/tutorial/unlocks"
+
 import {
   ascendCard,
   enhanceCard,
@@ -52,6 +55,8 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [essence, setEssence] = useState<number | null>(null)
   const [coins, setCoins] = useState<number | null>(null)
   const [price, setPrice] = useState("30")
+  const progress = useTutorialProgress(userId)
+  const marketUnlocked = isModuleUnlocked("market", progress)
 
   const face = useMemo(() => toFace(current), [current])
 
@@ -158,6 +163,10 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
 
   const list = async () => {
     if (!userId || busy !== null) return
+    if (!marketUnlocked) {
+      setMessage(`市场达到 Lv.${unlockLevelOf("market")} 解锁后才能上架`)
+      return
+    }
     const value = Number(price)
     if (!Number.isInteger(value) || value <= 0) {
       setMessage("价格必须是正整数")
@@ -322,26 +331,36 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
           {!readOnly && !hero && (
             <div className="card-detail__market">
               <div className="bk-label">市场 · 金币 {coins ?? "—"}</div>
-              <div className="card-detail__market-row">
-                <input
-                  className="bk-input bk-num"
-                  type="number"
-                  min={1}
-                  value={price}
-                  onChange={(event) => setPrice(event.target.value)}
-                  aria-label="上架价格"
-                />
-                <span>金币</span>
-                <button
-                  type="button"
-                  className="bk-btn"
-                  onClick={() => void list()}
-                  disabled={busy !== null}
-                >
-                  {busy === "list" ? "上架中…" : "上架市场"}
-                </button>
-              </div>
-              <p className="bk-note">上架后其他玩家可以购买；下架后继续留在卡册。</p>
+              {marketUnlocked ? (
+                <>
+                  <div className="card-detail__market-row">
+                    <input
+                      className="bk-input bk-num"
+                      type="number"
+                      min={1}
+                      value={price}
+                      onChange={(event) => setPrice(event.target.value)}
+                      aria-label="上架价格"
+                    />
+                    <span>金币</span>
+                    <button
+                      type="button"
+                      className="bk-btn"
+                      onClick={() => void list()}
+                      disabled={busy !== null}
+                    >
+                      {busy === "list" ? "上架中…" : "上架市场"}
+                    </button>
+                  </div>
+                  <p className="bk-note">
+                    上架后其他玩家可以购买；下架后继续留在卡册。
+                  </p>
+                </>
+              ) : (
+                <p className="bk-note">
+                  市场达到 Lv.{unlockLevelOf("market")} 解锁后才能上架。
+                </p>
+              )}
             </div>
           )}
 

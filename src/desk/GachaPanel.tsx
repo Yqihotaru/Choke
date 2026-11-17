@@ -271,6 +271,7 @@ export function GachaPanel({
     } catch (reason) {
       if (!isCurrent()) return
       const message = reason instanceof Error ? reason.message : "开包失败"
+      if (consumed) emitTutorialEvent("pack-opened")
       setError(
         consumed
           ? `卡包已开启，卡牌已收入卡册；${message}。请到卡册查看。`

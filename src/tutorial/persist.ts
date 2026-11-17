@@ -14,7 +14,8 @@ import { TUTORIAL_STEPS, type PlayerProgress, type TutorialStep } from "./types"
  * tutorial_done / progress_updated_at 五列即可；updatedAt 用毫秒时间戳，
  * 用来做“本地 / 远端谁更新”的合并。没有远端时完全不影响本地流程。
  */
-export const PROGRESS_SYNC_ENABLED = import.meta.env.VITE_PROGRESS_SYNC === "1"
+// 默认开启；本地调试后端时可用 VITE_PROGRESS_SYNC=0 临时关掉
+export const PROGRESS_SYNC_ENABLED = import.meta.env.VITE_PROGRESS_SYNC !== "0"
 
 export interface ServerProgress {
   level: number
