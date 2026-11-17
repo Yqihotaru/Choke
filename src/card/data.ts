@@ -228,6 +228,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: [],
     constellation: 0,
     no: 12,
+    serial: 3,
+    pulled: 41,
     skills: [...SKILL_SETS.tank.slice(0, 2)],
   }),
   makeCard({
@@ -246,6 +248,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["HD"],
     constellation: 1,
     no: 208,
+    serial: 17,
+    pulled: 17,
     skills: [...SKILL_SETS.support.slice(0, 2)],
   }),
   makeCard({
@@ -264,6 +268,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["SD"],
     constellation: 2,
     no: 1471,
+    serial: 128,
+    pulled: 302,
     skills: [...SKILL_SETS.warrior],
   }),
   makeCard({
@@ -282,6 +288,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["HD", "DT"],
     constellation: 3,
     no: 8320,
+    serial: 1,
+    pulled: 9,
     skills: [...SKILL_SETS.mage],
   }),
   makeCard({
@@ -300,6 +308,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["HD", "SD", "DT"],
     constellation: 4,
     no: 20155,
+    serial: 2,
+    pulled: 5,
     skills: [...SKILL_SETS.warrior],
   }),
   makeCard({
@@ -318,6 +328,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["DT"],
     constellation: 5,
     no: 48207,
+    serial: 1,
+    pulled: 1,
     skills: [...SKILL_SETS.support],
   }),
   makeCard({

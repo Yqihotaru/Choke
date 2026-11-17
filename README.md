@@ -72,6 +72,10 @@ pnpm import:cards    # 全量卡池
 
 数据在 `apps/api/.data/pg`。PGlite 是单进程单连接，不要同时开两个 API 或一边跑 API 一边导入。
 
+卡牌实例新增永久序号 `serial`，卡定义的 `pulled` 记录累计发行数；熔卡不回收序号，交易保留原号。发号和实例创建在同一事务中完成。
+
+API 启动会自动补列和旧卡序号：已有号码不变，未编号实例按实例 ID 顺序从现有最大号／累计发行数之后续号。重复启动不重新编号。旧版已删除的实例历史无法还原；`import --replace` 会清掉卡定义和计数，重启后只能从仍存实例恢复发行数下界，不能把它当作完整历史恢复工具。
+
 如果启动报 `invalid checkpoint` / `PANIC: could not locate a valid checkpoint record`，说明数据库在关机时被写坏了。直接删掉数据目录再导入即可（源卡池文件还在）：
 
 ```bash

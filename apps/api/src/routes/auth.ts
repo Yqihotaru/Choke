@@ -16,6 +16,7 @@ import {
 import { WEB_BASE } from "../auth/env"
 import { db } from "../db/client"
 import { cards, userCards, userPacks, users } from "../db/schema"
+import { grantCard } from "../gacha/open"
 import { invalidatePublicCardCache } from "./cards"
 import { heroCardDef } from "../hero"
 import { addPacks, getPackCounts, grantStarterPacks } from "../packs/inventory"
@@ -49,8 +50,19 @@ async function claimHeroCard(
 
   await db
     .insert(cards)
-    .values({ id, ...rest })
-    .onConflictDoUpdate({ target: cards.id, set: rest })
+    .values({
+      id,
+      ...rest,
+      // import --replace 会删掉本体定义；登录重建时补回仍存实例的最大号。
+      pulled: sql<number>`coalesce((
+        select max(${userCards.serial}) from ${userCards}
+        where ${userCards.cardId} = ${id}
+      ), 0)`,
+    })
+    .onConflictDoUpdate({
+      target: cards.id,
+      set: { ...rest, pulled: sql`greatest(${cards.pulled}, excluded.pulled)` },
+    })
 
   invalidatePublicCardCache()
   const [owned] = await db
@@ -60,7 +72,7 @@ async function claimHeroCard(
     .limit(1)
 
   if (grant && !owned) {
-    await db.insert(userCards).values({ userId, cardId: id })
+    await db.transaction((tx) => grantCard(tx, { userId, cardId: id }))
   }
 
 }
@@ -183,6 +195,7 @@ export async function authRoutes(app: FastifyInstance) {
           level: userCards.level,
           constellation: userCards.constellation,
           exp: userCards.exp,
+          serial: userCards.serial,
           foil: userCards.foil,
         })
         .from(userCards)

@@ -67,6 +67,8 @@ interface OpenResponse {
       fromPity: boolean
       userCardId: number
       foil: boolean
+      serial: number
+      pulled: number
     }[]
     pity: Pity
     packs?: Record<string, number>
@@ -237,6 +239,8 @@ export function GachaPanel({
               constellation: 0,
               exp: 0,
               foil: item.foil,
+              serial: item.serial,
+              pulled: detail.data.pulled ?? item.pulled,
             }),
             userCardId: item.userCardId,
           }

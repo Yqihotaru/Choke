@@ -6,8 +6,8 @@ import { requireSelf, requireSession } from "../auth/guard"
 import { DECK_SIZE } from "../config"
 import { db } from "../db/client"
 import { cards, userCards, users } from "../db/schema"
-import { invalidatePublicCardCache } from "./cards"
-import { openPack } from "../gacha/open"
+import { invalidatePublicCardCache, invalidatePublicCardRows } from "./cards"
+import { grantCard, openPack } from "../gacha/open"
 import { PACKS, PACK_SIZE, PITY, STARTER_PACKS, MYSTERY_PACK, type PackId } from "../gacha/packs"
 import {
   addPacks,
@@ -29,6 +29,7 @@ async function loadHero(userId: string, heroId: string) {
       level: userCards.level,
       constellation: userCards.constellation,
       exp: userCards.exp,
+      serial: userCards.serial,
       foil: userCards.foil,
     })
     .from(userCards)
@@ -209,7 +210,7 @@ export async function packRoutes(app: FastifyInstance) {
 
     await db.update(cards).set({ heroBonus: user.heroBonus }).where(eq(cards.id, heroId))
     invalidatePublicCardCache()
-    await db.insert(userCards).values({ userId, cardId: heroId })
+    await db.transaction((tx) => grantCard(tx, { userId, cardId: heroId }))
 
     return {
       ok: true,
@@ -271,6 +272,7 @@ export async function packRoutes(app: FastifyInstance) {
 
     try {
       const result = await openPack(userId, params.data.pool, body.data.count ?? PACK_SIZE)
+      invalidatePublicCardRows()
       return {
         ok: true,
         data: { ...result, packs: await getPackCounts(userId) },

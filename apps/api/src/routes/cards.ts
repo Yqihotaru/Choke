@@ -7,6 +7,7 @@ import {
   eq,
   getTableColumns,
   ilike,
+  inArray,
   isNotNull,
   isNull,
   notLike,
@@ -42,8 +43,14 @@ const publicCardsCache = new Map<string, PublicCardsPayload>()
 const publicCountCache = new Map<string, number>()
 const PUBLIC_CACHE_LIMIT = 64
 let publicStats: { total: number; byRarity: Record<string, number> } | null = null
-export function invalidatePublicCardCache() {
+let publicCardsRevision = 0
+/** 发行数变化只失效卡行；卡定义总数、稀有度统计仍可复用。 */
+export function invalidatePublicCardRows() {
   publicCardsCache.clear()
+  publicCardsRevision += 1
+}
+export function invalidatePublicCardCache() {
+  invalidatePublicCardRows()
   publicCountCache.clear()
   publicStats = null
 }
@@ -106,11 +113,15 @@ export async function cardRoutes(app: FastifyInstance) {
     const key = JSON.stringify(query)
     let data = publicCardsCache.get(key)
     if (!data) {
+      const revision = publicCardsRevision
       data = await queryPublicCards(query)
-      if (publicCardsCache.size >= PUBLIC_CACHE_LIMIT) {
-        publicCardsCache.delete(publicCardsCache.keys().next().value!)
+      // 发卡可能在查询期间提交，不能把发卡前的累计数重新写回缓存。
+      if (revision === publicCardsRevision) {
+        if (publicCardsCache.size >= PUBLIC_CACHE_LIMIT) {
+          publicCardsCache.delete(publicCardsCache.keys().next().value!)
+        }
+        publicCardsCache.set(key, data)
       }
-      publicCardsCache.set(key, data)
     }
     return { ok: true, data }
   })
@@ -311,12 +322,18 @@ export async function cardRoutes(app: FastifyInstance) {
         sort: z.enum(SORTS).default("recent"),
         limit: z.coerce.number().int().min(1).max(60).default(24),
         offset: z.coerce.number().int().min(0).default(0),
+        ids: z.string().optional(),
       })
       .parse(request.query)
 
     const filters = [eq(userCards.userId, userId)]
     if (query.rarity) filters.push(eq(cards.rarity, query.rarity))
     if (query.q) filters.push(ilike(cards.name, `%${query.q}%`))
+    // 按实例 id 刷新桌面卡面快照；所有筛选仍限制在当前用户名下。
+    if (query.ids) {
+      const ids = query.ids.split(",").map(Number).filter((id) => Number.isInteger(id) && id > 0)
+      filters.push(inArray(userCards.id, ids.length ? ids : [0]))
+    }
     const where = and(...filters)
 
     const orderBy =
@@ -335,6 +352,7 @@ export async function cardRoutes(app: FastifyInstance) {
         level: userCards.level,
         constellation: userCards.constellation,
         exp: userCards.exp,
+        serial: userCards.serial,
         foil: userCards.foil,
         obtainedAt: userCards.obtainedAt,
       })

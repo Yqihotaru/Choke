@@ -17,7 +17,7 @@ import {
   type PanelId,
 } from "./DeskBook"
 import { DragGhost } from "./DragGhost"
-import { toFace } from "./api"
+import { fetchUserCards, toFace } from "./api"
 import {
   ALBUM_HOVER_EVENT,
   BACKPACK_HOVER_EVENT,
@@ -70,7 +70,7 @@ import { PackOpener, type OriginRect } from "./opening/PackOpener"
 import "./desk.css"
 
 export function DeskPage() {
-  const { items, move, front, spawn, remove, reset, stow, unstow } = useDesk()
+  const { items, move, front, spawn, remove, reset, stow, unstow, refreshFaces } = useDesk()
   const stageRef = useRef<HTMLDivElement>(null)
   const [stageSize, setStageSize] = useState({ w: 1200, h: 700 })
   const [lifted, setLifted] = useState<{
@@ -384,6 +384,27 @@ export function DeskPage() {
   useEffect(() => {
     itemsRef.current = items
   }, [items])
+
+  const userId = user?.id
+  useEffect(() => {
+    if (!userId) return
+    const ids = [...new Set(itemsRef.current.flatMap((item) =>
+      item.kind === "card" && typeof item.card?.userCardId === "number" ? [item.card.userCardId] : []
+    ))]
+    if (!ids.length) return
+    const controller = new AbortController()
+    const chunks: number[][] = []
+    for (let i = 0; i < ids.length; i += 60) chunks.push(ids.slice(i, i + 60))
+    Promise.all(chunks.map((chunk) => fetchUserCards(userId, { ids: chunk, limit: 60, signal: controller.signal })))
+      .then((pages) => {
+        if (controller.signal.aborted) return
+        refreshFaces(new Map(pages.flatMap((page) => page.rows.map((row) => [row.userCardId, toFace(row)] as const))))
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) showToast("桌面卡牌刷新失败，请刷新重试")
+      })
+    return () => controller.abort()
+  }, [userId, refreshFaces, showToast])
 
   useEffect(() => {
     const ids = items.flatMap((item) =>
@@ -1284,6 +1305,8 @@ export function DeskPage() {
                 constellation: 0,
                 exp: 0,
                 foil: result.foil,
+                serial: result.serial,
+                pulled: row.pulled ?? result.pulled,
               }),
               result.userCardId
             )

@@ -1,4 +1,4 @@
-import { and, eq, notLike } from "drizzle-orm"
+import { and, eq, notLike, sql } from "drizzle-orm"
 
 import { db } from "../db/client"
 import { cards, packOpenings, pity, userCards } from "../db/schema"
@@ -37,6 +37,30 @@ export interface DrawnCard {
   userCardId: number
   /** 闪卡实例属性 */
   foil: boolean
+  /** 实例序号 / 发出这一张时的累计发行数 */
+  serial: number
+  pulled: number
+}
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+/** 所有新实例都从这里领号；只接受事务，计数和实例写入必须一起提交或回滚。 */
+export async function grantCard(
+  tx: Transaction,
+  values: { userId: string; cardId: string; foil?: boolean },
+): Promise<{ userCardId: number; serial: number }> {
+  const [counted] = await tx
+    .update(cards)
+    .set({ pulled: sql`${cards.pulled} + 1` })
+    .where(eq(cards.id, values.cardId))
+    .returning({ pulled: cards.pulled })
+  if (!counted) throw new Error(`卡不存在：${values.cardId}`)
+  const [inserted] = await tx
+    .insert(userCards)
+    .values({ ...values, serial: counted.pulled })
+    .returning({ id: userCards.id })
+  if (!inserted) throw new Error("卡实例写入失败")
+  return { userCardId: inserted.id, serial: counted.pulled }
 }
 
 export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) {
@@ -78,11 +102,8 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       const cardId = ids[Math.floor(random() * ids.length)]!
       const foil = random() < PACKS[pool].foilRate
 
-      const [inserted] = await tx
-        .insert(userCards)
-        .values({ userId, cardId, foil })
-        .returning({ id: userCards.id })
-      results.push({ cardId, rarity, fromPity, userCardId: inserted!.id, foil })
+      const { userCardId, serial } = await grantCard(tx, { userId, cardId, foil })
+      results.push({ cardId, rarity, fromPity, userCardId, foil, serial, pulled: serial })
     }
 
     await tx

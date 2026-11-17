@@ -34,6 +34,8 @@ export const cards = pgTable(
     /** 本体卡个人加成（basis point）；池卡为 0 */
     heroBonus: integer("hero_bonus").notNull().default(0),
     version: integer("version").notNull().default(1),
+    /** 累计发行数；每发一张 +1，给新实例当序号，不随熔卡减少 */
+    pulled: integer("pulled").notNull().default(0),
   },
   (table) => [
     index("cards_rarity_idx").on(table.rarity),
@@ -84,6 +86,8 @@ export const userCards = pgTable(
     exp: integer("exp").notNull().default(0),
     /** 闪卡：实例属性，任何卡都可能出 */
     foil: boolean("foil").notNull().default(false),
+    /** 这张卡的第几张：发行时从 cards.pulled 领号，熔卡、转手都不变 */
+    serial: integer("serial").notNull().default(0),
     mods: jsonb("mods").notNull().default(sql`'[]'::jsonb`),
     obtainedAt: timestamp("obtained_at", { withTimezone: true }).defaultNow().notNull(),
   },

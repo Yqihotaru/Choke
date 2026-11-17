@@ -14,6 +14,7 @@ const cardColumns = {
   level: userCards.level,
   constellation: userCards.constellation,
   exp: userCards.exp,
+  serial: userCards.serial,
   foil: userCards.foil,
 }
 
@@ -87,6 +88,8 @@ export async function marketRoutes(app: FastifyInstance) {
           level: row.level,
           constellation: row.constellation,
           exp: row.exp,
+          serial: row.serial,
+          pulled: row.pulled,
           foil: row.foil,
         },
       })),
@@ -135,6 +138,8 @@ export async function marketRoutes(app: FastifyInstance) {
           level: row.level,
           constellation: row.constellation,
           exp: row.exp,
+          serial: row.serial,
+          pulled: row.pulled,
           foil: row.foil,
         },
       })),

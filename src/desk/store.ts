@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react"
 
+import type { CardFaceData } from "@/card/types"
 import { onIdle } from "@/lib/idle"
 
 import { OBJECT_META, OBJECT_ORDER, type DeskObjectId } from "./objects"
@@ -44,6 +45,7 @@ type Action =
   | { type: "stow"; id: string }
   | { type: "unstow"; id: string; x: number; y: number }
   | { type: "reset" }
+  | { type: "faces"; faces: Map<number, CardFaceData> }
 
 /** 旧存档里的卡册 / 市场方块换成新物件；缺的物件补到默认位置；只认物件上的 stowed === true */
 function migrate(items: DeskItem[]): DeskItem[] {
@@ -109,6 +111,14 @@ function reducer(state: DeskState, action: Action): DeskState {
     }
     case "reset":
       return { version: 2, items: defaultItems() }
+    case "faces":
+      return {
+        ...state,
+        items: state.items.map((item) => {
+          const face = item.card?.userCardId == null ? undefined : action.faces.get(item.card.userCardId)
+          return face && item.card ? { ...item, card: { ...item.card, face, foil: face.foil } } : item
+        }),
+      }
   }
 }
 
@@ -155,6 +165,11 @@ export function useDesk() {
   /** 卡包用掉 / 卡收进卡册 / 卡放进卡组，都是把它从桌面拿走 */
   const remove = useCallback((id: string) => dispatch({ type: "remove", id }), [])
   const reset = useCallback(() => dispatch({ type: "reset" }), [])
+  /** 登录后用服务端最新实例数据刷新桌面保存的卡面快照。 */
+  const refreshFaces = useCallback(
+    (faces: Map<number, CardFaceData>) => dispatch({ type: "faces", faces }),
+    [],
+  )
   /** 物件收进抽屉 / 从抽屉拖回桌面（落在 x, y，放到最上面） */
   const stow = useCallback((id: string) => dispatch({ type: "stow", id }), [])
   const unstow = useCallback(
@@ -162,7 +177,7 @@ export function useDesk() {
     [],
   )
 
-  return { items: state.items, move, front, spawn, remove, reset, stow, unstow }
+  return { items: state.items, move, front, spawn, remove, reset, stow, unstow, refreshFaces }
 }
 
 export function cardsToItems(cards: CardData[], originX: number, originY: number): DeskItem[] {
