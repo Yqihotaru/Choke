@@ -45,6 +45,7 @@ export function CardEditor() {
   const [width, setWidth] = useState(420)
   const [guides, setGuides] = useState(false)
   const [faceStyle, setFaceStyle] = useState<string>(CARD_FACES[0].id)
+  const [theme, setTheme] = useState<"dark" | "light">("dark")
   const [holo, setHolo] = useState<Holo>("none")
   const [exported, setExported] = useState<string | null>(null)
 
@@ -104,7 +105,8 @@ export function CardEditor() {
     }
   }
 
-  const Face = getCardFace(faceStyle).Component
+  const selectedFace = getCardFace(faceStyle)
+  const Face = selectedFace.Component
 
   return (
     <div className="editor">
@@ -319,6 +321,16 @@ export function CardEditor() {
               ))}
             </select>
           </Field>
+          <Field label="主题">
+            <select
+              value={theme}
+              disabled={!selectedFace.supportsTheme}
+              onChange={(e) => setTheme(e.target.value as "dark" | "light")}
+            >
+              <option value="dark">暗色</option>
+              <option value="light">亮色</option>
+            </select>
+          </Field>
           <Field label={`宽度 ${width}px`}>
             <input
               type="range"
@@ -371,6 +383,7 @@ export function CardEditor() {
         >
           <Face
             card={card}
+            theme={theme}
             className={faceStyle === "current" && guides ? "cf--guides" : undefined}
           />
         </div>

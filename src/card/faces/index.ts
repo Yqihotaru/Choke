@@ -5,6 +5,7 @@ import type { CardFaceData, CardFaceMode } from "../types"
 export interface CardFaceProps {
   card: CardFaceData
   mode?: CardFaceMode
+  theme?: "dark" | "light"
   className?: string
 }
 
@@ -13,6 +14,8 @@ export interface CardFaceMeta {
   label: string
   note?: string
   order?: number
+  /** 这个卡面是否响应 theme="light" */
+  supportsTheme?: boolean
 }
 
 interface FaceModule {

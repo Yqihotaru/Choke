@@ -25,6 +25,7 @@ export const faceMeta = {
   label: "暗夜腰封 v5.2",
   note: "固定基线对齐 + 3D 星章 + 六边形 MOD + 明暗双主题",
   order: 45,
+  supportsTheme: true,
 } as const
 
 interface Props {

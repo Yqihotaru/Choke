@@ -9,15 +9,17 @@ function FaceView({
   style,
   card,
   mode,
+  theme,
   className,
 }: {
   style: string
   card: CardFaceData
   mode?: CardFaceMode
+  theme?: "dark" | "light"
   className?: string
 }) {
   const Face = getCardFace(style).Component
-  return <Face card={card} mode={mode} className={className} />
+  return <Face card={card} mode={mode} theme={theme} className={className} />
 }
 
 const HERO_SKILLS = [
@@ -63,6 +65,12 @@ export function CardLab() {
       ? legacy
       : CARD_FACES[0].id
   })
+  const [theme, setTheme] = useState<"dark" | "light">(
+    params.get("theme") === "light" ? "light" : "dark",
+  )
+  const currentFace = getCardFace(faceStyle)
+  const v52 = CARD_FACES.find((face) => face.id === "night-obi-52")
+  const V52 = v52?.Component
   const embed = params.get("embed") === "1"
 
   useEffect(() => {
@@ -86,7 +94,7 @@ export function CardLab() {
     if (embed) {
       return (
         <div style={{ width: "100%", padding: 0 }}>
-          <FaceView style={faceStyle} card={card} mode={battle ? "battle" : "collection"} />
+          <FaceView style={faceStyle} theme={theme} card={card} mode={battle ? "battle" : "collection"} />
         </div>
       )
     }
@@ -97,6 +105,7 @@ export function CardLab() {
           <FaceView style={faceStyle}
             card={card}
             mode={battle ? "battle" : "collection"}
+            theme={theme}
             className={guides ? "cf--guides" : undefined}
           />
         </div>
@@ -132,6 +141,19 @@ export function CardLab() {
           <button
             type="button"
             className="lab__toggle"
+            disabled={!currentFace.supportsTheme}
+            onClick={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}
+            title={
+              currentFace.supportsTheme
+                ? "切换当前卡面的明暗主题"
+                : "当前卡面没有明暗主题"
+            }
+          >
+            {theme === "dark" ? "主题：暗" : "主题：亮"}
+          </button>
+          <button
+            type="button"
+            className="lab__toggle"
             onClick={() => setBg((v) => (v === "dark" ? "light" : "dark"))}
           >
             {bg === "dark" ? "浅色底" : "深色底"}
@@ -148,13 +170,31 @@ export function CardLab() {
             const Face = face.Component
             return (
               <div className="lab__slot" style={{ width: 200 }} key={face.id}>
-                <Face card={DEMO_CARDS[4]} />
+                <Face card={DEMO_CARDS[4]} theme={theme} />
                 <span className="lab__tag">{face.label}</span>
               </div>
             )
           })}
         </div>
       </Section>
+
+      {V52 && (
+        <Section
+          label="v5.2 明暗主题"
+          note="同一个组件，theme='dark' / theme='light'。右上角按钮只影响当前选中的卡面。"
+        >
+          <div className="lab__row lab__row--baseline">
+            <div className="lab__slot" style={{ width: 220 }}>
+              <V52 card={DEMO_CARDS[4]} theme="dark" />
+              <span className="lab__tag">暗色</span>
+            </div>
+            <div className="lab__slot" style={{ width: 220 }}>
+              <V52 card={DEMO_CARDS[4]} theme="light" />
+              <span className="lab__tag">亮色</span>
+            </div>
+          </div>
+        </Section>
+      )}
 
       <Section
         label="七档材质"
@@ -163,7 +203,7 @@ export function CardLab() {
         <div className="lab__row">
           {DEMO_CARDS.map((card) => (
             <div className="lab__slot" style={{ width: 200 }} key={card.id}>
-              <FaceView style={faceStyle} card={card} />
+              <FaceView style={faceStyle} theme={theme} card={card} />
               <span className="lab__tag">{RARITY_LABEL[card.rarity]}</span>
             </div>
           ))}
@@ -174,7 +214,7 @@ export function CardLab() {
         <div className="lab__row">
           {DEMO_CARDS.map((card) => (
             <div className="lab__slot" style={{ width: 200 }} key={card.id}>
-              <FaceView style={faceStyle} card={{ ...card, id: `${card.id}-foil`, foil: true }} />
+              <FaceView style={faceStyle} theme={theme} card={{ ...card, id: `${card.id}-foil`, foil: true }} />
               <span className="lab__tag">{RARITY_LABEL[card.rarity]} · FOIL</span>
             </div>
           ))}
@@ -184,19 +224,19 @@ export function CardLab() {
       <Section label="三档尺寸" note="100px 上场 / 200px 卡册 / 360px 全屏详情">
         <div className="lab__row lab__row--baseline">
           <div className="lab__slot" style={{ width: 100 }}>
-            <FaceView style={faceStyle} card={DEMO_CARDS[4]} mode="battle" />
+            <FaceView style={faceStyle} theme={theme} card={DEMO_CARDS[4]} mode="battle" />
             <span className="lab__tag">100 · 战斗态</span>
           </div>
           <div className="lab__slot" style={{ width: 140 }}>
-            <FaceView style={faceStyle} card={DEMO_CARDS[4]} />
+            <FaceView style={faceStyle} theme={theme} card={DEMO_CARDS[4]} />
             <span className="lab__tag">140 · 卡册</span>
           </div>
           <div className="lab__slot" style={{ width: 220 }}>
-            <FaceView style={faceStyle} card={DEMO_CARDS[4]} />
+            <FaceView style={faceStyle} theme={theme} card={DEMO_CARDS[4]} />
             <span className="lab__tag">220 · 网格</span>
           </div>
           <div className="lab__slot" style={{ width: 360 }}>
-            <FaceView style={faceStyle} card={DEMO_CARDS[4]} />
+            <FaceView style={faceStyle} theme={theme} card={DEMO_CARDS[4]} />
             <span className="lab__tag">360 · 详情</span>
           </div>
         </div>
@@ -205,11 +245,11 @@ export function CardLab() {
       <Section label="战斗态" note="顶栏与底栏淡出，只留立绘与技能行；血量条在卡牌下方单独渲染">
         <div className="lab__row">
           <div className="lab__slot" style={{ width: 120 }}>
-            <FaceView style={faceStyle} card={DEMO_CARDS[3]} mode="battle" />
+            <FaceView style={faceStyle} theme={theme} card={DEMO_CARDS[3]} mode="battle" />
             <span className="lab__tag">120</span>
           </div>
           <div className="lab__slot" style={{ width: 200 }}>
-            <FaceView style={faceStyle} card={DEMO_CARDS[3]} mode="battle" />
+            <FaceView style={faceStyle} theme={theme} card={DEMO_CARDS[3]} mode="battle" />
             <span className="lab__tag">200</span>
           </div>
         </div>
@@ -219,7 +259,7 @@ export function CardLab() {
         <div className="lab__row">
           {HEROES.map((card) => (
             <div className="lab__slot" style={{ width: 160 }} key={card.id}>
-              <FaceView style={faceStyle} card={card} />
+              <FaceView style={faceStyle} theme={theme} card={card} />
               <span className="lab__tag">Lv {card.level}</span>
             </div>
           ))}
@@ -229,19 +269,19 @@ export function CardLab() {
       <Section label="字段取舍" note="技能少的卡插画窗自动拉高；被动不显示 AP；法系才有 MP；没装 MOD 的槽留空">
         <div className="lab__row">
           <div className="lab__slot" style={{ width: 200 }}>
-            <FaceView style={faceStyle} card={SOLO_SKILL} />
+            <FaceView style={faceStyle} theme={theme} card={SOLO_SKILL} />
             <span className="lab__tag">单技能</span>
           </div>
           <div className="lab__slot" style={{ width: 200 }}>
-            <FaceView style={faceStyle} card={DEMO_CARDS[3]} />
+            <FaceView style={faceStyle} theme={theme} card={DEMO_CARDS[3]} />
             <span className="lab__tag">法系 MP</span>
           </div>
           <div className="lab__slot" style={{ width: 200 }}>
-            <FaceView style={faceStyle} card={DEMO_CARDS[2]} />
+            <FaceView style={faceStyle} theme={theme} card={DEMO_CARDS[2]} />
             <span className="lab__tag">被动 + 三技能</span>
           </div>
           <div className="lab__slot" style={{ width: 200 }}>
-            <FaceView style={faceStyle} card={DEMO_CARDS[0]} />
+            <FaceView style={faceStyle} theme={theme} card={DEMO_CARDS[0]} />
             <span className="lab__tag">无 MOD</span>
           </div>
         </div>
