@@ -97,7 +97,7 @@ export function Pages({
     let cancelled = false
     if (!prepared.current) {
       if (preload || !book.active)
-        void root.querySelector<HTMLElement>(".cf")?.offsetWidth
+        void root.querySelector<HTMLElement>(".card-face")?.offsetWidth
       prepared.current = true
     }
     void Promise.all(

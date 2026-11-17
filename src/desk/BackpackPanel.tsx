@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL, battlePower } from "@/card/data"
 
 import {
@@ -231,7 +231,7 @@ export function BackpackPanel({
           <div className="backpack-detail">
             {showHero ? (
               <div className="backpack-detail__card">
-                <CardFace card={showHero} />
+                <GameCardFace card={showHero} />
               </div>
             ) : (
               <span className="backpack-detail__art" aria-hidden>

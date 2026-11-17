@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import {
   ELEMENT_COLOR,
   ELEMENT_LABEL,
@@ -193,7 +193,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
         </button>
 
         <div className="card-detail__face">
-          <CardFace card={face} />
+          <GameCardFace card={face} />
         </div>
 
         <div className="card-detail__info">
@@ -319,7 +319,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                         }
                       }}
                     >
-                      <CardFace card={toFace(row)} />
+                      <GameCardFace card={toFace(row)} />
                       <span>+{meltExpOf(row.rarity)} EXP</span>
                     </div>
                   ))}

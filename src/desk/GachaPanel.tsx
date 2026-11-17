@@ -6,7 +6,7 @@ import {
   type CSSProperties,
 } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import type { CardFaceData, Rarity } from "@/card/types"
 import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
@@ -439,7 +439,7 @@ export function GachaPanel({
                       }
                       title="拖到桌面"
                     >
-                      <CardFace card={card} />
+                      <GameCardFace card={card} />
                     </div>
                   ))}
             </div>

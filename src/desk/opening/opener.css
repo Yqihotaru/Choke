@@ -299,7 +299,7 @@
 .op-card__front {
   transform: rotateY(180deg);
 }
-.op-card__front .cf {
+.op-card__front .card-face {
   box-shadow:
     0 0 0 0.5px rgb(0 0 0 / 0.3),
     2px 4px 4px rgb(0 0 0 / 0.4),
@@ -393,7 +393,7 @@
 /* ---------- 卡背 ---------- */
 /* 品牌卡背，不随卡池变色：梅子色卡纸、粉色双线框、全彩标志，和卡包、图鉴封面同一个画法。
    保持中性，是为了让边缘透出的稀有度光（.op-card__glow）读得清。
-   尺寸、圆角、外投影和正面 .cf 一致，翻面时不跳。
+   尺寸、圆角、外投影和正面 .card-face 一致，翻面时不跳。
    注意：.cb 自己是 container，这条规则里不能用 cqw，只能用 % 和 px。 */
 .cb {
   container-type: inline-size;

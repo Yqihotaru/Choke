@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
 import { RARITIES, type Rarity } from "@/card/types"
 
@@ -285,7 +285,7 @@ export function PoolLab() {
                   key={card.osuId}
                   onClick={() => setSelected(card.osuId)}
                 >
-                  <CardFace card={faceFromPool(card)} />
+                  <GameCardFace card={faceFromPool(card)} />
                   <span className="lab__tag">
                     #{card.countryRank ?? "—"} {card.country} · {card.followerCount}
                   </span>
@@ -336,10 +336,10 @@ export function PoolLab() {
 
           <div className="pool-lab__detail-body">
             <div className="pool-lab__detail-card">
-              <CardFace card={faceFromPool(selectedCard)} />
+              <GameCardFace card={faceFromPool(selectedCard)} />
             </div>
             <div className="pool-lab__detail-card">
-              <CardFace card={faceFromPool(selectedCard, true)} />
+              <GameCardFace card={faceFromPool(selectedCard, true)} />
               <span className="lab__tag">
                 {selectedCard.hero
                   ? `指数 ${selectedCard.hero.index} · ${selectedCard.hero.band} · ${selectedCard.hero.power}`

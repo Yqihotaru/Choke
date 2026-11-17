@@ -17,7 +17,7 @@
   width: 44px;
   flex: 0 0 44px;
 }
-.market-own__face .cf {
+.market-own__face .card-face {
   width: 100%;
 }
 .market-own__text {
@@ -54,11 +54,11 @@
 .market-card__face {
   margin-bottom: 4px;
 }
-.market-card__face .cf {
+.market-card__face .card-face {
   width: 100%;
 }
 /* 卡面上的主页链接在这里不可点，免得误触跳走 */
-.market-card__face .cf a {
+.market-card__face .card-face a {
   pointer-events: none;
 }
 .market-card__name {

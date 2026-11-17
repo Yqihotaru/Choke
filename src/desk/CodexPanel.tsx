@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import { faceFromDef } from "@/card/def"
 import { RARITY_LABEL } from "@/card/data"
 import { RARITIES, type CardFaceData, type CardSkill, type Job, type Rarity } from "@/card/types"
@@ -453,7 +453,7 @@ const CodexSlot = memo(function CodexSlot({
         }
       }}
     >
-      <CardFace card={toFace(row)} eager />
+      <GameCardFace card={toFace(row)} eager />
     </div>
   )
 })

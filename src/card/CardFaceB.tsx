@@ -1,8 +1,9 @@
-import { memo, useMemo, type CSSProperties, type ReactNode } from "react"
+import { memo, useEffect, useMemo, type CSSProperties, type ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
 import { ElementGlyph, JobGlyph } from "./CardFace"
+import { CardFoil } from "./CardFoil"
 import {
   ELEMENT_COLOR,
   ELEMENT_LABEL,
@@ -16,6 +17,7 @@ import {
   nameSizeOf,
   starStates,
 } from "./data"
+import { trackCardLight } from "./light"
 import { motifTriangles } from "./motif"
 import type { CardFaceData, CardFaceMode } from "./types"
 import "./card-face-b.css"
@@ -37,6 +39,7 @@ interface Props {
  * 卡面 B（侧栏版）。左边一条稀有度色竖栏，全部横排：稀有度图标、MOD，底部 Lv、命座；
  * 右边从上到下：banner（世界排名水印）→ 头像压 banner 下沿 + 国旗排名 / pp / 大号 BP
  * → 名字 → 技能 → 底标。战斗态只留肖像和技能行。类名前缀 cfb（cb 已被开包卡背占用）。
+ * 闪卡膜是和肖像版共用的 CardFoil，跟着光标反光。
  */
 export const CardFaceB = memo(function CardFaceB({
   card,
@@ -47,6 +50,8 @@ export const CardFaceB = memo(function CardFaceB({
   className,
   eager = false,
 }: Props) {
+  useEffect(trackCardLight, [])
+
   const bp = battlePower(card)
   const flag = flagUrl(card.country)
   const banner = isCustomBanner(card.banner) ? card.banner : null
@@ -74,7 +79,7 @@ export const CardFaceB = memo(function CardFaceB({
 
   return (
     <div
-      className={cn("cfb", className)}
+      className={cn("cfb card-face", className)}
       data-rarity={card.rarity}
       data-tone={tone}
       data-version={version}
@@ -187,6 +192,8 @@ export const CardFaceB = memo(function CardFaceB({
           ) : null}
         </footer>
       </div>
+
+      {card.foil && <CardFoil seed={card.id} />}
     </div>
   )
 })

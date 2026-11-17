@@ -44,7 +44,7 @@
   width: 330px;
   flex: 0 0 330px;
 }
-.card-detail__face .cf {
+.card-detail__face .card-face {
   width: 100%;
 }
 .card-detail__info {
@@ -191,7 +191,7 @@
   outline: 2px solid var(--bk-osu);
   outline-offset: 2px;
 }
-.card-detail__fuel-card .cf {
+.card-detail__fuel-card .card-face {
   width: 100%;
   pointer-events: none;
 }

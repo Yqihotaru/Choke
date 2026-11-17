@@ -82,16 +82,16 @@
   outline: 2px solid var(--bk-osu);
   outline-offset: 2px;
 }
-.album-slot .cf a {
+.album-slot .card-face a {
   pointer-events: none;
 }
 /* 已经摆在桌面上的卡：压暗 */
-.album-slot.is-on-desk .cf {
+.album-slot.is-on-desk .card-face {
   opacity: 0.4;
   filter: saturate(0.45);
 }
 /* 从桌面飞回来落进这一格：亮起来，轻轻弹一下 */
-.album-slot[data-landing] .cf {
+.album-slot[data-landing] .card-face {
   animation: album-land 0.46s cubic-bezier(0.3, 1.4, 0.5, 1);
 }
 @keyframes album-land {
@@ -105,7 +105,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .album-slot[data-landing] .cf {
+  .album-slot[data-landing] .card-face {
     animation: none;
   }
 }

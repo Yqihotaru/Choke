@@ -211,7 +211,8 @@
 /* ---------- banner + 世界排名水印 ---------- */
 .cfb__banner {
   position: relative;
-  flex: 0 0 42cqw;
+  /* 头像压掉下沿 21cqw，露出 29cqw；技能区下方原本留白约 12cqw，吸收这 8cqw 下移 */
+  flex: 0 0 50cqw;
   overflow: hidden;
   background:
     radial-gradient(80% 90% at 70% 30%, color-mix(in srgb, var(--r) 45%, transparent), transparent 75%),
@@ -458,6 +459,8 @@
   overflow: hidden;
   font-size: 6.6cqw;
   font-weight: 700;
+  /* 卡面整体 line-height: 1；中文字形比 1em 高，overflow 裁省略号时会切掉上下沿 */
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -649,18 +652,9 @@
   font-size: 3.2cqw;
 }
 
-/* 闪卡膜与明暗主题、两个尺寸及战斗态共用，不截获卡面交互。 */
-.cfb[data-foil="true"]::after {
-  content: "";
-  position: absolute;
-  inset: 0;
+/* 闪卡膜（CardFoil）压过外框和侧栏；z-index 只给子层，混合模式才能混到卡面上。 */
+.cfb .card-foil > i {
   z-index: 4;
-  border-radius: inherit;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(115deg, #ff7eb655, #ffcf6e33 12%, #7dffb244 24%, #6ec8ff44 36%, #b98cff55 48%, #ff7eb655 60%);
-  mix-blend-mode: soft-light;
-  opacity: 0.6;
 }
 
 /* 战斗态：收起身份信息，保留大肖像和技能；两个尺寸版本共用。 */

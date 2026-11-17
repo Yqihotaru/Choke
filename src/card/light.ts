@@ -39,7 +39,7 @@ export function trackCardLight() {
 
     let card =
       event.target instanceof Element
-        ? event.target.closest<HTMLElement>(".cf")
+        ? event.target.closest<HTMLElement>(".card-face")
         : null
     // 小卡格里看不出反光，每帧重绘整张卡却很贵：最近的 data-no-light 祖先里不跟踪，data-light 可以重新打开
     if (card?.closest("[data-light], [data-no-light]")?.hasAttribute("data-no-light")) card = null
@@ -50,7 +50,7 @@ export function trackCardLight() {
         lit.dataset.lit = ""
         litSurfaces = Array.from(
           lit.querySelectorAll<HTMLElement>(
-            ".cf__bezel, .cf__sheen, .cf__portrait, .cf__emblem, .cf__rarity, .cf__foil > i:not(.cf__foil-sweep)"
+            ".cf__bezel, .cf__sheen, .cf__portrait, .cf__emblem, .cf__rarity, .card-foil > i:not(.card-foil__sweep)"
           )
         )
       }

@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, type CSSProperties } from "react"
+import { memo, useEffect, useMemo, type CSSProperties } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -11,11 +11,11 @@ import {
   battlePower,
   bpColor,
   flagUrl,
-  hashOf,
   isCustomBanner,
   nameSizeOf,
   starStates,
 } from "./data"
+import { CardFoil } from "./CardFoil"
 import { trackCardLight } from "./light"
 import { motifTriangles } from "./motif"
 import type { CardFaceData, CardFaceMode, Element, Job } from "./types"
@@ -34,27 +34,10 @@ interface Props {
  * 肖像窗（大头像居中；背景是本人自定义 banner 虚化压暗，没有或是 osu! 预设图时换成稀有度底纹；
  * 左上品阶、右上 Lv / 已装 MOD，底部命座星）→ 卡名（名字 + 国旗排名 · pp 一行）
  * → 技能行（1–3 行）→ 底栏（职业 + BP / 编号）。
- * 战斗态只留肖像窗和技能行。材质、烫印、闪卡膜全在 card-face.css。
+ * 战斗态只留肖像窗和技能行。材质、烫印在 card-face.css；闪卡膜是共用的 CardFoil。
  */
 export const CardFace = memo(function CardFace({ card, mode = "collection", className, eager = false }: Props) {
-  const cardRef = useRef<HTMLDivElement>(null)
-
   useEffect(trackCardLight, [])
-
-  useEffect(() => {
-    if (!card.foil || !cardRef.current) return
-
-    const element = cardRef.current
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) element.dataset.sweepVisible = ""
-        else delete element.dataset.sweepVisible
-      },
-      { rootMargin: "100px" }
-    )
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [card.foil])
 
   const bp = battlePower(card)
   const flag = flagUrl(card.country)
@@ -70,8 +53,7 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
 
   return (
     <div
-      ref={cardRef}
-      className={cn("cf", className)}
+      className={cn("cf card-face", className)}
       data-rarity={card.rarity}
       data-mode={mode}
       data-foil={card.foil ? "true" : undefined}
@@ -252,21 +234,7 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
         </footer>
       </div>
 
-      {card.foil && (
-        <div
-          className="cf__foil"
-          // 每张闪卡的扫光错开，不会整页一起闪
-          style={{ "--seed": hashOf(card.id) % 97 } as CSSProperties}
-          aria-hidden
-        >
-          <i className="cf__foil-film" />
-          <i className="cf__foil-dodge" />
-          <i className="cf__foil-glitter" />
-          <i className="cf__foil-glitter cf__foil-glitter--b" />
-          <i className="cf__foil-glare" />
-          <i className="cf__foil-sweep" />
-        </div>
-      )}
+      {card.foil && <CardFoil seed={card.id} />}
     </div>
   )
 })

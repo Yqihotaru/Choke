@@ -1,6 +1,6 @@
 import { memo } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import { expToNextLevel } from "@/tutorial/store"
 
 import { toFace, type ApiUserCard } from "./api"
@@ -17,7 +17,7 @@ export const DeskCard = memo(function DeskCard({
   hero: ApiUserCard | null
 }) {
   return (
-    <CardFace card={card.isHero && hero ? toFace(hero) : cardFromDesk(card)} />
+    <GameCardFace card={card.isHero && hero ? toFace(hero) : cardFromDesk(card)} />
   )
 })
 

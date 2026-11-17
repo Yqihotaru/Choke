@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
 import { faceFromDef } from "@/card/def"
 
@@ -38,9 +38,14 @@ export function AccountPanel({
       <Pages
         left={
           <>
-            <p className="account-text">用 osu! 登录后，抽到的卡和保底进度都会绑定到你的账号。</p>
+            <p className="account-text">
+              用 osu! 登录后，抽到的卡和保底进度都会绑定到你的账号。
+            </p>
             <div className="login-actions">
-              <a className="bk-btn bk-btn--main account-action" href="/auth/osu">
+              <a
+                className="bk-btn bk-btn--main account-action"
+                href="/auth/osu"
+              >
                 用 osu! 登录
               </a>
               <GuestLoginButton className="bk-btn bk-btn--ghost account-action" />
@@ -73,7 +78,9 @@ export function AccountPanel({
             <div className="account-id__text">
               <b>{username}</b>
               <span className="bk-num">
-                {publicId != null ? `CHOKE ID #${String(publicId).padStart(6, "0")}` : userId}
+                {publicId != null
+                  ? `CHOKE ID #${String(publicId).padStart(6, "0")}`
+                  : userId}
               </span>
             </div>
           </div>
@@ -110,7 +117,11 @@ export function AccountPanel({
             </div>
           </div>
 
-          <button type="button" className="bk-btn bk-btn--danger account-action account-logout" onClick={onLogout}>
+          <button
+            type="button"
+            className="bk-btn bk-btn--danger account-action account-logout"
+            onClick={onLogout}
+          >
             退出登录
           </button>
         </>
@@ -120,7 +131,7 @@ export function AccountPanel({
           <div className="account-hero">
             <span className="bk-label">我的本体卡</span>
             <div className="account-hero__face">
-              <CardFace
+              <GameCardFace
                 card={faceFromDef(
                   {
                     id: hero.id,
@@ -139,7 +150,7 @@ export function AccountPanel({
                     skills: hero.skills,
                     version: 1,
                   },
-                  { level: hero.level, constellation: hero.constellation },
+                  { level: hero.level, constellation: hero.constellation }
                 )}
               />
             </div>
@@ -147,13 +158,17 @@ export function AccountPanel({
             <span className="account-hero__meta">
               {RARITY_LABEL[hero.rarity]} · Lv.{hero.level}
             </span>
-            <p className="bk-note">本体卡已绑定，抽到自己的镜像卡会单独记进卡册。</p>
+            <p className="bk-note">
+              本体卡已绑定，抽到自己的镜像卡会单独记进卡册。
+            </p>
           </div>
         ) : (
           <div className="account-hero">
             <span className="bk-label">我的本体卡</span>
             <div className="account-hero__face bk-slot">?</div>
-            <b className="account-hero__name">{isGuest ? "游客没有本体卡" : "还没有获得"}</b>
+            <b className="account-hero__name">
+              {isGuest ? "游客没有本体卡" : "还没有获得"}
+            </b>
             <p className="bk-note">
               {isGuest
                 ? "本体卡来自 osu! 账号数据。用 osu! 登录后会生成你的本体卡；游客期间的卡包和进度不会转移。"
@@ -164,7 +179,11 @@ export function AccountPanel({
                 用 osu! 登录
               </a>
             ) : (
-              <button type="button" className="bk-btn bk-btn--main" onClick={onOpenBackpack}>
+              <button
+                type="button"
+                className="bk-btn bk-btn--main"
+                onClick={onOpenBackpack}
+              >
                 去背包开神秘卡包
               </button>
             )}

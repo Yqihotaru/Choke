@@ -131,7 +131,7 @@
 }
 /* 密集卡格只让悬停的卡扫光；桌面和详情保持原来的动态材质。
    保留合成层，暂停后不切换混合模式的绘制路径，静态膜的颜色也不变。 */
-.book__spread:is(.album-panel, .deck-panel, .codex-panel) .cf__foil-sweep {
+.book__spread:is(.album-panel, .deck-panel, .codex-panel) .card-foil__sweep {
   animation-play-state: paused;
   will-change: transform;
 }
@@ -139,14 +139,14 @@
 .book:not([data-turn]) > .book__panel.is-active
   > .book__spread:is(.album-panel, .deck-panel, .codex-panel):not([data-preload])
   :is(.album-slot, .deck-slot, .deck-pick, .codex-slot):hover
-  .cf__foil-sweep {
+  .card-foil__sweep {
   animation-play-state: running;
 }
 
 /* VT 的新快照是实时纹理；膜上的扫光不能在翻页时把卡面逐帧重绘。 */
-.book[data-turn] .cf__foil-sweep,
-.book__panel:not(.is-active) .cf__foil-sweep,
-.book__spread[data-preload] .cf__foil-sweep {
+.book[data-turn] .card-foil__sweep,
+.book__panel:not(.is-active) .card-foil__sweep,
+.book__spread[data-preload] .card-foil__sweep {
   animation-play-state: paused;
 }
 .book__spread {
