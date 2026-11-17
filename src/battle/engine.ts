@@ -88,7 +88,25 @@ function enemyIntentsFor(turn: number): EnemyIntent[] {
   return intents.map((intent, i) => ({ ...intent, id: `${intent.id}-${turn}-${i}` }))
 }
 
-function makeEnemy(): Enemy {
+/** 教程首战用的练习幽灵：血量、攻防都压低，保证新号也能在 1–2 回合内打完 */
+export const TUTORIAL_ENEMY_HP = 3600
+
+function makeEnemy(tutorial = false): Enemy {
+  if (tutorial) {
+    return {
+      name: "谱面幽灵（教学）",
+      element: "dark",
+      hp: TUTORIAL_ENEMY_HP,
+      hpMax: TUTORIAL_ENEMY_HP,
+      atk: 180,
+      int: 200,
+      def: 500,
+      intents: enemyIntentsFor(1),
+      statuses: [],
+      stun: 0,
+      buff: 0,
+    }
+  }
   return {
     name: "谱面幽灵",
     element: "dark",
@@ -110,8 +128,12 @@ export interface BattleInputCard {
   face: CardFaceData
 }
 
-export function createBattle(inputs: BattleInputCard[]): BattleState {
+export function createBattle(
+  inputs: BattleInputCard[],
+  options: { tutorial?: boolean } = {},
+): BattleState {
   const cards = inputs.map((input) => createBattleCard(input.face, input.uid, input.cardId))
+  const enemy = makeEnemy(options.tutorial)
   return {
     turn: 1,
     phase: "player",
@@ -121,8 +143,8 @@ export function createBattle(inputs: BattleInputCard[]): BattleState {
     defenseTier: 0,
     cards,
     supports: [],
-    enemy: makeEnemy(),
-    log: ["战斗开始", "敌方：谱面幽灵"],
+    enemy,
+    log: [options.tutorial ? "教学战开始" : "战斗开始", `敌方：${enemy.name}`],
     selectedCard: null,
   }
 }

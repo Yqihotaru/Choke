@@ -1,4 +1,11 @@
-import { memo, useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react"
 
 import { CardFace } from "@/card/CardFace"
 import { RARITY_LABEL } from "@/card/data"
@@ -31,7 +38,11 @@ interface Result {
   error: string | null
 }
 
-export const AlbumPanel = memo(function AlbumPanel({ userId }: { userId: string | null }) {
+export const AlbumPanel = memo(function AlbumPanel({
+  userId,
+}: {
+  userId: string | null
+}) {
   const book = useBook()
   const [rarity, setRarity] = useState("")
   const [query, setQuery] = useState("")
@@ -45,7 +56,10 @@ export const AlbumPanel = memo(function AlbumPanel({ userId }: { userId: string 
 
   useEffect(() => {
     const onHover = (event: Event) => {
-      rootRef.current?.classList.toggle("is-drop-target", !!(event as CustomEvent<boolean>).detail)
+      rootRef.current?.classList.toggle(
+        "is-drop-target",
+        !!(event as CustomEvent<boolean>).detail
+      )
     }
     window.addEventListener(ALBUM_HOVER_EVENT, onHover)
     return () => window.removeEventListener(ALBUM_HOVER_EVENT, onHover)
@@ -59,23 +73,32 @@ export const AlbumPanel = memo(function AlbumPanel({ userId }: { userId: string 
     return () => window.clearTimeout(timer)
   }, [query])
 
-  const key = userId ? `${userId}|${rarity}|${deferredQuery}|${sort}|${book.revision}` : ""
-  const loadPage = useCallback(async (index: number, signal: AbortSignal): Promise<Result> => {
-    try {
-      const data = await fetchUserCards(userId!, {
-        rarity: rarity || undefined,
-        q: deferredQuery || undefined,
-        sort,
-        page: index,
-        limit: PAGE_SIZE,
-        signal,
-      })
-      return { rows: data.rows, total: data.total, error: null }
-    } catch (error) {
-      if (signal.aborted) throw error
-      return { rows: [], total: 0, error: error instanceof Error ? error.message : "加载失败" }
-    }
-  }, [userId, rarity, deferredQuery, sort])
+  const key = userId
+    ? `${userId}|${rarity}|${deferredQuery}|${sort}|${book.revision}`
+    : ""
+  const loadPage = useCallback(
+    async (index: number, signal: AbortSignal): Promise<Result> => {
+      try {
+        const data = await fetchUserCards(userId!, {
+          rarity: rarity || undefined,
+          q: deferredQuery || undefined,
+          sort,
+          page: index,
+          limit: PAGE_SIZE,
+          signal,
+        })
+        return { rows: data.rows, total: data.total, error: null }
+      } catch (error) {
+        if (signal.aborted) throw error
+        return {
+          rows: [],
+          total: 0,
+          error: error instanceof Error ? error.message : "加载失败",
+        }
+      }
+    },
+    [userId, rarity, deferredQuery, sort]
+  )
   const cachedPages = usePageCache(key, page, PAGE_SIZE, loadPage)
   const currentResult = cachedPages.find(([index]) => index === page)?.[1]
   if (currentResult && !currentResult.error) {
@@ -106,148 +129,177 @@ export const AlbumPanel = memo(function AlbumPanel({ userId }: { userId: string 
   }
 
   const renderPage = (index: number, result: Result | null) => {
-  const ready = result !== null
-  const total = result?.total ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const filtered = !!(rarity || deferredQuery)
-  const rows = result && !result.error ? result.rows : null
-  const empty = ready && rows !== null && rows.length === 0
+    const ready = result !== null
+    const total = result?.total ?? 0
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+    const filtered = !!(rarity || deferredQuery)
+    const rows = result && !result.error ? result.rows : null
+    const empty = ready && rows !== null && rows.length === 0
 
-  const slot = (row: ApiUserCard) => (
-    <AlbumSlot key={row.userCardId} row={row} onDesk={deskIds.has(row.userCardId)} onDetail={openDetail} />
-  )
+    const slot = (row: ApiUserCard) => (
+      <AlbumSlot
+        key={row.userCardId}
+        row={row}
+        onDesk={deskIds.has(row.userCardId)}
+        onDetail={openDetail}
+      />
+    )
 
-  /** 一页卡位：有卡放卡，剩下的补空位；items 为 null 时（加载中）全是空位 */
-  const sheet = (items: ApiUserCard[] | null, size: number, label: string) => (
-    <FitArea
-      className="album-sheet"
-      cols={COLS}
-      rows={size / COLS}
-      gapX={SHEET_GAP}
-      gapY={SHEET_GAP}
-      style={{ "--cols": COLS, "--rows": size / COLS } as CSSProperties}
-    >
-      <div
-        className="album-sheet__grid"
-        style={{ visibility: ready ? undefined : "hidden" }}
-        aria-label={ready && items ? label : "加载中"}
-        aria-busy={ready ? undefined : true}
+    /** 一页卡位：有卡放卡，剩下的补空位；items 为 null 时（加载中）全是空位 */
+    const sheet = (
+      items: ApiUserCard[] | null,
+      size: number,
+      label: string
+    ) => (
+      <FitArea
+        className="album-sheet"
+        cols={COLS}
+        rows={size / COLS}
+        gapX={SHEET_GAP}
+        gapY={SHEET_GAP}
+        style={{ "--cols": COLS, "--rows": size / COLS } as CSSProperties}
       >
-        {items?.map(slot)}
-        {Array.from({ length: size - (items?.length ?? 0) }, (_, i) => (
-          <div className="bk-slot" key={`empty-${i}`} aria-hidden />
-        ))}
-      </div>
-      <div className="album-sheet__grid album-sheet__loading" style={{ visibility: ready ? "hidden" : undefined }} aria-hidden>
-        {Array.from({ length: size }, (_, i) => <div className="bk-slot" key={i} />)}
-      </div>
-    </FitArea>
-  )
+        <div
+          className="album-sheet__grid"
+          style={{ visibility: ready ? undefined : "hidden" }}
+          aria-label={ready && items ? label : "加载中"}
+          aria-busy={ready ? undefined : true}
+        >
+          {items?.map(slot)}
+          {Array.from({ length: size - (items?.length ?? 0) }, (_, i) => (
+            <div className="bk-slot" key={`empty-${i}`} aria-hidden />
+          ))}
+        </div>
+        <div
+          className="album-sheet__grid album-sheet__loading"
+          style={{ visibility: ready ? "hidden" : undefined }}
+          aria-hidden
+        >
+          {Array.from({ length: size }, (_, i) => (
+            <div className="bk-slot" key={i} />
+          ))}
+        </div>
+      </FitArea>
+    )
 
-  return (
-    <Pages
-      key={index}
-      rootRef={index === page ? rootRef : undefined}
-      preload={index !== page}
-      className={rootClass}
-      ready={ready}
-      pager={
-        totalPages > 1
-          ? { page: Math.min(index + 1, totalPages), pages: totalPages, onPage: (next) => setPage(next - 1) }
-          : undefined
-      }
-      left={
-        <>
-          <div className="album-head">
-            <div className="bk-stat">
-              <b>{ready ? total : "—"}</b>
-              <span>{filtered ? "张符合筛选" : "张已收集"}</span>
+    return (
+      <Pages
+        key={index}
+        rootRef={index === page ? rootRef : undefined}
+        preload={index !== page}
+        className={rootClass}
+        ready={ready}
+        tutorialId={index === page ? "album-grid" : undefined}
+        pager={
+          totalPages > 1
+            ? {
+                page: Math.min(index + 1, totalPages),
+                pages: totalPages,
+                onPage: (next) => setPage(next - 1),
+              }
+            : undefined
+        }
+        left={
+          <>
+            <div className="album-head">
+              <div className="bk-stat">
+                <b>{ready ? total : "—"}</b>
+                <span>{filtered ? "张符合筛选" : "张已收集"}</span>
+              </div>
+              <input
+                className="bk-input album-head__search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="搜索玩家名"
+                aria-label="搜索玩家名"
+              />
+              <select
+                className="bk-select"
+                value={sort}
+                onChange={(event) => {
+                  setSort(event.target.value as CardSort)
+                  setPage(0)
+                }}
+                aria-label="排序"
+              >
+                <option value="recent">最近获得</option>
+                <option value="rarity">稀有度</option>
+                <option value="pp">pp</option>
+                <option value="name">名字</option>
+              </select>
             </div>
-            <input
-              className="bk-input album-head__search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索玩家名"
-              aria-label="搜索玩家名"
-            />
-            <select
-              className="bk-select"
-              value={sort}
-              onChange={(event) => {
-                setSort(event.target.value as CardSort)
-                setPage(0)
-              }}
-              aria-label="排序"
-            >
-              <option value="recent">最近获得</option>
-              <option value="rarity">稀有度</option>
-              <option value="pp">pp</option>
-              <option value="name">名字</option>
-            </select>
-          </div>
 
-          <div className="bk-chips" role="group" aria-label="稀有度筛选">
-            <button
-              type="button"
-              className="bk-chip"
-              aria-pressed={rarity === ""}
-              onClick={() => {
-                setRarity("")
-                setPage(0)
-              }}
-            >
-              全部
-            </button>
-            {RARITIES.map((item) => (
+            <div className="bk-chips" role="group" aria-label="稀有度筛选">
               <button
-                key={item}
                 type="button"
                 className="bk-chip"
-                aria-pressed={rarity === item}
+                aria-pressed={rarity === ""}
                 onClick={() => {
-                  setRarity(item)
+                  setRarity("")
                   setPage(0)
                 }}
               >
-                <i style={{ "--c": RARITY_COLOR[item] } as CSSProperties} aria-hidden />
-                {RARITY_LABEL[item]}
+                全部
               </button>
-            ))}
-          </div>
-
-          {!empty && !(ready && result.error) && sheet(rows && rows.slice(0, LEFT_SIZE), LEFT_SIZE, "卡册左页")}
-        </>
-      }
-      right={
-        <>
-          {ready && result.error ? (
-            <div className="bk-empty bk-error album-fill">{result.error}</div>
-          ) : empty ? (
-            <div className="bk-empty album-fill">
-              <span>{filtered ? "没有符合条件的卡" : "还没有卡"}</span>
-              {!filtered && (
-                <a className="bk-btn bk-btn--main" href="/?panel=packs">
-                  去开包
-                </a>
-              )}
+              {RARITIES.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className="bk-chip"
+                  aria-pressed={rarity === item}
+                  onClick={() => {
+                    setRarity(item)
+                    setPage(0)
+                  }}
+                >
+                  <i
+                    style={{ "--c": RARITY_COLOR[item] } as CSSProperties}
+                    aria-hidden
+                  />
+                  {RARITY_LABEL[item]}
+                </button>
+              ))}
             </div>
-          ) : (
-            sheet(rows && rows.slice(LEFT_SIZE), PAGE_SIZE - LEFT_SIZE, "卡册右页")
-          )}
 
-          {book.active && index === page && detail && (
-            <CardDetail
-              key={detail.userCardId}
-              card={detail}
-              userId={userId}
-              onClose={() => setDetail(null)}
-              onChanged={book.invalidate}
-            />
-          )}
-        </>
-      }
-    />
-  )
+            {!empty &&
+              !(ready && result.error) &&
+              sheet(rows && rows.slice(0, LEFT_SIZE), LEFT_SIZE, "卡册左页")}
+          </>
+        }
+        right={
+          <>
+            {ready && result.error ? (
+              <div className="bk-empty bk-error album-fill">{result.error}</div>
+            ) : empty ? (
+              <div className="bk-empty album-fill">
+                <span>{filtered ? "没有符合条件的卡" : "还没有卡"}</span>
+                {!filtered && (
+                  <a className="bk-btn bk-btn--main" href="/?panel=packs">
+                    去开包
+                  </a>
+                )}
+              </div>
+            ) : (
+              sheet(
+                rows && rows.slice(LEFT_SIZE),
+                PAGE_SIZE - LEFT_SIZE,
+                "卡册右页"
+              )
+            )}
+
+            {book.active && index === page && detail && (
+              <CardDetail
+                key={detail.userCardId}
+                card={detail}
+                userId={userId}
+                onClose={() => setDetail(null)}
+                onChanged={book.invalidate}
+              />
+            )}
+          </>
+        }
+      />
+    )
   }
   return cachedPages.map(([index, result]) => renderPage(index, result))
 })
@@ -268,10 +320,12 @@ const AlbumSlot = memo(function AlbumSlot({
       data-user-card={row.userCardId}
       role="button"
       tabIndex={0}
-      onPointerDown={(event) => startCardPointerDrag(event, {
-        card: toDeskCard(face, row.userCardId),
-        userCardId: row.userCardId,
-      })}
+      onPointerDown={(event) =>
+        startCardPointerDrag(event, {
+          card: toDeskCard(face, row.userCardId),
+          userCardId: row.userCardId,
+        })
+      }
       onClick={() => onDetail(row)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {

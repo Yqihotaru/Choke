@@ -29,12 +29,31 @@ import { GachaPanel, type PoolId } from "./GachaPanel"
 import { MarketPanel } from "./MarketPanel"
 import { OBJECT_META } from "./objects"
 import { DESK_ADD_CARDS_EVENT, PACKS_CHANGED_EVENT } from "./drag"
+import { isModuleUnlocked, unlockLevelOf } from "@/tutorial/unlocks"
 import "./book.css"
 
-export type PanelId = "codex" | "album" | "deck" | "backpack" | "battle" | "packs" | "market" | "about" | "account"
+export type PanelId =
+  | "codex"
+  | "album"
+  | "deck"
+  | "backpack"
+  | "battle"
+  | "packs"
+  | "market"
+  | "about"
+  | "account"
 
-export const PANEL_IDS: PanelId[] = ["codex", "album", "deck", "backpack", "packs", "battle", "market", "account", "about"]
-
+export const PANEL_IDS: PanelId[] = [
+  "codex",
+  "album",
+  "deck",
+  "backpack",
+  "packs",
+  "battle",
+  "market",
+  "account",
+  "about",
+]
 
 export interface DeskBookHandle {
   /** 播完合上动画再通知外面关掉 */
@@ -57,6 +76,10 @@ interface Props {
   onClose: () => void
   onLogout?: () => void
   onHeroClaimed?: () => void
+  /** 玩家等级 / 教程毕业状态：桌面物件和书本标签页共用同一套解锁规则 */
+  level: number
+  tutorialDone: boolean
+  onLocked?: (id: PanelId, need: number) => void
 }
 
 const POS_KEY = "choke-book-pos"
@@ -72,8 +95,12 @@ interface Box {
 
 function readPos(): { x: number; y: number } {
   try {
-    const raw = JSON.parse(localStorage.getItem(POS_KEY) ?? "null") as { x?: unknown; y?: unknown } | null
-    if (raw && typeof raw.x === "number" && typeof raw.y === "number") return { x: raw.x, y: raw.y }
+    const raw = JSON.parse(localStorage.getItem(POS_KEY) ?? "null") as {
+      x?: unknown
+      y?: unknown
+    } | null
+    if (raw && typeof raw.x === "number" && typeof raw.y === "number")
+      return { x: raw.x, y: raw.y }
   } catch {
     // 坏数据当没有
   }
@@ -101,6 +128,9 @@ export function DeskBook({
   onClose,
   onLogout,
   onHeroClaimed,
+  level,
+  tutorialDone,
+  onLocked,
 }: Props) {
   const [gachaPool, setGachaPool] = useState<PoolId>("normal")
   const [leaving, setLeaving] = useState(false)
@@ -121,7 +151,9 @@ export function DeskBook({
     left: number
     top: number
   } | null>(null)
-  const selectFaces = useRef<{ select: HTMLSelectElement; face: HTMLElement }[]>([])
+  const selectFaces = useRef<
+    { select: HTMLSelectElement; face: HTMLElement }[]
+  >([])
   const restoreSelects = useCallback(() => {
     for (const { select, face } of selectFaces.current) {
       select.hidden = false
@@ -149,14 +181,20 @@ export function DeskBook({
     }
   }, [invalidate])
   const whenIdle = useCallback(async () => {
-    while (activeTransition.current) await activeTransition.current.finished.catch(() => {})
+    while (activeTransition.current)
+      await activeTransition.current.finished.catch(() => {})
   }, [])
   useEffect(() => {
     let cancelled = false
     const cancel = onIdle(() => {
-      void whenIdle().then(() => { if (!cancelled) setWarmed(true) })
+      void whenIdle().then(() => {
+        if (!cancelled) setWarmed(true)
+      })
     }, 500)
-    return () => { cancelled = true; cancel() }
+    return () => {
+      cancelled = true
+      cancel()
+    }
   }, [whenIdle])
 
   /**
@@ -166,7 +204,11 @@ export function DeskBook({
    */
   const turn = useCallback((dir: 1 | -1, update: () => void) => {
     const el = bookRef.current
-    if (!el || !document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (
+      !el ||
+      !document.startViewTransition ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       update()
       return
     }
@@ -199,9 +241,18 @@ export function DeskBook({
     for (const resolve of state.waiters.splice(0)) resolve()
   }, [])
 
+  const unlocked = (id: PanelId) =>
+    isModuleUnlocked(id, { level, tutorialDone })
+
   const selectPanel = (id: PanelId) => {
     if (id === panel) return
-    turn(PANEL_IDS.indexOf(id) > PANEL_IDS.indexOf(panel) ? 1 : -1, () => onSelect(id))
+    if (!unlocked(id)) {
+      onLocked?.(id, unlockLevelOf(id))
+      return
+    }
+    turn(PANEL_IDS.indexOf(id) > PANEL_IDS.indexOf(panel) ? 1 : -1, () =>
+      onSelect(id)
+    )
   }
 
   const close = useCallback(() => {
@@ -224,7 +275,7 @@ export function DeskBook({
       delete document.documentElement.dataset.bookTurn
       restoreSelects()
     },
-    [restoreSelects],
+    [restoreSelects]
   )
 
   // 展开动画的原点放在物件上
@@ -237,7 +288,8 @@ export function DeskBook({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !document.querySelector(".card-detail")) close()
+      if (event.key === "Escape" && !document.querySelector(".card-detail"))
+        close()
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
@@ -247,7 +299,13 @@ export function DeskBook({
   const bounds = (): Box => {
     const el = bookRef.current
     const stage = el?.offsetParent as HTMLElement | null
-    if (!el || !stage) return { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity }
+    if (!el || !stage)
+      return {
+        minX: -Infinity,
+        maxX: Infinity,
+        minY: -Infinity,
+        maxY: Infinity,
+      }
     const x = (stage.clientWidth + el.offsetWidth) / 2 - KEEP
     return {
       minX: -x,
@@ -277,7 +335,9 @@ export function DeskBook({
     if (event.button !== 0) return
     const target = event.target as HTMLElement
     const onCover = target === event.currentTarget
-    const onGrip = !!target.closest("[data-book-grip]") && !target.closest("button, a, input, select, textarea")
+    const onGrip =
+      !!target.closest("[data-book-grip]") &&
+      !target.closest("button, a, input, select, textarea")
     if (!onCover && !onGrip) return
     event.currentTarget.setPointerCapture(event.pointerId)
     const rect = event.currentTarget.getBoundingClientRect()
@@ -297,7 +357,8 @@ export function DeskBook({
     // 先批量读尺寸，再改 DOM，避免每个控件都让卡页同步布局一次。
     const faces = Array.from(
       event.currentTarget.querySelectorAll<HTMLSelectElement>("select")
-    ).filter((select) => !select.hidden && select.getClientRects().length > 0)
+    )
+      .filter((select) => !select.hidden && select.getClientRects().length > 0)
       .map((select) => {
         const style = getComputedStyle(select)
         const face = document.createElement("span")
@@ -321,14 +382,20 @@ export function DeskBook({
     const d = drag.current
     if (!d || d.id !== event.pointerId) return
     d.next = {
-      x: Math.max(d.box.minX, Math.min(d.box.maxX, d.start.x + event.clientX - d.x)),
-      y: Math.max(d.box.minY, Math.min(d.box.maxY, d.start.y + event.clientY - d.y)),
+      x: Math.max(
+        d.box.minX,
+        Math.min(d.box.maxX, d.start.x + event.clientX - d.x)
+      ),
+      y: Math.max(
+        d.box.minY,
+        Math.min(d.box.maxY, d.start.y + event.clientY - d.y)
+      ),
     }
     // 合成层落在半个物理像素上会被整张重采样，卡面细线和小字就糊了：把书的左上角对齐到物理像素
     const dpr = window.devicePixelRatio || 1
-    const snap = (origin: number, delta: number) => Math.round((origin + delta) * dpr) / dpr - origin
-    event.currentTarget.style.translate =
-      `${snap(d.left, d.next.x - d.start.x)}px ${snap(d.top, d.next.y - d.start.y)}px`
+    const snap = (origin: number, delta: number) =>
+      Math.round((origin + delta) * dpr) / dpr - origin
+    event.currentTarget.style.translate = `${snap(d.left, d.next.x - d.start.x)}px ${snap(d.top, d.next.y - d.start.y)}px`
   }
   const onGripUp = (event: PointerEvent<HTMLElement>) => {
     const d = drag.current
@@ -342,27 +409,44 @@ export function DeskBook({
     localStorage.setItem(POS_KEY, JSON.stringify(d.next))
   }
 
-
   const meta = OBJECT_META[panel]
   const current = PANEL_IDS.indexOf(panel)
-  const api = useMemo<BookApi>(() => ({
-    eyebrow: meta.sub,
-    title: meta.label,
-    active: true,
-    revision,
-    invalidate,
-    close,
-    turn,
-    setReady,
-    whenIdle,
-  }), [meta.sub, meta.label, close, turn, setReady, whenIdle, revision, invalidate])
+  const api = useMemo<BookApi>(
+    () => ({
+      eyebrow: meta.sub,
+      title: meta.label,
+      active: true,
+      revision,
+      invalidate,
+      close,
+      turn,
+      setReady,
+      whenIdle,
+    }),
+    [
+      meta.sub,
+      meta.label,
+      close,
+      turn,
+      setReady,
+      whenIdle,
+      revision,
+      invalidate,
+    ]
+  )
 
   return (
     <aside
       ref={bookRef}
       className={`book ${leaving ? "is-leaving" : ""}`}
       data-object={panel}
-      style={{ "--book-from": from, "--bx": `${initialPos.x}px`, "--by": `${initialPos.y}px` } as CSSProperties}
+      style={
+        {
+          "--book-from": from,
+          "--bx": `${initialPos.x}px`,
+          "--by": `${initialPos.y}px`,
+        } as CSSProperties
+      }
       aria-label={meta.label}
       onPointerDown={onGripDown}
       onPointerMove={onGripMove}
@@ -370,66 +454,96 @@ export function DeskBook({
       onPointerCancel={onGripUp}
     >
       <nav className="book__tabs" aria-label="切换">
-        {PANEL_IDS.map((id, index) => (
-          <button
-            key={id}
-            type="button"
-            className="book__tab"
-            data-object={id}
-            data-side={index < current ? "left" : "right"}
-            style={{ "--i": index } as CSSProperties}
-            aria-current={panel === id ? "page" : undefined}
-            onClick={() => selectPanel(id)}
-          >
-            {OBJECT_META[id].label}
-          </button>
-        ))}
+        {PANEL_IDS.map((id, index) => {
+          const locked = !unlocked(id)
+          return (
+            <button
+              key={id}
+              type="button"
+              className="book__tab"
+              data-object={id}
+              data-side={index < current ? "left" : "right"}
+              data-tutorial-id={`book-tab-${id}`}
+              data-locked={locked || undefined}
+              data-lock-level={locked ? unlockLevelOf(id) : undefined}
+              style={{ "--i": index } as CSSProperties}
+              aria-current={panel === id ? "page" : undefined}
+              aria-disabled={locked || undefined}
+              onClick={() => selectPanel(id)}
+            >
+              {OBJECT_META[id].label}
+            </button>
+          )
+        })}
       </nav>
 
-      <BookContext value={api}>
-        {(warmed || panel === "codex") && (
-          <CachedPanel id="codex" active={panel === "codex"} api={api}>
-            <CodexPanel userId={userId} />
-          </CachedPanel>
-        )}
-        {(warmed || panel === "album") && (
-          <CachedPanel id="album" active={panel === "album"} api={api}>
-            <AlbumPanel userId={userId} />
-          </CachedPanel>
-        )}
-        {(warmed || panel === "deck") && (
-          <CachedPanel id="deck" active={panel === "deck"} api={api}>
-            <DeckPanel userId={userId} />
-          </CachedPanel>
-        )}
-        {panel === "backpack" && (
-          <BackpackPanel
-            userId={userId}
-            onOpenGacha={(pool) => {
-              setGachaPool(pool as PoolId)
-              selectPanel("packs")
-            }}
-            onHeroClaimed={onHeroClaimed}
-          />
-        )}
-        {panel === "battle" && <BattlePanel userId={userId} onOpenDeck={() => selectPanel("deck")} />}
-        {panel === "packs" && <GachaPanel userId={userId} initialPool={gachaPool} />}
-        {panel === "market" && <MarketPanel userId={userId} onOpenAlbum={() => selectPanel("album")} />}
-        {panel === "about" && <AboutPanel />}
-        {panel === "account" && (
-          <AccountPanel
-            userId={userId}
-            username={username}
-            publicId={publicId}
-            avatarUrl={avatarUrl}
-            essence={essence}
-            coins={coins}
-            hero={hero}
-            onLogout={onLogout}
-            onOpenBackpack={() => selectPanel("backpack")}
-          />
-        )}
-      </BookContext>
+      {unlocked(panel) ? (
+        <BookContext value={api}>
+          {(warmed || panel === "codex") && (
+            <CachedPanel id="codex" active={panel === "codex"} api={api}>
+              <CodexPanel userId={userId} />
+            </CachedPanel>
+          )}
+          {(warmed || panel === "album") && (
+            <CachedPanel id="album" active={panel === "album"} api={api}>
+              <AlbumPanel userId={userId} />
+            </CachedPanel>
+          )}
+          {(warmed || panel === "deck") && (
+            <CachedPanel id="deck" active={panel === "deck"} api={api}>
+              <DeckPanel userId={userId} />
+            </CachedPanel>
+          )}
+          {panel === "backpack" && (
+            <BackpackPanel
+              userId={userId}
+              onOpenGacha={(pool) => {
+                setGachaPool(pool as PoolId)
+                selectPanel("packs")
+              }}
+              onHeroClaimed={onHeroClaimed}
+            />
+          )}
+          {panel === "battle" && (
+            <BattlePanel
+              userId={userId}
+              onOpenDeck={() => selectPanel("deck")}
+            />
+          )}
+          {panel === "packs" && (
+            <GachaPanel userId={userId} initialPool={gachaPool} />
+          )}
+          {panel === "market" && (
+            <MarketPanel
+              userId={userId}
+              onOpenAlbum={() => selectPanel("album")}
+            />
+          )}
+          {panel === "about" && <AboutPanel />}
+          {panel === "account" && (
+            <AccountPanel
+              userId={userId}
+              username={username}
+              publicId={publicId}
+              avatarUrl={avatarUrl}
+              essence={essence}
+              coins={coins}
+              hero={hero}
+              onLogout={onLogout}
+              onOpenBackpack={() => selectPanel("backpack")}
+            />
+          )}
+        </BookContext>
+      ) : (
+        <div className="book__locked" role="note">
+          <span className="book__eyebrow">LOCKED</span>
+          <h2>{meta.label}</h2>
+          <p>达到 Lv.{unlockLevelOf(panel)} 解锁</p>
+          <button type="button" className="bk-btn bk-btn--main" onClick={close}>
+            先合上书
+          </button>
+        </div>
+      )}
 
       <CardDragLayer root={bookRef} />
     </aside>
@@ -437,29 +551,58 @@ export function DeskBook({
 }
 
 /** opacity 不改变邻页的布局或继承样式；inert 把隐藏的控件、拖放目标和弹窗隔离。 */
-function CachedPanel({ id, active, api, children }: { id: PanelId; active: boolean; api: BookApi; children: ReactNode }) {
+function CachedPanel({
+  id,
+  active,
+  api,
+  children,
+}: {
+  id: PanelId
+  active: boolean
+  api: BookApi
+  children: ReactNode
+}) {
   const ready = useRef(true)
   const reportReady = api.setReady
-  const setReady = useCallback((value: boolean) => {
-    ready.current = value
-    if (active) reportReady(value)
-  }, [active, reportReady])
+  const setReady = useCallback(
+    (value: boolean) => {
+      ready.current = value
+      if (active) reportReady(value)
+    },
+    [active, reportReady]
+  )
   useLayoutEffect(() => {
     if (active) reportReady(ready.current)
   }, [active, reportReady])
-  const context = useMemo<BookApi>(() => ({
-    active,
-    title: OBJECT_META[id].label,
-    eyebrow: OBJECT_META[id].sub,
-    close: api.close,
-    turn: api.turn,
-    whenIdle: api.whenIdle,
-    revision: api.revision,
-    invalidate: api.invalidate,
-    setReady,
-  }), [id, active, api.close, api.turn, api.whenIdle, api.revision, api.invalidate, setReady])
+  const context = useMemo<BookApi>(
+    () => ({
+      active,
+      title: OBJECT_META[id].label,
+      eyebrow: OBJECT_META[id].sub,
+      close: api.close,
+      turn: api.turn,
+      whenIdle: api.whenIdle,
+      revision: api.revision,
+      invalidate: api.invalidate,
+      setReady,
+    }),
+    [
+      id,
+      active,
+      api.close,
+      api.turn,
+      api.whenIdle,
+      api.revision,
+      api.invalidate,
+      setReady,
+    ]
+  )
   return (
-    <div className={`book__panel ${active ? "is-active" : ""}`} inert={!active} aria-hidden={!active || undefined}>
+    <div
+      className={`book__panel ${active ? "is-active" : ""}`}
+      inert={!active}
+      aria-hidden={!active || undefined}
+    >
       <BookContext value={context}>{children}</BookContext>
     </div>
   )

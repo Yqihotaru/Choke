@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { battlePower } from "@/card/data"
+import { useTutorialProgress } from "@/tutorial/store"
 
 import { fetchDeck, toFace, type ApiDeck } from "./api"
 import { Pages } from "./BookPages"
@@ -14,6 +15,7 @@ export function BattlePanel({
   userId: string | null
   onOpenDeck: () => void
 }) {
+  const tutorial = useTutorialProgress(userId)
   const [deck, setDeck] = useState<ApiDeck | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,7 +25,8 @@ export function BattlePanel({
     fetchDeck(userId, controller.signal)
       .then((data) => setDeck(data))
       .catch((reason: unknown) => {
-        if (reason instanceof DOMException && reason.name === "AbortError") return
+        if (reason instanceof DOMException && reason.name === "AbortError")
+          return
         setError(reason instanceof Error ? reason.message : "加载卡组失败")
       })
     return () => controller.abort()
@@ -51,13 +54,21 @@ export function BattlePanel({
     return (
       <Pages
         left={<p className="bk-note">带上卡组，和练习对手打一场。</p>}
-        right={<div className={`bk-empty ${error ? "bk-error" : ""}`}>{error ?? "加载卡组…"}</div>}
+        right={
+          <div className={`bk-empty ${error ? "bk-error" : ""}`}>
+            {error ?? "加载卡组…"}
+          </div>
+        }
       />
     )
   }
 
   const cards = deck.slots.flatMap((slot) => (slot.card ? [slot.card] : []))
-  const totalBp = cards.reduce((sum, card) => sum + battlePower(toFace(card)), 0)
+  const totalBp = cards.reduce(
+    (sum, card) => sum + battlePower(toFace(card)),
+    0
+  )
+  const tutorialBattleStep = tutorial.tutorialStep === "battle-view"
 
   const enemy = (
     <div className="bk-box battle-enemy">
@@ -70,13 +81,17 @@ export function BattlePanel({
     </div>
   )
 
-  if (cards.length === 0) {
+  if (cards.length === 0 && !tutorialBattleStep) {
     return (
       <Pages
         left={
           <div className="bk-empty">
             <span>卡组里还没有卡</span>
-            <button type="button" className="bk-btn bk-btn--main" onClick={onOpenDeck}>
+            <button
+              type="button"
+              className="bk-btn bk-btn--main"
+              onClick={onOpenDeck}
+            >
               去卡组
             </button>
           </div>
@@ -112,11 +127,17 @@ export function BattlePanel({
               <div className="bk-row" key={card.userCardId}>
                 <span className="battle-row__no bk-num">{index + 1}</span>
                 <span className="battle-row__name">{card.name}</span>
-                <span className="bk-num">{battlePower(toFace(card)).toLocaleString("en-US")}</span>
+                <span className="bk-num">
+                  {battlePower(toFace(card)).toLocaleString("en-US")}
+                </span>
               </div>
             ))}
           </div>
-          <button type="button" className="bk-btn bk-btn--ghost battle-edit" onClick={onOpenDeck}>
+          <button
+            type="button"
+            className="bk-btn bk-btn--ghost battle-edit"
+            onClick={onOpenDeck}
+          >
             调整卡组
           </button>
         </>
@@ -125,12 +146,28 @@ export function BattlePanel({
         <>
           {enemy}
           <p className="bk-note">
-            开局 2 AP，靠 Combo、防御档位和技能应对敌方预告的意图。技能按 14 个子职业分池，卡组不满 7
-            张也可以出战。
+            开局 2 AP，靠 Combo、防御档位和技能应对敌方预告的意图。技能按 14
+            个子职业分池，卡组不满 7 张也可以出战。
           </p>
-          <a className="bk-btn bk-btn--main bk-btn--block battle-start" href="/battle">
-            进入战斗
-          </a>
+          {tutorialBattleStep ? (
+            <>
+              <p className="bk-note">教学战 · 不计排名，不会掉 pp。</p>
+              <a
+                className="bk-btn bk-btn--main bk-btn--block battle-start"
+                data-tutorial-id="battle-tutorial-start"
+                href="/battle?tutorial=1"
+              >
+                进入教学对战
+              </a>
+            </>
+          ) : (
+            <a
+              className="bk-btn bk-btn--main bk-btn--block battle-start"
+              href="/battle"
+            >
+              进入战斗
+            </a>
+          )}
         </>
       }
     />

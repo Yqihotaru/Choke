@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react"
+import { useEffect, useRef, useState, type CSSProperties } from "react"
 
 import { CardFace } from "@/card/CardFace"
 import {
@@ -7,8 +7,9 @@ import {
 } from "@/card/data"
 import { fetchDeck, toFace, type ApiDeck } from "@/desk/api"
 import { GuestLoginButton } from "@/desk/GuestLoginButton"
+import { advanceTutorial, useTutorialProgress } from "@/tutorial/store"
 
-import { cloneBattle, createBattle, endTurn, enemyDamageTier, playSkill, raiseDefense, teamHpOf } from "./engine"
+import { TUTORIAL_ENEMY_HP, cloneBattle, createBattle, endTurn, enemyDamageTier, playSkill, raiseDefense, teamHpOf } from "./engine"
 import type { BattleState } from "./types"
 import "./battle.css"
 
@@ -24,6 +25,14 @@ export function BattlePage() {
   const [error, setError] = useState<string | null>(null)
   const [battle, setBattle] = useState<BattleState | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const tutorialMode =
+    new URLSearchParams(window.location.search).get("tutorial") === "1"
+  const progress = useTutorialProgress(user?.id ?? null)
+  const tutorialRun = tutorialMode && progress.tutorialStep === "battle-view"
+  const tutorialFinished =
+    tutorialMode && progress.tutorialStep === "battle-result"
+  const tutorialBattle = tutorialRun || tutorialFinished
+  const rewarded = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -59,6 +68,14 @@ export function BattlePage() {
       cancelled = true
     }
   }, [user])
+
+  // 教学战结束（胜负都算）后直接把教程推进到“结算”步骤
+  useEffect(() => {
+    if (!tutorialRun || !battle || rewarded.current) return
+    if (battle.phase !== "won" && battle.phase !== "lost") return
+    rewarded.current = true
+    advanceTutorial("battle-result", 70)
+  }, [battle, tutorialRun])
 
   if (loading) return <div className="battle-page battle-page--center">加载中…</div>
   if (!user) {
@@ -101,18 +118,24 @@ export function BattlePage() {
           cardId: card.id,
           face: toFace(card),
         })),
+        { tutorial: tutorialRun },
       ),
     )
   }
 
   if (!battle) {
     const totalBp = cards.reduce((sum, card) => sum + card.level, 0)
+    const enemyHp = tutorialRun ? TUTORIAL_ENEMY_HP : 24000
     return (
       <div className="battle-page battle-page--center">
         <div className="battle-gate">
-          <span>PVE · PROTOTYPE</span>
-          <h1>练习对手 · 谱面幽灵</h1>
-          <p>当前 {cards.length} 张主队卡、AP 2 起始、Combo、防御档位和敌方意图预告。</p>
+          <span>{tutorialRun ? "TUTORIAL · PRACTICE" : "PVE · PROTOTYPE"}</span>
+          <h1>{tutorialRun ? "教学对手" : "练习对手"} · 谱面幽灵</h1>
+          <p>
+            {tutorialRun
+              ? "新手首战：敌人血量与攻防都调低了，正常出牌就能赢。"
+              : "当前卡组、AP 2 起始、Combo、防御档位和敌方意图预告。"}
+          </p>
           <div className="battle-gate__stats">
             <div>
               <span>卡组</span>
@@ -120,7 +143,7 @@ export function BattlePage() {
             </div>
             <div>
               <span>敌人 HP</span>
-              <b>24,000</b>
+              <b>{enemyHp.toLocaleString("en-US")}</b>
             </div>
             <div>
               <span>总等级</span>
@@ -128,7 +151,7 @@ export function BattlePage() {
             </div>
           </div>
           <button type="button" onClick={start}>
-            开始战斗
+            {tutorialRun ? "开始教学战斗" : "开始战斗"}
           </button>
           <a href="/">回桌面</a>
         </div>
@@ -169,8 +192,8 @@ export function BattlePage() {
           ‹ 桌面
         </a>
         <div className="battle-top__title">
-          <span>PVE · 练习对手</span>
-          <b>谱面幽灵</b>
+          <span>{tutorialBattle ? "TUTORIAL · 教学对手" : "PVE · 练习对手"}</span>
+          <b>{battle.enemy.name}</b>
         </div>
         <div className="battle-top__stats">
           <div className="battle-stat">
@@ -364,11 +387,21 @@ export function BattlePage() {
             </div>
           ) : (
             <div className="battle-result">
-              <b>{battle.phase === "won" ? "战斗胜利" : "战斗失败"}</b>
+              <b>
+                {tutorialFinished
+                  ? "教学战结束"
+                  : battle.phase === "won"
+                    ? "战斗胜利"
+                    : "战斗失败"}
+              </b>
               <div>
-                <button type="button" onClick={start}>
-                  再来一场
-                </button>
+                {tutorialFinished ? (
+                  <a href="/">返回桌面继续教程</a>
+                ) : (
+                  <button type="button" onClick={start}>
+                    {tutorialRun ? "再试一次" : "再来一场"}
+                  </button>
+                )}
                 <a href="/">回桌面</a>
               </div>
             </div>

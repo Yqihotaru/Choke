@@ -10,6 +10,8 @@ export interface DealButtonState {
   pool: PackPool
   available: boolean
   pressing: boolean
+  /** 每次按下 +1；用作 key，强制重挂按钮让 CSS 动画一定从头播 */
+  pressId: number
   onPool: (pool: PackPool) => void
   onPressed: () => void
 }
@@ -21,13 +23,28 @@ interface Props {
   /** 是否有卡正悬在它上面（卡册收卡 / 纸盒收卡包） */
   dropping: boolean
   deal: DealButtonState
+  /** 等级未到：保持物件可见，但盖一层封条 / 等级徽章 */
+  locked?: boolean
+  unlockLevel?: number
 }
 
 /** 桌上的实物。全部用 CSS 画，光从左上来；点一下翻开对应面板，按钮例外。 */
-export function DeskObject({ id, username, avatarUrl, dropping, deal }: Props) {
+export function DeskObject({
+  id,
+  username,
+  avatarUrl,
+  dropping,
+  deal,
+  locked = false,
+  unlockLevel,
+}: Props) {
   const meta = OBJECT_META[id]
   return (
-    <div className={`obj ${dropping ? "is-dropping" : ""}`} data-object={id}>
+    <div
+      className={`obj ${dropping ? "is-dropping" : ""} ${locked ? "is-locked" : ""}`}
+      data-object={id}
+      data-locked={locked || undefined}
+    >
       {id === "codex" && (
         <div className="obj-book">
           <i className="obj-book__pages" />
@@ -80,7 +97,12 @@ export function DeskObject({ id, username, avatarUrl, dropping, deal }: Props) {
             <em>CHOKE STAFF</em>
             <div className="obj-badge__photo">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="" draggable={false} referrerPolicy="no-referrer" />
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  draggable={false}
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 (username ?? "?").slice(0, 1).toUpperCase()
               )}
@@ -158,10 +180,18 @@ export function DeskObject({ id, username, avatarUrl, dropping, deal }: Props) {
           style={{ "--pool": POOL_META[deal.pool].color } as CSSProperties}
         >
           <div
+            key={deal.pressId}
             className={`obj-deal__button ${deal.pressing ? "is-pressing" : ""}`}
             onAnimationEnd={deal.onPressed}
           />
           <PoolPicker pool={deal.pool} onPool={deal.onPool} />
+        </div>
+      )}
+
+      {locked && (
+        <div className="obj-lock" aria-hidden>
+          <i className="obj-lock__seal">SEALED</i>
+          <b className="obj-lock__badge">Lv.{unlockLevel ?? 1} 解锁</b>
         </div>
       )}
     </div>
@@ -169,7 +199,13 @@ export function DeskObject({ id, username, avatarUrl, dropping, deal }: Props) {
 }
 
 /** 发牌按钮下的卡池下拉框：平时只显示当前卡池，点开向下展开六个卡池。 */
-function PoolPicker({ pool, onPool }: { pool: PackPool; onPool: (pool: PackPool) => void }) {
+function PoolPicker({
+  pool,
+  onPool,
+}: {
+  pool: PackPool
+  onPool: (pool: PackPool) => void
+}) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
 
@@ -203,7 +239,10 @@ function PoolPicker({ pool, onPool }: { pool: PackPool; onPool: (pool: PackPool)
         aria-label={`当前${POOL_META[pool].label}，切换卡池`}
         onClick={() => setOpen((v) => !v)}
       >
-        <i className="obj-pick__dot" style={{ background: POOL_META[pool].color }} />
+        <i
+          className="obj-pick__dot"
+          style={{ background: POOL_META[pool].color }}
+        />
         <span>{POOL_META[pool].label}</span>
         <i className="obj-pick__arrow" />
       </button>
@@ -221,7 +260,10 @@ function PoolPicker({ pool, onPool }: { pool: PackPool; onPool: (pool: PackPool)
                 setOpen(false)
               }}
             >
-              <i className="obj-pick__dot" style={{ background: POOL_META[it].color }} />
+              <i
+                className="obj-pick__dot"
+                style={{ background: POOL_META[it].color }}
+              />
               <span>{POOL_META[it].label}</span>
             </button>
           ))}

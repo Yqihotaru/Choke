@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type RefObject } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react"
 import { createPortal, flushSync } from "react-dom"
 
 import { cellScale, type DeskDrawerHandle } from "./DeskDrawer"
@@ -45,9 +53,12 @@ interface Props {
   drawer: RefObject<DeskDrawerHandle | null>
   /** 抽屉里给信留的位置，收着时信封经 portal 画进去 */
   drawerSlot: HTMLElement | null
+  /** 教程毕业后即使新手礼包已领，也把邀请函留在桌上（日常任务入口） */
+  forceVisible?: boolean
 }
 
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), Math.max(min, max))
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), Math.max(min, max))
 
 /** 信封本身：拆过就露出半截信纸、没有火漆 */
 function EnvelopeBody({ opened }: { opened: boolean }) {
@@ -74,7 +85,20 @@ function EnvelopeBody({ opened }: { opened: boolean }) {
  * 按住能拖，扔出桌面会重新从底边弹回来；登录用户第一次这么干会解锁一个本地成就，信的内容也跟着变。
  * 拖到桌沿的抽屉上就收进去，收着时不再自动弹出；在抽屉里点它照样拆开读，拖出来落在松手的地方。
  */
-export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClaimed, onOpenBackpack, stowed, onStow, drawer, drawerSlot }: Props) {
+export function InviteLetter({
+  user,
+  ready,
+  stageSize,
+  stageRef,
+  onToast,
+  onClaimed,
+  onOpenBackpack,
+  stowed,
+  onStow,
+  drawer,
+  drawerSlot,
+  forceVisible = false,
+}: Props) {
   const [opened, setOpened] = useState(readInviteOpened)
   const [tossed, setTossed] = useState(() => hasAchievement("invite-toss"))
   const [pos, setPos] = useState(() => readInvitePos() ?? DEFAULT_POS)
@@ -114,11 +138,12 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
   }, [stowed, onStow, openLetter])
 
   const needed = ready && (!user || !user.onboarded)
-  if (!stowed && (!ready || !(needed || opened || summoned))) return null
+  if (!stowed && (!ready || !(needed || opened || summoned || forceVisible)))
+    return null
 
   const left = clamp(pos.x * stageSize.w, 8, stageSize.w - ENV_W - 8)
   const top = clamp(pos.y * stageSize.h, 8, stageSize.h - ENV_H - 22)
-  const rising = rise && (needed || pops > 0)
+  const rising = rise && (needed || pops > 0 || forceVisible)
 
   // 开封翻盖向上伸出本体高度的 62%；留出旋转边距后，按完整外形缩进抽屉格子。
   const drawerFlap = opened ? ENV_H * 0.62 : 0
@@ -130,7 +155,8 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
     saveInvitePos(null)
     setRise(true)
     if (user) {
-      if (unlockAchievement("invite-toss")) onToast(`成就解锁：${ACHIEVEMENTS["invite-toss"]}`)
+      if (unlockAchievement("invite-toss"))
+        onToast(`成就解锁：${ACHIEVEMENTS["invite-toss"]}`)
       setTossed(true)
     }
     setPops((value) => value + 1)
@@ -143,7 +169,7 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
     startX: number,
     startY: number,
     base: { left: number; top: number },
-    lifted: boolean,
+    lifted: boolean
   ) => {
     const stage = stageRef.current
     if (!stage) return
@@ -157,8 +183,14 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
     const insideFraction = () => {
       const box = el.getBoundingClientRect()
       const area = stage.getBoundingClientRect()
-      const w = Math.max(0, Math.min(box.right, area.right) - Math.max(box.left, area.left))
-      const h = Math.max(0, Math.min(box.bottom, area.bottom) - Math.max(box.top, area.top))
+      const w = Math.max(
+        0,
+        Math.min(box.right, area.right) - Math.max(box.left, area.left)
+      )
+      const h = Math.max(
+        0,
+        Math.min(box.bottom, area.bottom) - Math.max(box.top, area.top)
+      )
       return (w * h) / Math.max(1, box.width * box.height)
     }
     const hintDrawer = (next: boolean) => {
@@ -178,10 +210,13 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
       }
       el.style.transform = `translate(${dx}px, ${dy}px)`
       // 信封自己压在指针下面，跳过它看底下是不是抽屉；停在合着的抽屉面上一会儿，抽屉自己拉开
-      const under = document.elementsFromPoint(ev.clientX, ev.clientY).find((node) => !el.contains(node))
+      const under = document
+        .elementsFromPoint(ev.clientX, ev.clientY)
+        .find((node) => !el.contains(node))
       hintDrawer(!!under?.closest(".desk-drawer"))
       if (under?.closest(".desk-drawer__front") && !drawer.current?.isOpen()) {
-        if (!drawerTimer) drawerTimer = window.setTimeout(() => drawer.current?.open(), 450)
+        if (!drawerTimer)
+          drawerTimer = window.setTimeout(() => drawer.current?.open(), 450)
       } else if (drawerTimer) {
         window.clearTimeout(drawerTimer)
         drawerTimer = 0
@@ -238,7 +273,14 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
     if (event.button !== 0 || !event.isPrimary) return
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
-    dragEnvelope(event.currentTarget, event.pointerId, event.clientX, event.clientY, { left, top }, false)
+    dragEnvelope(
+      event.currentTarget,
+      event.pointerId,
+      event.clientX,
+      event.clientY,
+      { left, top },
+      false
+    )
   }
 
   /** 从抽屉里拿出来：信封换成原尺寸出现在指针下面，接着由桌上的拖动接手 */
@@ -277,7 +319,8 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
     }
     const onMove = (ev: PointerEvent) => {
       if (ev.pointerId !== pointerId) return
-      if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 4) return
+      if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 4)
+        return
       stop()
       takeOut(pointerId, ev.clientX, ev.clientY)
     }
@@ -320,7 +363,9 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
           style={style}
           role="button"
           tabIndex={0}
-          aria-label={opened ? "邀请函（已拆开），点开再读一遍" : "邀请函，点开拆封"}
+          aria-label={
+            opened ? "邀请函（已拆开），点开再读一遍" : "邀请函，点开拆封"
+          }
           onPointerDown={onPointerDown}
           onKeyDown={(event) => {
             if (event.key !== "Enter" && event.key !== " ") return
@@ -340,7 +385,11 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
             data-stowed="invite"
             role="button"
             tabIndex={0}
-            aria-label={opened ? "邀请函（已拆开）：点开再读一遍，拖回桌面" : "邀请函：点开拆封，拖回桌面"}
+            aria-label={
+              opened
+                ? "邀请函（已拆开）：点开再读一遍，拖回桌面"
+                : "邀请函：点开拆封，拖回桌面"
+            }
             onPointerDown={onCellDown}
             onKeyDown={(event) => {
               if (event.key !== "Enter" && event.key !== " ") return
@@ -350,18 +399,29 @@ export function InviteLetter({ user, ready, stageSize, stageRef, onToast, onClai
           >
             <div
               className="desk-drawer__thing"
-              style={{ width: drawerWidth, height: drawerHeight, "--s": cellScale(drawerWidth, drawerHeight) } as CSSProperties}
+              style={
+                {
+                  width: drawerWidth,
+                  height: drawerHeight,
+                  "--s": cellScale(drawerWidth, drawerHeight),
+                } as CSSProperties
+              }
             >
               <div
                 className={`invite-env ${opened ? "is-open" : ""}`}
-                style={{ left: 8, top: drawerFlap + 8, width: ENV_W, height: ENV_H }}
+                style={{
+                  left: 8,
+                  top: drawerFlap + 8,
+                  width: ENV_W,
+                  height: ENV_H,
+                }}
               >
                 <EnvelopeBody opened={opened} />
               </div>
             </div>
             <span className="desk-drawer__tag">邀请函</span>
           </div>,
-          drawerSlot,
+          drawerSlot
         )}
 
       {reading && (
@@ -391,7 +451,14 @@ interface ModalProps {
 }
 
 /** 拆信：翻盖掀开、信纸抽出来、信封落下去，信纸放大到眼前 */
-function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack }: ModalProps) {
+function LetterModal({
+  sealed,
+  user,
+  tossed,
+  onClose,
+  onClaimed,
+  onOpenBackpack,
+}: ModalProps) {
   const [claiming, setClaiming] = useState(false)
   const [granted, setGranted] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -412,9 +479,16 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
     setClaiming(true)
     setError(null)
     try {
-      const response = await fetch("/auth/onboard", { method: "POST", credentials: "include" })
+      const response = await fetch("/auth/onboard", {
+        method: "POST",
+        credentials: "include",
+      })
       const payload: unknown = await response.json().catch(() => null)
-      const ok = !!payload && typeof payload === "object" && "ok" in payload && payload.ok === true
+      const ok =
+        !!payload &&
+        typeof payload === "object" &&
+        "ok" in payload &&
+        payload.ok === true
       if (!ok) {
         const message =
           payload &&
@@ -431,7 +505,9 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
       setGranted(true)
       onClaimed()
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "领取失败，请稍后再试")
+      setError(
+        reason instanceof Error ? reason.message : "领取失败，请稍后再试"
+      )
     } finally {
       setClaiming(false)
     }
@@ -443,7 +519,12 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
     </button>
   )
   const claimButton = (
-    <button type="button" className="invite-paper__btn" onClick={() => void claim()} disabled={claiming}>
+    <button
+      type="button"
+      className="invite-paper__btn"
+      onClick={() => void claim()}
+      disabled={claiming}
+    >
       {claiming ? "领取中…" : "领取新手礼包"}
     </button>
   )
@@ -465,12 +546,22 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
             <em>内有你的本体卡</em>
           </li>
         </ul>
-        <p>本体卡不会随登录直接发放：去背包拆开神秘卡包，它就是你的了。普通卡包用桌上的发牌按钮发到桌面，点开就能拆。</p>
+        <p>
+          本体卡不会随登录直接发放：去背包拆开神秘卡包，它就是你的了。普通卡包用桌上的发牌按钮发到桌面，点开就能拆。
+        </p>
         <div className="invite-paper__actions">
-          <button type="button" className="invite-paper__btn" onClick={onOpenBackpack}>
+          <button
+            type="button"
+            className="invite-paper__btn"
+            onClick={onOpenBackpack}
+          >
             去背包开神秘卡包
           </button>
-          <button type="button" className="invite-paper__btn invite-paper__btn--ghost" onClick={onClose}>
+          <button
+            type="button"
+            className="invite-paper__btn invite-paper__btn--ghost"
+            onClick={onClose}
+          >
             返回桌面
           </button>
         </div>
@@ -481,10 +572,18 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
       <>
         <span className="invite-paper__eyebrow">又见面了 · 第二封</span>
         <h2>{user.username}，它又回来了</h2>
-        <p>你刚才把这封邀请函扔出了桌子。它在地上滚了两圈，又从桌子底下爬了回来——看得出来，它是真心想请你入座。</p>
-        <p className="invite-paper__stamp">成就「{ACHIEVEMENTS["invite-toss"]}」已记在这台设备上</p>
-        {!user.onboarded && <p>对了，新手礼包还没领：30 个普通卡包 + 1 个神秘卡包。</p>}
-        <div className="invite-paper__actions">{user.onboarded ? back : claimButton}</div>
+        <p>
+          你刚才把这封邀请函扔出了桌子。它在地上滚了两圈，又从桌子底下爬了回来——看得出来，它是真心想请你入座。
+        </p>
+        <p className="invite-paper__stamp">
+          成就「{ACHIEVEMENTS["invite-toss"]}」已记在这台设备上
+        </p>
+        {!user.onboarded && (
+          <p>对了，新手礼包还没领：30 个普通卡包 + 1 个神秘卡包。</p>
+        )}
+        <div className="invite-paper__actions">
+          {user.onboarded ? back : claimButton}
+        </div>
       </>
     )
   } else if (!user) {
@@ -493,7 +592,10 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
         <span className="invite-paper__eyebrow">致每一位 osu! 玩家</span>
         <h2>诚邀你入座 Choke!</h2>
         <p>这里把 osu! 玩家做成一张张卡：开包、收藏、组 7 张卡上桌对战。</p>
-        <p>用 osu! 账号登录后，我们会读取你的公开排名与游玩数据，做出属于你的本体卡，再送你一份新手礼包。</p>
+        <p>
+          用 osu!
+          账号登录后，我们会读取你的公开排名与游玩数据，做出属于你的本体卡，再送你一份新手礼包。
+        </p>
         <ul className="invite-paper__facts">
           <li>
             <b>19 万+</b>
@@ -525,11 +627,17 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
         <span className="invite-paper__eyebrow">欢迎入座</span>
         <h2>{user.username}，你的座位准备好了</h2>
         <ol className="invite-paper__steps">
-          <li>你的 osu! 账号就是你的本体卡，它封在新手礼包的「神秘卡包」里。</li>
-          <li>点桌上的发牌按钮把卡包发到桌面，点卡包拆开；抽到的卡进卡册，图鉴能看全卡池。</li>
+          <li>
+            你的 osu! 账号就是你的本体卡，它封在新手礼包的「神秘卡包」里。
+          </li>
+          <li>
+            点桌上的发牌按钮把卡包发到桌面，点卡包拆开；抽到的卡进卡册，图鉴能看全卡池。
+          </li>
           <li>在卡组卡套槽里排好 7 张卡，就能去对战垫上打一场。</li>
         </ol>
-        <p className="invite-paper__hint">新手礼包：30 个普通卡包 + 1 个神秘卡包。</p>
+        <p className="invite-paper__hint">
+          新手礼包：30 个普通卡包 + 1 个神秘卡包。
+        </p>
         <div className="invite-paper__actions">{claimButton}</div>
       </>
     )
@@ -538,7 +646,9 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
       <>
         <span className="invite-paper__eyebrow">邀请函 · 已入座</span>
         <h2>{user.username}，欢迎回来</h2>
-        <p>新手礼包已经领过了。卡包都在背包里，桌上的发牌按钮会把它们一个个发出来。</p>
+        <p>
+          新手礼包已经领过了。卡包都在背包里，桌上的发牌按钮会把它们一个个发出来。
+        </p>
         <p>这封信就留在桌上做个纪念吧。</p>
         <div className="invite-paper__actions">{back}</div>
       </>
@@ -565,7 +675,12 @@ function LetterModal({ sealed, user, tossed, onClose, onClaimed, onOpenBackpack 
         </div>
         <article className="invite-paper">
           <i className="invite-paper__tape" aria-hidden />
-          <button type="button" className="invite-paper__close" onClick={onClose} aria-label="合上邀请函">
+          <button
+            type="button"
+            className="invite-paper__close"
+            onClick={onClose}
+            aria-label="合上邀请函"
+          >
             ×
           </button>
           {body}

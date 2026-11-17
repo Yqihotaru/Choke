@@ -1,7 +1,15 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react"
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react"
 
 import { CardFace } from "@/card/CardFace"
 import type { CardFaceData, Rarity } from "@/card/types"
+import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
+import { useTutorialProgress } from "@/tutorial/store"
 
 import { fetchPackInventory, toFace, type ApiUserCard } from "./api"
 import { Pages } from "./BookPages"
@@ -55,7 +63,13 @@ interface Pity {
 interface OpenResponse {
   ok: boolean
   data?: {
-    results: { cardId: string; rarity: Rarity; fromPity: boolean; userCardId: number; foil: boolean }[]
+    results: {
+      cardId: string
+      rarity: Rarity
+      fromPity: boolean
+      userCardId: number
+      foil: boolean
+    }[]
     pity: Pity
     packs?: Record<string, number>
   }
@@ -77,12 +91,20 @@ export function GachaPanel({
 }) {
   const [pool, setPool] = useState<PoolId>(initialPool)
   const [ownerId, setOwnerId] = useState(userId)
-  const [cards, setCards] = useState<(CardFaceData & { userCardId: number })[]>([])
+  const [cards, setCards] = useState<(CardFaceData & { userCardId: number })[]>(
+    []
+  )
   const [pity, setPity] = useState<Pity | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [packs, setPacks] = useState<{ userId: string; data: Record<string, number> } | null>(null)
-  const [skipAnim, setSkipAnim] = useState(() => localStorage.getItem(SKIP_KEY) === "1")
+  const [packs, setPacks] = useState<{
+    userId: string
+    data: Record<string, number>
+  } | null>(null)
+  const [skipAnim, setSkipAnim] = useState(
+    () => localStorage.getItem(SKIP_KEY) === "1"
+  )
+  const tutorial = useTutorialProgress(userId)
   /** 选中卡池那一行的卡包图，开包动画从这里长出来 */
   const artRef = useRef<HTMLSpanElement>(null)
   const ownerRef = useRef<{ userId: string | null } | null>(null)
@@ -119,6 +141,18 @@ export function GachaPanel({
     }
   }, [userId])
 
+  // 桌面补发新手卡包后，面板里的库存数字要跟上
+  useEffect(() => {
+    if (!userId) return
+    const handler = () => {
+      fetchPackInventory(userId)
+        .then((data) => setPacks({ userId, data: data.packs }))
+        .catch(() => {})
+    }
+    window.addEventListener(PACKS_CHANGED_EVENT, handler)
+    return () => window.removeEventListener(PACKS_CHANGED_EVENT, handler)
+  }, [userId])
+
   const current = POOLS.find((item) => item.id === pool) ?? POOLS[0]
   const pityPercent = pity ? Math.min(100, (pity.after / 60) * 100) : 0
   const currentPacks = packs && packs.userId === userId ? packs.data : null
@@ -146,7 +180,8 @@ export function GachaPanel({
     // 对写请求只放弃过期的展示结果，不中止可能已经消耗卡包的 POST。
     const request = {}
     requestRef.current = request
-    const isCurrent = () => ownerRef.current === owner && requestRef.current === request
+    const isCurrent = () =>
+      ownerRef.current === owner && requestRef.current === request
     let consumed = false
     setLoading(true)
     setError(null)
@@ -207,6 +242,7 @@ export function GachaPanel({
       if (!isCurrent()) return
       if (skipAnim) {
         setCards(faces)
+        emitTutorialEvent("pack-opened")
         return
       }
       const art = artRef.current?.getBoundingClientRect()
@@ -216,19 +252,30 @@ export function GachaPanel({
           userId,
           cards: faces.map((card) => toDeskCard(card, card.userCardId)),
           pool: current.art,
-          rect: art && art.width > 0
-            ? { left: art.left, top: art.top, width: art.width, height: art.height }
-            : undefined,
+          rect:
+            art && art.width > 0
+              ? {
+                  left: art.left,
+                  top: art.top,
+                  width: art.width,
+                  height: art.height,
+                }
+              : undefined,
         },
       })
       // 桌面已有另一场开包时保留本次结果，不覆盖它，也不丢弃已经入库的卡。
-      if (!window.dispatchEvent(event) && isCurrent()) setCards(faces)
+      if (!window.dispatchEvent(event) && isCurrent()) {
+        setCards(faces)
+        emitTutorialEvent("pack-opened")
+      }
     } catch (reason) {
       if (!isCurrent()) return
       const message = reason instanceof Error ? reason.message : "开包失败"
-      setError(consumed
-        ? `卡包已开启，卡牌已收入卡册；${message}。请到卡册查看。`
-        : message)
+      setError(
+        consumed
+          ? `卡包已开启，卡牌已收入卡册；${message}。请到卡册查看。`
+          : message
+      )
     } finally {
       if (isCurrent()) {
         requestRef.current = null
@@ -240,14 +287,31 @@ export function GachaPanel({
   const sendAllToDesk = () => {
     if (!cards.length) return
     const payload = cards.map((card) => toDeskCard(card, card.userCardId))
-    window.dispatchEvent(new CustomEvent(DESK_ADD_CARDS_EVENT, { detail: payload }))
+    window.dispatchEvent(
+      new CustomEvent(DESK_ADD_CARDS_EVENT, { detail: payload })
+    )
     setCards([])
   }
 
-  const openButton = (
+  const needsStarter =
+    !loading &&
+    !!userId &&
+    packCount <= 0 &&
+    tutorial.tutorialStep === "gacha-open"
+  const openButton = needsStarter ? (
     <button
       type="button"
       className="bk-btn bk-btn--main bk-btn--block"
+      data-tutorial-id="gacha-restock"
+      onClick={() => requestTutorialStarter()}
+    >
+      领取新手卡包
+    </button>
+  ) : (
+    <button
+      type="button"
+      className="bk-btn bk-btn--main bk-btn--block"
+      data-tutorial-id="gacha-open-button"
       disabled={loading || !userId || packCount <= 0}
       onClick={openPack}
     >
@@ -269,7 +333,11 @@ export function GachaPanel({
                 disabled={loading}
                 onClick={() => selectPool(item.id)}
               >
-                <span className="gacha-pool__art" ref={pool === item.id ? artRef : undefined} aria-hidden>
+                <span
+                  className="gacha-pool__art"
+                  ref={pool === item.id ? artRef : undefined}
+                  aria-hidden
+                >
                   <PackArt pool={item.art} />
                 </span>
                 <span className="gacha-pool__text">
@@ -325,10 +393,18 @@ export function GachaPanel({
           </div>
         ) : loading || cards.length > 0 ? (
           <>
-            <div className="bk-cards gacha-results" aria-busy={loading} aria-live="polite">
+            <div
+              className="bk-cards gacha-results"
+              aria-busy={loading}
+              aria-live="polite"
+            >
               {loading
                 ? Array.from({ length: 5 }, (_, index) => (
-                    <div className="bk-slot gacha-results__loading" key={index} aria-hidden>
+                    <div
+                      className="bk-slot gacha-results__loading"
+                      key={index}
+                      aria-hidden
+                    >
                       …
                     </div>
                   ))
@@ -336,13 +412,22 @@ export function GachaPanel({
                     <div
                       className="gacha-results__card"
                       key={`${card.id}-${index}`}
-                      onPointerDown={(event) => startCardPointerDrag(event, {
-                        card: toDeskCard(card, card.userCardId),
-                      }, {
-                        onDrop: () => setCards((current) =>
-                          current.filter((item) => item.userCardId !== card.userCardId),
-                        ),
-                      })}
+                      onPointerDown={(event) =>
+                        startCardPointerDrag(
+                          event,
+                          {
+                            card: toDeskCard(card, card.userCardId),
+                          },
+                          {
+                            onDrop: () =>
+                              setCards((current) =>
+                                current.filter(
+                                  (item) => item.userCardId !== card.userCardId
+                                )
+                              ),
+                          }
+                        )
+                      }
                       title="拖到桌面"
                     >
                       <CardFace card={card} />
@@ -354,7 +439,11 @@ export function GachaPanel({
                 {error}
               </p>
             )}
-            {cards.length > 0 && <p className="bk-note gacha-hint">把卡拖到桌面，或一次全部发过去。</p>}
+            {cards.length > 0 && (
+              <p className="bk-note gacha-hint">
+                把卡拖到桌面，或一次全部发过去。
+              </p>
+            )}
             <div className="gacha-actions">
               <button
                 type="button"
@@ -381,7 +470,10 @@ export function GachaPanel({
             </div>
             <div className="gacha-odds" aria-label="概率">
               {odds.map(([rarity, weight]) => (
-                <span key={rarity} style={{ "--c": RARITY_COLOR[rarity] } as CSSProperties}>
+                <span
+                  key={rarity}
+                  style={{ "--c": RARITY_COLOR[rarity] } as CSSProperties}
+                >
                   <i aria-hidden />
                   {rarity}
                   <b className="bk-num">{weight}%</b>

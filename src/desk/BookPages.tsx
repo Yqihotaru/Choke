@@ -1,4 +1,14 @@
-import { createContext, use, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react"
+import {
+  createContext,
+  use,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+} from "react"
 
 import { onIdle } from "@/lib/idle"
 
@@ -45,13 +55,24 @@ interface PagesProps {
   ready?: boolean
   /** 邻页已挂载并完成布局，但不显示、不接收输入 */
   preload?: boolean
+  /** 新手教程定位标识；只给当前页，避免预加载页抢到目标 */
+  tutorialId?: string
 }
 
 /**
  * 每个面板的根：一个跨页，左页顶上是标题（也是拖书的把手），右页顶上是合上按钮。
  * 两页各自滚动；内容尽量排成不用滚。
  */
-export function Pages({ className, rootRef, left, right, pager, ready = true, preload = false }: PagesProps) {
+export function Pages({
+  className,
+  rootRef,
+  left,
+  right,
+  pager,
+  ready = true,
+  preload = false,
+  tutorialId,
+}: PagesProps) {
   const book = useBook()
   const element = useRef<HTMLDivElement>(null)
   const prepared = useRef(false)
@@ -75,17 +96,36 @@ export function Pages({ className, rootRef, left, right, pager, ready = true, pr
     }
     let cancelled = false
     if (!prepared.current) {
-      if (preload || !book.active) void root.querySelector<HTMLElement>(".cf")?.offsetWidth
+      if (preload || !book.active)
+        void root.querySelector<HTMLElement>(".cf")?.offsetWidth
       prepared.current = true
     }
-    void Promise.all(Array.from(root.querySelectorAll("img")).filter((image) => image.complete && (image.loading !== "lazy" || image.offsetWidth > 0)).map((image) => image.decode().catch(() => {}))).then(() => {
+    void Promise.all(
+      Array.from(root.querySelectorAll("img"))
+        .filter(
+          (image) =>
+            image.complete &&
+            (image.loading !== "lazy" || image.offsetWidth > 0)
+        )
+        .map((image) => image.decode().catch(() => {}))
+    ).then(() => {
       if (!cancelled && !preload) book.setReady(true)
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [ready, preload, book])
 
   return (
-    <div ref={element} className={`book__spread ${className ?? ""}`} data-no-light data-preload={preload ? "" : undefined} inert={preload} aria-hidden={preload || undefined}>
+    <div
+      ref={element}
+      className={`book__spread ${className ?? ""}`}
+      data-no-light
+      data-preload={preload ? "" : undefined}
+      data-tutorial-id={tutorialId}
+      inert={preload}
+      aria-hidden={preload || undefined}
+    >
       <section className="book__page book__page--left">
         <header className="book__head" data-book-grip>
           <span className="book__eyebrow">{book.eyebrow}</span>
@@ -94,7 +134,12 @@ export function Pages({ className, rootRef, left, right, pager, ready = true, pr
         <div className="book__body">{left}</div>
         {pager && (
           <footer className="book__foot">
-            <button type="button" className="book__turn" disabled={pager.page <= 1} onClick={() => go(-1)}>
+            <button
+              type="button"
+              className="book__turn"
+              disabled={pager.page <= 1}
+              onClick={() => go(-1)}
+            >
               ‹ 上一页
             </button>
           </footer>
@@ -102,7 +147,12 @@ export function Pages({ className, rootRef, left, right, pager, ready = true, pr
       </section>
       <section className="book__page book__page--right">
         <header className="book__head book__head--right" data-book-grip>
-          <button type="button" className="book__close" onClick={book.close} aria-label="合上">
+          <button
+            type="button"
+            className="book__close"
+            onClick={book.close}
+            aria-label="合上"
+          >
             ×
           </button>
         </header>
@@ -132,10 +182,12 @@ export function usePageCache<T extends { total: number }>(
   key: string,
   page: number,
   pageSize: number,
-  load: (page: number, signal: AbortSignal) => Promise<T>,
+  load: (page: number, signal: AbortSignal) => Promise<T>
 ): [number, T | null][] {
   const { whenIdle } = useBook()
-  const [cache, setCache] = useState<{ key: string; pages: Map<number, T> }>(() => ({ key: "", pages: new Map() }))
+  const [cache, setCache] = useState<{ key: string; pages: Map<number, T> }>(
+    () => ({ key: "", pages: new Map() })
+  )
   const latest = useRef(cache)
   useEffect(() => {
     if (!key) return
@@ -148,31 +200,45 @@ export function usePageCache<T extends { total: number }>(
       if (controller.signal.aborted) return null
       const pages = new Map(latest.current.pages)
       pages.set(index, result)
-      for (const index of pages.keys()) if (Math.abs(index - page) > 1) pages.delete(index)
+      for (const index of pages.keys())
+        if (Math.abs(index - page) > 1) pages.delete(index)
       latest.current = { key, pages }
       setCache(latest.current)
       return result
     }
-    void get(page).then(async (current) => {
-      if (!current) return
-      await whenIdle()
-      if (controller.signal.aborted) return
-      const count = Math.max(1, Math.ceil(current.total / pageSize))
-      const preload = () => {
-        void whenIdle().then(async () => {
-          if (controller.signal.aborted) return
-          await Promise.all([page - 1, page + 1].filter((index) => index >= 0 && index < count).map(get))
-        }).catch((error: unknown) => {
-          if (!controller.signal.aborted) throw error
-        })
-      }
-      onIdle(preload, 1000)
-    }).catch((error: unknown) => {
-      if (!controller.signal.aborted) throw error
-    })
+    void get(page)
+      .then(async (current) => {
+        if (!current) return
+        await whenIdle()
+        if (controller.signal.aborted) return
+        const count = Math.max(1, Math.ceil(current.total / pageSize))
+        const preload = () => {
+          void whenIdle()
+            .then(async () => {
+              if (controller.signal.aborted) return
+              await Promise.all(
+                [page - 1, page + 1]
+                  .filter((index) => index >= 0 && index < count)
+                  .map(get)
+              )
+            })
+            .catch((error: unknown) => {
+              if (!controller.signal.aborted) throw error
+            })
+        }
+        onIdle(preload, 1000)
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) throw error
+      })
     return () => controller.abort()
   }, [key, page, pageSize, load, whenIdle])
   const pages = cache.key === key ? cache.pages : new Map<number, T>()
-  const entries: [number, T | null][] = [[page, pages.get(page) ?? null], ...Array.from(pages).filter(([index]) => index !== page && Math.abs(index - page) <= 1)]
+  const entries: [number, T | null][] = [
+    [page, pages.get(page) ?? null],
+    ...Array.from(pages).filter(
+      ([index]) => index !== page && Math.abs(index - page) <= 1
+    ),
+  ]
   return entries.sort(([a], [b]) => a - b)
 }
