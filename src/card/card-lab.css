@@ -83,6 +83,17 @@
   gap: 8px;
 }
 
+.lab__mod-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lab__toggle[data-on] {
+  border-color: var(--lab-ink);
+  background: color-mix(in srgb, var(--lab-ink) 12%, transparent);
+}
+
 .lab__face-select {
   display: flex;
   align-items: center;

@@ -6,6 +6,7 @@ export interface CardFaceProps {
   card: CardFaceData
   mode?: CardFaceMode
   theme?: "dark" | "light"
+  modPlacement?: "spine" | "portrait" | "name"
   className?: string
 }
 
@@ -16,6 +17,8 @@ export interface CardFaceMeta {
   order?: number
   /** 这个卡面是否响应 theme="light" */
   supportsTheme?: boolean
+  /** 这个卡面是否支持三种 MOD 位置 */
+  supportsModPlacement?: boolean
 }
 
 interface FaceModule {
