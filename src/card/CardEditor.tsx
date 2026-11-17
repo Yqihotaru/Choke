@@ -2,10 +2,9 @@ import { useMemo, useState } from "react"
 
 import { DEMO_CARDS, ELEMENT_LABEL, JOB_LABEL, MOD_LIST, RARITY_LABEL } from "./data"
 import { CARD_FACES, getCardFace } from "./faces"
-import type { CardFaceData, CardSkill, Element, Job, Mod, Rarity } from "./types"
+import { RARITIES, type CardFaceData, type CardSkill, type Element, type Job, type Mod, type Rarity } from "./types"
 import "./card-editor.css"
 
-const RARITIES: Rarity[] = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"]
 const JOBS: Job[] = ["tank", "warrior", "mage", "support"]
 const ELEMENTS: Element[] = ["metal", "wood", "earth", "ice", "fire", "thunder", "light", "dark", "physical"]
 type Holo = "none" | "regular" | "rainbow" | "glare"

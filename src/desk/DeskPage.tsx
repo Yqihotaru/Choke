@@ -21,7 +21,7 @@ import {
   type PanelId,
 } from "./DeskBook"
 import { DragGhost } from "./DragGhost"
-import { toFace, type ApiUserCard } from "./api"
+import { fetchPackCatalog, toFace, type ApiUserCard } from "./api"
 import {
   ALBUM_HOVER_EVENT,
   BACKPACK_HOVER_EVENT,
@@ -83,11 +83,10 @@ const DeskPack = memo(function DeskPack({ pool }: { pool: PackPool }) {
 
 const POOL_KEY = "choke.pool"
 
-/** 桌面卡池 → 服务端卡池 id（任务包在服务端叫 golden） */
 const SERVER_POOL: Record<PackPool, string> = {
   normal: "normal",
   idle: "idle",
-  quest: "golden",
+  golden: "golden",
   radiant: "radiant",
   sky: "sky",
   prism: "prism",
@@ -195,9 +194,11 @@ export function DeskPage() {
     rect?: OriginRect
   } | null>(null)
   const [pool, setPool] = useState<PackPool>(() => {
-    const saved = localStorage.getItem(POOL_KEY) as PackPool | null
-    return saved && saved in POOL_META ? saved : "normal"
+    const saved = localStorage.getItem(POOL_KEY)
+    const normalized = saved === "quest" ? "golden" : saved
+    return normalized && normalized in POOL_META ? (normalized as PackPool) : "normal"
   })
+  const [packSize, setPackSize] = useState(5)
   const [pressing, setPressing] = useState(false)
   const pressingRef = useRef(false)
   const pressHandled = useRef(false)
@@ -270,6 +271,18 @@ export function DeskPage() {
   useEffect(() => {
     localStorage.setItem(POOL_KEY, pool)
   }, [pool])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchPackCatalog()
+      .then((catalog) => {
+        if (!cancelled) setPackSize(catalog.packSize)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const refreshUser = useCallback(() => {
     fetch("/auth/me", { credentials: "include" })
@@ -1350,7 +1363,7 @@ export function DeskPage() {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ count: 5, token: item.token }),
+          body: JSON.stringify({ count: packSize, token: item.token }),
         })
         const payload = (await res.json()) as OpenResponse
         if (!res.ok || !payload.ok || !payload.data) {

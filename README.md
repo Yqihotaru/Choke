@@ -25,20 +25,10 @@
 pnpm install
 cp .env.example .env   # Windows: copy .env.example .env
 pnpm dev:api           # API  → http://localhost:3100
-pnpm dev               # Web  → http://localhost:5173
+pnpm dev               # Web  → http://localhost:5207（读 WEB_BASE_URL）
 ```
 
-前端端口以 `.env` 里的 `WEB_BASE_URL` 为准。本地用 5207 时：
-
-```bash
-pnpm dev -- --port 5207 --strictPort
-```
-
-```env
-WEB_BASE_URL=http://localhost:5207
-```
-
-改完 `.env` 要重启 API。
+前端端口由 `.env` 里的 `WEB_BASE_URL` 决定，Vite 会从这个地址取端口，不再单独传 `--port`。改完 `.env` 要重启 API。
 
 ## 环境
 

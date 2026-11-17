@@ -1,9 +1,33 @@
-import { CardEditor } from "@/card/CardEditor"
-import { CardLab } from "@/card/CardLab"
-import { BattlePage } from "@/battle/BattlePage"
+import { lazy, Suspense } from "react"
+
 import { BackToDesk } from "@/components/BackToDesk"
+import { BattlePage } from "@/battle/BattlePage"
 import { DeskPage } from "@/desk/DeskPage"
-import { PoolLab } from "@/pool/PoolLab"
+
+const CardEditor = lazy(() =>
+  import("@/card/CardEditor").then((m) => ({ default: m.CardEditor }))
+)
+const CardLab = lazy(() =>
+  import("@/card/CardLab").then((m) => ({ default: m.CardLab }))
+)
+const PoolLab = lazy(() =>
+  import("@/pool/PoolLab").then((m) => ({ default: m.PoolLab }))
+)
+
+const FALLBACK = (
+  <div
+    style={{
+      minHeight: "100vh",
+      display: "grid",
+      placeItems: "center",
+      background: "#18171c",
+      color: "#edeae5",
+      fontFamily: "Outfit, sans-serif",
+    }}
+  >
+    加载中…
+  </div>
+)
 
 export function App() {
   const path = window.location.pathname.replace(/\/+$/, "")
@@ -27,7 +51,9 @@ export function App() {
   if (path.endsWith("card-editor")) {
     return (
       <>
-        <CardEditor />
+        <Suspense fallback={FALLBACK}>
+          <CardEditor />
+        </Suspense>
         <BackToDesk />
       </>
     )
@@ -35,7 +61,9 @@ export function App() {
   if (path.endsWith("pool-lab")) {
     return (
       <>
-        <PoolLab />
+        <Suspense fallback={FALLBACK}>
+          <PoolLab />
+        </Suspense>
         <BackToDesk />
       </>
     )
@@ -43,7 +71,9 @@ export function App() {
   if (path.endsWith("card-lab")) {
     return (
       <>
-        <CardLab />
+        <Suspense fallback={FALLBACK}>
+          <CardLab />
+        </Suspense>
         <BackToDesk />
       </>
     )

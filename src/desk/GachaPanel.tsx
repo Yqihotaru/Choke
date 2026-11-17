@@ -11,7 +11,7 @@ import type { CardFaceData, Rarity } from "@/card/types"
 import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
 
-import { fetchPackInventory, toFace, type ApiUserCard } from "./api"
+import { fetchPackCatalog, fetchPackInventory, toFace, type ApiUserCard, type PackCatalog } from "./api"
 import { Pages } from "./BookPages"
 import {
   DESK_ADD_CARDS_EVENT,
@@ -23,8 +23,7 @@ import {
 } from "./drag"
 import { GuestLoginButton } from "./GuestLoginButton"
 import { PackArt } from "./opening/PackArt"
-import { POOL_META, RARITY_COLOR } from "./rarity"
-import type { PackPool } from "./types"
+import { RARITY_COLOR } from "./rarity"
 import "./gacha-panel.css"
 
 const API = "/api"
@@ -37,17 +36,15 @@ interface Pool {
   id: PoolId
   name: string
   note: string
-  /** 卡包图和概率表用的桌面卡池（服务端的 golden 在桌面叫 quest） */
-  art: PackPool
 }
 
 const POOLS: Pool[] = [
-  { id: "normal", name: "普通", note: "日常主力", art: "normal" },
-  { id: "idle", name: "挂机", note: "低成本", art: "idle" },
-  { id: "golden", name: "黄金", note: "任务产出", art: "quest" },
-  { id: "radiant", name: "璀璨", note: "周常奖励", art: "radiant" },
-  { id: "sky", name: "天穹", note: "月常奖励", art: "sky" },
-  { id: "prism", name: "棱彩", note: "赛季牌面", art: "prism" },
+  { id: "normal", name: "普通", note: "日常主力" },
+  { id: "idle", name: "挂机", note: "低成本" },
+  { id: "golden", name: "黄金", note: "任务产出" },
+  { id: "radiant", name: "璀璨", note: "周常奖励" },
+  { id: "sky", name: "天穹", note: "月常奖励" },
+  { id: "prism", name: "棱彩", note: "赛季牌面" },
 ]
 
 type ApiCard = Omit<
@@ -101,6 +98,7 @@ export function GachaPanel({
     userId: string
     data: Record<string, number>
   } | null>(null)
+  const [catalog, setCatalog] = useState<PackCatalog | null>(null)
   const [skipAnim, setSkipAnim] = useState(
     () => localStorage.getItem(SKIP_KEY) === "1"
   )
@@ -129,6 +127,18 @@ export function GachaPanel({
   }, [userId])
 
   useEffect(() => {
+    let cancelled = false
+    fetchPackCatalog()
+      .then((data) => {
+        if (!cancelled) setCatalog(data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
     if (!userId) return
     let cancelled = false
     fetchPackInventory(userId)
@@ -154,9 +164,14 @@ export function GachaPanel({
   }, [userId])
 
   const current = POOLS.find((item) => item.id === pool) ?? POOLS[0]
-  const pityPercent = pity ? Math.min(100, (pity.after / 60) * 100) : 0
+  const pityThreshold = catalog?.pity.threshold ?? 60
+  const pityRarity = catalog?.pity.rarity ?? "L"
+  const packSize = catalog?.packSize ?? 5
+  const pityPercent = pity ? Math.min(100, (pity.after / pityThreshold) * 100) : 0
   const currentPacks = packs && packs.userId === userId ? packs.data : null
-  const odds = POOL_META[current.art].weights.filter(([, weight]) => weight > 0)
+  const odds = Object.entries(
+    catalog?.packs.find((item) => item.id === pool)?.weights ?? {}
+  ).filter(([, weight]) => weight > 0)
   const packCount = currentPacks?.[pool] ?? 0
 
   function selectPool(id: PoolId) {
@@ -192,7 +207,7 @@ export function GachaPanel({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: 5 }),
+        body: JSON.stringify({ count: packSize }),
       })
       const payload = (await res
         .json()
@@ -251,7 +266,7 @@ export function GachaPanel({
         detail: {
           userId,
           cards: faces.map((card) => toDeskCard(card, card.userCardId)),
-          pool: current.art,
+          pool,
           rect:
             art && art.width > 0
               ? {
@@ -316,7 +331,7 @@ export function GachaPanel({
       disabled={loading || !userId || packCount <= 0}
       onClick={openPack}
     >
-      {loading ? "开启中…" : packCount > 0 ? "开 5 张" : "没有卡包"}
+      {loading ? "开启中…" : packCount > 0 ? `开 ${packSize} 张` : "没有卡包"}
     </button>
   )
 
@@ -339,7 +354,7 @@ export function GachaPanel({
                   ref={pool === item.id ? artRef : undefined}
                   aria-hidden
                 >
-                  <PackArt pool={item.art} />
+                  <PackArt pool={item.id} />
                 </span>
                 <span className="gacha-pool__text">
                   <b>{item.name}</b>
@@ -353,7 +368,7 @@ export function GachaPanel({
           <div className="bk-box gacha-pity">
             <div className="gacha-pity__top">
               <span className="bk-label">保底进度</span>
-              <b className="bk-num">{pity ? `${pity.after} / 60` : "— / 60"}</b>
+              <b className="bk-num">{pity ? `${pity.after} / ${pityThreshold}` : `— / ${pityThreshold}`}</b>
             </div>
             <div
               className="bk-bar"
@@ -361,12 +376,12 @@ export function GachaPanel({
               role="progressbar"
               aria-label="保底进度"
               aria-valuemin={0}
-              aria-valuemax={60}
+              aria-valuemax={pityThreshold}
               aria-valuenow={pity?.after ?? 0}
             >
               <i />
             </div>
-            <p className="bk-note">60 抽未出 L 及以上时强制保底。</p>
+            <p className="bk-note">{pityThreshold} 抽未出 {pityRarity} 及以上时强制保底。</p>
           </div>
 
           <button
@@ -400,7 +415,7 @@ export function GachaPanel({
               aria-live="polite"
             >
               {loading
-                ? Array.from({ length: 5 }, (_, index) => (
+                ? Array.from({ length: packSize }, (_, index) => (
                     <div
                       className="bk-slot gacha-results__loading"
                       key={index}
@@ -461,19 +476,19 @@ export function GachaPanel({
           <>
             <div className="gacha-current">
               <span className="gacha-current__art" aria-hidden>
-                <PackArt pool={current.art} />
+                <PackArt pool={pool} />
               </span>
               <div className="gacha-current__text">
                 <span className="bk-label">{current.note}</span>
                 <b className="gacha-current__name">{current.name}卡池</b>
-                <p className="bk-note">一次开 5 张 · 库存 ×{packCount}</p>
+                <p className="bk-note">一次开 {packSize} 张 · 库存 ×{packCount}</p>
               </div>
             </div>
             <div className="gacha-odds" aria-label="概率">
               {odds.map(([rarity, weight]) => (
                 <span
                   key={rarity}
-                  style={{ "--c": RARITY_COLOR[rarity] } as CSSProperties}
+                  style={{ "--c": RARITY_COLOR[rarity as Rarity] } as CSSProperties}
                 >
                   <i aria-hidden />
                   {rarity}

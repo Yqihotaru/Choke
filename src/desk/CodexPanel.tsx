@@ -3,7 +3,7 @@ import { memo, useCallback, useEffect, useMemo, useState, type CSSProperties } f
 import { CardFace } from "@/card/CardFace"
 import { faceFromDef } from "@/card/def"
 import { RARITY_LABEL } from "@/card/data"
-import type { CardFaceData, CardSkill, Job, Rarity } from "@/card/types"
+import { RARITIES, type CardFaceData, type CardSkill, type Job, type Rarity } from "@/card/types"
 
 import { Pages, useBook, usePageCache } from "./BookPages"
 import { CardDetail } from "./CardDetail"
@@ -18,7 +18,6 @@ const LEFT_ROWS = 2
 const RIGHT_ROWS = 3
 const LEFT_COUNT = COLS * LEFT_ROWS
 const PAGE_SIZE = COLS * (LEFT_ROWS + RIGHT_ROWS)
-const RARITIES: Rarity[] = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"]
 const SORTS = [
   { id: "rarity", label: "稀有度" },
   { id: "pp", label: "pp" },

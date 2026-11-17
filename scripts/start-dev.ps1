@@ -53,14 +53,14 @@ if (-not (Test-Path ".env")) {
   Write-Host "[Choke!] WARNING: .env not found."
   Write-Host "[Choke!] Copy .env.example to .env and fill OSU_CLIENT_SECRET / SESSION_SECRET,"
   Write-Host "[Choke!] otherwise osu! login will fail."
-  Write-Host "[Choke!] WEB_BASE_URL will fall back to http://localhost:5173."
+  Write-Host "[Choke!] WEB_BASE_URL will fall back to http://localhost:5207."
   Write-Host ""
 }
 
 # Read ports from .env so the web server and the osu! redirect stay in sync.
 $webBase = Read-EnvValue "WEB_BASE_URL"
 $apiBase = Read-EnvValue "API_BASE_URL"
-$webPort = Get-Port $webBase 5173
+$webPort = Get-Port $webBase 5207
 $apiPort = Get-Port $apiBase 3100
 if (-not $apiBase) {
   $portValue = Read-EnvValue "PORT"
@@ -101,7 +101,7 @@ if (-not (Test-Url "$apiUrl/health")) {
 if (-not (Test-Url "$webUrl/")) {
   if (-not (Test-Port $webPort)) {
     Write-Host "[Choke!] Starting web in a new window..."
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "pnpm exec vite --port $webPort --host localhost --strictPort" -WorkingDirectory $root
+    Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "pnpm exec vite --host localhost" -WorkingDirectory $root
   } else {
     Write-Host "[Choke!] Port $webPort is occupied; web may already be running."
   }

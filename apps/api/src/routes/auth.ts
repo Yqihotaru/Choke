@@ -19,6 +19,7 @@ import { cards, userCards, userPacks, users } from "../db/schema"
 import { invalidatePublicCardCache } from "./cards"
 import { heroCardDef } from "../hero"
 import { addPacks, getPackCounts, grantStarterPacks } from "../packs/inventory"
+import { STARTER_PACKS } from "../gacha/packs"
 import { heroIndex, heroPersonalBonus, heroStatsFromOsu } from "../../../../src/pool/hero"
 
 /** 登录时把 /me/osu 写成 hero-{id} 卡定义，并放进该用户的卡册 */
@@ -90,7 +91,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     if (!user) throw new Error("游客账号写入失败")
 
-    await addPacks(userId, { normal: 30 })
+    await addPacks(userId, { normal: STARTER_PACKS.normal })
     request.log.info({ userId }, "guest account created")
 
     reply.setCookie(COOKIE_NAME, makeSession(userId), {

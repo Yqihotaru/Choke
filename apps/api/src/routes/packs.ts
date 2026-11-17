@@ -7,7 +7,7 @@ import { db } from "../db/client"
 import { cards, userCards, users } from "../db/schema"
 import { invalidatePublicCardCache } from "./cards"
 import { openPack } from "../gacha/open"
-import { POOL_NAMES, POOL_WEIGHTS, type PoolId } from "../gacha/pools"
+import { PACKS, PACK_SIZE, PITY, type PackId } from "../gacha/packs"
 import {
   addPacks,
   consumePack,
@@ -18,7 +18,7 @@ import {
   type PackPoolId,
 } from "../packs/inventory"
 
-const poolIds = Object.keys(POOL_WEIGHTS) as [PoolId, ...PoolId[]]
+const poolIds = Object.keys(PACKS) as [PackId, ...PackId[]]
 
 async function loadHero(userId: string, heroId: string) {
   const [row] = await db
@@ -41,11 +41,21 @@ export async function packRoutes(app: FastifyInstance) {
   app.get("/packs", async () => {
     return {
       ok: true,
-      data: poolIds.map((id) => ({
-        id,
-        name: POOL_NAMES[id],
-        weights: POOL_WEIGHTS[id],
-      })),
+      data: {
+        packs: Object.entries(PACKS).map(([id, pack]) => ({
+          id,
+          name: pack.name,
+          short: pack.short,
+          color: pack.color,
+          weights: pack.weights,
+          foilRate: pack.foilRate,
+        })),
+        pity: {
+          threshold: PITY.threshold,
+          rarity: PITY.rarity,
+        },
+        packSize: PACK_SIZE,
+      },
     }
   })
 
@@ -73,7 +83,7 @@ export async function packRoutes(app: FastifyInstance) {
     const params = z
       .object({
         userId: z.string(),
-        pool: z.enum(["normal", "idle", "golden", "radiant", "sky", "prism"]),
+        pool: z.enum(poolIds),
       })
       .safeParse(request.params)
     if (!params.success) {
@@ -253,7 +263,7 @@ export async function packRoutes(app: FastifyInstance) {
     }
 
     try {
-      const result = await openPack(userId, params.data.pool, body.data.count ?? 5)
+      const result = await openPack(userId, params.data.pool, body.data.count ?? PACK_SIZE)
       return {
         ok: true,
         data: { ...result, packs: await getPackCounts(userId) },

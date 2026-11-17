@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react"
 
 import { CardFace } from "@/card/CardFace"
 import { RARITY_LABEL, battlePower } from "@/card/data"
-import type { Rarity } from "@/card/types"
+import { RARITIES, type Rarity } from "@/card/types"
 import { emitTutorialEvent } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
 
@@ -28,16 +28,7 @@ import { GuestLoginButton } from "./GuestLoginButton"
 import { useDeskCardIds } from "./presence"
 import "./deck-panel.css"
 
-const RARITIES: (Rarity | "")[] = [
-  "",
-  "C",
-  "UC",
-  "R",
-  "E",
-  "L",
-  "Radiant",
-  "Prismatic",
-]
+const RARITY_FILTER: (Rarity | "")[] = ["", ...RARITIES]
 /** 右页候选卡：一页 4 列 × 3 排，用书的翻页，不滚动 */
 const PICK_COLS = 4
 const PICK_ROWS = 3
@@ -510,7 +501,7 @@ export const DeckPanel = memo(function DeckPanel({
                 }}
                 aria-label="按品质筛选"
               >
-                {RARITIES.map((item) => (
+                {RARITY_FILTER.map((item) => (
                   <option key={item || "all"} value={item}>
                     {item ? RARITY_LABEL[item] : "全部品质"}
                   </option>

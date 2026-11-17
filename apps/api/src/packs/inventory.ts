@@ -2,17 +2,10 @@ import { and, eq, gt, sql } from "drizzle-orm"
 import { randomUUID } from "node:crypto"
 
 import { db } from "../db/client"
+import { PACKS, STARTER_PACKS, type PackId } from "../gacha/packs"
 import { packTokens, userPacks } from "../db/schema"
 
-export const PACK_POOLS = [
-  "normal",
-  "idle",
-  "golden",
-  "radiant",
-  "sky",
-  "prism",
-  "mystery",
-] as const
+export const PACK_POOLS = [...(Object.keys(PACKS) as PackId[]), "mystery"] as const
 
 export type PackPoolId = (typeof PACK_POOLS)[number]
 
@@ -58,7 +51,7 @@ export async function consumePack(userId: string, pool: PackPoolId): Promise<boo
 
 /** 新号 OOBE 完成时发放：30 新手包 + 1 神秘卡包 */
 export async function grantStarterPacks(userId: string): Promise<void> {
-  await addPacks(userId, { normal: 30, mystery: 1 })
+  await addPacks(userId, STARTER_PACKS)
 }
 
 /** 把背包里的一个卡包“拿到桌面”：先扣库存，生成一次性 token。 */

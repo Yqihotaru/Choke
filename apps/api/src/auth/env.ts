@@ -27,7 +27,7 @@ if (file) {
 export const CLIENT_ID = process.env.OSU_CLIENT_ID ?? ""
 export const CLIENT_SECRET = process.env.OSU_CLIENT_SECRET ?? ""
 export const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3100"
-export const WEB_BASE = process.env.WEB_BASE_URL ?? "http://localhost:5173"
+export const WEB_BASE = process.env.WEB_BASE_URL ?? "http://localhost:5207"
 export const REDIRECT_URI = `${API_BASE}/auth/osu/callback`
 
 /**

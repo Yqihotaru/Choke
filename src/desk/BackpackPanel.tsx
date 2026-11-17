@@ -5,10 +5,12 @@ import { CardFace } from "@/card/CardFace"
 import { RARITY_LABEL, battlePower } from "@/card/data"
 
 import {
+  fetchPackCatalog,
   fetchPackInventory,
   openMysteryPack,
   toFace,
   type ApiUserCard,
+  type PackCatalog,
   type PackInventory,
 } from "./api"
 import { Pages } from "./BookPages"
@@ -25,21 +27,23 @@ interface PackMeta {
   note: string
   /** 服务端卡池 id，去抽卡时用 */
   pool?: string
-  /** 卡包图用的桌面卡池（服务端的 golden 在桌面叫 quest）；神秘卡包没有 */
+  /** 卡包图用的桌面卡池；神秘卡包没有 */
   art?: PackPool
 }
 
 const MYSTERY_ID = "mystery"
 
-const PACKS: PackMeta[] = [
-  { id: MYSTERY_ID, label: "神秘卡包", note: "只有 1 张卡：你的本体卡" },
-  { id: "idle", label: "挂机卡包", note: "低稀有度 · 每包 5 张", pool: "idle", art: "idle" },
-  { id: "normal", label: "普通卡包", note: "日常主力 · 每包 5 张", pool: "normal", art: "normal" },
-  { id: "golden", label: "黄金卡包", note: "任务产出 · 每包 5 张", pool: "golden", art: "quest" },
-  { id: "radiant", label: "璀璨卡包", note: "周常奖励 · 每包 5 张", pool: "radiant", art: "radiant" },
-  { id: "sky", label: "天穹卡包", note: "月常奖励 · 每包 5 张", pool: "sky", art: "sky" },
-  { id: "prism", label: "棱彩卡包", note: "赛季牌面 · 每包 5 张", pool: "prism", art: "prism" },
-]
+/** 背包里的展示顺序是 UI 决定；名称、每包张数从 GET /packs 读。 */
+const PACK_ORDER = ["idle", "normal", "golden", "radiant", "sky", "prism"] as const
+
+const PACK_TAGLINE: Record<PackPool, string> = {
+  idle: "低稀有度",
+  normal: "日常主力",
+  golden: "任务产出",
+  radiant: "周常奖励",
+  sky: "月常奖励",
+  prism: "赛季牌面",
+}
 
 const QUESTIONS = [
   {
@@ -66,6 +70,7 @@ export function BackpackPanel({
   onHeroClaimed?: () => void
 }) {
   const [inventory, setInventory] = useState<PackInventory | null>(null)
+  const [catalog, setCatalog] = useState<PackCatalog | null>(null)
   const [hero, setHero] = useState<ApiUserCard | null>(null)
   const [onboarded, setOnboarded] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -77,6 +82,18 @@ export function BackpackPanel({
   const [revision, setRevision] = useState(0)
   /** 没点过就默认选第一个有库存的 */
   const [picked, setPicked] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchPackCatalog()
+      .then((data) => {
+        if (!cancelled) setCatalog(data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const onHover = (event: Event) => {
@@ -118,10 +135,27 @@ export function BackpackPanel({
   const heroClaimed = inventory?.heroClaimed ?? !!hero
   const totalPacks = Object.values(counts).reduce((sum, value) => sum + (value ?? 0), 0)
   const heroFace = useMemo(() => (hero ? toFace(hero) : result ? toFace(result) : null), [hero, result])
+  const packSize = catalog?.packSize ?? 5
+  const packList = useMemo<PackMeta[]>(() => {
+    const list: PackMeta[] = [
+      { id: MYSTERY_ID, label: "神秘卡包", note: "只有 1 张卡：你的本体卡" },
+    ]
+    for (const id of PACK_ORDER) {
+      const meta = catalog?.packs.find((pack) => pack.id === id)
+      list.push({
+        id,
+        label: meta?.name ?? id,
+        note: `${PACK_TAGLINE[id]} · 每包 ${packSize} 张`,
+        pool: id,
+        art: id,
+      })
+    }
+    return list
+  }, [catalog, packSize])
   const selected =
-    PACKS.find((pack) => pack.id === picked) ??
-    PACKS.find((pack) => (counts[pack.id] ?? 0) > 0) ??
-    PACKS[0]
+    packList.find((pack) => pack.id === picked) ??
+    packList.find((pack) => (counts[pack.id] ?? 0) > 0) ??
+    packList[0]!
   const selectedCount = counts[selected.id] ?? 0
   const isMystery = selected.id === MYSTERY_ID
   const showHero = isMystery && heroFace
@@ -179,7 +213,7 @@ export function BackpackPanel({
         <>
           <span className="bk-label">库存 · 共 {totalPacks} 包</span>
           <div className="bk-list">
-            {PACKS.map((pack) => {
+            {packList.map((pack) => {
               const count = counts[pack.id] ?? 0
               const on = pack.id === selected.id
               return (

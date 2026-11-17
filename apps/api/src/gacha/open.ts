@@ -2,7 +2,8 @@ import { and, eq, notLike } from "drizzle-orm"
 
 import { db } from "../db/client"
 import { cards, packOpenings, pity, userCards } from "../db/schema"
-import { PITY_RARITY, PITY_THRESHOLD, FOIL_RATE, mulberry32, rollRarity, type PoolId } from "./pools"
+import { PITY, PACK_SIZE, PACKS } from "./packs"
+import { mulberry32, rollRarity, type PoolId } from "./pools"
 
 const RANK: Record<string, number> = {
   C: 0,
@@ -38,7 +39,7 @@ export interface DrawnCard {
   foil: boolean
 }
 
-export async function openPack(userId: string, pool: PoolId, count = 5) {
+export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) {
   const seed = Math.floor(Math.random() * 2 ** 32)
   const random = mulberry32(seed)
 
@@ -63,19 +64,19 @@ export async function openPack(userId: string, pool: PoolId, count = 5) {
       let rarity = rollRarity(pool, random)
       let fromPity = false
 
-      if (RANK[rarity] < RANK[PITY_RARITY] && counter >= PITY_THRESHOLD) {
-        rarity = PITY_RARITY
+      if (RANK[rarity] < RANK[PITY.rarity] && counter >= PITY.threshold) {
+        rarity = PITY.rarity
         fromPity = true
       }
 
-      if (RANK[rarity] >= RANK[PITY_RARITY]) counter = 0
+      if (RANK[rarity] >= RANK[PITY.rarity]) counter = 0
 
       const ids = pools.get(rarity) ?? []
       if (ids.length === 0) {
         throw new Error(`卡池里没有 ${rarity} 档的卡，先导入卡定义`)
       }
       const cardId = ids[Math.floor(random() * ids.length)]!
-      const foil = random() < FOIL_RATE[pool]
+      const foil = random() < PACKS[pool].foilRate
 
       const [inserted] = await tx
         .insert(userCards)

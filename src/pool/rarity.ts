@@ -1,8 +1,8 @@
-import type { Rarity } from "@/card/types"
+import { RARITIES, type Rarity } from "@/card/types"
 
 import type { GradeCounts, MutualifyRow, PoolShares } from "./types"
 
-export const RARITY_ORDER = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"] as const
+export const RARITY_ORDER = RARITIES
 
 /**
  * 基础卡池目标占比。一个 seed 只在这附近抖动，不改档位数。

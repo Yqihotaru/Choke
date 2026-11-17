@@ -1,4 +1,4 @@
-import type { Rarity } from "@/card/types"
+import { RARITIES, type Rarity } from "@/card/types"
 
 /**
  * 稀有度打分。五项各自 0–100，加权求和。
@@ -60,7 +60,7 @@ export const PP_CAP = {
   rarity: "L" as Rarity,
 }
 
-const RARITY_ORDER: Rarity[] = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"]
+const RARITY_ORDER = RARITIES
 
 function clamp(value: number, min = 0, max = 100): number {
   return Math.min(max, Math.max(min, value))

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react"
 
 import { CardFace } from "@/card/CardFace"
 import { RARITY_LABEL } from "@/card/data"
-import type { Rarity } from "@/card/types"
+import { RARITIES, type Rarity } from "@/card/types"
 
 import { defRow } from "@/card/def"
 
@@ -12,7 +12,7 @@ import type { OsuSelf } from "./hero"
 import "./pool-lab.css"
 import "@/card/card-lab.css"
 
-const RARITY_ORDER: Rarity[] = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"]
+const RARITY_ORDER = RARITIES
 
 const SAMPLE = [
   {

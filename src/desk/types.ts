@@ -1,12 +1,12 @@
-import type { CardFaceData } from "@/card/types"
+import type { CardFaceData, Rarity } from "@/card/types"
 
 import type { DeskObjectId } from "./objects"
 
-export type Rarity = "C" | "UC" | "R" | "E" | "L" | "Radiant" | "Prismatic"
+export type { Rarity }
 
 export type ItemKind = "pack" | "card" | "object"
 
-export type PackPool = "normal" | "idle" | "quest" | "radiant" | "sky" | "prism"
+export type PackPool = "normal" | "idle" | "golden" | "radiant" | "sky" | "prism"
 
 export interface CardData {
   /** 服务端卡牌 id；桌面本地原型卡没有 */

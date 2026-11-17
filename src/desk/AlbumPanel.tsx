@@ -10,7 +10,7 @@ import {
 import { CardFace } from "@/card/CardFace"
 import { RARITY_LABEL } from "@/card/data"
 import { expToNext, isHeroCardId, levelCap } from "@/card/progression"
-import type { Rarity } from "@/card/types"
+import { RARITIES } from "@/card/types"
 
 import { fetchUserCards, toFace, type ApiUserCard, type CardSort } from "./api"
 import { Pages, useBook, usePageCache } from "./BookPages"
@@ -29,8 +29,6 @@ const RIGHT_ROWS = 3
 const PAGE_SIZE = LEFT_SIZE + COLS * RIGHT_ROWS
 /** 和 album-panel.css 的 .album-sheet__grid gap 一致 */
 const SHEET_GAP = 10
-
-const RARITIES: Rarity[] = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"]
 
 interface Result {
   rows: ApiUserCard[]

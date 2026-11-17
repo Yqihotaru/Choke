@@ -1,4 +1,7 @@
-export type Rarity = "C" | "UC" | "R" | "E" | "L" | "Radiant" | "Prismatic"
+/** 品质从低到高；界面的筛选、排序、概率展示都从这里取顺序。 */
+export const RARITIES = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"] as const
+
+export type Rarity = (typeof RARITIES)[number]
 
 /** 职业四大类；十四子职业后续在此扩展 */
 export type Job = "tank" | "warrior" | "mage" | "support"

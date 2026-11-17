@@ -9,7 +9,10 @@ import {
 } from "react"
 import { createPortal, flushSync } from "react-dom"
 
+import { RARITIES } from "@/card/types"
+
 import { cellScale, type DeskDrawerHandle } from "./DeskDrawer"
+import { fetchPackCatalog } from "./api"
 import { GuestLoginButton } from "./GuestLoginButton"
 import {
   ACHIEVEMENTS,
@@ -462,6 +465,20 @@ function LetterModal({
   const [claiming, setClaiming] = useState(false)
   const [granted, setGranted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** 保底阈值由 API 提供；没读到之前先显示占位 */
+  const [pityThreshold, setPityThreshold] = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchPackCatalog()
+      .then((catalog) => {
+        if (!cancelled) setPityThreshold(catalog.pity.threshold)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     // 捕获阶段先拦下 Esc，不让底下翻开的书也跟着合上
@@ -602,11 +619,11 @@ function LetterModal({
             <span>玩家卡池</span>
           </li>
           <li>
-            <b>7</b>
+            <b>{RARITIES.length}</b>
             <span>品质档位</span>
           </li>
           <li>
-            <b>60</b>
+            <b>{pityThreshold ?? "—"}</b>
             <span>抽保底</span>
           </li>
         </ul>

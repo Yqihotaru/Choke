@@ -11,6 +11,7 @@ import {
 } from "react"
 
 import { CardFace } from "@/card/CardFace"
+import { RARITIES } from "@/card/types"
 
 import { cardFromDesk } from "../cardFace"
 import { CARD_POINTER_DROP_EVENT, startCardPointerDrag, type CardPointerDrop } from "../drag"
@@ -40,7 +41,7 @@ interface Props {
   onDropCard: (card: CardData) => void
 }
 
-const RARITY_ORDER: Rarity[] = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"]
+const RARITY_ORDER = RARITIES
 /** 翻开时桌面暗下来、扫一道光的档位 */
 const BIG: Record<Rarity, boolean> = { C: false, UC: false, R: false, E: false, L: true, Radiant: true, Prismatic: true }
 /** 翻牌前卡背边缘透出的光，越稀有越亮 */

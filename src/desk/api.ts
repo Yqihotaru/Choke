@@ -174,6 +174,34 @@ export interface PackInventory {
   heroClaimed: boolean
 }
 
+export interface PackCatalogEntry {
+  id: string
+  name: string
+  short: string
+  color: string
+  weights: Record<string, number>
+  foilRate: number
+}
+
+export interface PackCatalog {
+  packs: PackCatalogEntry[]
+  pity: { threshold: number; rarity: string }
+  packSize: number
+}
+
+let catalogPromise: Promise<PackCatalog> | null = null
+
+/** 卡包配置是静态的；同一次会话里多处要用，缓存一份。 */
+export function fetchPackCatalog(): Promise<PackCatalog> {
+  if (!catalogPromise) {
+    catalogPromise = request<PackCatalog>("/api/packs").catch((error) => {
+      catalogPromise = null
+      throw error
+    })
+  }
+  return catalogPromise
+}
+
 export function fetchPackInventory(userId: string, signal?: AbortSignal): Promise<PackInventory> {
   return request<PackInventory>(`/api/users/${userId}/packs`, { signal })
 }
