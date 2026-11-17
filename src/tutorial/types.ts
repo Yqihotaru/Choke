@@ -35,7 +35,7 @@ export type TutorialEventType = "pack-opened" | "deck-confirmed"
 
 export type TutorialMood = "idle" | "happy" | "smug" | "serious"
 
-export type TutorialAdvance = "continue" | "click" | "event"
+export type TutorialAdvance = "continue" | "click" | "event" | "external"
 
 export interface TutorialLine {
   text: string

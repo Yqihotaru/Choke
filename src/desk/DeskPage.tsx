@@ -399,10 +399,18 @@ export function DeskPage() {
     const task = (async () => {
       if (!user.onboarded) {
         try {
-          await fetch("/auth/onboard", {
+          const res = await fetch("/auth/onboard", {
             method: "POST",
             credentials: "include",
           })
+          if (!res.ok) {
+            const payload = (await res.json().catch(() => null)) as
+              | { error?: { message?: string } }
+              | null
+            showToast(
+              payload?.error?.message ?? "新手礼包领取失败，请刷新重试"
+            )
+          }
         } catch {
           showToast("新手礼包领取失败，请刷新重试")
         }
@@ -458,15 +466,24 @@ export function DeskPage() {
     return () => window.removeEventListener(TUTORIAL_CLOSE_BOOK_EVENT, handler)
   }, [])
 
-  // 教程目标如果被收进抽屉，先放回桌面，避免遮罩高亮一个看不见的位置
+  // 只在当前步骤需要时，把收进抽屉的目标放回桌面
   useEffect(() => {
-    if (progress.tutorialDone) return
-    const needed: DeskObjectId[] = ["packs", "album", "deck", "battle"]
-    for (const id of needed) {
-      const item = items.find((entry) => entry.object === id && entry.stowed)
-      if (item) {
-        unstow(item.id, OBJECT_META[id].x, OBJECT_META[id].y)
-      }
+    if (progress.tutorialDone || progress.tutorialStep === "idle") return
+    const needed: Record<string, DeskObjectId> = {
+      "gacha-entry": "packs",
+      "gacha-open": "packs",
+      album: "album",
+      "album-view": "album",
+      deck: "deck",
+      "deck-view": "deck",
+      "battle-tab": "battle",
+      "battle-view": "battle",
+    }
+    const id = needed[progress.tutorialStep]
+    if (!id) return
+    const item = items.find((entry) => entry.object === id && entry.stowed)
+    if (item) {
+      unstow(item.id, OBJECT_META[id].x, OBJECT_META[id].y)
     }
   }, [progress.tutorialStep, progress.tutorialDone, items, unstow])
 

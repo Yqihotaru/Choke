@@ -412,7 +412,7 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
             <CardDetail
               key={`codex-${detailCard.id}`}
               card={detailCard}
-              userId={null}
+              userId={userId}
               readOnly
               onClose={() => setDetail(null)}
             />

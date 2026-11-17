@@ -173,6 +173,7 @@ export function BattlePanel({
                 <button
                   type="button"
                   className="bk-btn bk-btn--main bk-btn--block"
+                  data-tutorial-id="battle-go-deck"
                   onClick={onOpenDeck}
                 >
                   去卡组上阵

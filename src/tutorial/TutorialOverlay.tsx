@@ -592,7 +592,11 @@ export function TutorialOverlay({
           </div>
         </>
       ) : (
-        <div className="tut-shade tut-shade--full" />
+        <div
+          className={`tut-shade tut-shade--full ${
+            script.advanceOn === "external" ? "tut-shade--pass" : ""
+          }`}
+        />
       )}
 
       <div

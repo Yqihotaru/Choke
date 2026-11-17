@@ -157,9 +157,9 @@ export const TUTORIAL_SCRIPTS = {
 
   "battle-view": {
     target: ({ bookOpen }) =>
-      bookOpen ? "battle-tutorial-start" : "battle-entry",
+      bookOpen ? ["battle-tutorial-start", "battle-go-deck"] : "battle-entry",
     // 战斗页自己负责推进到 battle-result；这里只等待玩家从书里进入战斗
-    advanceOn: "event",
+    advanceOn: "external",
     next: "battle-result",
     lines: [
       {

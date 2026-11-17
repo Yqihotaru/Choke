@@ -26,9 +26,15 @@ export const MODULE_UNLOCK_LEVEL: Record<ModuleId, number> = {
 
 /**
  * 日常模块在教程毕业前不开放，避免玩家在 Step 1 就绕去背包 / 图鉴。
- * 市场始终在桌面上显示锁定态，用来预告 Lv.6 目标。
+ * 市场始终在桌面上显示锁定态，作为等级解锁的预告。
  */
-const AFTER_TUTORIAL: ModuleId[] = ["backpack", "codex", "invite", "button"]
+const AFTER_TUTORIAL: ModuleId[] = [
+  "backpack",
+  "codex",
+  "invite",
+  "button",
+  "market",
+]
 
 export function unlockLevelOf(id: ModuleId): number {
   return MODULE_UNLOCK_LEVEL[id]

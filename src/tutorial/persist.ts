@@ -3,16 +3,16 @@ import { TUTORIAL_STEPS, type PlayerProgress, type TutorialStep } from "./types"
 /**
  * 后端同步适配层。
  *
- * 默认只写 localStorage；把 VITE_PROGRESS_SYNC 设为 "1" 后启用远端备份。
- * 建议的后端接口（与下面两个函数一一对应）：
+ * localStorage 是主存储，远端同步默认开启（VITE_PROGRESS_SYNC=0 可临时关闭）。
+ * 后端接口（与下面两个函数一一对应）：
  *
  *   GET  /api/users/:userId/progress
  *   PUT  /api/users/:userId/progress
  *   body: { level, exp, tutorialStep, tutorialDone, updatedAt }
  *
- * 服务端保存到 users 表的 player_level / player_exp / tutorial_step /
- * tutorial_done / progress_updated_at 五列即可；updatedAt 用毫秒时间戳，
- * 用来做“本地 / 远端谁更新”的合并。没有远端时完全不影响本地流程。
+ * users 表保存 player_level / player_exp / tutorial_step / tutorial_done /
+ * progress_updated_at；updatedAt 用毫秒时间戳，用来做“本地 / 远端谁更新”
+ * 的合并。没有远端时完全不影响本地流程。
  */
 // 默认开启；本地调试后端时可用 VITE_PROGRESS_SYNC=0 临时关掉
 export const PROGRESS_SYNC_ENABLED = import.meta.env.VITE_PROGRESS_SYNC !== "0"

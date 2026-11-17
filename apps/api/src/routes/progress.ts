@@ -33,6 +33,10 @@ function payload(row: {
   }
 }
 
+/**
+ * 注意：玩家等级 / 教程完成状态目前由客户端上传，服务端只做单调查合并锁上限，
+ * 它是 UX 门槛而不是反作弊。真正需要防刷时，应把经验来源改成服务端事件结算。
+ */
 export async function progressRoutes(app: FastifyInstance) {
   app.get("/users/:userId/progress", async (request, reply) => {
     const params = paramsSchema.parse(request.params)

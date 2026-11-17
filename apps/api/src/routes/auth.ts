@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto"
 
-import { and, eq, getTableColumns } from "drizzle-orm"
+import { and, eq, getTableColumns, sql } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 
 import {
@@ -15,7 +15,7 @@ import {
 } from "../auth/osu"
 import { WEB_BASE } from "../auth/env"
 import { db } from "../db/client"
-import { cards, userCards, users } from "../db/schema"
+import { cards, userCards, userPacks, users } from "../db/schema"
 import { invalidatePublicCardCache } from "./cards"
 import { heroCardDef } from "../hero"
 import { addPacks, getPackCounts, grantStarterPacks } from "../packs/inventory"
@@ -281,24 +281,33 @@ export async function authRoutes(app: FastifyInstance) {
       return { ok: true, data: { granted: false, packs: counts } }
     }
 
-    const claimed = await db
-      .update(users)
-      .set({ tutorialPackClaimed: true })
-      .where(
-        and(
-          eq(users.id, userId),
-          eq(users.tutorialPackClaimed, false),
-        ),
-      )
-      .returning({ id: users.id })
-    if (claimed.length === 0) {
-      return { ok: true, data: { granted: false, packs: counts } }
-    }
+    let granted = false
+    await db.transaction(async (tx) => {
+      const claimed = await tx
+        .update(users)
+        .set({ tutorialPackClaimed: true })
+        .where(
+          and(
+            eq(users.id, userId),
+            eq(users.tutorialPackClaimed, false),
+          ),
+        )
+        .returning({ id: users.id })
+      if (claimed.length === 0) return
 
-    await addPacks(userId, { normal: 1 })
+      granted = true
+      await tx
+        .insert(userPacks)
+        .values({ userId, pool: "normal", count: 1 })
+        .onConflictDoUpdate({
+          target: [userPacks.userId, userPacks.pool],
+          set: { count: sql`${userPacks.count} + 1` },
+        })
+    })
+
     return {
       ok: true,
-      data: { granted: true, packs: await getPackCounts(userId) },
+      data: { granted, packs: await getPackCounts(userId) },
     }
   })
 

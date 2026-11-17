@@ -59,10 +59,11 @@ function normalize(
   let tutorialStep = isStep(raw.tutorialStep) ? raw.tutorialStep : "idle"
   const tutorialDone = raw.tutorialDone === true || tutorialStep === "done"
   if (tutorialDone && tutorialStep === "idle") tutorialStep = "done"
-  const level = Math.min(
+  let level = Math.min(
     MAX_LEVEL,
     Math.max(1, Math.round(typeof raw.level === "number" ? raw.level : 1))
   )
+  if (tutorialDone && level < 3) level = 3
   const exp = Math.max(0, Math.round(typeof raw.exp === "number" ? raw.exp : 0))
   return {
     version: 1,
@@ -165,9 +166,9 @@ const pulled = new Set<string>()
 /** 登录后拉一次远端进度；远端更新才覆盖本地，否则把本地推上去 */
 export async function pullProgress(ownerId: string | null) {
   if (!PROGRESS_SYNC_ENABLED || !ownerId || pulled.has(ownerId)) return
-  pulled.add(ownerId)
   const remote = await fetchServerProgress(ownerId)
   if (!remote || owner !== ownerId) return
+  pulled.add(ownerId)
   const remoteState = normalize(
     {
       version: 1,

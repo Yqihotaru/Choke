@@ -23,6 +23,11 @@
 .tut-shade--full {
   inset: 0;
 }
+/* external 步骤在目标消失时允许点击底层，避免书合上/切页后彻底卡死 */
+.tut-shade--pass {
+  pointer-events: none;
+  background: rgb(10 6 9 / 0.42);
+}
 
 .tut-hole-block {
   position: fixed;
