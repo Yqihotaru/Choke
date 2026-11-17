@@ -95,6 +95,8 @@ export function DeskPage() {
   const pressingRef = useRef(false)
   const pressHandled = useRef(false)
   const [pressId, setPressId] = useState(0)
+  /** 按压动画结束后，请求仍可能进行中；继续拦住重复 /take。 */
+  const dealBusy = useRef(false)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [collecting, setCollecting] = useState<{
     id: string
@@ -822,6 +824,8 @@ export function DeskPage() {
       showToast("请先登录（osu! 或游客）")
       return
     }
+    if (dealBusy.current) return
+    dealBusy.current = true
     try {
       const res = await fetch(
         `/api/users/${user.id}/packs/${SERVER_POOL[pool]}/take`,
@@ -855,6 +859,8 @@ export function DeskPage() {
       showToast(`${meta.label} · 卡包已发到桌面`)
     } catch {
       showToast("发牌失败")
+    } finally {
+      dealBusy.current = false
     }
   }
 
@@ -1217,6 +1223,15 @@ export function DeskPage() {
   const onTap = async (item: DeskItem) => {
     if (item.kind === "object" && item.object) {
       if (item.object === "button") {
+        if (!user) {
+          showToast("请先登录（osu! 或游客）")
+          return
+        }
+        if (poolPacks <= 0) {
+          showToast(`背包里没有${POOL_META[pool].label}`)
+          return
+        }
+        if (dealBusy.current) return
         // 上一次按压动画还没走完：直接吞掉这次点击，避免 class 在同一帧里被反复擦写
         if (pressingRef.current) return
         pressingRef.current = true
