@@ -1,9 +1,5 @@
 /* =========================================================
-   卡面 v5 — 暗夜黑胶腰封 × 音游战术海报
-   · 2:3 比例（100cqw × 150cqw），内部全走 cqw。
-   · 全 7 档统一深色高质感卡基，闪卡光泽彻底通透；
-   · 左侧 14cqw 精简腰封 + 右侧 86cqw 放大关键信息区；
-   · Banner 随技能数量自动伸缩高度，彻底消除底部空洞。
+   卡面 v5.1 — 清理脏点 & 修复 SVG 徽记与星标
    ========================================================= */
 
 .cfn {
@@ -24,7 +20,6 @@
     0 4px 10px rgb(0 0 0 / 0.35),
     0 14px 28px -6px rgb(0 0 0 / 0.6);
 
-  /* 默认暗色基调 */
   --paper: #1c1e24;
   --obi: #121419;
   --ink: #f3f1ec;
@@ -46,10 +41,6 @@
   --hair: max(0.28cqw, 0.5px);
   --rule: max(0.55cqw, 1px);
 }
-
-/* =========================================================
-   1. 卡纸与光影追踪
-   ========================================================= */
 
 .cfn__stock,
 .cfn__sheen,
@@ -85,7 +76,6 @@
 }
 
 .cfn__seal,
-.cfn__emblem,
 .cfn__rarity,
 .cfn__title-rule,
 .cfn__sheen,
@@ -97,7 +87,7 @@
 }
 
 .cfn[data-lit]
-  :is(.cfn__seal, .cfn__emblem, .cfn__rarity, .cfn__title-rule, .cfn__sheen, .cfn__foil > i) {
+  :is(.cfn__seal, .cfn__rarity, .cfn__title-rule, .cfn__sheen, .cfn__foil > i) {
   transition: none;
 }
 
@@ -116,10 +106,7 @@
   height: 100%;
 }
 
-/* =========================================================
-   2. 左侧精简黑胶腰封（14cqw）
-   ========================================================= */
-
+/* 左侧腰封 */
 .cfn__obi {
   position: relative;
   flex: 0 0 14cqw;
@@ -143,7 +130,6 @@
     1cqw 0 2.8cqw rgb(0 0 0 / 0.35);
 }
 
-/* 腰封右侧细烫印分界线 */
 .cfn__obi::after {
   content: "";
   position: absolute;
@@ -163,6 +149,7 @@
   height: 9.4cqw;
   display: grid;
   place-items: center;
+  color: color-mix(in srgb, var(--accent) 68%, #fff);
 }
 
 .cfn__seal::before {
@@ -184,35 +171,12 @@
     linear-gradient(#000 0 0);
 }
 
-.cfn__emblem {
-  display: block;
+.cfn__emblem-svg {
   position: relative;
   z-index: 1;
-  width: 5.2cqw;
-  height: 5.2cqw;
-  background-image: var(--foil);
-  background-size: 260% 260%;
-  background-position: var(--foil-pos);
-  mask: url("./tex/emblem-c.svg") center / contain no-repeat;
-}
-
-.cfn[data-rarity="UC"] .cfn__emblem {
-  mask-image: url("./tex/emblem-uc.svg");
-}
-.cfn[data-rarity="R"] .cfn__emblem {
-  mask-image: url("./tex/emblem-r.svg");
-}
-.cfn[data-rarity="E"] .cfn__emblem {
-  mask-image: url("./tex/emblem-e.svg");
-}
-.cfn[data-rarity="L"] .cfn__emblem {
-  mask-image: url("./tex/emblem-l.svg");
-}
-.cfn[data-rarity="Radiant"] .cfn__emblem {
-  mask-image: url("./tex/emblem-radiant.svg");
-}
-.cfn[data-rarity="Prismatic"] .cfn__emblem {
-  mask-image: url("./tex/emblem-prismatic.svg");
+  width: 5cqw;
+  height: 5cqw;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.6));
 }
 
 .cfn__obi-mid {
@@ -285,10 +249,7 @@
   color: var(--obi-dim);
 }
 
-/* =========================================================
-   3. 右侧暗黑海报主画幅（86cqw）
-   ========================================================= */
-
+/* 右侧海报 */
 .cfn__poster {
   flex: 1 1 0;
   min-width: 0;
@@ -296,7 +257,6 @@
   flex-direction: column;
 }
 
-/* 顶部 Banner：flex: 1 1 28cqw 自适应剩余高度，告别下方空洞 */
 .cfn__cover {
   position: relative;
   flex: 1 1 28cqw;
@@ -346,17 +306,16 @@
 
 .cfn__watermark {
   position: absolute;
-  right: 2.6cqw;
-  bottom: 0.4cqw;
+  right: 2.8cqw;
+  bottom: 1.2cqw;
   z-index: 1;
-  font-size: 16cqw;
+  font-size: 14.5cqw;
   font-weight: 900;
   letter-spacing: -0.04em;
   color: rgb(255 255 255 / 0.11);
   pointer-events: none;
 }
 
-/* 顶部悬浮 Lv + 横排 MOD 胶囊 */
 .cfn__cover-top {
   position: relative;
   z-index: 2;
@@ -417,18 +376,7 @@
   color: #fff;
 }
 
-.cfn__series {
-  position: absolute;
-  right: 3cqw;
-  bottom: 2.2cqw;
-  z-index: 2;
-  font-size: 2.1cqw;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: rgb(255 255 255 / 0.7);
-}
-
-/* 破界 42cqw 大头像 + 放大版关键信息看板 */
+/* 头像与数据 HUD */
 .cfn__hero-row {
   position: relative;
   z-index: 3;
@@ -469,35 +417,15 @@
   background: rgb(255 255 255 / 0.05);
 }
 
-.cfn__approach {
-  position: absolute;
-  right: -1.8cqw;
-  bottom: -1.8cqw;
-  width: 7cqw;
-  height: 7cqw;
-  border-radius: 50%;
-  border: 0.55cqw solid var(--accent);
-  background: var(--paper);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.55);
-}
-
-.cfn__approach::after {
-  content: "";
-  position: absolute;
-  inset: 1.4cqw;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
 .cfn__hud {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1.5cqw;
+  gap: 1.4cqw;
   padding-top: 12cqw;
-  padding-bottom: 0.4cqw;
+  padding-bottom: 0.2cqw;
 }
 
 .cfn__rank-line {
@@ -533,47 +461,47 @@
 }
 
 .cfn__pp b {
-  font-size: 4.6cqw;
+  font-size: 4.5cqw;
   font-weight: 800;
   color: var(--ink);
 }
 
 .cfn__pp i {
   font-style: normal;
-  font-size: 2.6cqw;
+  font-size: 2.5cqw;
   font-weight: 700;
   color: var(--ink-dim);
 }
 
 .cfn__stars {
   display: flex;
-  gap: 0.5cqw;
+  gap: 0.45cqw;
 }
 
-.cfn__star {
+.cfn__star-svg {
   width: 4cqw;
   height: 4cqw;
-  mask: url("./tex/star-fill.svg") center / contain no-repeat;
 }
 
-.cfn__star[data-state="empty"] {
-  mask-image: url("./tex/star-line.svg");
-  background: rgb(255 255 255 / 0.25);
+.cfn__star-svg[data-state="empty"] {
+  color: rgb(255 255 255 / 0.3);
 }
 
-.cfn__star[data-state="copper"] {
-  background: linear-gradient(135deg, #f8d49a, #d9822b 55%, #9a4f16);
+.cfn__star-svg[data-state="copper"] {
+  color: #e89b44;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.5));
 }
 
-.cfn__star[data-state="prism"] {
-  background: linear-gradient(135deg, #86f5d5, #9cc2ff 50%, #f59fe0);
+.cfn__star-svg[data-state="prism"] {
+  color: #8ce9e6;
+  filter: drop-shadow(0 0 3px rgb(140 233 230 / 0.45));
 }
 
 .cfn__bp {
   display: inline-flex;
   align-items: baseline;
   gap: 1.1cqw;
-  padding: 0.95cqw 1.9cqw;
+  padding: 0.9cqw 1.8cqw;
   border-radius: 0.9cqw;
   background: color-mix(in srgb, var(--bp) 20%, rgb(0 0 0 / 0.25));
   box-shadow: inset 0 0 0 var(--hair) color-mix(in srgb, var(--bp) 62%, #fff);
@@ -588,7 +516,7 @@
 }
 
 .cfn__bp b {
-  font-size: 4.4cqw;
+  font-size: 4.3cqw;
   font-weight: 800;
 }
 
@@ -596,13 +524,12 @@
   display: none;
 }
 
-/* 大号玩家名字区 */
 .cfn__title {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1.6cqw;
-  padding: 3cqw 3.2cqw 2cqw;
+  padding: 2.8cqw 3.2cqw 1.8cqw;
 }
 
 .cfn__name {
@@ -626,10 +553,7 @@
   background-position: var(--foil-pos);
 }
 
-/* =========================================================
-   4. 暗玻璃加厚技能条（无空白、高可读）
-   ========================================================= */
-
+/* 技能条 */
 .cfn__skills {
   flex: 0 0 auto;
   display: flex;
@@ -745,11 +669,7 @@
   opacity: 0.6;
 }
 
-/* =========================================================
-   5. 七档暗色材质演化（每档独立深色宝石/金属质感）
-   ========================================================= */
-
-/* C：冷石墨 */
+/* 七档暗色材质 */
 .cfn[data-rarity="C"] {
   --obi: #14161b;
   --paper: #1e2026;
@@ -757,7 +677,6 @@
   --foil: linear-gradient(125deg, #8b919e, #c8cdd6);
 }
 
-/* UC：暗松林翡翠 */
 .cfn[data-rarity="UC"] {
   --obi: #101914;
   --paper: #17221c;
@@ -765,7 +684,6 @@
   --foil: linear-gradient(125deg, #4b946e, #8ee0b5);
 }
 
-/* R：午夜钢蓝 */
 .cfn[data-rarity="R"] {
   --obi: #0e141f;
   --paper: #151d2b;
@@ -781,7 +699,6 @@
   );
 }
 
-/* E：暗丝绒紫 + 斜纹腰封压纹 */
 .cfn[data-rarity="E"] {
   --obi: #140e1e;
   --paper: #1c1628;
@@ -809,7 +726,6 @@
   pointer-events: none;
 }
 
-/* L：黑曜古铜 + 24K 烫金 */
 .cfn[data-rarity="L"] {
   --obi: #110e0b;
   --paper: #1c1915;
@@ -828,7 +744,6 @@
   );
 }
 
-/* Radiant：冷钛金属 + 贝母珠光纸面 */
 .cfn[data-rarity="Radiant"] {
   --obi: #11141a;
   --paper: #1a1e26;
@@ -881,7 +796,6 @@
   );
 }
 
-/* Prismatic：虚空靛黑 + 全息棱镜折射 */
 .cfn[data-rarity="Prismatic"] {
   --obi: #0b0a14;
   --paper: #131220;
@@ -939,10 +853,7 @@
     );
 }
 
-/* =========================================================
-   6. 闪卡膜（全暗底优化：通透耀眼）
-   ========================================================= */
-
+/* 闪卡膜 */
 .cfn__foil > i {
   position: absolute;
   inset: 0;
@@ -1067,10 +978,7 @@
   }
 }
 
-/* =========================================================
-   7. 战斗态：只留大头像和技能条
-   ========================================================= */
-
+/* 战斗态 */
 .cfn[data-mode="battle"] .cfn__obi,
 .cfn[data-mode="battle"] .cfn__cover,
 .cfn[data-mode="battle"] .cfn__hero-row,
@@ -1135,10 +1043,7 @@
   font-size: 4.2cqw;
 }
 
-/* =========================================================
-   8. 小尺寸自适应
-   ========================================================= */
-
+/* 小尺寸自适应 */
 @container cfn (max-width: 170px) {
   .cfn__obi {
     flex-basis: 11cqw;
@@ -1149,7 +1054,6 @@
   .cfn__no,
   .cfn__hero,
   .cfn__mods,
-  .cfn__series,
   .cfn__watermark,
   .cfn__stars,
   .cfn__pp,
@@ -1174,10 +1078,6 @@
     display: none;
   }
 }
-
-/* =========================================================
-   9. 参考线支持
-   ========================================================= */
 
 .cfn--guides .cfn__obi {
   outline: 1px dashed #ff3b6b;

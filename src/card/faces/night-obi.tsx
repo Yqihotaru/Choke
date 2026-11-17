@@ -17,13 +17,13 @@ import {
   starStates,
 } from "../data"
 import { trackCardLight } from "../light"
-import type { CardFaceData, CardFaceMode, Element, Job } from "../types"
+import type { CardFaceData, CardFaceMode, Element, Job, Rarity } from "../types"
 import "./night-obi.css"
 
 export const faceMeta = {
   id: "night-obi",
-  label: "暗夜腰封 v5",
-  note: "深色卡基 + 14cqw 腰封 + 战术海报",
+  label: "暗夜腰封 v5.1",
+  note: "v5 清理版：修复 SVG 徽记与星级",
   order: 40,
 } as const
 
@@ -34,13 +34,6 @@ interface Props {
   eager?: boolean
 }
 
-/**
- * 卡面 v5 — 暗夜黑胶腰封 × 音游战术海报
- * · 全 7 档采用深色宝石/金属卡基，高对比烫印与镭射闪膜；
- * · 左侧 14cqw 精简腰封（品阶章 / 竖排品阶 / 职业 / 编号）；
- * · 顶部 Banner 承载大号 Lv 与横排 MOD 胶囊，并在技能较少时自动舒展高度；
- * · 42cqw 大头像 + 醒目 Rank/PP/BP 看板 + 暗玻璃技能条。
- */
 export const CardFaceNightObi = memo(function CardFaceNightObi({
   card,
   mode = "collection",
@@ -86,10 +79,10 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
       <div className="cfn__sheen" aria-hidden />
 
       <div className="cfn__layout">
-        {/* 左侧精简黑胶腰封（14cqw） */}
+        {/* 左侧精简黑胶腰封 */}
         <aside className="cfn__obi">
           <span className="cfn__seal" title={RARITY_LABEL[card.rarity]}>
-            <i className="cfn__emblem" />
+            <EmblemGlyph rarity={card.rarity} />
           </span>
 
           <div className="cfn__obi-mid">
@@ -105,9 +98,8 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
           </div>
         </aside>
 
-        {/* 右侧暗黑海报主画幅（86cqw） */}
+        {/* 右侧暗黑海报主画幅 */}
         <main className="cfn__poster">
-          {/* 顶部自适应 Banner + 大号 Lv / MOD 战术条 */}
           <div className="cfn__cover">
             {(card.banner || card.art) && (
               <img
@@ -161,13 +153,9 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
                 })}
               </div>
             </div>
-
-            <span className="cfn__series" aria-hidden>
-              CHOKE! · S26
-            </span>
           </div>
 
-          {/* 破界大头像 + 高可读数据看板 */}
+          {/* 干净无脏点的 42cqw 大头像 + 右侧数据看板 */}
           <div className="cfn__hero-row">
             <div className="cfn__avatar">
               {card.art && (
@@ -180,7 +168,6 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
                   referrerPolicy="no-referrer"
                 />
               )}
-              <i className="cfn__approach" aria-hidden />
             </div>
 
             <div className="cfn__hud">
@@ -214,7 +201,7 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
                 aria-label={`命座 ${card.constellation}`}
               >
                 {starStates(card).map((state, i) => (
-                  <i className="cfn__star" data-state={state} key={i} />
+                  <StarGlyph state={state} key={i} />
                 ))}
               </div>
 
@@ -228,7 +215,6 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
             </div>
           </div>
 
-          {/* 战斗模式精简头像区 */}
           <div className="cfn__battle-stage" aria-hidden={mode !== "battle"}>
             {card.art && (
               <img
@@ -242,7 +228,6 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
             )}
           </div>
 
-          {/* 大号玩家名 + 金属流光分割线 */}
           <div className="cfn__title">
             {card.profileUrl ? (
               <a
@@ -263,7 +248,6 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
             <span className="cfn__title-rule" aria-hidden />
           </div>
 
-          {/* 暗玻璃加厚技能条 */}
           <div className="cfn__skills">
             {card.skills.slice(0, 3).map((skill, i) => (
               <div
@@ -320,6 +304,75 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
   )
 })
 
+function EmblemGlyph({ rarity }: { rarity: Rarity }) {
+  switch (rarity) {
+    case "C":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" strokeWidth="2.2" />
+        </svg>
+      )
+    case "UC":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path d="M12 4.5L18.5 12 12 19.5 5.5 12z" fill="none" stroke="currentColor" strokeWidth="2.1" />
+        </svg>
+      )
+    case "R":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z" fill="currentColor" />
+        </svg>
+      )
+    case "E":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path d="M12 3.2l7.4 4.3v9L12 20.8l-7.4-4.3v-9z" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M12 7.2l3.8 4.8-3.8 4.8L8.2 12z" fill="currentColor" />
+        </svg>
+      )
+    case "L":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path
+            d="M12 3l2.65 5.55 6.1.85-4.45 4.25 1.1 6.05L12 16.8l-5.4 2.9 1.1-6.05L3.25 9.4l6.1-.85z"
+            fill="currentColor"
+          />
+        </svg>
+      )
+    case "Radiant":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path
+            d="M12 2l2 6.2 6-2.2-2.2 6 6.2 2-6.2 2 2.2 6-6-2.2L12 22l-2-6.2-6 2.2 2.2-6L0 12l6.2-2L4 4l6 2.2z"
+            fill="currentColor"
+          />
+        </svg>
+      )
+    case "Prismatic":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path d="M12 2.5l8 5.2v8.6l-8 5.2-8-5.2V7.7z" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 5.2l2.1 4.7 4.7 2.1-4.7 2.1-2.1 4.7-2.1-4.7-4.7-2.1 4.7-2.1z" fill="currentColor" />
+        </svg>
+      )
+  }
+}
+
+function StarGlyph({ state }: { state: "empty" | "copper" | "prism" }) {
+  return (
+    <svg className="cfn__star-svg" data-state={state} viewBox="0 0 24 24">
+      <path
+        d="M12 2.6l2.8 5.8 6.4.9-4.6 4.5 1.1 6.3-5.7-3-5.7 3 1.1-6.3-4.6-4.5 6.4-.9z"
+        fill={state === "empty" ? "none" : "currentColor"}
+        stroke="currentColor"
+        strokeWidth={state === "empty" ? "2" : "0"}
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function OsuBeatmapMotif({ hasBanner }: { hasBanner: boolean }) {
   return (
     <svg
@@ -334,7 +387,7 @@ function OsuBeatmapMotif({ hasBanner }: { hasBanner: boolean }) {
         stroke="currentColor"
         strokeWidth="16"
         strokeLinecap="round"
-        opacity="0.16"
+        opacity="0.14"
       />
       <path
         d="M -10 78 Q 55 18, 128 52 T 250 24"
@@ -342,7 +395,7 @@ function OsuBeatmapMotif({ hasBanner }: { hasBanner: boolean }) {
         stroke="currentColor"
         strokeWidth="0.9"
         strokeLinecap="round"
-        opacity="0.5"
+        opacity="0.45"
       />
       <circle
         cx="196"
@@ -352,16 +405,7 @@ function OsuBeatmapMotif({ hasBanner }: { hasBanner: boolean }) {
         stroke="currentColor"
         strokeWidth="0.9"
         strokeDasharray="3 3"
-        opacity="0.55"
-      />
-      <circle
-        cx="196"
-        cy="42"
-        r="30"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="0.6"
-        opacity="0.35"
+        opacity="0.45"
       />
     </svg>
   )
