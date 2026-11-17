@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 
 import { CardFace } from "./CardFace"
+import { CardFaceV1 } from "./CardFaceV1"
 import { DEMO_CARDS, ELEMENT_LABEL, JOB_LABEL, MOD_LIST, RARITY_LABEL } from "./data"
 import type { CardFaceData, CardSkill, Element, Job, Mod, Rarity } from "./types"
 import "./card-editor.css"
@@ -44,6 +45,7 @@ export function CardEditor() {
   const [slots, setSlots] = useState<SkillSlot[]>(slotsFromCard(DEMO_CARDS[4]))
   const [width, setWidth] = useState(420)
   const [guides, setGuides] = useState(false)
+  const [faceStyle, setFaceStyle] = useState<"current" | "v1">("current")
   const [holo, setHolo] = useState<Holo>("none")
   const [exported, setExported] = useState<string | null>(null)
 
@@ -304,6 +306,15 @@ export function CardEditor() {
         </Section>
 
         <Section title="预览">
+          <Field label="卡面版本">
+            <select
+              value={faceStyle}
+              onChange={(e) => setFaceStyle(e.target.value as "current" | "v1")}
+            >
+              <option value="current">当前版（handoff）</option>
+              <option value="v1">星章版（860820f）</option>
+            </select>
+          </Field>
           <Field label={`宽度 ${width}px`}>
             <input
               type="range"
@@ -318,6 +329,7 @@ export function CardEditor() {
             <input
               type="checkbox"
               checked={guides}
+              disabled={faceStyle === "v1"}
               onChange={(e) => setGuides(e.target.checked)}
             />
             显示布局参考线
@@ -353,9 +365,12 @@ export function CardEditor() {
           data-holo={holo === "none" ? undefined : holo}
           style={{ width }}
         >
-          <CardFace card={card} className={guides ? "cf--guides" : undefined} />
+          {faceStyle === "v1" ? (
+            <CardFaceV1 card={card} />
+          ) : (
+            <CardFace card={card} className={guides ? "cf--guides" : undefined} />
+          )}
         </div>
-
         <div className="editor__zoom">
           <button type="button" onClick={() => setWidth((w) => Math.max(240, w - 40))} aria-label="缩小">
             −

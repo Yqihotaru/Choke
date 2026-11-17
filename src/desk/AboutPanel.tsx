@@ -5,7 +5,7 @@ const TOOLS = [
   {
     href: "/card-lab",
     label: "卡面实验室",
-    note: "七档卡框材质、三档尺寸、战斗态和本体卡命座阶梯。",
+    note: "当前 handoff 材料版与星章版（860820f）并排对比，七档材质、尺寸、战斗态和本体卡命座都可在右上角切换。",
   },
   {
     href: "/card-editor",

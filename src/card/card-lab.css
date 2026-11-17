@@ -76,6 +76,13 @@
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
+.lab__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .lab__toggle:hover {
   border-color: color-mix(in srgb, var(--lab-ink) 40%, transparent);
 }

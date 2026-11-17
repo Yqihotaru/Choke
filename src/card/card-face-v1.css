@@ -1,0 +1,980 @@
+/* =========================================================
+   卡面 v0.5 — 异形分块版
+   全部内部尺寸以卡宽 = 100cqw 计量，卡高恒为 150cqw（2:3）
+   ========================================================= */
+
+.cfv1 {
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  /* 注意：.cfv1 自身是 container 根节点，自身属性不可用 cqw（否则会按视口宽度计算导致小卡变椭圆），必须用百分比 */
+  border-radius: 5.4% / 3.6%;
+  background: var(--frame-grad, #e9e4da);
+  box-shadow:
+    0 16px 38px -18px rgb(0 0 0 / 0.65),
+    inset 0 0 0 1px var(--frame-rim, rgb(255 255 255 / 0.45)),
+    0 0 0 0.5px rgb(0 0 0 / 0.32);
+  --paper: #fcfbf9;
+  --panel: #211c48;
+  --panel-ink: #ffffff;
+  --slot-ink: #12101b;
+  --accent: #d4b263;
+  --frame-w: 2.2cqw;
+  --pad-x: 1.8cqw;
+  color: var(--slot-ink);
+  font-family: var(--font-heading), var(--font-cn), var(--font-sans);
+  user-select: none;
+  isolation: isolate;
+}
+
+/* ---------- 七档稀有度色板：外框材质 + 外框描边 + --panel + --accent ---------- */
+
+.cfv1[data-rarity="C"] {
+  --frame-grad: linear-gradient(135deg, #d8d0c2, #b5ab99 52%, #e2dcd0);
+  --frame-rim: #9e9483;
+  --frame-w: 2.2cqw;
+  --panel: #2b2823;
+  --accent: #a69880;
+}
+
+.cfv1[data-rarity="UC"] {
+  --frame-grad: linear-gradient(135deg, #d8e3f2, #7e94b0 36%, #e8eff8 58%, #647b99 82%, #cad8ec);
+  --frame-rim: #748aa6;
+  --frame-w: 2.3cqw;
+  --panel: #1e2536;
+  --accent: #a9b7c9;
+}
+
+.cfv1[data-rarity="R"] {
+  --frame-grad: linear-gradient(135deg, #f6dc96, #c4922e 38%, #faecc2 55%, #a8761c 78%, #efd282);
+  --frame-rim: #c99838;
+  --frame-w: 2.4cqw;
+  --panel: #302215;
+  --accent: #d4a64a;
+}
+
+.cfv1[data-rarity="E"] {
+  --frame-grad: linear-gradient(135deg, #b8dce6, #5ca8bc 48%, #cce8f0);
+  --frame-rim: #4996ab;
+  --frame-w: 2.5cqw;
+  --panel: #192d33;
+  --accent: #4fb3cc;
+}
+
+.cfv1[data-rarity="L"] {
+  --frame-grad: conic-gradient(from 215deg, #dfcffa, #9e7be0, #f0e6fd, #8862d2, #dfcffa);
+  --frame-rim: #9b78de;
+  --frame-w: 2.6cqw;
+  --panel: #211c48;
+  --accent: #d4b263;
+}
+
+.cfv1[data-rarity="Radiant"] {
+  --frame-grad: linear-gradient(120deg, #b0eed4, #45c496 30%, #e0fbf0 52%, #2fa87d 74%, #a4e8cb);
+  --frame-rim: #36b88a;
+  --frame-w: 2.7cqw;
+  --panel: #132d25;
+  --accent: #35df8e;
+}
+
+.cfv1[data-rarity="Prismatic"] {
+  --frame-grad: conic-gradient(from 80deg, #f29cb3, #9dbbf2, #94e3ca, #f2e194, #f2b494, #d199eb, #f29cb3);
+  --frame-rim: #c997e6;
+  --frame-w: 2.8cqw;
+  --panel: #2a1c38;
+  --accent: #e3bcf2;
+}
+
+/* ---------- 卡身与统一异形内框 ---------- */
+
+.cfv1__body {
+  position: absolute;
+  inset: var(--frame-w);
+  box-sizing: border-box;
+  padding: var(--pad-x);
+  border-radius: 3.9cqw;
+  background: var(--paper);
+  color: var(--slot-ink);
+  box-shadow: 0 0 0 0.25cqw rgb(0 0 0 / 0.14);
+  overflow: hidden;
+}
+
+/* 92cqw × 142cqw 内容骨架容器 */
+.cfv1__frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.cfv1__frame-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ---------- 1. 头部：左上深蓝异形块 + 大圆立体徽章 + 右侧白底信息 ---------- */
+
+.cfv1__head {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 29cqw;
+  min-height: 0;
+}
+
+/* 顶部深蓝条内的稀有度英文 */
+.cfv1__rank-name {
+  position: absolute;
+  top: 0.2cqw;
+  left: 28cqw;
+  width: 32cqw;
+  height: 5.8cqw;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading), var(--font-sans);
+  font-size: 2.75cqw;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  color: var(--panel-ink);
+  white-space: nowrap;
+}
+
+/* 右上角等级 Lv. 68 */
+.cfv1__lv {
+  position: absolute;
+  top: 1.2cqw;
+  right: 2.4cqw;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6cqw;
+  font-family: var(--font-heading), var(--font-sans);
+  color: var(--slot-ink);
+}
+
+.cfv1__lv i {
+  font-style: normal;
+  font-size: 4cqw;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.cfv1__lv b {
+  font-size: 6.8cqw;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+}
+
+/* 左上角大圆立体徽章 */
+.cfv1__badge {
+  position: absolute;
+  top: 1.6cqw;
+  left: 1.8cqw;
+  z-index: 3;
+  width: 25.4cqw;
+  height: 25.4cqw;
+  border-radius: 50%;
+  filter: drop-shadow(0 0.5cqw 0.9cqw rgb(0 0 0 / 0.32));
+}
+
+.cfv1__badge svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 右侧白卡信息区 */
+.cfv1__head-info {
+  position: absolute;
+  top: 6.3cqw;
+  left: 29.2cqw;
+  right: 2.2cqw;
+  bottom: 0.2cqw;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cfv1__name-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65cqw;
+  background: transparent;
+  color: var(--slot-ink);
+}
+
+.cfv1__name {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-heading), var(--font-cn), var(--font-sans);
+  font-size: var(--name-size, 8.2cqw);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  color: var(--slot-ink);
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cfv1__meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2cqw;
+  min-height: 3.8cqw;
+}
+
+.cfv1__identity {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.9cqw;
+  font-family: var(--font-heading), var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 3.25cqw;
+  font-weight: 600;
+  color: var(--slot-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cfv1__identity > span + span::before {
+  content: "·";
+  margin-right: 0.9cqw;
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+.cfv1__country {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7cqw;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.cfv1__flag {
+  width: 5.6cqw;
+  height: 3.8cqw;
+  border-radius: 0.4cqw;
+  box-shadow: 0 0 0 0.15cqw rgb(0 0 0 / 0.12);
+  object-fit: cover;
+}
+
+.cfv1__sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2cqw;
+  min-height: 4.8cqw;
+  margin-top: 0.15cqw;
+}
+
+/* 预留给后续扩展元素的左侧槽位 */
+.cfv1__head-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 1.2cqw;
+}
+
+/* MOD 胶囊：放大 + 深色面板背景衬浅色文字 */
+.cfv1__mods {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75cqw;
+}
+
+.cfv1__mod {
+  display: grid;
+  place-items: center;
+  min-width: 6.2cqw;
+  height: 4.4cqw;
+  padding: 0 1cqw;
+  border: 0.25cqw solid color-mix(in srgb, var(--mod, var(--accent)) 62%, var(--panel));
+  border-radius: 1.15cqw;
+  font-family: var(--font-heading), var(--font-sans);
+  font-size: 2.85cqw;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--mod, var(--accent)) 72%, #ffffff);
+  background: color-mix(in srgb, var(--mod, var(--accent)) 22%, var(--panel));
+  box-shadow: 0 0.25cqw 0.5cqw rgb(0 0 0 / 0.16);
+}
+
+.cfv1__mod--more {
+  min-width: 4.6cqw;
+  padding: 0 0.7cqw;
+  color: var(--panel-ink);
+  background: var(--panel);
+}
+
+/* ---------- 2. 插画窗：深蓝底框 + 一体化金色阶梯内描边 + 命座六星 ---------- */
+
+.cfv1__art {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0.6cqw 1.8cqw 0;
+  border-radius: 2.2cqw;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.cfv1__art-screen {
+  position: absolute;
+  inset: 1.2cqw;
+  border-radius: 1.4cqw;
+  overflow: hidden;
+  background: #040407;
+}
+
+/* 立绘加载完成前的占位，避免插画窗全黑 */
+.cfv1__art-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgb(60 186 219 / 0.24), transparent 62%),
+    linear-gradient(158deg, #101a2f 0%, #070a12 55%, #101a2f 100%);
+}
+
+.cfv1__art-placeholder span {
+  font-family: var(--font-heading), var(--font-sans);
+  font-size: 15cqw;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: rgb(159 217 234 / 0.32);
+  animation: cf-art-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cf-art-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+/* 玩家主页 banner 作为立绘背景铺满 */
+.cfv1__art-banner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.78;
+}
+
+/* 没有 banner 时，用同一张头像放大模糊做底，避免插画窗空成黑块 */
+.cfv1__art-blur {
+  position: absolute;
+  inset: -12%;
+  width: 124%;
+  height: 124%;
+  object-fit: cover;
+  filter: blur(18px) brightness(0.42) saturate(0.85);
+  transform: scale(1.05);
+}
+
+/* 玩家头像始终居于立绘窗正中央 */
+.cfv1__art-avatar {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  width: 52%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  transform: translate(-50%, -50%);
+  border: 0.85cqw solid rgb(255 255 255 / 0.22);
+  border-radius: 50%;
+  box-shadow: 0 2cqw 6cqw -2cqw rgb(0 0 0 / 0.75);
+}
+
+.cfv1__art-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 45%, transparent 58%, rgb(0 0 0 / 0.38));
+}
+
+/* 一体化金色阶梯边框 SVG */
+.cfv1__art-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+/* 底部梯形凹槽内的六颗星 */
+.cfv1__stars-strip {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: 58cqw;
+  height: 7.7cqw;
+  pointer-events: none;
+}
+
+.cfv1__stars {
+  position: absolute;
+  left: 50%;
+  bottom: 1.05cqw;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1.55cqw;
+}
+
+.cfv1__star {
+  width: 4.4cqw;
+  height: 4.4cqw;
+  display: block;
+}
+
+.cfv1__star path {
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.cfv1__star--copper path {
+  fill: #ffffff;
+  stroke: #ffffff;
+  stroke-width: 1.2;
+}
+
+.cfv1__star--empty path {
+  fill: #ffffff;
+  stroke: #ffffff;
+  stroke-width: 1.2;
+  opacity: 0.34;
+}
+
+.cfv1__star--prism path {
+  stroke: #ffffff;
+  stroke-width: 1;
+}
+
+/* ---------- 3. 技能区：三条双层异形胶囊 ---------- */
+
+.cfv1__skills {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 36.2cqw;
+  min-height: 0;
+  margin: 1.9cqw 1.8cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 2.05cqw;
+}
+
+.cfv1__skill {
+  flex: 1 1 0;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 0.42cqw;
+  border: 0.28cqw solid #aba8b5;
+  border-radius: 2.2cqw;
+  background: linear-gradient(180deg, #ffffff 0%, #dfdde6 100%);
+  box-shadow: 0 0.45cqw 0.8cqw rgb(0 0 0 / 0.1);
+}
+
+.cfv1__skill-track {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  border-radius: 1.75cqw;
+  background: #0a0a0f;
+  overflow: hidden;
+}
+
+.cfv1__skill-body {
+  flex: 0 0 71%;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  padding: 0 2.6cqw 0 1cqw;
+  border-radius: 1.65cqw 999px 999px 1.65cqw;
+  background: #ffffff;
+  color: var(--slot-ink);
+  box-shadow:
+    0.55cqw 0 0 #cfccd8,
+    0.85cqw 0 0.25cqw rgb(0 0 0 / 0.45);
+}
+
+.cfv1__skill--mp .cfv1__skill-body {
+  flex: 0 0 54%;
+}
+
+.cfv1__skill--mp .cfv1__cost {
+  gap: 0.7cqw;
+  padding-right: 1.5cqw;
+}
+
+.cfv1__skill--mp .cfv1__ap i,
+.cfv1__skill--mp .cfv1__mp i {
+  width: auto;
+  font-size: 2.7cqw;
+}
+
+.cfv1__skill--mp .cfv1__ap b,
+.cfv1__skill--mp .cfv1__mp b {
+  width: 2.8cqw;
+  font-size: 4.8cqw;
+}
+
+.cfv1__skill--mp .cfv1__ap-gem {
+  width: 2.5cqw;
+  height: 3.7cqw;
+}
+
+.cfv1__skill--empty {
+  opacity: 0.35;
+}
+
+.cfv1__el {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 7.4cqw;
+  height: 7.4cqw;
+  border-radius: 1.45cqw;
+  color: var(--accent);
+  background: #0b0b10;
+}
+
+.cfv1__el svg {
+  width: 68%;
+  height: 68%;
+  display: block;
+}
+
+.cfv1__el-sep {
+  flex: 0 0 auto;
+  width: 0.28cqw;
+  height: 5.2cqw;
+  border-radius: 999px;
+  background: #c5c2ce;
+}
+
+.cfv1__skill-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-cn), var(--font-heading), var(--font-sans);
+  font-size: 5.1cqw;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--slot-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cfv1__cost {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1cqw;
+  padding-right: 2.1cqw;
+  font-family: var(--font-heading), var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+}
+
+/* 固定列宽：保证不同行的 AP 字母与字母垂直对齐、数字与数字垂直对齐 */
+.cfv1__ap,
+.cfv1__mp {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55cqw;
+  white-space: nowrap;
+}
+
+.cfv1__ap i,
+.cfv1__mp i {
+  display: inline-block;
+  width: 4.8cqw;
+  text-align: right;
+  font-style: normal;
+  font-size: 3.3cqw;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+}
+
+.cfv1__ap b,
+.cfv1__mp b {
+  display: inline-block;
+  width: 3.5cqw;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 5.8cqw;
+  font-weight: 700;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.cfv1__ap-gem {
+  width: 3.1cqw;
+  height: 4.5cqw;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.cfv1__mp i,
+.cfv1__mp b {
+  color: #8cc4f8;
+}
+
+.cfv1__passive {
+  font-family: var(--font-heading), var(--font-cn), var(--font-sans);
+  font-size: 3.9cqw;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+}
+
+/* ---------- 4. 底栏：左大右小深蓝异形块 + 右侧编号胶囊 + 底部品牌缺口 ---------- */
+
+.cfv1__foot {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 17.8cqw;
+  width: 100%;
+  min-height: 0;
+}
+
+.cfv1__foot-main {
+  position: absolute;
+  top: 0.2cqw;
+  left: 3.4cqw;
+  width: 52cqw;
+  height: 13.2cqw;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 1.6cqw;
+  color: var(--panel-ink);
+}
+
+.cfv1__job {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 5.8cqw;
+  height: 5.8cqw;
+  color: var(--panel-ink);
+}
+
+.cfv1__job svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.cfv1__foot-sep {
+  flex: 0 0 auto;
+  width: 0.26cqw;
+  height: 5.4cqw;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.65);
+}
+
+.cfv1__bp {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.9cqw;
+  white-space: nowrap;
+  color: var(--panel-ink);
+}
+
+.cfv1__bp i {
+  font-style: normal;
+  font-family: var(--font-heading), var(--font-sans);
+  font-size: 3.5cqw;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.cfv1__bp b {
+  font-family: var(--font-heading), var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 6.4cqw;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+/* 右侧独立编号胶囊 */
+.cfv1__no {
+  position: absolute;
+  top: 4.8cqw;
+  right: 2.2cqw;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 5.2cqw;
+  padding: 0 1.8cqw;
+  border-radius: 1.4cqw;
+  background: var(--panel);
+  color: var(--panel-ink);
+  font-family: var(--font-heading), var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 2.55cqw;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* 底部品牌文字：嵌在 SVG 原生异形缺口内，严格居中 */
+.cfv1__brand {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 0.1cqw;
+  z-index: 3;
+  height: 3.6cqw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slot-ink);
+  font-family: var(--font-heading), var(--font-sans);
+  font-size: 2.02cqw;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---------- 箔面反光 ---------- */
+
+.cfv1__sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: soft-light;
+  background: linear-gradient(
+    116deg,
+    transparent 16%,
+    rgb(255 255 255 / 0.34) 34%,
+    rgb(255 255 255 / 0.05) 44%,
+    transparent 58%
+  );
+}
+
+.cfv1[data-rarity="R"] .cfv1__sheen {
+  opacity: 0.35;
+}
+
+.cfv1[data-rarity="E"] .cfv1__sheen {
+  opacity: 0.42;
+}
+
+.cfv1[data-rarity="L"] .cfv1__sheen {
+  opacity: 0.45;
+}
+
+.cfv1[data-rarity="Radiant"] .cfv1__sheen {
+  opacity: 0.55;
+}
+
+.cfv1[data-rarity="Prismatic"] .cfv1__sheen {
+  opacity: 0.72;
+}
+
+/* ---------- 闪卡 ---------- */
+
+.cfv1__foil {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.55;
+  mix-blend-mode: soft-light;
+  background:
+    repeating-linear-gradient(
+      116deg,
+      transparent 0 7%,
+      rgb(255 255 255 / 0.42) 8.2%,
+      transparent 9.4% 17%
+    ),
+    conic-gradient(
+      from 210deg at 32% 18%,
+      rgb(255 64 158 / 0.32),
+      rgb(64 231 255 / 0.3),
+      rgb(255 236 96 / 0.24),
+      rgb(170 91 255 / 0.3),
+      rgb(255 64 158 / 0.32)
+    );
+  background-size: 220% 220%, 180% 180%;
+  animation: cf-foil-shift 7s linear infinite;
+}
+
+@keyframes cf-foil-shift {
+  from {
+    background-position: 0% 0%, 0% 50%;
+  }
+  to {
+    background-position: 220% 0%, 180% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cfv1__foil {
+    animation: none;
+  }
+}
+
+/* ---------- 调试参考线（?guides=1） ---------- */
+
+.cfv1--guides::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent calc(50% - 0.5px),
+    rgb(255 59 107 / 0.4) calc(50% - 0.5px),
+    rgb(255 59 107 / 0.4) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
+}
+
+.cfv1--guides::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--frame-w) + var(--pad-x));
+  z-index: 100;
+  pointer-events: none;
+  border: 1px dashed #ff3b6b;
+}
+
+.cfv1--guides .cfv1__head,
+.cfv1--guides .cfv1__art,
+.cfv1--guides .cfv1__skills,
+.cfv1--guides .cfv1__foot {
+  outline: 1px dashed rgb(59 130 246 / 0.6);
+  outline-offset: -1px;
+}
+
+.cfv1--guides .cfv1__badge,
+.cfv1--guides .cfv1__job,
+.cfv1--guides .cfv1__lv,
+.cfv1--guides .cfv1__mods,
+.cfv1--guides .cfv1__no,
+.cfv1--guides .cfv1__bp {
+  outline: 1px dotted rgb(255 196 0 / 0.8);
+  outline-offset: 2px;
+}
+
+.cfv1__defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ---------- 战斗态：隐藏顶栏 / 底栏 / 外骨架 ---------- */
+
+.cfv1[data-mode="battle"] .cfv1__head,
+.cfv1[data-mode="battle"] .cfv1__foot,
+.cfv1[data-mode="battle"] .cfv1__frame-svg {
+  display: none;
+}
+
+.cfv1[data-mode="battle"] .cfv1__body {
+  padding: 2cqw;
+}
+
+.cfv1[data-mode="battle"] .cfv1__frame {
+  gap: 2cqw;
+}
+
+.cfv1[data-mode="battle"] .cfv1__art {
+  margin: 0;
+}
+
+.cfv1[data-mode="battle"] .cfv1__skills {
+  flex: 0 0 38cqw;
+  margin: 0;
+}
+
+/* ---------- 小尺寸适配 ---------- */
+
+@container (max-width: 140px) {
+  .cfv1__skill-name,
+  .cfv1__cost,
+  .cfv1__el-sep {
+    display: none;
+  }
+
+  .cfv1__skill-body {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0;
+    border-radius: 1.6cqw;
+    box-shadow: none;
+  }
+
+  .cfv1__skills {
+    flex: 0 0 30cqw;
+    gap: 1.6cqw;
+  }
+
+  .cfv1[data-mode="battle"] .cfv1__skills {
+    flex: 0 0 32cqw;
+  }
+
+  .cfv1__el {
+    width: 8.8cqw;
+    height: 8.8cqw;
+  }
+}
