@@ -8,7 +8,7 @@
 `index.ts` 用 `import.meta.glob("./*.tsx", { eager: true })` 自动扫描。
 新增一个版本：把 tsx 和 css 丢进这个文件夹，组件里 import 自己的 css，类名用自己的前缀（current 用 `cfcur`，星章版用 `cfv1`，Paper & Prism 用 `cfg`，黑胶腰封用 `cfo`，肖像版用 `cf`，B 共用渲染器用 `cfb`）。直接复用已有渲染器的版本只需注册组件，无须复制 TSX 和 CSS。
 
-游戏里的卡面（卡册、图鉴、卡组、桌面、开包、背包、详情、市场、战斗、账号、卡池实验室）统一走 `../GameCardFace.tsx`，当前是 B v2 · 大元素、暗色、MOD 在名字后。换游戏卡面只改那一个文件。
+游戏里的卡面（卡册、图鉴、卡组、桌面、开包、背包、详情、市场、战斗、账号、卡池实验室）统一走 `../GameCardFace.tsx`，当前是 B v2 · 大元素、暗色、MOD 在名字后。换游戏卡面改那个文件，同时把 `faceMeta.inGame: true` 挪到对应版本：实验室和编辑器靠它把游戏卡面排第一、默认选中，其余归入「历史版本」（实验室里默认折叠）。
 卡面根节点要带通用类 `card-face`：外部容器样式、拖拽、受光（`light.ts`）都认这个类。闪卡膜用共用的 `../CardFoil.tsx`（`card-foil`），放在根节点最后。
 
 不用改 CardLab / CardEditor，也不用重新登记。

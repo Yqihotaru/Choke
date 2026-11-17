@@ -165,6 +165,19 @@
   color: var(--lab-dim);
 }
 
+/* 历史版本默认收起，只在版本对比里展开看 */
+.lab__history {
+  margin-top: 20px;
+}
+
+.lab__history > summary {
+  cursor: pointer;
+  margin-bottom: 14px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--lab-dim);
+}
+
 @media (max-width: 720px) {
   .lab__bar {
     flex-direction: column;

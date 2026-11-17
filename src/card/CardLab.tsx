@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react"
 
 import type { ModPlacement } from "./CardFaceB"
 import { DEMO_CARDS, RARITY_LABEL, makeCard } from "./data"
-import { CARD_FACES, getCardFace } from "./faces"
+import { CARD_FACES, DEFAULT_FACE, HISTORY_FACES, getCardFace } from "./faces"
 import type { CardFaceData, CardFaceMode } from "./types"
 import "./card-lab.css"
 
@@ -72,14 +72,15 @@ export function CardLab() {
     const legacy = value === "v1" ? "star-860820f" : value === "gemini" ? "paper-prism" : value
     return legacy && CARD_FACES.some((face) => face.id === legacy)
       ? legacy
-      : CARD_FACES[0].id
+      : DEFAULT_FACE.id
   })
   const [theme, setTheme] = useState<"dark" | "light">(
     params.get("theme") === "light" ? "light" : "dark",
   )
   const [mods, setMods] = useState<ModPlacement>(() => {
     const value = params.get("mods")
-    return MOD_OPTIONS.find((option) => option.id === value)?.id ?? "spine"
+    // 默认和游戏一致：MOD 在名字后
+    return MOD_OPTIONS.find((option) => option.id === value)?.id ?? "name"
   })
   const currentFace = getCardFace(faceStyle)
   const v52 = CARD_FACES.find((face) => face.id === "night-obi-52")
@@ -163,11 +164,16 @@ export function CardLab() {
               value={faceStyle}
               onChange={(e) => setFaceStyle(e.target.value)}
             >
-              {CARD_FACES.map((face) => (
-                <option key={face.id} value={face.id}>
-                  {face.label}
-                </option>
-              ))}
+              <optgroup label="游戏中">
+                <option value={DEFAULT_FACE.id}>{DEFAULT_FACE.label}</option>
+              </optgroup>
+              <optgroup label="历史版本">
+                {HISTORY_FACES.map((face) => (
+                  <option key={face.id} value={face.id}>
+                    {face.label}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </label>
           <button
@@ -195,19 +201,28 @@ export function CardLab() {
 
       <Section
         label="版本对比"
-        note={`自动扫描 src/card/faces/ 下的 ${CARD_FACES.length} 个版本；新增一对 tsx/css 就会出现在这里。`}
+        note={`游戏里用的是 ${DEFAULT_FACE.label}；其余 ${HISTORY_FACES.length} 个是历史版本，自动扫描 src/card/faces/，点卡面下拉框可以切到任意一个看下面的细节。`}
       >
         <div className="lab__row lab__row--baseline">
-          {CARD_FACES.map((face) => {
-            const Face = face.Component
-            return (
-              <div className="lab__slot" style={{ width: 200 }} key={face.id}>
-                <Face card={DEMO_CARDS[4]} theme={theme} modPlacement={mods} />
-                <span className="lab__tag">{face.label}</span>
-              </div>
-            )
-          })}
+          <div className="lab__slot" style={{ width: 200 }}>
+            <DEFAULT_FACE.Component card={DEMO_CARDS[4]} theme={theme} modPlacement={mods} />
+            <span className="lab__tag">{DEFAULT_FACE.label} · 游戏中</span>
+          </div>
         </div>
+        <details className="lab__history">
+          <summary>历史版本（{HISTORY_FACES.length}）</summary>
+          <div className="lab__row lab__row--baseline">
+            {HISTORY_FACES.map((face) => {
+              const Face = face.Component
+              return (
+                <div className="lab__slot" style={{ width: 200 }} key={face.id}>
+                  <Face card={DEMO_CARDS[4]} theme={theme} modPlacement={mods} />
+                  <span className="lab__tag">{face.label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </details>
       </Section>
 
       {currentFace.supportsModPlacement && (
@@ -225,7 +240,7 @@ export function CardLab() {
         </Section>
       )}
 
-      {V52 && (
+      {V52 && faceStyle === v52.id && (
         <Section
           label="v5.2 明暗主题"
           note="同一个组件，theme='dark' / theme='light'。右上角按钮只影响当前选中的卡面。"
@@ -245,7 +260,7 @@ export function CardLab() {
 
       <Section
         label="七档材质"
-        note="当前/星章：黑卡纸 + 稀有度工艺。Gemini v3：浅色卡纸 + 稀有度边框，Prismatic 独占深色卡基。把鼠标移到卡上看反光。"
+        note="七档稀有度在当前选中卡面上的样子。"
       >
         <div className="lab__row">
           {DEMO_CARDS.map((card) => (
@@ -257,7 +272,7 @@ export function CardLab() {
         </div>
       </Section>
 
-      <Section label="闪卡" note="三版都支持闪卡；Gemini v3 在浅色卡纸上用 overlay 混合，效果比深色版更淡。">
+      <Section label="闪卡" note="闪卡膜所有卡面共用（CardFoil）：鼠标移上去彩带和闪粉跟着光走，静止时每 9 秒扫过一道彩光。">
         <div className="lab__row">
           {DEMO_CARDS.map((card) => (
             <div className="lab__slot" style={{ width: 200 }} key={card.id}>
