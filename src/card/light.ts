@@ -50,7 +50,7 @@ export function trackCardLight() {
         lit.dataset.lit = ""
         litSurfaces = Array.from(
           lit.querySelectorAll<HTMLElement>(
-            ".cf__bezel, .cf__sheen, .cf__seal, .cf__emblem, .cf__rarity, .cf__name-rule, .cf__foil > i:not(.cf__foil-sweep)"
+            ".cf__bezel, .cf__sheen, .cf__portrait, .cf__emblem, .cf__rarity, .cf__foil > i:not(.cf__foil-sweep)"
           )
         )
       }

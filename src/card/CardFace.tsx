@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, type CSSProperties } from "react"
+import { memo, useEffect, useMemo, useRef, type CSSProperties } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -11,12 +11,13 @@ import {
   battlePower,
   bpColor,
   flagUrl,
-  formatNo,
   hashOf,
+  isCustomBanner,
   nameSizeOf,
   starStates,
 } from "./data"
 import { trackCardLight } from "./light"
+import { motifTriangles } from "./motif"
 import type { CardFaceData, CardFaceMode, Element, Job } from "./types"
 import "./card-face.css"
 
@@ -30,9 +31,10 @@ interface Props {
 
 /**
  * 纸质卡面。分区从上到下：
- * 顶栏（品阶徽记 / 品阶名 / Lv / MOD 三槽）→ 插画窗（banner，右下压一块头像，左下命座星）
- * → 卡名条（名字 / 排名 / pp）→ 技能行（1–3 行，行数少时插画窗自动拉高）→ 底栏（职业 / BP / 编号）。
- * 战斗态只留插画窗和技能行。材质、压印、闪卡膜全在 card-face.css。
+ * 肖像窗（大头像居中；背景是本人自定义 banner 虚化压暗，没有或是 osu! 预设图时换成稀有度底纹；
+ * 左上品阶、右上 Lv / 已装 MOD，底部命座星）→ 卡名（名字 + 国旗排名 · pp 一行）
+ * → 技能行（1–3 行）→ 底栏（职业 + BP / 编号）。
+ * 战斗态只留肖像窗和技能行。材质、烫印、闪卡膜全在 card-face.css。
  */
 export const CardFace = memo(function CardFace({ card, mode = "collection", className, eager = false }: Props) {
   const cardRef = useRef<HTMLDivElement>(null)
@@ -56,12 +58,15 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
 
   const bp = battlePower(card)
   const flag = flagUrl(card.country)
-  // 三个 MOD 槽；装得更多时第三格改成 +N
+  const banner = isCustomBanner(card.banner) ? card.banner : null
+  // 只画已经装上的 MOD；超过三个时第三格改成 +N
   const modOverflow = card.mods.length > 3
   const mods = modOverflow ? card.mods.slice(0, 2) : card.mods
   const nameStyle = {
     "--name-size": `${nameSizeOf(card.name)}cqw`,
   } as CSSProperties
+  const hasStats = Boolean(card.country) || card.globalRank != null || card.pp != null
+  const triangles = useMemo(() => (banner ? null : motifTriangles(card.id)), [banner, card.id])
 
   return (
     <div
@@ -76,71 +81,65 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
       <div className="cf__bezel" aria-hidden />
 
       <div className="cf__content">
-        <header className="cf__head">
-          <span className="cf__seal" title={RARITY_LABEL[card.rarity]}>
+        <div className="cf__art" data-backdrop={banner ? "banner" : "motif"}>
+          {banner && (
+            <img
+              className="cf__backdrop"
+              src={banner}
+              alt=""
+              draggable={false}
+              loading={eager ? "eager" : "lazy"}
+              decoding="async"
+              fetchPriority="low"
+              referrerPolicy="no-referrer"
+            />
+          )}
+          {triangles && (
+            <svg className="cf__motif" viewBox="0 0 100 80" preserveAspectRatio="xMidYMid slice" aria-hidden>
+              {triangles.map((t, i) => (
+                <path key={i} d={t.d} data-fill={t.filled ? "" : undefined} />
+              ))}
+            </svg>
+          )}
+
+          <span className="cf__grade" title={RARITY_LABEL[card.rarity]}>
             <i className="cf__emblem" />
+            <span className="cf__rarity">{RARITY_LABEL[card.rarity]}</span>
           </span>
 
-          <div className="cf__grade">
-            <span className="cf__rarity">{RARITY_LABEL[card.rarity]}</span>
+          <div className="cf__corner">
             <span className="cf__lv">
               <i>Lv</i>
               <b>{card.level}</b>
-              {card.isHero && <em className="cf__hero">HERO</em>}
             </span>
-          </div>
-
-          <div className="cf__mods">
-            {[0, 1, 2].map((slot) => {
-              if (modOverflow && slot === 2) {
-                return (
-                  <span className="cf__mod cf__mod--more" key={slot}>
-                    +{card.mods.length - 2}
-                  </span>
-                )
-              }
-              const mod = mods[slot]
-              return mod ? (
-                <span
-                  className="cf__mod cf__mod--on"
-                  key={slot}
-                  style={{ "--mod": MOD_COLOR[mod] } as CSSProperties}
-                >
-                  {mod}
-                </span>
-              ) : (
-                <span className="cf__mod" key={slot} aria-hidden />
-              )
-            })}
-          </div>
-        </header>
-
-        <div className="cf__art">
-          <div className="cf__window">
-            {/* 没有 banner 时用头像放大虚化垫底；两样都没有就是一扇空窗 */}
-            {(card.banner || card.art) && (
-              <img
-                className={cn(
-                  "cf__banner",
-                  !card.banner && "cf__banner--blur"
-                )}
-                src={card.banner || card.art}
-                alt=""
-                draggable={false}
-                loading={eager ? "eager" : "lazy"}
-                decoding="async"
-                fetchPriority="low"
-                referrerPolicy="no-referrer"
-              />
-            )}
-            <div className="cf__stars" aria-label={`命座 ${card.constellation}`}>
+            <span className="cf__stars" aria-label={`命座 ${card.constellation}`}>
               {starStates(card).map((state, i) => (
                 <i className="cf__star" data-state={state} key={i} />
               ))}
-            </div>
+            </span>
           </div>
 
-          <div className="cf__avatar">
+          {(card.isHero || mods.length > 0) && (
+            <div className="cf__mods">
+              {card.isHero && <em className="cf__hero">HERO</em>}
+              {mods.map((mod) => (
+                <span
+                  className="cf__mod"
+                  key={mod}
+                  style={{ "--mod": MOD_COLOR[mod] } as CSSProperties}
+                >
+                  <b>{mod}</b>
+                </span>
+              ))}
+              {modOverflow && (
+                <span className="cf__mod cf__mod--more">
+                  <b>+{card.mods.length - 2}</b>
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="cf__portrait">
             {card.art && (
               <img
                 src={card.art}
@@ -155,49 +154,42 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
         </div>
 
         <div className="cf__title">
-          <div className="cf__name-wrap">
-            {card.profileUrl ? (
-              <a
-                className="cf__name"
-                href={card.profileUrl}
-                title={card.name}
-                target="_blank"
-                rel="noreferrer"
-                style={nameStyle}
-              >
-                {card.name}
-              </a>
-            ) : (
-              <h3 className="cf__name" title={card.name} style={nameStyle}>
-                {card.name}
-              </h3>
-            )}
-            <span className="cf__name-rule" aria-hidden />
-          </div>
+          {card.profileUrl ? (
+            <a
+              className="cf__name"
+              href={card.profileUrl}
+              title={card.name}
+              target="_blank"
+              rel="noreferrer"
+              style={nameStyle}
+            >
+              {card.name}
+            </a>
+          ) : (
+            <h3 className="cf__name" title={card.name} style={nameStyle}>
+              {card.name}
+            </h3>
+          )}
 
-          {(card.country || card.globalRank != null || card.pp != null) && (
+          {hasStats && (
             <div className="cf__stats">
-              {(card.country || card.globalRank != null) && (
-                <span className="cf__stat">
-                  {flag && (
-                    <img
-                      className="cf__flag"
-                      src={flag}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                    />
-                  )}
-                  <b>
-                    {card.globalRank != null
-                      ? `#${card.globalRank.toLocaleString("en-US")}`
-                      : card.country}
-                  </b>
-                </span>
+              {flag && (
+                <img
+                  className="cf__flag"
+                  src={flag}
+                  alt={card.country}
+                  loading="lazy"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                />
+              )}
+              {card.globalRank != null ? (
+                <b>#{card.globalRank.toLocaleString("en-US")}</b>
+              ) : (
+                !flag && card.country && <b>{card.country}</b>
               )}
               {card.pp != null && (
-                <span className="cf__stat">
+                <span className="cf__pp">
                   <b>{Math.round(card.pp).toLocaleString("en-US")}</b>
                   <i>pp</i>
                 </span>
@@ -226,7 +218,7 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
                   </span>
                 )}
                 {skill.passive ? (
-                  <span className="cf__passive">PAS</span>
+                  <span className="cf__passive">被动</span>
                 ) : (
                   <span className="cf__ap" title="AP">
                     {skill.ap}
@@ -235,11 +227,16 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
               </span>
             </div>
           ))}
+          {/* 不足三行补空槽：所有卡的技能区一样高，头像窗、卡名的位置对齐 */}
+          {Array.from({ length: 3 - Math.min(card.skills.length, 3) }, (_, i) => (
+            <div className="cf__skill cf__skill--empty" key={`empty-${i}`} aria-hidden />
+          ))}
         </div>
 
         <footer className="cf__foot">
           <span className="cf__job" title={JOB_LABEL[card.job]}>
             <JobGlyph job={card.job} />
+            <span>{JOB_LABEL[card.job]}</span>
           </span>
           <span
             className="cf__bp"
@@ -248,14 +245,10 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
             <i>BP</i>
             <b>{bp.toLocaleString("en-US")}</b>
           </span>
-          <span className="cf__imprint" aria-hidden>
-            Choke!
-            <br />
-            Trading Card
-            <br />
-            Series 2026
+          {/* 第几张 / 这张卡累计抽出数；图鉴、预览这类没有实例的卡留空 span，三栏网格才不会错位 */}
+          <span className="cf__no" title={card.serial ? `第 ${card.serial} 张 / 共抽出 ${card.pulled ?? card.serial} 张` : undefined}>
+            {card.serial ? `#${card.serial}/${Math.max(card.pulled ?? 0, card.serial)}` : null}
           </span>
-          <span className="cf__no">{formatNo(card.no, card.total)}</span>
         </footer>
       </div>
 
@@ -278,7 +271,7 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
   )
 })
 
-function JobGlyph({ job }: { job: Job }) {
+export function JobGlyph({ job }: { job: Job }) {
   const line = {
     fill: "none",
     stroke: "currentColor",
@@ -316,7 +309,7 @@ function JobGlyph({ job }: { job: Job }) {
   }
 }
 
-function ElementGlyph({ element }: { element: Element }) {
+export function ElementGlyph({ element }: { element: Element }) {
   const line = {
     fill: "none",
     stroke: "currentColor",

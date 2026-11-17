@@ -47,6 +47,11 @@ export function flagUrl(code: string | undefined): string | null {
   return `https://flagcdn.com/${code.toLowerCase()}.svg`
 }
 
+/** osu! 预设背景不算个人 banner：卡面改用稀有度底纹，避免多数卡长一个样 */
+export function isCustomBanner(url: string | undefined): url is string {
+  return !!url && !/user-cover-presets|\/images\/headers\/profile-covers\//.test(url)
+}
+
 
 /** 七档品质基础值；压缩比固定 3.5×（C 400 → Prismatic 1,400） */
 export const RARITY_BASE: Record<Rarity, number> = {
@@ -76,7 +81,8 @@ export const RARITY_LABEL: Record<Rarity, string> = {
   R: "RARE",
   E: "EPIC",
   L: "LEGENDARY",
-  Radiant: "RADIANT",
+  // 内部 id 仍是 Radiant（数据库和卡池规则不变），只改显示名。
+  Radiant: "MYTHIC",
   Prismatic: "PRISMATIC",
 }
 
