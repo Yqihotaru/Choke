@@ -1,0 +1,1184 @@
+/* =========================================================
+   卡面 v4 — 黑胶腰封 × 音游海报（Obi & Beatmap Poster）
+   · 2:3 比例（100cqw × 150cqw），内部全走 cqw。
+   · 左侧 18cqw 贯穿全高的「腰封竖脊」承担全部重色与金属烫印；
+   · 右侧 82cqw 为明丽艺术纸海报画幅，彻底告别黑黑一坨与方形小框贴纸。
+   ========================================================= */
+
+.cfo {
+  container: cfo / inline-size;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 4% / 2.667%;
+  overflow: hidden;
+  isolation: isolate;
+  user-select: none;
+  color: var(--ink);
+  font-family: var(--font-heading), var(--font-cn), var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.24),
+    0 3px 6px rgb(0 0 0 / 0.18),
+    0 12px 26px -6px rgb(0 0 0 / 0.4);
+
+  /* 右侧主纸基（明丽艺术纸） */
+  --paper: #f3f1ec;
+  --ink: #171920;
+  --ink-dim: #686d7a;
+  --rule-color: rgb(23 25 32 / 0.13);
+
+  /* 左侧腰封 */
+  --obi: #262932;
+  --obi-ink: #f4f1ea;
+  --obi-dim: rgb(244 241 234 / 0.56);
+  --obi-line: rgb(255 255 255 / 0.14);
+
+  /* 烫印色带 */
+  --foil: linear-gradient(125deg, #c2c6d0, #eef1f7);
+  --foil-pos: calc(var(--mx) * 100%) calc(var(--my) * 100%);
+  --accent: #3d4352;
+
+  /* 技能与资源色 */
+  --ap: #d97706;
+  --mp: #2563eb;
+  --cover-bg: #26313d;
+
+  /* 闪卡混合参数 */
+  --foil-film-blend: overlay;
+  --foil-film-op: 0.34;
+  --foil-dodge-op: 0.18;
+  --foil-glitter-op: 0.52;
+
+  --hair: max(0.28cqw, 0.5px);
+  --rule: max(0.55cqw, 1px);
+}
+
+/* =========================================================
+   1. 卡纸底层与边缘倒角高光
+   ========================================================= */
+
+.cfo__stock,
+.cfo__sheen,
+.cfo__frame,
+.cfo__foil {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.cfo__stock {
+  background:
+    linear-gradient(
+      140deg,
+      rgb(255 255 255 / 0.42),
+      transparent 45%,
+      rgb(0 0 0 / 0.05)
+    ),
+    url("./tex/grain.svg") 0 0 / 220px 220px,
+    var(--paper);
+  background-blend-mode: normal, multiply, normal;
+}
+
+.cfo__frame {
+  box-shadow:
+    inset 0.25cqw 0.25cqw 0 rgb(255 255 255 / 0.48),
+    inset -0.25cqw -0.25cqw 0 rgb(0 0 0 / 0.22);
+}
+
+.cfo__sheen {
+  display: none;
+}
+
+.cfo__seal,
+.cfo__emblem,
+.cfo__rarity,
+.cfo__title-rule,
+.cfo__sheen,
+.cfo__foil > i {
+  --foil-pos: calc(var(--mx) * 100%) calc(var(--my) * 100%);
+  transition:
+    --mx 0.55s ease-out,
+    --my 0.55s ease-out;
+}
+
+.cfo[data-lit]
+  :is(.cfo__seal, .cfo__emblem, .cfo__rarity, .cfo__title-rule, .cfo__sheen, .cfo__foil > i) {
+  transition: none;
+}
+
+.cfo__seal::before,
+.cfo__sheen::before,
+.cfo__sheen::after {
+  --mx: inherit;
+  --my: inherit;
+}
+
+.cfo__layout {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================================
+   2. 左侧黑胶腰封（18cqw 贯穿全高）
+   ========================================================= */
+
+.cfo__obi {
+  position: relative;
+  flex: 0 0 18cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4.2cqw 1.6cqw 3.8cqw;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.08),
+      transparent 35%,
+      rgb(0 0 0 / 0.22)
+    ),
+    url("./tex/grain.svg") 0 0 / 200px 200px,
+    var(--obi);
+  background-blend-mode: normal, multiply, normal;
+  color: var(--obi-ink);
+  box-shadow:
+    inset -0.4cqw 0 0 rgb(0 0 0 / 0.28),
+    1.2cqw 0 3.2cqw rgb(0 0 0 / 0.16);
+}
+
+/* 腰封右侧细烫印分界线 */
+.cfo__obi::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 0.6cqw;
+  background-image: var(--foil);
+  background-size: 260% 260%;
+  background-position: var(--foil-pos);
+}
+
+.cfo__seal {
+  position: relative;
+  flex: 0 0 10.6cqw;
+  width: 10.6cqw;
+  height: 10.6cqw;
+  display: grid;
+  place-items: center;
+}
+
+.cfo__seal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 0.65cqw;
+  border-radius: 50%;
+  background-image: var(--foil);
+  background-size: 260% 260%;
+  background-position: var(--foil-pos);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+.cfo__emblem {
+  width: 5.6cqw;
+  height: 5.6cqw;
+  background-image: var(--foil);
+  background-size: 260% 260%;
+  background-position: var(--foil-pos);
+  mask: url("./tex/emblem-c.svg") center / contain no-repeat;
+}
+
+.cfo[data-rarity="UC"] .cfo__emblem {
+  mask-image: url("./tex/emblem-uc.svg");
+}
+.cfo[data-rarity="R"] .cfo__emblem {
+  mask-image: url("./tex/emblem-r.svg");
+}
+.cfo[data-rarity="E"] .cfo__emblem {
+  mask-image: url("./tex/emblem-e.svg");
+}
+.cfo[data-rarity="L"] .cfo__emblem {
+  mask-image: url("./tex/emblem-l.svg");
+}
+.cfo[data-rarity="Radiant"] .cfo__emblem {
+  mask-image: url("./tex/emblem-radiant.svg");
+}
+.cfo[data-rarity="Prismatic"] .cfo__emblem {
+  mask-image: url("./tex/emblem-prismatic.svg");
+}
+
+.cfo__obi-mid {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2cqw;
+  padding: 2cqw 0;
+}
+
+.cfo__rarity {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 2.9cqw;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  background-image: var(--foil);
+  background-size: 260% 260%;
+  background-position: var(--foil-pos);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.cfo__hero {
+  padding: 0.6cqw 1cqw;
+  border: var(--hair) solid rgb(255 255 255 / 0.45);
+  border-radius: 0.6cqw;
+  font-style: normal;
+  font-size: 2.1cqw;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+/* 竖向 MOD 槽 */
+.cfo__mods {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2cqw;
+  width: 100%;
+  padding: 2.4cqw 0;
+  border-block: var(--hair) solid var(--obi-line);
+}
+
+.cfo__mod {
+  height: 5cqw;
+  display: grid;
+  place-items: center;
+  border: var(--hair) solid var(--obi-line);
+  border-radius: 0.8cqw;
+  color: var(--obi-dim);
+  font-size: 2.7cqw;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.cfo__mod--on {
+  border-color: color-mix(in srgb, var(--mod) 65%, transparent);
+  background: color-mix(in srgb, var(--mod) 28%, rgb(0 0 0 / 0.25));
+  color: #fff;
+}
+
+.cfo__obi-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.2cqw;
+  padding-top: 2.4cqw;
+  width: 100%;
+}
+
+.cfo__lv {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5cqw;
+}
+
+.cfo__lv i {
+  font-style: normal;
+  font-size: 2.2cqw;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--obi-dim);
+}
+
+.cfo__lv b {
+  font-size: 6cqw;
+  font-weight: 800;
+}
+
+.cfo__job {
+  width: 7.4cqw;
+  height: 7.4cqw;
+  display: grid;
+  place-items: center;
+  border: var(--hair) solid var(--obi-line);
+  border-radius: 1.1cqw;
+  background: rgb(255 255 255 / 0.06);
+}
+
+.cfo__job svg {
+  width: 4.6cqw;
+  height: 4.6cqw;
+}
+
+.cfo__no {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 2.2cqw;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--obi-dim);
+}
+
+/* =========================================================
+   3. 右侧主海报区（82cqw）
+   ========================================================= */
+
+.cfo__poster {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部全景 Banner 横幅 */
+.cfo__cover {
+  position: relative;
+  flex: 0 0 33cqw;
+  overflow: hidden;
+  background: var(--cover-bg);
+}
+
+.cfo__cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 0.22) 0%,
+    transparent 45%,
+    rgb(0 0 0 / 0.34) 100%
+  );
+  pointer-events: none;
+}
+
+.cfo__banner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cfo__banner--blur {
+  filter: blur(3.5cqw) saturate(1.3) brightness(0.88);
+  scale: 1.4;
+}
+
+.cfo__motif {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: rgb(255 255 255 / 0.42);
+  pointer-events: none;
+}
+
+.cfo__motif--subtle {
+  opacity: 0.45;
+}
+
+/* 超大号半透明排名水印，瞬间拉出海报杂志感 */
+.cfo__watermark {
+  position: absolute;
+  right: 2.8cqw;
+  top: 2cqw;
+  z-index: 1;
+  font-size: 16cqw;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: rgb(255 255 255 / 0.14);
+  pointer-events: none;
+}
+
+.cfo__series {
+  position: absolute;
+  right: 3.4cqw;
+  bottom: 2.4cqw;
+  z-index: 1;
+  padding: 0.7cqw 1.4cqw;
+  border-radius: 0.7cqw;
+  background: rgb(0 0 0 / 0.42);
+  backdrop-filter: blur(6px);
+  color: rgb(255 255 255 / 0.88);
+  font-size: 2.1cqw;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+/* 骑跨 Banner 底线的 1:1 头像 + 右侧数据 HUD */
+.cfo__hero-row {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 3cqw;
+  margin-top: -7.5cqw;
+  padding: 0 3.8cqw;
+}
+
+.cfo__avatar {
+  position: relative;
+  flex: 0 0 38cqw;
+  width: 38cqw;
+  height: 38cqw;
+  padding: 1.2cqw;
+  border-radius: 2.6cqw;
+  background: #fff;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.12),
+    0 4px 10px rgb(0 0 0 / 0.18),
+    0 14px 26px -6px rgb(0 0 0 / 0.3);
+}
+
+.cfo__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 1.6cqw;
+}
+
+.cfo__avatar:empty::after {
+  content: "";
+  display: block;
+  height: 100%;
+  border-radius: 1.6cqw;
+  background: rgb(0 0 0 / 0.08);
+}
+
+/* 头像角上的 osu! Approach Circle 呼吸细圈装饰 */
+.cfo__approach {
+  position: absolute;
+  right: -1.8cqw;
+  bottom: -1.8cqw;
+  width: 7.2cqw;
+  height: 7.2cqw;
+  border-radius: 50%;
+  border: 0.55cqw solid var(--accent);
+  background: var(--paper);
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.18);
+}
+
+.cfo__approach::after {
+  content: "";
+  position: absolute;
+  inset: 1.4cqw;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.cfo__hud {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.6cqw;
+  padding-top: 9.5cqw;
+  padding-bottom: 0.4cqw;
+}
+
+.cfo__rank-line {
+  display: flex;
+  align-items: center;
+  gap: 1.4cqw;
+  max-width: 100%;
+}
+
+.cfo__flag {
+  flex: 0 0 auto;
+  width: 4.8cqw;
+  height: 3.4cqw;
+  object-fit: cover;
+  border-radius: 0.4cqw;
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.18);
+}
+
+.cfo__rank {
+  font-size: 6.4cqw;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.cfo__pp {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8cqw;
+}
+
+.cfo__pp b {
+  font-size: 4.4cqw;
+  font-weight: 800;
+}
+
+.cfo__pp i {
+  font-style: normal;
+  font-size: 2.5cqw;
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+.cfo__stars {
+  display: flex;
+  gap: 0.45cqw;
+}
+
+.cfo__star {
+  width: 3.8cqw;
+  height: 3.8cqw;
+  mask: url("./tex/star-fill.svg") center / contain no-repeat;
+}
+
+.cfo__star[data-state="empty"] {
+  mask-image: url("./tex/star-line.svg");
+  background: color-mix(in srgb, var(--ink-dim) 42%, transparent);
+}
+
+.cfo__star[data-state="copper"] {
+  background: linear-gradient(135deg, #f59e0b, #d97706 55%, #92400e);
+}
+
+.cfo__star[data-state="prism"] {
+  background: linear-gradient(135deg, #2dd4bf, #60a5fa 50%, #f472b6);
+}
+
+.cfo__bp {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1cqw;
+  padding: 0.9cqw 1.8cqw;
+  border-radius: 0.9cqw;
+  background: color-mix(in srgb, var(--bp) 13%, transparent);
+  border: var(--hair) solid color-mix(in srgb, var(--bp) 42%, transparent);
+  color: color-mix(in srgb, var(--bp) 78%, var(--ink));
+}
+
+.cfo__bp i {
+  font-style: normal;
+  font-size: 2.3cqw;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.cfo__bp b {
+  font-size: 3.8cqw;
+  font-weight: 800;
+}
+
+/* 战斗态专用的大头像容器，平时隐藏 */
+.cfo__battle-stage {
+  display: none;
+}
+
+/* 大号海报标题区 */
+.cfo__title {
+  display: flex;
+  flex-direction: column;
+  gap: 1.8cqw;
+  padding: 3.6cqw 3.8cqw 1.8cqw;
+}
+
+.cfo__name {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: calc(var(--name-size, 8.6cqw) * 1.05);
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfo__title-rule {
+  height: 0.65cqw;
+  border-radius: 99px;
+  background-image: var(--foil);
+  background-size: 260% 260%;
+  background-position: var(--foil-pos);
+}
+
+/* =========================================================
+   4. 瑞士网格技能列表：开放无框，仅保留清晰分隔线
+   ========================================================= */
+
+.cfo__skills {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 3.8cqw;
+}
+
+.cfo__skill {
+  height: 11.4cqw;
+  display: flex;
+  align-items: center;
+  gap: 2.2cqw;
+  border-bottom: var(--hair) solid var(--rule-color);
+}
+
+.cfo__skill:first-child {
+  border-top: var(--hair) solid var(--rule-color);
+}
+
+.cfo__el {
+  flex: 0 0 6.8cqw;
+  height: 6.8cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 1.2cqw;
+  background: color-mix(in srgb, var(--el) 16%, transparent);
+  color: color-mix(in srgb, var(--el) 85%, var(--ink));
+}
+
+.cfo__el svg {
+  width: 4.5cqw;
+  height: 4.5cqw;
+}
+
+.cfo__skill-name {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 4.9cqw;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfo__cost {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1.2cqw;
+}
+
+.cfo__ap,
+.cfo__mp {
+  width: 6.8cqw;
+  height: 6.8cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 4cqw;
+  font-weight: 800;
+}
+
+.cfo__ap {
+  background: var(--ap);
+  color: #fff;
+}
+
+.cfo__mp {
+  border: var(--rule) solid var(--mp);
+  color: var(--mp);
+}
+
+.cfo__passive {
+  height: 5.4cqw;
+  display: grid;
+  place-items: center;
+  padding: 0 1.6cqw;
+  border-radius: 0.8cqw;
+  border: var(--hair) solid var(--rule-color);
+  color: var(--ink-dim);
+  font-size: 2.6cqw;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+/* 底部印刷微标 */
+.cfo__colophon {
+  flex: 0 0 7.2cqw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 3.8cqw 1.2cqw;
+  color: var(--ink-dim);
+  font-size: 2cqw;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  opacity: 0.72;
+}
+
+/* =========================================================
+   5. 七档稀有度：腰封色彩 + 纸张质感演化
+   ========================================================= */
+
+/* C：石板灰腰封 + 象牙纸 */
+.cfo[data-rarity="C"] {
+  --obi: #32353d;
+  --paper: #f3f2ee;
+  --accent: #525766;
+  --foil: linear-gradient(125deg, #b5bac4, #e5e8ee);
+}
+
+/* UC：深苔绿腰封 + 浅薄荷纸 */
+.cfo[data-rarity="UC"] {
+  --obi: #1c4736;
+  --paper: #edf3ef;
+  --accent: #276e50;
+  --foil: linear-gradient(125deg, #74c99f, #c8f2dc);
+}
+
+/* R：群青钢蓝腰封 + 冰川纸 */
+.cfo[data-rarity="R"] {
+  --obi: #19355e;
+  --paper: #ecf1f8;
+  --accent: #2e5d9f;
+  --foil: linear-gradient(
+    115deg,
+    #4c7dc2 0%,
+    #9cc5ff 26%,
+    #e2f0ff 48%,
+    #5f92d6 74%,
+    #4c7dc2 100%
+  );
+}
+
+/* E：深紫罗兰腰封 + 雾紫纸 */
+.cfo[data-rarity="E"] {
+  --obi: #37205c;
+  --paper: #f0ecf8;
+  --accent: #6842a8;
+  --foil: linear-gradient(
+    115deg,
+    #865ed0 0%,
+    #d8beff 28%,
+    #f3e8ff 50%,
+    #966edf 75%,
+    #865ed0 100%
+  );
+}
+
+/* L：黑曜金箔腰封 + 香槟象牙艺术纸（高对比重奢） */
+.cfo[data-rarity="L"] {
+  --obi: #181512;
+  --paper: #f7f2e7;
+  --ink: #1e1810;
+  --ink-dim: #73644c;
+  --accent: #b88828;
+  --foil: linear-gradient(
+    112deg,
+    #9a701e 0%,
+    #d4aa44 16%,
+    #fff0b5 30%,
+    #c2922f 48%,
+    #e4ba55 68%,
+    #fff4c9 82%,
+    #9a701e 100%
+  );
+}
+
+/* Radiant：铂金冷银腰封 + 珍珠贝母纸面 */
+.cfo[data-rarity="Radiant"] {
+  --obi: #232834;
+  --paper: #f3f5fb;
+  --accent: #5e6d8c;
+  --foil: linear-gradient(
+    112deg,
+    #8d96a6 0%,
+    #cfd6e3 18%,
+    #ffffff 34%,
+    #a5aebf 52%,
+    #dfe4ee 72%,
+    #ffffff 86%,
+    #8d96a6 100%
+  );
+}
+
+.cfo[data-rarity="Radiant"] .cfo__sheen,
+.cfo[data-rarity="Prismatic"] .cfo__sheen {
+  display: block;
+}
+
+.cfo__sheen::before,
+.cfo__sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.cfo[data-rarity="Radiant"] .cfo__sheen::before {
+  background: linear-gradient(
+    calc(118deg + (var(--mx) - 0.5) * 50deg),
+    rgb(255 182 214),
+    rgb(174 214 255) 24%,
+    rgb(176 250 218) 46%,
+    rgb(255 234 176) 68%,
+    rgb(218 186 255) 86%,
+    rgb(255 182 214)
+  );
+  background-size: 240% 240%;
+  background-position: var(--foil-pos);
+  mix-blend-mode: overlay;
+  opacity: 0.4;
+}
+
+.cfo[data-rarity="Radiant"] .cfo__sheen::after {
+  background: radial-gradient(
+    60% 44% at calc(var(--mx) * 100%) calc(var(--my) * 100%),
+    rgb(255 255 255 / 0.45),
+    transparent 70%
+  );
+}
+
+/* Prismatic：全黑全息夜幕 + 彩虹镭射箔 */
+.cfo[data-rarity="Prismatic"] {
+  --obi: #0f0e18;
+  --paper: #161523;
+  --ink: #f6f4ff;
+  --ink-dim: #a39ec0;
+  --rule-color: rgb(255 255 255 / 0.14);
+  --accent: #9b8cff;
+  --foil-film-blend: screen;
+  --foil-film-op: 0.2;
+  --foil-dodge-op: 0.2;
+  --foil: linear-gradient(
+    112deg,
+    #7d6cff 0%,
+    #c58cff 14%,
+    #ff8cc8 28%,
+    #ffb36b 42%,
+    #f3e06a 56%,
+    #6fe3b8 70%,
+    #6cc4ff 84%,
+    #7d6cff 100%
+  );
+}
+
+.cfo[data-rarity="Prismatic"] .cfo__stock {
+  background:
+    linear-gradient(
+      140deg,
+      rgb(255 255 255 / 0.08),
+      transparent 45%,
+      rgb(0 0 0 / 0.42)
+    ),
+    url("./tex/grain.svg") 0 0 / 220px 220px,
+    var(--paper);
+  background-blend-mode: normal, screen, normal;
+}
+
+.cfo[data-rarity="Prismatic"] .cfo__sheen::before {
+  background: repeating-linear-gradient(
+    calc(118deg + (var(--mx) - 0.5) * 40deg),
+    hsl(350 92% 70%) 0,
+    hsl(28 96% 68%) 6.5cqw,
+    hsl(56 96% 66%) 13cqw,
+    hsl(112 76% 66%) 19.5cqw,
+    hsl(172 86% 60%) 26cqw,
+    hsl(206 96% 70%) 32.5cqw,
+    hsl(256 92% 76%) 39cqw,
+    hsl(302 86% 74%) 45.5cqw,
+    hsl(350 92% 70%) 52cqw
+  );
+  background-size: 300% 300%;
+  background-position: var(--foil-pos);
+  mix-blend-mode: screen;
+  opacity: 0.18;
+}
+
+.cfo[data-rarity="Prismatic"] .cfo__sheen::after {
+  background:
+    radial-gradient(
+      56% 42% at calc(var(--mx) * 100%) calc(var(--my) * 100%),
+      rgb(255 255 255 / 0.14),
+      transparent 70%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgb(255 255 255 / 0.05) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgb(255 255 255 / 0.035) 0 1px,
+      transparent 1px 4px
+    );
+}
+
+/* =========================================================
+   6. 闪卡膜
+   ========================================================= */
+
+.cfo__foil > i {
+  position: absolute;
+  inset: 0;
+  --foil-angle: calc(118deg + (var(--mx) - 0.5) * 36deg);
+  --spectrum: repeating-linear-gradient(
+    var(--foil-angle),
+    hsl(350 92% 62%) 0,
+    hsl(28 96% 60%) 7cqw,
+    hsl(56 96% 58%) 14cqw,
+    hsl(112 76% 56%) 21cqw,
+    hsl(172 86% 50%) 28cqw,
+    hsl(206 96% 60%) 35cqw,
+    hsl(256 92% 68%) 42cqw,
+    hsl(302 86% 66%) 49cqw,
+    hsl(350 92% 62%) 56cqw
+  );
+  --at-light: calc(var(--mx) * 100%) calc(var(--my) * 100%);
+  --at-far: calc((1 - var(--mx)) * 100%) calc((1 - var(--my)) * 100%);
+}
+
+.cfo__foil-film {
+  background: var(--spectrum);
+  background-size: 300% 300%;
+  background-position: var(--at-light);
+  mask: linear-gradient(
+      var(--foil-angle),
+      transparent 28%,
+      #000 46%,
+      #000 54%,
+      transparent 72%
+    )
+    var(--at-far) / 250% 250%;
+  mix-blend-mode: var(--foil-film-blend);
+  opacity: var(--foil-film-op);
+}
+
+.cfo__foil-dodge {
+  background: var(--spectrum);
+  background-size: 300% 300%;
+  background-position: var(--at-far);
+  mask: radial-gradient(
+    46% 32% at var(--at-light),
+    #000,
+    rgb(0 0 0 / 0.3) 55%,
+    transparent
+  );
+  mix-blend-mode: color-dodge;
+  opacity: var(--foil-dodge-op);
+}
+
+.cfo__foil-glitter {
+  background: var(--spectrum);
+  background-size: 300% 300%;
+  background-position: calc(var(--my) * 100%) calc(var(--mx) * 100%);
+  mask-image:
+    url("./tex/glitter.svg"),
+    radial-gradient(40% 28% at var(--at-light), #000, transparent);
+  mask-size:
+    220px 220px,
+    100% 100%;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  opacity: var(--foil-glitter-op);
+}
+
+.cfo__foil-glitter--b {
+  background: #fff;
+  mask-image:
+    url("./tex/glitter-b.svg"),
+    radial-gradient(30% 22% at var(--at-far), #000, transparent);
+  mask-size:
+    260px 260px,
+    100% 100%;
+  opacity: 0.4;
+}
+
+.cfo__foil-glare {
+  background: radial-gradient(
+    44% 30% at var(--at-light),
+    rgb(255 255 255 / 0.3),
+    rgb(255 255 255 / 0.06) 45%,
+    transparent 75%
+  );
+  mix-blend-mode: overlay;
+}
+
+.cfo__foil > .cfo__foil-sweep {
+  inset: -10% -60%;
+  background: linear-gradient(
+    105deg,
+    transparent 43%,
+    hsl(190 100% 62% / 0.14) 46.5%,
+    hsl(300 100% 78% / 0.2) 50%,
+    hsl(45 100% 62% / 0.14) 53.5%,
+    transparent 57%
+  );
+  transform: translateX(-62%);
+  animation: cf-foil-sweep 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: calc(var(--seed, 0) * -0.07s);
+}
+
+@keyframes cf-foil-sweep {
+  0%,
+  74% {
+    transform: translateX(-62%);
+  }
+  100% {
+    transform: translateX(62%);
+  }
+}
+
+.cfo:not([data-sweep-visible]) .cfo__foil-sweep {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cfo {
+    transition: none;
+  }
+  .cfo__foil > .cfo__foil-sweep {
+    display: none;
+  }
+}
+
+/* =========================================================
+   7. 战斗态：收起腰封与印刷文字，只留超大头像和技能行
+   ========================================================= */
+
+.cfo[data-mode="battle"] .cfo__obi,
+.cfo[data-mode="battle"] .cfo__cover,
+.cfo[data-mode="battle"] .cfo__hero-row,
+.cfo[data-mode="battle"] .cfo__title,
+.cfo[data-mode="battle"] .cfo__colophon {
+  display: none;
+}
+
+.cfo[data-mode="battle"] .cfo__poster {
+  padding: 3cqw;
+  gap: 2.6cqw;
+}
+
+.cfo[data-mode="battle"] .cfo__battle-stage {
+  flex: 1 1 0;
+  min-height: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: 2.4cqw;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);
+}
+
+.cfo[data-mode="battle"] .cfo__battle-stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cfo[data-mode="battle"] .cfo__skills {
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.cfo[data-mode="battle"] .cfo__skill {
+  height: 16cqw;
+  gap: 2.2cqw;
+}
+
+.cfo[data-mode="battle"] .cfo__el {
+  flex-basis: 11cqw;
+  height: 11cqw;
+}
+
+.cfo[data-mode="battle"] .cfo__el svg {
+  width: 7.8cqw;
+  height: 7.8cqw;
+}
+
+.cfo[data-mode="battle"] .cfo__skill-name {
+  font-size: 8.2cqw;
+}
+
+.cfo[data-mode="battle"] :is(.cfo__ap, .cfo__mp) {
+  width: 10.6cqw;
+  height: 10.6cqw;
+  font-size: 6.4cqw;
+}
+
+.cfo[data-mode="battle"] .cfo__passive {
+  height: 8cqw;
+  padding: 0 1.8cqw;
+  font-size: 4.2cqw;
+}
+
+/* =========================================================
+   8. 小尺寸自适应
+   ========================================================= */
+
+@container cfo (max-width: 170px) {
+  .cfo__obi {
+    flex-basis: 14cqw;
+    padding: 3cqw 1cqw;
+  }
+
+  .cfo__rarity,
+  .cfo__no,
+  .cfo__hero,
+  .cfo__series,
+  .cfo__watermark,
+  .cfo__stars,
+  .cfo__pp,
+  .cfo__bp,
+  .cfo__colophon {
+    display: none;
+  }
+
+  .cfo__mod {
+    height: 3.4cqw;
+    font-size: 0;
+  }
+
+  .cfo__cover {
+    flex-basis: 28cqw;
+  }
+
+  .cfo__avatar {
+    flex-basis: 44cqw;
+    width: 44cqw;
+    height: 44cqw;
+  }
+
+  .cfo__hud {
+    padding-top: 8.5cqw;
+  }
+
+  .cfo__rank {
+    font-size: 7cqw;
+  }
+}
+
+@container cfo (max-width: 120px) {
+  .cfo__obi {
+    display: none;
+  }
+}
+
+/* =========================================================
+   9. 参考线支持
+   ========================================================= */
+
+.cfo--guides .cfo__obi {
+  outline: 1px dashed #ff3b6b;
+  outline-offset: -1px;
+}
+
+.cfo--guides :is(.cfo__cover, .cfo__hero-row, .cfo__title, .cfo__skills, .cfo__colophon) {
+  outline: 1px dashed rgb(59 130 246 / 0.6);
+  outline-offset: -1px;
+}

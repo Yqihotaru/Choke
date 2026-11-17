@@ -1,19 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react"
 
-import { CardFace } from "./CardFace"
-import { CardFaceV1 } from "./CardFaceV1"
-import { CardFaceGemini } from "./CardFaceGemini"
 import { DEMO_CARDS, RARITY_LABEL, makeCard } from "./data"
+import { CARD_FACES, getCardFace } from "./faces"
 import type { CardFaceData, CardFaceMode } from "./types"
 import "./card-lab.css"
-
-type FaceStyle = "current" | "v1" | "gemini"
-
-const FACE_LABEL: Record<FaceStyle, string> = {
-  current: "当前版",
-  v1: "星章版 860820f",
-  gemini: "Gemini v3",
-}
 
 function FaceView({
   style,
@@ -21,14 +11,13 @@ function FaceView({
   mode,
   className,
 }: {
-  style: FaceStyle
+  style: string
   card: CardFaceData
   mode?: CardFaceMode
   className?: string
 }) {
-  if (style === "v1") return <CardFaceV1 card={card} mode={mode} className={className} />
-  if (style === "gemini") return <CardFaceGemini card={card} mode={mode} className={className} />
-  return <CardFace card={card} mode={mode} className={className} />
+  const Face = getCardFace(style).Component
+  return <Face card={card} mode={mode} className={className} />
 }
 
 const HERO_SKILLS = [
@@ -67,9 +56,12 @@ const SOLO_SKILL: CardFaceData = makeCard({
 export function CardLab() {
   const [bg, setBg] = useState<"dark" | "light">("dark")
   const params = new URLSearchParams(window.location.search)
-  const [faceStyle, setFaceStyle] = useState<FaceStyle>(() => {
+  const [faceStyle, setFaceStyle] = useState<string>(() => {
     const value = params.get("style")
-    return value === "v1" || value === "gemini" ? value : "current"
+    const legacy = value === "v1" ? "star-860820f" : value === "gemini" ? "paper-prism" : value
+    return legacy && CARD_FACES.some((face) => face.id === legacy)
+      ? legacy
+      : CARD_FACES[0].id
   })
   const embed = params.get("embed") === "1"
 
@@ -119,7 +111,7 @@ export function CardLab() {
           <div className="lab__eyebrow">CHOKE! · CARD FACE</div>
           <h1 className="lab__title">卡面实验室 v0.1</h1>
           <p className="lab__sub">
-            2:3 竖版 · 当前 / 星章版 / Gemini v3 三版对比 · 稀有度看材质和工艺 · BP 是唯一战力数字
+            2:3 竖版 · {CARD_FACES.length} 个卡面版本自动加载 · 稀有度看材质和工艺 · BP 是唯一战力数字
           </p>
         </div>
         <div className="lab__actions">
@@ -128,11 +120,11 @@ export function CardLab() {
             <select
               className="lab__toggle"
               value={faceStyle}
-              onChange={(e) => setFaceStyle(e.target.value as FaceStyle)}
+              onChange={(e) => setFaceStyle(e.target.value)}
             >
-              {(Object.keys(FACE_LABEL) as FaceStyle[]).map((key) => (
-                <option key={key} value={key}>
-                  {FACE_LABEL[key]}
+              {CARD_FACES.map((face) => (
+                <option key={face.id} value={face.id}>
+                  {face.label}
                 </option>
               ))}
             </select>
@@ -149,21 +141,18 @@ export function CardLab() {
 
       <Section
         label="版本对比"
-        note="左：当前 handoff 材料版。中：星章版（860820f）。右：Gemini v3（Paper & Prism，浅色卡纸 + 居中头像 + 磨砂名牌坞）。"
+        note={`自动扫描 src/card/faces/ 下的 ${CARD_FACES.length} 个版本；新增一对 tsx/css 就会出现在这里。`}
       >
         <div className="lab__row lab__row--baseline">
-          <div className="lab__slot" style={{ width: 220 }}>
-            <CardFace card={DEMO_CARDS[4]} />
-            <span className="lab__tag">当前版 · handoff</span>
-          </div>
-          <div className="lab__slot" style={{ width: 220 }}>
-            <CardFaceV1 card={DEMO_CARDS[4]} />
-            <span className="lab__tag">星章版 · 860820f</span>
-          </div>
-          <div className="lab__slot" style={{ width: 220 }}>
-            <CardFaceGemini card={DEMO_CARDS[4]} />
-            <span className="lab__tag">Gemini v3 · Paper &amp; Prism</span>
-          </div>
+          {CARD_FACES.map((face) => {
+            const Face = face.Component
+            return (
+              <div className="lab__slot" style={{ width: 200 }} key={face.id}>
+                <Face card={DEMO_CARDS[4]} />
+                <span className="lab__tag">{face.label}</span>
+              </div>
+            )
+          })}
         </div>
       </Section>
 

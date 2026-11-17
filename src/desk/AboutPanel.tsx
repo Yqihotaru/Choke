@@ -5,7 +5,7 @@ const TOOLS = [
   {
     href: "/card-lab",
     label: "卡面实验室",
-    note: "当前 handoff、星章版（860820f）和 Gemini v3 三版并排对比，七档材质、尺寸、战斗态和本体卡命座都可切换。",
+    note: "自动加载 src/card/faces/ 下所有卡面版本，并排对比材质、尺寸、战斗态和本体卡命座。",
   },
   {
     href: "/card-editor",

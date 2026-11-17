@@ -15,10 +15,17 @@ import {
   hashOf,
   nameSizeOf,
   starStates,
-} from "./data"
-import { trackCardLight } from "./light"
-import type { CardFaceData, CardFaceMode, Element, Job } from "./types"
-import "./card-face-gemini.css"
+} from "../data"
+import { trackCardLight } from "../light"
+import type { CardFaceData, CardFaceMode, Element, Job } from "../types"
+import "./paper-prism.css"
+
+export const faceMeta = {
+  id: "paper-prism",
+  label: "Gemini v3 · Paper & Prism",
+  note: "浅色卡纸 + 居中头像 + 磨砂名牌坞",
+  order: 20,
+} as const
 
 interface Props {
   card: CardFaceData
@@ -473,3 +480,5 @@ function ElementGlyph({ element }: { element: Element }) {
       )
   }
 }
+
+export default CardFaceGemini

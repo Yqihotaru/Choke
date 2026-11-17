@@ -15,9 +15,16 @@ import {
   formatNo,
   nameSizeOf,
   starStates,
-} from "./data"
-import type { CardFaceData, CardFaceMode, CardSkill, Element, Job, Rarity, StarState } from "./types"
-import "./card-face-v1.css"
+} from "../data"
+import type { CardFaceData, CardFaceMode, CardSkill, Element, Job, Rarity, StarState } from "../types"
+import "./star-860820f.css"
+
+export const faceMeta = {
+  id: "star-860820f",
+  label: "星章版 860820f",
+  note: "左上角星形徽记 + 独立命座星条",
+  order: 10,
+} as const
 
 const STAR_PATH =
   "M12 2.2l2.9 5.9 6.5.92-4.7 4.56 1.12 6.46L12 17.02l-5.82 3.02 1.12-6.46L2.6 9.02l6.5-.92z"
@@ -631,3 +638,6 @@ function ElementGlyph({ element }: { element: Element }) {
       )
   }
 }
+
+
+export default CardFaceV1
