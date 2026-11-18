@@ -1118,7 +1118,10 @@ export function skillSeed(cardId: string): string {
 }
 
 /**
- * 卡面展示用的 2–3 个技能（§4.1 槽位规则：C~L 2槽，Radiant/Prismatic/本体卡 3槽）
+ * 卡面与战斗共用的技能池（严格遵循 §4.1 槽位规则）：
+ * - C / UC / R / E / L：固定 2 个技能槽（1 主动 + 1 被动，或 L 的 2 槽）
+ * - Radiant / Prismatic / 本体卡：3 个技能槽（2 主动 + 1 被动）
+ * 绝不额外硬塞第 4、第 5 个技能。
  */
 export function skillDefsFor(seed: string, job: Job, rarity: Rarity, wantThree = false): SkillDef[] {
   const subjob = subjobFor(seed, job)
@@ -1127,28 +1130,20 @@ export function skillDefsFor(seed: string, job: Job, rarity: Rarity, wantThree =
   const passives = pool.filter((skill) => skill.passive)
   const count = wantThree || rarity === "Radiant" || rarity === "Prismatic" ? 3 : 2
   const activeCount = Math.min(actives.length, Math.max(1, count - 1))
-  const picked = [
-    ...actives.slice(0, activeCount),
-    ...passives.slice(0, Math.max(1, count - activeCount)),
-  ]
-  return picked.slice(0, count)
+  const h = hashOf(`${seed}|skillpick`)
+  const pickedActives: SkillDef[] = []
+  for (let i = 0; i < activeCount && i < actives.length; i += 1) {
+    pickedActives.push(actives[(h + i) % actives.length]!)
+  }
+  const pickedPassives = passives.slice(0, Math.max(1, count - pickedActives.length))
+  return [...pickedActives, ...pickedPassives].slice(0, count)
 }
 
 /**
- * 战斗内指令菜单可用的完整技能列表：
- * - 包含该子职业配置的全部技能 + 若无 0 AP 主动技则自动补充【突击·零式 (0 AP)】
- *   确保在 0 AP 时未行动的卡片依然可以挥刀垫 Combo（符合 §6.2 & §6.6 兰斯10平刀逻辑）。
+ * 战斗内卡片拥有的技能（与卡面 100% 同源，只有 2～3 个槽位，包含主动与被动）
  */
 export function battleSkillsFor(seed: string, job: Job, rarity: Rarity, isHero = false): SkillDef[] {
-  const subjob = subjobFor(seed, job)
-  const pool = subjob.skills.map((id) => SKILLS[id]).filter(Boolean)
-  const actives = pool.filter((s) => !s.passive)
-  const passives = pool.filter((s) => s.passive)
-  const maxActives = isHero || rarity === "Radiant" || rarity === "Prismatic" || rarity === "L" ? 3 : 2
-  const chosenActives = actives.slice(0, maxActives)
-  const hasZeroAp = chosenActives.some((s) => s.ap === 0)
-  const withZero = hasZeroAp ? chosenActives : [SKILLS.basic_slash, ...chosenActives]
-  return [...withZero, ...passives]
+  return skillDefsFor(seed, job, rarity, isHero)
 }
 
 export function cardSkillsFor(seed: string, job: Job, rarity: Rarity, wantThree = false): CardSkill[] {

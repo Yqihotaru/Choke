@@ -122,15 +122,15 @@ export function hasTankAlive(cards: BattleCard[]): boolean {
 
 /**
  * 防御档位减伤率（§6.7）：
- * - 坦克在场：I=20%, II=40%, III=70%, IV=90%
- * - 非坦克：I=20%, II=30%, III=50%（IV 锁死）
+ * - 坦克在场：最高可升至 Lv4（1=20%, 2=40%, 3=70%, 4=90%）
+ * - 无坦克在场：最高只能升至 Lv2（1=20%, 2=35%）
  */
 export function defenseReductionOf(tier: number, tankPresent: boolean): number {
-  const clamped = Math.min(Math.max(tier, 0), tankPresent ? 4 : 3)
+  const clamped = Math.min(Math.max(tier, 0), tankPresent ? 4 : 2)
   if (tankPresent) {
     return [0, 0.2, 0.4, 0.7, 0.9][clamped] ?? 0
   }
-  return [0, 0.2, 0.3, 0.5, 0.5][clamped] ?? 0
+  return [0, 0.2, 0.35, 0.35, 0.35][clamped] ?? 0
 }
 
 /**
@@ -616,7 +616,7 @@ function rollCardTriggers(state: BattleState) {
   }
 }
 
-/** 同步更新右侧支援栏中的「主动防御指令」占格（§6.7 & §8.1 我方防御占用右侧支援 1 格） */
+/** 同步更新右侧支援栏中的「防御」侧面支援占格（§6.7 & §8.1 我方防御占用右侧支援 1 格，分四级） */
 function syncDefenseSupportSlot(state: BattleState) {
   const idx = state.playerSupports.findIndex((s) => s.id === "party-defense-slot")
   if (state.defenseTier <= 0) {
@@ -627,14 +627,14 @@ function syncDefenseSupportSlot(state: BattleState) {
   const redPct = Math.round(defenseReductionOf(state.defenseTier, tankPresent) * 100)
   const unit: SideSupportUnit = {
     id: "party-defense-slot",
-    name: `部队防御 ${ROMAN_TIER[state.defenseTier]}`,
+    name: `防御 Lv${state.defenseTier}`,
     kind: "defense",
     element: "earth",
     job: "tank",
     defenseTier: state.defenseTier,
     temporary: true,
     triggered: true,
-    roleText: `本回合全队减伤 −${redPct}%`,
+    roleText: `本回合减伤 −${redPct}%`,
   }
   if (idx >= 0) {
     state.playerSupports[idx] = unit
@@ -1160,13 +1160,13 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
 
       case "guard": {
         const tankPresent = hasTankAlive(state.cards)
-        const maxTier = tankPresent ? 4 : 3
+        const maxTier = tankPresent ? 4 : 2
         const nextTier = Math.min(maxTier, state.defenseTier + (skill.power ?? 1))
         state.defenseTier = nextTier
         syncDefenseSupportSlot(state)
         const redPct = Math.round(defenseReductionOf(nextTier, tankPresent) * 100)
         emit(state, { type: "guard", tier: nextTier, reductionPct: redPct })
-        log(state, `${card.name} 将部队防御档位提升至 ${ROMAN_TIER[nextTier]}（−${redPct}%）`)
+        log(state, `${card.name} 追加侧面支援【防御 Lv${nextTier}】（−${redPct}%）`)
         break
       }
 
@@ -1274,14 +1274,16 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
 export function raiseDefense(state: BattleState, targetTier?: number): string | null {
   if (state.phase !== "player") return "战斗已经结束"
   const tankPresent = hasTankAlive(state.cards)
-  const maxTier = tankPresent ? 4 : 3
+  const maxTier = tankPresent ? 4 : 2
   const nextTier = targetTier ?? state.defenseTier + 1
   if (nextTier <= state.defenseTier) return "本回合防御档位不可降档"
   if (nextTier > maxTier) {
-    return tankPresent ? "已达最高 IV 档（−90%）" : "非坦克在场最高 III 档（−50%，IV 档需坦克在场）"
+    return tankPresent
+      ? "防御支援已达最高 Lv4（−90%）"
+      : "队伍无坦克在场，防御支援最高只能升至 Lv2（−35%）"
   }
   const cost = nextTier - state.defenseTier
-  if (state.ap < cost) return `AP 不足（升至 ${ROMAN_TIER[nextTier]} 档需要 ${cost} AP）`
+  if (state.ap < cost) return `AP 不足（需要 ${cost} AP）`
 
   beginAction(state)
   state.hasActedThisTurn = true
@@ -1292,7 +1294,7 @@ export function raiseDefense(state: BattleState, targetTier?: number): string | 
 
   const redPct = Math.round(defenseReductionOf(nextTier, tankPresent) * 100)
   emit(state, { type: "guard", tier: nextTier, reductionPct: redPct })
-  log(state, `🛡️ 部队侧面支援【防御 ${ROMAN_TIER[nextTier]}】展开！本回合全队承受伤害 −${redPct}%`)
+  log(state, `🛡️ 追加侧面支援【防御 Lv${nextTier}】！本回合承受伤害 −${redPct}%`)
   return null
 }
 

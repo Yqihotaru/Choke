@@ -352,6 +352,16 @@ export function createBattleCard(face: CardFaceData, uid: number, cardId: string
   const seed = skillSeed(face.id)
   const subjob = subjobFor(seed, face.job)
   const skills = battleSkillsFor(seed, face.job, face.rarity, Boolean(face.isHero))
+  const syncedFace: CardFaceData = {
+    ...face,
+    skills: skills.map((s) => ({
+      name: s.name,
+      element: s.element,
+      ap: s.ap,
+      mp: s.mp,
+      passive: s.passive,
+    })),
+  }
   const initialStatuses: StatusEffect[] = []
   if (subjob.tags.includes("thorns")) {
     initialStatuses.push({
@@ -371,7 +381,7 @@ export function createBattleCard(face: CardFaceData, uid: number, cardId: string
     level: face.level,
     constellation: face.constellation,
     art: face.art,
-    face,
+    face: syncedFace,
     stats: statsFor(face, subjob),
     skills,
     acted: false,

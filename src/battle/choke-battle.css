@@ -1,5 +1,5 @@
 /* =========================================================
-   兰斯10 风格 16:9 战斗舞台（纯受控壳子样式，前缀 choke-）
+   兰斯10 风格 16:9 战斗舞台（1:1 折线血条 + 垂直扣血光柱 + 梯形支援铭牌）
    ========================================================= */
 
 .choke-viewport {
@@ -27,21 +27,21 @@
   box-shadow: 0 0 40px rgb(0 0 0 / 0.85);
 }
 
-/* ---------- 1. BOSS 战区 ---------- */
+/* ---------- 1. 上半区：BOSS 战区 ---------- */
 .choke-boss-zone {
   position: relative;
   flex: 1 1 0;
   overflow: hidden;
   background:
-    radial-gradient(55% 80% at 48% 42%, rgb(168 38 28 / 0.42), transparent 72%),
-    radial-gradient(85% 90% at 50% 60%, rgb(45 14 14 / 0.8), #0c090c);
+    radial-gradient(52% 85% at 50% 42%, rgb(175 42 30 / 0.45), transparent 72%),
+    radial-gradient(90% 95% at 50% 60%, rgb(45 14 14 / 0.85), #0b080c);
 }
 
 .choke-boss-backdrop {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(28% 55% at 48% 45%, rgb(255 110 64 / 0.16), transparent 70%),
+    radial-gradient(35% 65% at 50% 42%, rgb(255 120 70 / 0.18), transparent 70%),
     repeating-linear-gradient(-25deg, rgb(255 255 255 / 0.015) 0 0.6cqw, transparent 0.6cqw 2.4cqw);
   pointer-events: none;
   transition: filter 0.3s ease;
@@ -52,7 +52,7 @@
 }
 
 .choke-boss-backdrop[data-slashed="true"] {
-  animation: choke-boss-shake 0.25s ease-out;
+  animation: choke-boss-shake 0.22s ease-out;
 }
 
 @keyframes choke-boss-shake {
@@ -62,18 +62,62 @@
   75% { transform: translate(-0.2cqw, -0.15cqw); }
 }
 
+/* BOSS 舞台剪影与光环（替代之前突兀的大圆球） */
+.choke-boss-figure {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 24cqw;
+  height: 20cqw;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.choke-boss-aura {
+  position: absolute;
+  inset: -15%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--el, #a842ff) 48%, transparent) 0%,
+    color-mix(in srgb, var(--el, #a842ff) 18%, transparent) 45%,
+    transparent 72%
+  );
+  filter: blur(0.6cqw);
+}
+.choke-boss-core {
+  position: relative;
+  width: 9.5cqw;
+  height: 9.5cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 0.14cqw solid color-mix(in srgb, var(--el, #fff) 65%, #d6b265);
+  background: radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--el) 45%, #1d1016), #0b070a 78%);
+  box-shadow:
+    0 0 2.6cqw color-mix(in srgb, var(--el) 55%, transparent),
+    inset 0 0 1.4cqw rgb(0 0 0 / 0.75);
+  color: #fff;
+}
+.choke-boss-core svg {
+  width: 4.8cqw;
+  height: 4.8cqw;
+  filter: drop-shadow(0 0 0.5cqw var(--el));
+}
+
 .choke-slash-fx {
   position: absolute;
   left: 50%;
-  top: 42%;
+  top: 40%;
   z-index: 6;
   width: 28cqw;
-  height: 0.55cqw;
+  height: 0.6cqw;
   background: linear-gradient(90deg, transparent, #fff 35%, #ff8248 65%, transparent);
-  box-shadow: 0 0 1.4cqw #ff5a2b;
+  box-shadow: 0 0 1.6cqw #ff5a2b;
   transform: translate(-50%, -50%) rotate(-24deg);
   pointer-events: none;
-  animation: choke-slash-flash 0.3s ease-out forwards;
+  animation: choke-slash-flash 0.26s ease-out forwards;
 }
 
 @keyframes choke-slash-flash {
@@ -90,21 +134,18 @@
   height: 100%;
   z-index: 10;
   pointer-events: none;
-  animation: choke-laser-fade 0.55s ease-out forwards;
+  animation: choke-laser-fade 0.52s ease-out forwards;
 }
-
 .choke-laser-glow {
   stroke: rgb(255 60 110 / 0.55);
   stroke-width: 0.85;
   stroke-linecap: round;
 }
-
 .choke-laser-core {
   stroke: #fff3f6;
   stroke-width: 0.25;
   stroke-linecap: round;
 }
-
 @keyframes choke-laser-fade {
   0% { opacity: 0; }
   18% { opacity: 1; }
@@ -113,11 +154,11 @@
 
 .choke-top-tools {
   position: absolute;
-  top: 1cqw;
-  right: 1.2cqw;
+  top: 0.9cqw;
+  right: 1.1cqw;
   z-index: 8;
   display: flex;
-  gap: 0.5cqw;
+  gap: 0.45cqw;
 }
 
 .choke-tool-btn {
@@ -125,16 +166,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.4cqw 0.8cqw;
-  border: 0.14cqw solid #8b7242;
+  min-width: 2.9cqw;
+  padding: 0.35cqw 0.65cqw;
+  border: 0.14cqw solid #a68546;
   border-radius: 0.35cqw;
-  background: linear-gradient(180deg, #352c20, #1a1510);
-  color: #f3d997;
-  font-size: 0.72cqw;
+  background: linear-gradient(180deg, #42331f, #1c150c);
+  color: #f5dea0;
+  font-size: 0.68cqw;
+  font-weight: 800;
+  text-decoration: none;
   cursor: pointer;
+  box-shadow: 0 0.2cqw 0.5cqw rgb(0 0 0 / 0.7);
 }
-
-.choke-tool-btn b { font-size: 1.25cqw; line-height: 1; }
+.choke-tool-btn b {
+  font-size: 1.15cqw;
+  line-height: 1;
+}
 
 /* 准备战斗 WARNING 警戒带 */
 .choke-tapes { position: absolute; top: 0; width: 38cqw; height: 18cqw; pointer-events: none; z-index: 3; }
@@ -172,14 +219,13 @@
   line-height: 0.9;
 }
 
-/* Boss 名字改为实心亮字+重阴影，放在警戒带下方偏左 */
 .choke-prep-title {
   position: absolute;
-  top: 7.4cqw;
+  top: 7.2cqw;
   left: 2cqw;
   z-index: 5;
   padding: 0.2cqw 1cqw 0.2cqw 0.6cqw;
-  font-size: 2.3cqw;
+  font-size: 2.2cqw;
   font-weight: 900;
   color: #ffeae0;
   text-shadow: 0 0.18cqw 0.45cqw #000, 0 0 0.8cqw rgb(180 20 20 / 0.85);
@@ -187,411 +233,1433 @@
   border-left: 0.3cqw solid #e03636;
   transform: rotate(-8deg);
 }
+.choke-prep-title small {
+  display: block;
+  font-size: 0.7cqw;
+  letter-spacing: 0.16em;
+  color: #ffb899;
+  font-weight: 700;
+}
 
 .choke-prep-badge {
   position: absolute;
-  top: 5.4cqw;
+  top: 5.2cqw;
   right: 6.2cqw;
   z-index: 5;
-  font-size: 2.8cqw;
+  font-size: 2.6cqw;
   font-weight: 900;
   color: #e03838;
   text-shadow: 0 0.2cqw 0.55cqw #000;
   transform: rotate(15deg);
 }
 
-/* 战果分支框抬高一点，给右下角“魔人讨伐队”留足呼吸感 */
+.choke-stage-selector {
+  position: absolute;
+  left: 1.8cqw;
+  bottom: 7.8cqw;
+  z-index: 6;
+  width: 28cqw;
+  padding: 0.5cqw 0.7cqw;
+  border: 0.12cqw solid rgb(210 155 82 / 0.65);
+  border-radius: 0.35cqw;
+  background: linear-gradient(90deg, rgb(14 11 15 / 0.92), rgb(24 16 18 / 0.78));
+  box-shadow: 0 0.4cqw 1.2cqw rgb(0 0 0 / 0.7);
+}
+.choke-stage-selector__label {
+  display: flex;
+  align-items: center;
+  gap: 0.35cqw;
+  font-size: 0.74cqw;
+  font-weight: 800;
+  color: #ffd984;
+  margin-bottom: 0.35cqw;
+}
+.choke-stage-selector__btns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35cqw;
+}
+.choke-stage-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.3cqw 0.42cqw;
+  border: 0.1cqw solid #6b5332;
+  border-radius: 0.25cqw;
+  background: rgb(26 20 16 / 0.9);
+  color: #e9dec7;
+  cursor: pointer;
+  text-align: left;
+}
+.choke-stage-pill b {
+  font-size: 0.72cqw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+.choke-stage-pill small {
+  font-size: 0.56cqw;
+  color: #b7a689;
+}
+.choke-stage-pill[data-active="true"] {
+  border-color: #ffd86b;
+  background: linear-gradient(180deg, #5c2716, #2d110a);
+  box-shadow: 0 0 0.6cqw rgb(255 190 70 / 0.45);
+}
+.choke-stage-selector__desc {
+  margin: 0.35cqw 0 0;
+  font-size: 0.66cqw;
+  line-height: 1.35;
+  color: #cfc2aa;
+}
+
 .choke-outcome-box {
   position: absolute;
   right: 0;
-  bottom: 7.4cqw;
+  bottom: 7.8cqw;
   z-index: 4;
   width: 21cqw;
   border-top: 0.14cqw solid #aa3333;
   border-bottom: 0.14cqw solid #705532;
   background: linear-gradient(90deg, transparent, rgb(14 10 12 / 0.9) 22%);
 }
-.choke-outcome-head { padding: 0.45cqw 1cqw; background: linear-gradient(90deg, transparent, #9e1818 30%); text-align: right; font-size: 1cqw; font-weight: 800; }
-.choke-outcome-row { display: flex; justify-content: space-between; padding: 0.45cqw 1.2cqw 0.45cqw 4.5cqw; font-size: 0.95cqw; border-top: 0.06cqw solid rgb(255 255 255 / 0.1); }
-.choke-outcome-row span { color: #b97575; }
+.choke-outcome-head { padding: 0.4cqw 1cqw; background: linear-gradient(90deg, transparent, #9e1818 30%); text-align: right; font-size: 0.92cqw; font-weight: 800; }
+.choke-outcome-row { display: flex; justify-content: space-between; padding: 0.38cqw 1.1cqw 0.38cqw 4cqw; font-size: 0.85cqw; border-top: 0.06cqw solid rgb(255 255 255 / 0.1); }
+.choke-outcome-row span { color: #d89a9a; }
 
-/* BOSS 左侧特性条 */
-.choke-traits { position: absolute; top: 3.8cqw; left: 1.2cqw; z-index: 4; display: flex; flex-direction: column; gap: 0.45cqw; }
-.choke-trait { display: flex; align-items: center; gap: 0.6cqw; width: 17.2cqw; padding: 0.3cqw 0.65cqw 0.3cqw 0.4cqw; border: 0.12cqw solid #c76e3b; border-radius: 0.3cqw; background: linear-gradient(90deg, rgb(125 32 16 / 0.88), rgb(52 18 12 / 0.85)); box-shadow: 0 0.25cqw 0.6cqw rgb(0 0 0 / 0.55); }
-.choke-trait--barrier { border-color: #ffe066; background: linear-gradient(90deg, rgb(145 102 18 / 0.9), rgb(58 42 12 / 0.88)); }
-.choke-trait--stack { border-color: #ff9c42; }
-.choke-trait-icon { flex: 0 0 1.95cqw; height: 1.95cqw; display: grid; place-items: center; border: 0.1cqw solid #e5b869; border-radius: 0.25cqw; background: color-mix(in srgb, var(--el) 35%, #191318); color: #fff; }
-.choke-trait-icon svg { width: 1.35cqw; height: 1.35cqw; }
-.choke-trait-name { flex: 1 1 0; font-size: 0.92cqw; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.choke-trait-lock { font-size: 0.95cqw; opacity: 0.85; }
+/* 兰斯10 梯形侧面支援铭牌（对应截图左侧「知性覚醒(1/4)」，紧贴部队剪影上方叠放，无空表格） */
+.choke-rance-supports {
+  position: absolute;
+  bottom: 6.8cqw;
+  z-index: 7;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.3cqw;
+}
+.choke-rance-supports--enemy {
+  left: 0.9cqw;
+}
+.choke-rance-supports--party {
+  right: 0.9cqw;
+  align-items: flex-end;
+}
 
-/* 右侧 3 格支援槽 */
-.choke-supports { position: absolute; top: 5.5cqw; right: 1.2cqw; z-index: 4; display: flex; flex-direction: column; gap: 0.45cqw; }
-.choke-support-card { display: flex; align-items: center; gap: 0.55cqw; width: 14.5cqw; padding: 0.32cqw 0.55cqw; border: 0.12cqw solid #4c86c4; border-radius: 0.3cqw; background: linear-gradient(90deg, rgb(18 42 74 / 0.88), rgb(10 20 38 / 0.86)); box-shadow: 0 0.2cqw 0.5cqw rgb(0 0 0 / 0.55); transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.choke-support-card[data-active="true"] { transform: translateX(-0.8cqw); border-color: #8ce3ff; box-shadow: 0 0 0.9cqw rgb(90 200 255 / 0.65); }
-.choke-support-icon { flex: 0 0 1.9cqw; height: 1.9cqw; display: grid; place-items: center; border-radius: 0.25cqw; background: color-mix(in srgb, var(--el) 38%, #0d1624); color: #fff; border: 0.08cqw solid #7eb8f2; }
-.choke-support-icon svg { width: 1.3cqw; height: 1.3cqw; }
-.choke-support-info { display: flex; flex-direction: column; gap: 0.1cqw; min-width: 0; }
-.choke-support-info b { font-size: 0.88cqw; color: #e8f4ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.choke-support-info small { font-size: 0.68cqw; color: #8cbff0; }
+.choke-rance-support-plate {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.45cqw;
+  min-width: 12.8cqw;
+  max-width: 16cqw;
+  padding: 0.22cqw 1cqw 0.22cqw 0.32cqw;
+  color: #fff;
+  filter: drop-shadow(0 0.2cqw 0.45cqw rgb(0 0 0 / 0.8));
+  transition: transform 0.18s ease;
+}
+.choke-rance-support-plate--enemy {
+  background: linear-gradient(90deg, #b83814, #eb5e1a 75%, #ff8838);
+  border-left: 0.24cqw solid #ffd970;
+  clip-path: polygon(0 0, 100% 0, 91% 100%, 0 100%);
+}
+.choke-rance-support-plate--party {
+  padding: 0.22cqw 0.35cqw 0.22cqw 1cqw;
+  background: linear-gradient(270deg, #12407a, #1f6bc4 75%, #44a4ff);
+  border-right: 0.24cqw solid #9ce8ff;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 9% 100%);
+}
+.choke-rance-support-plate--party[data-kind="defense"],
+.choke-rance-support-plate--party[data-kind="armor"] {
+  background: linear-gradient(270deg, #1b4d8a, #2c7be0 70%, #68c6ff);
+  border-right-color: #ffe278;
+}
+.choke-rance-support-plate--party[data-active="true"] {
+  transform: translateX(-0.5cqw);
+}
 
-/* OVER KILL 橙色六边形 */
-.choke-overkill-box { position: absolute; left: 2.2cqw; bottom: 5.8cqw; z-index: 8; display: flex; align-items: center; gap: 0.8cqw; }
-.choke-overkill-hex { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 7.4cqw; height: 6.4cqw; background: linear-gradient(155deg, #ff9922, #b8290b); clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); box-shadow: 0 0 1.4cqw rgb(255 130 30 / 0.7); animation: choke-combo-pop 0.2s ease-out; }
-.choke-overkill-hex i { font-style: normal; font-size: 0.7cqw; font-weight: 900; color: #ffe5a3; letter-spacing: 0.06em; }
-.choke-overkill-hex b { font-size: 1.85cqw; font-weight: 900; color: #fff; line-height: 1.05; }
-.choke-overkill-claim { padding: 0.45cqw 0.9cqw; border: 0.14cqw solid #ffe285; border-radius: 0.35cqw; background: linear-gradient(180deg, #b83316, #661306); color: #fff4cf; font-size: 0.95cqw; font-weight: 900; cursor: pointer; box-shadow: 0 0.25cqw 0.8cqw rgb(0 0 0 / 0.7); }
+.choke-plate-icon {
+  position: relative;
+  flex: 0 0 1.9cqw;
+  height: 1.9cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 0.22cqw;
+  border: 0.1cqw solid #ffe184;
+  background: #1a120d;
+  color: #ffe49c;
+}
+.choke-plate-icon svg {
+  width: 1.25cqw;
+  height: 1.25cqw;
+}
+.choke-plate-icon i {
+  position: absolute;
+  right: -0.28cqw;
+  bottom: -0.22cqw;
+  width: 0.92cqw;
+  height: 0.92cqw;
+  border-radius: 50%;
+  background: #14100c;
+  border: 0.08cqw solid #ffd86b;
+  color: #ffd86b;
+  font-style: normal;
+  font-size: 0.58cqw;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+}
+.choke-plate-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.12;
+}
+.choke-plate-text b {
+  font-size: 0.78cqw;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0.08cqw 0.22cqw #000;
+  white-space: nowrap;
+}
+.choke-plate-text small {
+  font-size: 0.58cqw;
+  color: #ffefd2;
+  opacity: 0.92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.choke-plate-lock {
+  color: #ffe27a;
+  font-size: 0.78cqw;
+}
 
-/* 技能横幅 & 伤害 & COMBO & 回合大字 */
-.choke-skill-banner, .choke-guard-banner { position: absolute; left: 50%; bottom: 8cqw; z-index: 7; transform: translateX(-50%); display: flex; align-items: center; gap: 0.5cqw; padding: 0.42cqw 3.2cqw; background: linear-gradient(90deg, transparent, rgb(10 10 14 / 0.88) 18%, rgb(10 10 14 / 0.88) 82%, transparent); border-top: 0.1cqw solid rgb(225 185 105 / 0.6); border-bottom: 0.1cqw solid rgb(225 185 105 / 0.6); font-size: 1.2cqw; white-space: nowrap; pointer-events: none; animation: choke-banner-in 0.18s ease-out; }
-.choke-skill-banner--support { bottom: 11.4cqw; border-color: #6cc2ff; color: #bfe5ff; }
-.choke-guard-banner { bottom: 11.4cqw; border-color: #6bc8ff; color: #a8e4ff; }
-.choke-banner-tag { padding: 0.1cqw 0.45cqw; border-radius: 0.2cqw; background: #c78b2a; color: #140e04; font-size: 0.76cqw; font-weight: 900; }
-@keyframes choke-banner-in { from { opacity: 0; transform: translateX(-50%) scaleX(0.8); } to { opacity: 1; transform: translateX(-50%) scaleX(1); } }
+/* BOSS 硬控提示 */
+.choke-boss-cc-banner {
+  position: absolute;
+  left: 50%;
+  top: 7%;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 0.55cqw;
+  padding: 0.32cqw 0.9cqw;
+  border: 0.14cqw solid #9ad8ff;
+  border-radius: 0.35cqw;
+  background: rgb(14 26 48 / 0.92);
+  box-shadow: 0 0 1.2cqw rgb(80 180 255 / 0.6);
+  color: #e6f6ff;
+}
+.choke-boss-cc-banner svg { width: 1.6cqw; height: 1.6cqw; color: #7fd4ff; }
+.choke-boss-cc-banner b { display: block; font-size: 0.82cqw; }
+.choke-boss-cc-banner small { display: block; font-size: 0.62cqw; color: #9fd8ff; }
 
-.choke-damage-stage { position: absolute; left: 50%; top: 44%; z-index: 7; transform: translate(-50%, -50%); text-align: center; pointer-events: none; animation: choke-dmg-pop 0.75s ease-out forwards; }
-.choke-dmg-num { font-size: 4.8cqw; font-weight: 900; color: #fff; -webkit-text-stroke: 0.16cqw #280a08; text-shadow: 0 0.3cqw 0.9cqw rgb(0 0 0 / 0.9); line-height: 1; }
-.choke-dmg-num[data-weak="true"] { color: #ffdc66; -webkit-text-stroke: 0.18cqw #8f1d09; }
-.choke-dmg-num[data-blocked="true"] { color: #a6b4cc; font-size: 3.8cqw; }
-.choke-weak-hit { font-size: 1.25cqw; font-weight: 900; font-style: italic; color: #ff7e47; letter-spacing: 0.1em; }
-@keyframes choke-dmg-pop { 0% { opacity: 0; transform: translate(-50%, -35%) scale(1.45); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; transform: translate(-50%, -55%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -70%) scale(0.95); } }
+/* Cut-in 技能横幅 */
+.choke-skill-banner {
+  position: absolute;
+  left: 50%;
+  bottom: 9cqw;
+  z-index: 8;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5cqw;
+  padding: 0.38cqw 3cqw;
+  background: linear-gradient(90deg, transparent, rgb(10 10 14 / 0.9) 18%, rgb(10 10 14 / 0.9) 82%, transparent);
+  border-top: 0.1cqw solid rgb(225 185 105 / 0.7);
+  border-bottom: 0.1cqw solid rgb(225 185 105 / 0.7);
+  font-size: 1.15cqw;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: choke-banner-in 0.16s ease-out;
+}
+.choke-skill-banner--support {
+  bottom: 12cqw;
+  border-color: #6cc2ff;
+  color: #bfe5ff;
+}
+.choke-banner-tag {
+  padding: 0.08cqw 0.42cqw;
+  border-radius: 0.2cqw;
+  background: #c78b2a;
+  color: #140e04;
+  font-size: 0.72cqw;
+  font-weight: 900;
+}
+@keyframes choke-banner-in {
+  from { opacity: 0; transform: translateX(-50%) scaleX(0.8); }
+  to { opacity: 1; transform: translateX(-50%) scaleX(1); }
+}
 
-.choke-combo-counter { position: absolute; left: 60%; bottom: 5.5cqw; z-index: 7; display: flex; align-items: baseline; gap: 0.3cqw; font-style: italic; pointer-events: none; animation: choke-combo-pop 0.2s ease-out; }
-.choke-combo-counter b { font-size: 3.4cqw; font-weight: 900; color: #ffd859; -webkit-text-stroke: 0.12cqw #94340a; line-height: 1; }
-.choke-combo-counter span { font-size: 1.25cqw; font-weight: 900; color: #ff9f47; -webkit-text-stroke: 0.06cqw #451404; }
-@keyframes choke-combo-pop { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
-
-.choke-turn-sweep { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; font-size: 4.5cqw; font-weight: 900; letter-spacing: 0.18em; pointer-events: none; background: linear-gradient(90deg, transparent, rgb(0 0 0 / 0.55) 35%, rgb(0 0 0 / 0.55) 65%, transparent); animation: choke-turn-flash 0.85s ease-out forwards; }
-.choke-turn-sweep[data-owner="player"] { color: #b8eeff; text-shadow: 0 0 1.4cqw #289eff; }
-.choke-turn-sweep[data-owner="enemy"] { color: #ffb8b8; text-shadow: 0 0 1.4cqw #ff2a2a; }
-@keyframes choke-turn-flash { 0% { opacity: 0; letter-spacing: 0.4em; } 25% { opacity: 1; letter-spacing: 0.18em; } 80% { opacity: 1; } 100% { opacity: 0; } }
-
-/* ---------- 2. 中轴 HUD ---------- */
+/* ---------- 2. 中轴 HUD（1:1 兰斯10 外低内高阶梯折线双血条 + 垂直冲顶红白光柱） ---------- */
 .choke-hud-band {
   position: relative;
-  z-index: 5;
-  margin-top: -6.4cqw;
-  padding: 0 1.4cqw 0.45cqw;
+  z-index: 6;
+  margin-top: -7.2cqw;
+  padding: 0 0.8cqw 0.2cqw;
   pointer-events: none;
 }
-.choke-hud-meta { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.25cqw; }
-.choke-side-info { position: relative; width: 28cqw; }
-.choke-side-info--party { text-align: right; }
 
-.choke-army-silhouette { position: absolute; bottom: 0.8cqw; width: 14cqw; height: 4.2cqw; opacity: 0.55; pointer-events: none; clip-path: polygon(0 100%, 8% 45%, 16% 65%, 24% 25%, 35% 60%, 44% 15%, 56% 55%, 68% 30%, 78% 65%, 90% 40%, 100% 100%); }
-.choke-army-silhouette--boss { left: 0; background: linear-gradient(180deg, #b8291d, transparent); }
-.choke-army-silhouette--party { right: 0; background: linear-gradient(180deg, #257cc9, transparent); }
+/* 兰斯10 标志性：扣血瞬间从掉血段垂直冲到屏幕最顶端的红白光柱！ */
+.choke-hp-loss-pillar {
+  position: absolute;
+  bottom: 1.4cqw;
+  height: 45cqw;
+  z-index: 25;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgb(255 60 95 / 0.18) 0%,
+    rgb(255 135 155 / 0.88) 22%,
+    #fff6f8 50%,
+    rgb(255 135 155 / 0.88) 78%,
+    rgb(255 60 95 / 0.18) 100%
+  );
+  box-shadow:
+    0 0 1.2cqw rgb(255 85 115 / 0.9),
+    0 0 2.6cqw rgb(255 45 75 / 0.65);
+  transform-origin: bottom center;
+  animation: choke-pillar-shoot 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+/* 左半侧 BOSS 血条占据左 0.8cqw ~ 47.5cqw（约 46.7cqw 宽） */
+.choke-hp-loss-pillar--boss {
+  left: calc(0.8cqw + 46.5cqw * var(--p-start, 50%) / 100%);
+  width: calc(max(1.4cqw, 46.5cqw * var(--p-width, 3%) / 100%));
+}
+/* 右半侧我方血条占据右 52.5cqw ~ 99.2cqw */
+.choke-hp-loss-pillar--party {
+  left: calc(52.7cqw + 46.5cqw * var(--p-start, 50%) / 100%);
+  width: calc(max(1.4cqw, 46.5cqw * var(--p-width, 3%) / 100%));
+}
 
-.choke-side-name { position: relative; font-size: 1.02cqw; font-weight: 700; color: #e4d9c3; text-shadow: 0 0.12cqw 0.3cqw #000; }
-.choke-hp-num { position: relative; display: flex; align-items: baseline; gap: 0.6cqw; text-shadow: 0 0.16cqw 0.35cqw #000; }
-.choke-side-info--party .choke-hp-num { justify-content: flex-end; }
-.choke-hp-num i { font-style: normal; font-size: 1.05cqw; color: #d1c4a8; }
-.choke-hp-num b { font-size: 2.15cqw; font-weight: 900; font-variant-numeric: tabular-nums; }
+@keyframes choke-pillar-shoot {
+  0% {
+    opacity: 1;
+    transform: scaleY(0.08);
+    filter: brightness(1.8);
+  }
+  22% {
+    opacity: 1;
+    transform: scaleY(1);
+    filter: brightness(1.5);
+  }
+  65% {
+    opacity: 0.82;
+    transform: scaleY(1);
+    filter: brightness(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1) scaleX(0.65);
+  }
+}
 
-/* 只把中间“弱点属性+预告”抬高，避开圆钮；左右 HP 贴近血条 */
-.choke-center-meta { display: flex; align-items: center; gap: 0.7cqw; margin-bottom: 2.55cqw; pointer-events: auto; }
-.choke-weakness { display: flex; align-items: center; gap: 0.45cqw; padding: 0.24cqw 0.65cqw; border-radius: 0.3cqw; background: rgb(10 14 22 / 0.78); border: 0.08cqw solid rgb(120 175 245 / 0.35); font-size: 0.82cqw; color: #82b8ff; }
-.choke-weakness-icons { display: flex; gap: 0.3cqw; }
-.choke-weak-el { width: 1.4cqw; height: 1.4cqw; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--el) 32%, #111); color: #fff; }
-.choke-weak-el svg { width: 0.95cqw; height: 0.95cqw; }
+/* 折线血条上方四段布局：
+   [左外 25.5cqw: 剪影+名字+HP] [左内高台 20.5cqw: 意图+弱点] [中空 6cqw] [右内高台 20.5cqw: COMBO!] [右外 25.5cqw: 剪影+名字+HP] */
+.choke-hud-upper {
+  display: grid;
+  grid-template-columns: 25.5cqw 20.5cqw 20.5cqw 25.5cqw;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: -1.35cqw;
+}
 
-.choke-intents { position: relative; display: flex; gap: 0.35cqw; }
-.choke-intent-box { position: relative; width: 2.1cqw; height: 2.1cqw; display: grid; place-items: center; border: 0.12cqw solid #e5bd5a; border-radius: 0.25cqw; background: color-mix(in srgb, var(--el) 30%, #241914); color: #fff; cursor: help; }
-.choke-intent-box svg { width: 1.3cqw; height: 1.3cqw; }
-.choke-intent-box i { position: absolute; right: 0.12cqw; bottom: 0; font-style: normal; font-size: 0.72cqw; font-weight: 900; color: #ffe285; text-shadow: 0 0.08cqw 0.2cqw #000; }
+.choke-side-info {
+  position: relative;
+  padding: 0 0.4cqw 1.35cqw;
+}
+.choke-side-info--party {
+  text-align: right;
+}
 
-.choke-tooltip { position: absolute; z-index: 30; width: 16cqw; padding: 0.55cqw 0.75cqw; border: 0.12cqw solid #b69452; border-radius: 0.3cqw; background: rgb(14 13 18 / 0.95); box-shadow: 0 0.5cqw 1.4cqw rgb(0 0 0 / 0.85); pointer-events: none; text-align: left; }
-.choke-tooltip--intent { bottom: 2.6cqw; left: 50%; transform: translateX(-50%); }
-.choke-tooltip--skill { bottom: calc(100% + 0.5cqw); left: 50%; transform: translateX(-50%); }
-.choke-tooltip-title { font-size: 0.95cqw; font-weight: 800; color: #ffe28a; margin-bottom: 0.2cqw; }
-.choke-tooltip-sub { font-size: 0.76cqw; color: #93c4ff; margin-bottom: 0.25cqw; }
-.choke-tooltip-desc { font-size: 0.76cqw; color: #ddd5c3; line-height: 1.35; }
+.choke-army-silhouette {
+  position: absolute;
+  bottom: 1.2cqw;
+  width: 17cqw;
+  height: 5.4cqw;
+  opacity: 0.72;
+  pointer-events: none;
+  clip-path: polygon(
+    0 100%,
+    6% 42%,
+    14% 66%,
+    22% 18%,
+    32% 58%,
+    42% 12%,
+    54% 52%,
+    66% 24%,
+    78% 62%,
+    90% 35%,
+    100% 100%
+  );
+}
+.choke-army-silhouette--boss {
+  left: 0;
+  background: linear-gradient(180deg, #3b0806 10%, #a81c14 75%, transparent);
+  filter: drop-shadow(0 0 0.35cqw #ff3b28);
+}
+.choke-army-silhouette--party {
+  right: 0;
+  background: linear-gradient(180deg, #071938 10%, #1d68c4 75%, transparent);
+  filter: drop-shadow(0 0 0.35cqw #3ba4ff);
+}
 
-.choke-gauges { position: relative; display: flex; align-items: center; height: 2.4cqw; }
-.choke-gauge { flex: 1 1 0; height: 1.8cqw; padding: 0.2cqw; background: linear-gradient(180deg, #b89452, #533e1f); box-shadow: 0 0.25cqw 0.6cqw rgb(0 0 0 / 0.75); }
-.choke-gauge--boss { clip-path: polygon(0 0, 98.5% 0, 100% 100%, 1.2% 100%); margin-right: -1.8cqw; }
-.choke-gauge--party { clip-path: polygon(1.5% 0, 100% 0, 98.8% 100%, 0 100%); margin-left: -1.8cqw; }
-.choke-gauge-track { width: 100%; height: 100%; background: #171216; clip-path: inherit; display: flex; }
-.choke-gauge--boss .choke-gauge-track { justify-content: flex-end; }
-.choke-gauge-fill { height: 100%; transition: width 0.3s ease-out; }
-.choke-gauge--boss .choke-gauge-fill { background: linear-gradient(90deg, #a61414, #eb4b1c 58%, #ffd259); box-shadow: inset 0 0.25cqw 0 rgb(255 255 255 / 0.35); }
-.choke-gauge--party .choke-gauge-fill { background: linear-gradient(90deg, #6bf0ff, #2697e8 50%, #144d9e); box-shadow: inset 0 0.25cqw 0 rgb(255 255 255 / 0.35); }
+.choke-side-name {
+  position: relative;
+  font-size: 1.05cqw;
+  font-weight: 800;
+  color: #f4ead5;
+  text-shadow: 0 0.14cqw 0.32cqw #000, 0 0 0.5cqw #000;
+}
 
+.choke-hp-num {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45cqw;
+  line-height: 1;
+  text-shadow: 0 0.18cqw 0.38cqw #000, 0 0 0.6cqw #000;
+}
+.choke-side-info--party .choke-hp-num {
+  justify-content: flex-end;
+}
+.choke-hp-num i {
+  font-style: normal;
+  font-size: 1.05cqw;
+  font-weight: 800;
+  color: #e4d6b8;
+}
+.choke-hp-num b {
+  font-size: 2.35cqw;
+  font-weight: 900;
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.02em;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.choke-mini-statuses {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25cqw;
+  margin-top: 0.2cqw;
+}
+.choke-mini-statuses--party {
+  justify-content: flex-end;
+}
+.choke-buff-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18cqw;
+  padding: 0.1cqw 0.38cqw;
+  border-radius: 0.2cqw;
+  border: 0.08cqw solid #569ce3;
+  background: rgb(16 38 68 / 0.88);
+  color: #c4e2ff;
+  font-size: 0.62cqw;
+  font-weight: 700;
+}
+.choke-buff-pill--bad {
+  border-color: #df5b3c;
+  background: rgb(78 20 14 / 0.88);
+  color: #ffc8ba;
+}
+
+/* 左内高台（紧贴折线抬高段）：上方敌方意图方框，下方蓝色弱点属性条 */
+.choke-shelf-left {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.22cqw;
+  padding-bottom: 2.35cqw;
+  padding-right: 0.6cqw;
+  pointer-events: auto;
+}
+
+.choke-intents {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.32cqw;
+}
+
+.choke-intent-box {
+  position: relative;
+  width: 2.35cqw;
+  height: 2.35cqw;
+  display: grid;
+  place-items: center;
+  border: 0.14cqw solid #ffe066;
+  border-radius: 0.22cqw;
+  background: linear-gradient(180deg, #f5c842, #b87b14);
+  color: #1f1204;
+  box-shadow: 0 0.2cqw 0.5cqw rgb(0 0 0 / 0.8);
+  cursor: help;
+  transition: transform 0.14s ease;
+}
+.choke-intent-box:hover {
+  transform: translateY(-0.18cqw) scale(1.05);
+}
+.choke-intent-box[data-uninterruptible="true"] {
+  border-color: #ff4242;
+}
+.choke-intent-box[data-interrupted="true"],
+.choke-intent-box[data-cc="true"] {
+  filter: grayscale(0.95) brightness(0.5);
+}
+.choke-intent-box__icon svg {
+  width: 1.38cqw;
+  height: 1.38cqw;
+}
+.choke-intent-box__order {
+  position: absolute;
+  left: 0.1cqw;
+  top: 0.02cqw;
+  font-style: normal;
+  font-size: 0.56cqw;
+  font-weight: 900;
+  color: #2b1600;
+}
+.choke-intent-box__tier {
+  position: absolute;
+  right: 0.08cqw;
+  bottom: 0.04cqw;
+  font-style: normal;
+  font-size: 0.52cqw;
+  font-weight: 900;
+  padding: 0 0.14cqw;
+  border-radius: 0.12cqw;
+  background: rgb(20 12 4 / 0.82);
+  color: #ffe694;
+}
+.choke-intent-box__lock {
+  position: absolute;
+  right: -0.25cqw;
+  top: -0.25cqw;
+  width: 0.85cqw;
+  height: 0.85cqw;
+  border-radius: 50%;
+  background: #d91b1b;
+  border: 0.08cqw solid #fff;
+  color: #fff;
+  font-size: 0.58cqw;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+}
+.choke-intent-box__break {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.7cqw;
+  font-weight: 900;
+  color: #ff2626;
+  text-shadow: 0 0 0.25cqw #000;
+}
+
+.choke-weakness-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0.35cqw;
+  padding: 0.14cqw 0.55cqw;
+  border-radius: 0.2cqw;
+  background: linear-gradient(90deg, rgb(12 32 68 / 0.92), rgb(22 58 112 / 0.92));
+  border: 0.08cqw solid #63adff;
+  font-size: 0.7cqw;
+  font-weight: 800;
+  color: #bfe0ff;
+  box-shadow: 0 0.15cqw 0.4cqw rgb(0 0 0 / 0.7);
+}
+.choke-weakness-icons {
+  display: flex;
+  gap: 0.28cqw;
+}
+.choke-weak-el {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.14cqw;
+  padding: 0.05cqw 0.3cqw 0.05cqw 0.18cqw;
+  border-radius: 0.2cqw;
+  background: color-mix(in srgb, var(--el) 42%, #0e131d);
+  border: 0.07cqw solid color-mix(in srgb, var(--el) 80%, #fff);
+  color: #fff;
+}
+.choke-weak-el svg {
+  width: 0.85cqw;
+  height: 0.85cqw;
+}
+.choke-weak-el em {
+  font-style: normal;
+  font-size: 0.62cqw;
+  font-weight: 900;
+}
+
+/* 右内高台（紧贴右折线抬高段）：兰斯10 大号斜体 1 COMBO! */
+.choke-shelf-right {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding-bottom: 2.25cqw;
+  padding-left: 0.6cqw;
+}
+
+.choke-combo-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25cqw;
+  font-style: italic;
+  pointer-events: none;
+  filter: drop-shadow(0 0.22cqw 0.45cqw rgb(0 0 0 / 0.9));
+}
+.choke-combo-counter b {
+  font-size: 4.2cqw;
+  font-weight: 900;
+  color: #f4ff6e;
+  -webkit-text-stroke: 0.16cqw #283606;
+  line-height: 0.88;
+}
+.choke-combo-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+.choke-combo-meta span {
+  font-size: 1.35cqw;
+  font-weight: 900;
+  color: #ffae42;
+  -webkit-text-stroke: 0.08cqw #451404;
+}
+.choke-combo-meta em {
+  font-style: normal;
+  font-size: 0.68cqw;
+  font-weight: 800;
+  color: #ffe89e;
+}
+
+/* 阶梯折线双血条容器 */
+.choke-bent-gauges {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3.6cqw;
+}
+
+.choke-bent-svg {
+  width: 46.8%;
+  height: 3.45cqw;
+  overflow: visible;
+  filter: drop-shadow(0 0.22cqw 0.5cqw rgb(0 0 0 / 0.85));
+}
+.choke-bent-svg--boss {
+  margin-right: -1.4cqw;
+}
+.choke-bent-svg--party {
+  margin-left: -1.4cqw;
+}
+
+/* 扣血瞬间的红白闪光残影条快速收缩，实条瞬缩 */
+.choke-bent-ghost {
+  transition:
+    width 0.28s cubic-bezier(0.2, 0.9, 0.2, 1) 0.06s,
+    x 0.28s cubic-bezier(0.2, 0.9, 0.2, 1) 0.06s;
+}
+.choke-bent-fill {
+  transition:
+    width 0.04s linear,
+    x 0.04s linear;
+}
+
+/* 中央盾形 Round / VS 徽章 */
 .choke-center-orb {
   pointer-events: auto;
   position: relative;
-  z-index: 3;
+  z-index: 5;
   flex: 0 0 auto;
-  width: 5.8cqw;
-  height: 5.8cqw;
-  margin-top: 0;
+  width: 5.4cqw;
+  height: 5.4cqw;
+  margin-top: -1.2cqw;
   border-radius: 50%;
-  border: 0.28cqw solid #c8a359;
+  border: 0.26cqw solid #d4ac58;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   color: #fff6df;
-  background: radial-gradient(circle at 35% 30%, #4b3822, #18120c 72%);
-  box-shadow: inset 0 0 0 0.16cqw rgb(0 0 0 / 0.7), 0 0.35cqw 1cqw rgb(0 0 0 / 0.85);
+  background: radial-gradient(circle at 35% 30%, #4b3822, #15100a 74%);
+  box-shadow:
+    inset 0 0 0 0.16cqw rgb(0 0 0 / 0.75),
+    0 0.35cqw 0.9cqw rgb(0 0 0 / 0.9);
 }
-/* 准备态圆钮收敛到 6.6cqw，上下各突出血条 2.1cqw */
 .choke-stage[data-phase="prepare"] .choke-center-orb {
-  width: 6.6cqw;
-  height: 6.6cqw;
+  width: 6.2cqw;
+  height: 6.2cqw;
   cursor: pointer;
   background: radial-gradient(circle at 40% 35%, #e83232, #7a0909 74%);
   box-shadow: 0 0 1.5cqw rgb(235 55 40 / 0.55), inset 0 0.25cqw 0.5cqw rgb(255 215 160 / 0.4);
 }
-.choke-orb-start { font-size: 1.2cqw; font-weight: 900; letter-spacing: 0.05em; }
-.choke-orb-round { font-style: normal; font-size: 0.7cqw; color: #e2c179; }
-.choke-orb-num { font-size: 1.95cqw; line-height: 1; }
-.choke-orb-vs { font-size: 0.7cqw; font-weight: 800; color: #c96248; }
+.choke-orb-start { font-size: 1.12cqw; font-weight: 900; letter-spacing: 0.05em; }
+.choke-orb-round { font-style: normal; font-size: 0.68cqw; font-weight: 800; color: #e8c87d; }
+.choke-orb-num { font-size: 1.85cqw; line-height: 0.95; font-family: Georgia, serif; }
+.choke-orb-vs { font-size: 0.82cqw; font-weight: 900; color: #e03a2b; -webkit-text-stroke: 0.04cqw #fff; }
 
-.choke-sub-hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1cqw; margin-top: 2.45cqw; }
-.choke-status-strip { display: flex; gap: 0.35cqw; min-height: 1.4cqw; }
-.choke-status-strip--party { justify-content: flex-end; }
-.choke-buff-pill { padding: 0.15cqw 0.45cqw; border-radius: 0.25cqw; border: 0.08cqw solid #569ce3; background: rgb(20 48 84 / 0.82); color: #b8dcff; font-size: 0.7cqw; }
-.choke-buff-pill--bad { border-color: #df5b3c; background: rgb(88 22 14 / 0.82); color: #ffc3b5; }
-
-.choke-ap-bar { display: flex; align-items: center; gap: 0.45cqw; }
-.choke-ap-label { font-size: 1cqw; font-weight: 900; color: #e4c06d; }
-.choke-ap-gems { display: flex; gap: 0.32cqw; padding: 0.2cqw 0.55cqw; border: 0.1cqw solid #6b5631; border-radius: 1.5cqw; background: rgb(14 12 10 / 0.9); }
-.choke-ap-gem { width: 1.48cqw; height: 1.48cqw; border-radius: 50%; display: grid; place-items: center; font-size: 0.8cqw; font-weight: 800; color: #5c5342; background: radial-gradient(circle at 35% 30%, #2b2720, #12100d); border: 0.08cqw solid #3d3527; }
-.choke-ap-gem[data-active="true"] { color: #2b1803; background: radial-gradient(circle at 35% 30%, #fff0ad, #e09c2b 75%); border-color: #ffe38a; box-shadow: 0 0 0.5cqw rgb(255 200 72 / 0.65); }
-.choke-ap-gem[data-preview="true"] { background: radial-gradient(circle at 35% 30%, #ffb5a8, #e03c2b 75%); border-color: #ff9c8a; color: #fff; }
-
-/* ---------- 3. 底部 7 卡指令台 ---------- */
-/* 收紧底部高度和左右翼宽度，7 张卡正好撑满指令台 */
-.choke-deck {
-  flex: 0 0 19.4cqw;
+/* 嵌在折线内侧抬高段正下方凹槽里的 AP 齿轮宝石栏 */
+.choke-ap-pocket {
+  position: absolute;
+  left: 50%;
+  bottom: -0.15cqw;
+  transform: translateX(-50%);
+  z-index: 4;
   display: flex;
-  align-items: stretch;
-  gap: 0.7cqw;
-  padding: 0.65cqw 0.9cqw 0.5cqw;
-  border-top: 0.2cqw solid #7a6338;
-  background: radial-gradient(60% 90% at 50% 0%, rgb(38 68 58 / 0.28), transparent 70%), linear-gradient(180deg, #101715, #090b0c);
+  align-items: center;
+  gap: 0.38cqw;
+  padding: 0.14cqw 0.65cqw;
+  border-radius: 1.2cqw;
+  background: rgb(10 9 8 / 0.92);
+  border: 0.1cqw solid #6b5631;
+  box-shadow: 0 0.2cqw 0.5cqw rgb(0 0 0 / 0.8);
 }
-.choke-wing { flex: 0 0 8.2cqw; display: flex; flex-direction: column; gap: 0.45cqw; }
-.choke-wing button { cursor: pointer; color: #f0e4ca; font-family: inherit; border-radius: 0.35cqw; }
-.choke-btn-panel { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25cqw; border: 0.14cqw solid #5c6c82; background: linear-gradient(180deg, #273140, #161c26); font-size: 1cqw; font-weight: 700; }
-.choke-btn-panel small { font-size: 0.76cqw; color: #9bb1cc; }
-.choke-btn-panel:disabled { opacity: 0.45; cursor: not-allowed; }
-.choke-wing-toggles { display: flex; gap: 0.4cqw; height: 4.1cqw; }
-.choke-btn-mini { flex: 1 1 0; border: 0.12cqw solid #755e36; background: linear-gradient(180deg, #2e261b, #17130d); font-size: 0.72cqw; font-weight: 700; }
-.choke-btn-menu { height: 3.5cqw; border: 0.14cqw solid #8b7141; background: linear-gradient(180deg, #3c301e, #1a140c); font-size: 1.05cqw; font-weight: 800; letter-spacing: 0.14em; }
-
-.choke-btn-defend { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35cqw; border: 0.16cqw solid #5b82b5; background: linear-gradient(180deg, #213757, #111d30); }
-.choke-btn-defend b { font-size: 1.15cqw; }
-.choke-btn-defend span { padding: 0.15cqw 0.55cqw; border-radius: 0.25cqw; background: rgb(0 0 0 / 0.45); font-size: 0.85cqw; }
-.choke-btn-defend:disabled, .choke-btn-end:disabled { opacity: 0.42; cursor: not-allowed; }
-.choke-btn-end { height: 4.2cqw; border: 0.16cqw solid #c46a49; background: linear-gradient(180deg, #75251a, #3d0f0a); font-size: 1.1cqw; font-weight: 800; letter-spacing: 0.08em; }
-
-.choke-party-grid { flex: 1 1 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.65cqw; align-items: center; }
-.choke-card-slot { position: relative; display: flex; flex-direction: column; align-items: center; transition: transform 0.15s ease; }
-.choke-card-slot[data-hovered="true"]:not([data-cd="true"]) { transform: translateY(-0.5cqw); z-index: 6; }
-.choke-card-slot[data-guarding="true"] { transform: translateY(-1.2cqw); z-index: 8; }
-.choke-card-slot[data-swap-target="true"] .choke-card-frame { box-shadow: 0 0 0 0.24cqw #4cc8ff, 0 0 1.2cqw rgb(76 200 255 / 0.7); }
-
-.choke-card-frame { position: relative; width: 100%; border-radius: 4.5% / 3%; }
-.choke-card-slot[data-boost="true"] .choke-card-frame { box-shadow: 0 0 0 0.18cqw #ffdc6b, 0 0 1cqw rgb(255 212 82 / 0.65); }
-.choke-card-slot[data-cd="true"] .choke-card-frame { filter: brightness(0.45) saturate(0.5); }
-
-/* BOOST 挪到卡槽顶边正中悬浮，不挡头像也不挡 BP */
-.choke-boost-tag {
-  position: absolute;
-  top: -0.78cqw;
-  left: 50%;
-  z-index: 8;
-  transform: translateX(-50%);
-  padding: 0.1cqw 0.65cqw;
-  border: 0.1cqw solid #ffe175;
-  border-radius: 0.28cqw;
-  background: linear-gradient(180deg, #c93312, #6b1104);
-  font-size: 0.92cqw;
+.choke-ap-label {
+  font-size: 0.88cqw;
   font-weight: 900;
-  font-style: italic;
-  letter-spacing: 0.08em;
-  color: #fff2a8;
-  box-shadow: 0 0.2cqw 0.6cqw rgb(0 0 0 / 0.85);
-  pointer-events: none;
+  font-family: Georgia, serif;
+  color: #e6c473;
 }
-.choke-guard-chip { position: absolute; top: -1.6cqw; z-index: 9; padding: 0.2cqw 0.65cqw; border-radius: 0.3cqw; background: #2383d6; border: 0.1cqw solid #a3e2ff; color: #fff; font-size: 0.8cqw; font-weight: 800; }
-.choke-card-hit { position: absolute; top: 38%; z-index: 9; font-size: 2cqw; font-weight: 900; color: #ff6262; -webkit-text-stroke: 0.08cqw #210303; animation: choke-dmg-pop 0.8s ease-out forwards; pointer-events: none; }
-
-.choke-cd-seal { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: inherit; background: rgb(18 8 10 / 0.35); pointer-events: none; }
-.choke-cd-seal span { padding: 0.12cqw 0.55cqw; border-radius: 0.25cqw; background: #a8151b; border: 0.1cqw solid #ff9482; color: #fff; font-size: 0.78cqw; font-weight: 800; }
-.choke-cd-seal b { font-size: 3.4cqw; font-weight: 900; color: #ff4438; -webkit-text-stroke: 0.12cqw #1a0202; line-height: 1; }
-
-.choke-card-overlay-skills { position: absolute; left: 0.35cqw; right: 0.35cqw; bottom: 0.45cqw; z-index: 8; display: flex; flex-direction: column; gap: 0.25cqw; padding: 0.32cqw; border-radius: 0.35cqw; border: 0.12cqw solid #d8aa50; background: rgb(14 13 18 / 0.94); box-shadow: 0 -0.25cqw 0.8cqw rgb(0 0 0 / 0.8); }
-.choke-overlay-skill-btn { display: flex; align-items: center; gap: 0.35cqw; padding: 0.26cqw 0.4cqw; border: 0.08cqw solid #786035; border-radius: 0.22cqw; background: linear-gradient(180deg, #322819, #1b150c); color: #fff4d2; font-size: 0.78cqw; font-weight: 700; cursor: pointer; text-align: left; }
-.choke-overlay-skill-btn:hover:not(:disabled) { border-color: #ffd872; background: linear-gradient(180deg, #523e21, #2c1f0e); }
-.choke-overlay-skill-btn:disabled { opacity: 0.42; cursor: not-allowed; }
-.choke-overlay-skill-btn i { flex: 0 0 1.2cqw; height: 1.2cqw; display: grid; place-items: center; border-radius: 50%; background: #d98a12; color: #fff; font-style: normal; font-size: 0.72cqw; font-weight: 900; }
-.choke-overlay-skill-btn span { flex: 1 1 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ---------- 4. 战中换人抽屉 ---------- */
-.choke-swap-drawer { position: absolute; left: 1cqw; right: 1cqw; top: 4.5cqw; bottom: 24.5cqw; z-index: 18; display: flex; flex-direction: column; padding: 1cqw 1.2cqw; border: 0.16cqw solid #8b7141; border-radius: 0.45cqw; background: rgb(12 14 18 / 0.95); box-shadow: 0 0.8cqw 2.4cqw rgb(0 0 0 / 0.85); }
-.choke-swap-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.75cqw; border-bottom: 0.08cqw solid rgb(255 255 255 / 0.12); margin-bottom: 0.8cqw; }
-.choke-swap-head b { font-size: 1.25cqw; color: #ffe28a; margin-right: 0.8cqw; }
-.choke-swap-head span { font-size: 0.9cqw; color: #a8cbe8; }
-.choke-swap-close { padding: 0.35cqw 0.9cqw; border: 0.1cqw solid #9b7f48; border-radius: 0.28cqw; background: #292014; color: #ffe8b0; font-size: 0.85cqw; cursor: pointer; }
-.choke-swap-grid { flex: 1 1 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 0.9cqw; overflow-y: auto; align-content: start; padding-right: 0.4cqw; }
-.choke-bench-item { display: flex; flex-direction: column; align-items: center; gap: 0.3cqw; background: none; border: none; color: #e8e0cf; cursor: pointer; padding: 0; }
-.choke-bench-item:hover:not(:disabled) .choke-bench-card { transform: translateY(-0.25cqw); box-shadow: 0 0 0 0.16cqw #ffd46b; }
-.choke-bench-item:disabled { opacity: 0.45; cursor: not-allowed; }
-.choke-bench-card { position: relative; width: 100%; border-radius: 4.5% / 3%; transition: transform 0.15s ease; }
-.choke-bench-meta { font-size: 0.78cqw; color: #cfc3ab; }
-
-/* ---------- 5. 底栏与 LOG ---------- */
-.choke-footer { flex: 0 0 2.45cqw; display: flex; align-items: center; justify-content: space-between; padding: 0 1cqw; border-top: 0.1cqw solid #473b24; background: #0b0a0c; font-size: 0.86cqw; }
-.choke-ticker { color: #d7ccb5; }
-.choke-log-toggle { padding: 0.2cqw 1cqw; border: 0.1cqw solid #7a643b; border-radius: 0.25cqw; background: #211b13; color: #e6d19f; font-size: 0.78cqw; cursor: pointer; }
-.choke-log-drawer { position: absolute; right: 1cqw; bottom: 2.7cqw; z-index: 25; width: 36cqw; max-height: 16cqw; overflow-y: auto; padding: 0.7cqw 1cqw; border: 0.14cqw solid #8b7141; border-radius: 0.35cqw; background: rgb(12 11 14 / 0.94); font-size: 0.82cqw; line-height: 1.5; }
-.choke-log-line { padding: 0.18cqw 0; border-bottom: 0.05cqw solid rgb(255 255 255 / 0.08); }
-
-/* ---------- 6. 剧情插播层 ---------- */
-.choke-dialogue-layer { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 12cqw 4cqw; background: rgb(0 0 0 / 0.45); cursor: pointer; }
-.choke-dialogue-box { position: relative; padding: 1.2cqw 1.8cqw 1.5cqw; border: 0.16cqw solid #9b8048; border-radius: 0.45cqw; background: linear-gradient(180deg, rgb(18 22 30 / 0.92), rgb(10 12 16 / 0.96)); box-shadow: 0 0.8cqw 2.2cqw rgb(0 0 0 / 0.85); }
-.choke-dialogue-head { display: flex; align-items: baseline; gap: 0.8cqw; margin-bottom: 0.55cqw; }
-.choke-dialogue-head small { color: #79b8ff; font-size: 0.85cqw; }
-.choke-dialogue-head b { color: #ffe28a; font-size: 1.35cqw; }
-.choke-dialogue-text { margin: 0; font-size: 1.15cqw; line-height: 1.5; color: #f6f1e6; }
-.choke-dialogue-next { position: absolute; right: 1.4cqw; bottom: 0.7cqw; font-size: 0.82cqw; color: #d8b566; }
-.choke-dialogue-skip { position: absolute; left: 1.5cqw; bottom: 4cqw; padding: 0.45cqw 1cqw; border: 0.12cqw solid #8b7141; border-radius: 0.3cqw; background: #1d1812; color: #e6d19f; font-size: 0.9cqw; cursor: pointer; }
-
-/* ---------- 7. 战后结算与开宝箱 ---------- */
-.choke-victory-layer { position: absolute; inset: 0; bottom: 24cqw; z-index: 35; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5cqw 6cqw; background: radial-gradient(70% 80% at 50% 45%, rgb(25 32 46 / 0.92), rgb(8 9 14 / 0.96)); }
-.choke-victory-title { font-size: 4.4cqw; font-weight: 900; letter-spacing: 0.14em; color: #ffe380; text-shadow: 0 0 1.4cqw rgb(255 205 70 / 0.65); margin-bottom: 1cqw; }
-.choke-victory-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 1.8cqw; width: 100%; }
-.choke-victory-panel { padding: 1.1cqw 1.4cqw; border: 0.14cqw solid #8b7141; border-radius: 0.45cqw; background: rgb(14 14 20 / 0.88); }
-.choke-v-row { display: flex; justify-content: space-between; padding: 0.28cqw 0; font-size: 0.95cqw; border-bottom: 0.06cqw solid rgb(255 255 255 / 0.08); }
-.choke-v-row--big { font-size: 1.25cqw; color: #ffe28a; font-weight: 800; }
-.choke-v-row--exp { margin-top: 0.5cqw; border-bottom: none; }
-.choke-v-sub { font-size: 0.78cqw; color: #9ec5ea; margin: 0.3cqw 0 0.85cqw; }
-.choke-chests-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8cqw; }
-.choke-chest-slot { height: 9.2cqw; border: 0.14cqw solid #a88647; border-radius: 0.4cqw; background: linear-gradient(180deg, #272219, #15120d); color: #f4ead4; cursor: pointer; display: grid; place-items: center; padding: 0.5cqw; }
-.choke-chest-slot[data-opened="true"] { border-color: #ffd866; background: linear-gradient(180deg, #322b1e, #1a150e); }
-.choke-chest-closed { display: flex; flex-direction: column; align-items: center; gap: 0.4cqw; font-size: 0.85cqw; }
-.choke-chest-closed b { font-size: 2.3cqw; }
-.choke-chest-reward { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.35cqw; text-align: center; }
-.choke-chest-reward b { font-size: 0.95cqw; color: #ffe494; }
-.choke-chest-reward small { font-size: 0.75cqw; color: #b9d2eb; }
-.choke-new-pill { font-style: normal; padding: 0.1cqw 0.45cqw; border-radius: 0.2cqw; background: #d42828; color: #fff; font-size: 0.68cqw; font-weight: 900; }
-.choke-v-continue { margin-top: 1cqw; width: 100%; padding: 0.55cqw; border: 0.14cqw solid #e2b859; border-radius: 0.35cqw; background: linear-gradient(180deg, #9c3818, #571709); color: #fff4cf; font-size: 0.95cqw; font-weight: 800; cursor: pointer; }
-
-/* =========================================================
-   生产战斗页补充（真实引擎）
-   ========================================================= */
-
-/* BOSS 区元素徽记（准备页与战斗页共用） */
-.choke-boss-emblem {
-  position: absolute;
-  left: 50%;
-  top: 24%;
-  width: 15cqw;
-  height: 15cqw;
-  transform: translateX(-50%);
+.choke-ap-gems {
+  display: flex;
+  gap: 0.28cqw;
+}
+.choke-ap-gem {
+  width: 1.42cqw;
+  height: 1.42cqw;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  border-radius: 50%;
+  font-size: 0.76cqw;
+  font-weight: 900;
+  color: #635a48;
+  background: radial-gradient(circle at 35% 30%, #2b2720, #12100d);
+  border: 0.1cqw solid #473d2c;
+}
+.choke-ap-gem[data-active="true"] {
+  color: #2b1803;
+  background: radial-gradient(circle at 35% 30%, #fff4b8, #e69d24 75%);
+  border-color: #ffe38a;
+  box-shadow: 0 0 0.5cqw rgb(255 200 72 / 0.7);
+}
+.choke-ap-gem[data-preview="true"] {
+  background: radial-gradient(circle at 35% 30%, #ffb5a8, #e03c2b 75%);
+  border-color: #ff9c8a;
   color: #fff;
-  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--el) 55%, #1a0b0b), #0b0709 72%);
-  box-shadow: 0 0 4cqw color-mix(in srgb, var(--el) 45%, transparent), inset 0 0 2cqw rgb(0 0 0 / 0.6);
-  opacity: 0.9;
 }
-.choke-boss-emblem svg { width: 7cqw; height: 7cqw; }
+.choke-ap-gem[data-locked="true"] {
+  opacity: 0.25;
+}
 
-/* 卡面底部 HP 条 + 悬停三围 */
-.choke-card-hp {
+/* 悬浮详情 Tooltip */
+.choke-tooltip {
   position: absolute;
-  left: 0.4cqw;
-  right: 0.4cqw;
-  bottom: 0.35cqw;
-  z-index: 7;
-  height: 0.55cqw;
+  z-index: 30;
+  width: 16.5cqw;
+  padding: 0.55cqw 0.75cqw;
+  border: 0.12cqw solid #b69452;
   border-radius: 0.3cqw;
-  background: rgb(8 6 8 / 0.78);
-  box-shadow: 0 0.1cqw 0.2cqw rgb(0 0 0 / 0.6);
-  overflow: hidden;
+  background: rgb(14 13 18 / 0.96);
+  box-shadow: 0 0.5cqw 1.4cqw rgb(0 0 0 / 0.88);
+  pointer-events: none;
+  text-align: left;
 }
-.choke-card-hp > i {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg, #e0453c, #ff8b5e);
-  transition: width 0.25s ease;
+.choke-tooltip--intent {
+  bottom: 2.8cqw;
+  left: 50%;
+  transform: translateX(-50%);
 }
-.choke-card-hp > em {
-  position: absolute;
-  right: 0.25cqw;
-  top: -1.05cqw;
-  font-style: normal;
-  font-size: 0.6cqw;
+.choke-tooltip--skill {
+  bottom: calc(100% + 0.45cqw);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.choke-tooltip-title { font-size: 0.92cqw; font-weight: 800; color: #ffe28a; margin-bottom: 0.18cqw; }
+.choke-tooltip-sub { font-size: 0.72cqw; color: #93c4ff; margin-bottom: 0.22cqw; }
+.choke-tooltip-desc { font-size: 0.74cqw; color: #ddd5c3; line-height: 1.35; }
+.choke-tooltip-badge {
+  margin-left: 0.4cqw;
+  padding: 0.06cqw 0.35cqw;
+  border-radius: 0.18cqw;
+  background: #8f2d14;
+  color: #ffd9c2;
+  font-size: 0.62cqw;
+}
+.choke-tooltip-badge--passive {
+  background: #234b6e;
+  color: #bfe4ff;
+}
+.choke-tooltip-warn {
+  margin-top: 0.22cqw;
+  color: #ff8b78;
+  font-size: 0.68cqw;
+  font-weight: 700;
+}
+
+/* ---------- 3. 下半区：7 卡指令台（1:1 兰斯10 布局） ---------- */
+.choke-deck {
+  flex: 0 0 19.8cqw;
+  display: flex;
+  align-items: stretch;
+  gap: 0.65cqw;
+  padding: 0.6cqw 0.85cqw 0.45cqw;
+  border-top: 0.22cqw solid #8b6f3b;
+  background:
+    radial-gradient(60% 90% at 50% 0%, rgb(32 68 54 / 0.32), transparent 70%),
+    linear-gradient(180deg, #0d1614, #07090a);
+}
+
+.choke-wing {
+  flex: 0 0 8.2cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.42cqw;
+}
+.choke-wing button,
+.choke-wing a {
+  cursor: pointer;
+  color: #f0e4ca;
+  font-family: inherit;
+  border-radius: 0.35cqw;
+  text-decoration: none;
+}
+
+/* 左翼按钮：居中排版 + 兰斯10 胶囊底槽 */
+.choke-btn-panel {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35cqw;
+  padding: 0.4cqw;
+  border: 0.14cqw solid #6b7d94;
+  background: linear-gradient(180deg, #273242, #141a24);
+  box-shadow: inset 0 0.1cqw 0.25cqw rgb(255 255 255 / 0.12);
+}
+.choke-btn-panel__top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28cqw;
+  font-size: 0.92cqw;
   font-weight: 800;
-  color: #ffe8d8;
-  text-shadow: 0 0.08cqw 0.2cqw #000;
-  white-space: nowrap;
+  color: #fff;
 }
-.choke-card-slot[data-acted="true"] .choke-card-frame { filter: brightness(0.55) saturate(0.6); }
-.choke-card-slot[data-down="true"] .choke-card-frame { filter: grayscale(1) brightness(0.38); }
-.choke-card-tag {
+.choke-btn-panel__top svg {
+  width: 1.05cqw;
+  height: 1.05cqw;
+}
+.choke-btn-panel__pill {
+  width: 90%;
+  padding: 0.16cqw 0.3cqw;
+  border-radius: 0.8cqw;
+  background: rgb(6 8 12 / 0.78);
+  border: 0.08cqw solid rgb(255 255 255 / 0.15);
+  font-size: 0.7cqw;
+  font-weight: 700;
+  color: #c2d4e8;
+  text-align: center;
+}
+.choke-btn-panel:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.choke-wing-toggles {
+  display: flex;
+  gap: 0.38cqw;
+  height: 3.9cqw;
+}
+.choke-btn-mini {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18cqw;
+  border: 0.12cqw solid #8c7040;
+  background: linear-gradient(180deg, #382c1c, #1a140c);
+  font-size: 0.68cqw;
+  font-weight: 800;
+  color: #f3dfb4;
+}
+.choke-btn-mini svg {
+  width: 1.05cqw;
+  height: 1.05cqw;
+  color: #ffd984;
+}
+
+.choke-btn-menu {
+  height: 3.3cqw;
+  display: grid;
+  place-items: center;
+  border: 0.14cqw solid #9b7d46;
+  background: linear-gradient(180deg, #42331e, #1b140b);
+  font-size: 1cqw;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #f5e2b8;
+  text-align: center;
+}
+
+/* 右翼：单个兰斯10深蓝高光【防御 / 1 Ap】大按键 */
+.choke-btn-defend {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38cqw;
+  border: 0.16cqw solid #78a6e0;
+  background:
+    radial-gradient(80% 60% at 50% 15%, rgb(85 160 255 / 0.35), transparent),
+    linear-gradient(180deg, #1b3864, #0d1c36 65%, #091326);
+  box-shadow:
+    inset 0 0 0.8cqw rgb(70 150 255 / 0.35),
+    0 0.25cqw 0.6cqw rgb(0 0 0 / 0.75);
+}
+.choke-defend-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28cqw;
+  padding: 0.2cqw 0.65cqw;
+  border-radius: 0.22cqw;
+  background: rgb(10 20 38 / 0.78);
+  border: 0.08cqw solid rgb(160 210 255 / 0.45);
+  color: #fff;
+}
+.choke-defend-top svg {
+  width: 1.1cqw;
+  height: 1.1cqw;
+  color: #ffd866;
+}
+.choke-defend-top b {
+  font-size: 0.95cqw;
+  font-weight: 900;
+}
+.choke-defend-ap {
+  padding: 0.14cqw 0.75cqw;
+  border-radius: 0.22cqw;
+  background: rgb(6 12 24 / 0.85);
+  border: 0.08cqw solid rgb(140 190 255 / 0.35);
+  font-size: 0.82cqw;
+  font-weight: 800;
+  color: #d6ecff;
+}
+.choke-btn-defend:disabled,
+.choke-btn-end:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.choke-btn-end {
+  height: 3.9cqw;
+  display: grid;
+  place-items: center;
+  border: 0.16cqw solid #d47652;
+  background: linear-gradient(180deg, #8a291b, #421009);
+  font-size: 1.02cqw;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #ffe8d6;
+}
+
+/* 7 卡网格与卡槽状态 */
+.choke-party-grid {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.6cqw;
+  align-items: center;
+}
+.choke-card-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.15s ease;
+}
+.choke-card-slot[data-hovered="true"]:not([data-acted="true"]):not([data-down="true"]) {
+  transform: translateY(-0.45cqw);
+  z-index: 6;
+}
+.choke-card-slot[data-guarding="true"] {
+  transform: translateY(-1cqw);
+  z-index: 8;
+}
+.choke-card-slot[data-swap-target="true"] .choke-card-frame {
+  box-shadow: 0 0 0 0.24cqw #4cc8ff, 0 0 1.2cqw rgb(76 200 255 / 0.7);
+}
+
+.choke-card-frame {
+  position: relative;
+  width: 100%;
+  border-radius: 4.5% / 3%;
+}
+
+/* 兰斯10 风格：获得 BOOST / 必杀 / 连击 时整张卡外框亮起荧光金绿/绯红光环 */
+.choke-card-slot[data-boost="boost"] .choke-card-frame {
+  box-shadow:
+    0 0 0 0.2cqw #d8ff4a,
+    0 0 1.3cqw rgb(216 255 74 / 0.85);
+}
+.choke-card-slot[data-boost="critical_art"] .choke-card-frame {
+  box-shadow:
+    0 0 0 0.22cqw #ff4a6e,
+    0 0 1.5cqw rgb(255 74 110 / 0.9);
+}
+.choke-card-slot[data-boost="double_cast"] .choke-card-frame {
+  box-shadow:
+    0 0 0 0.2cqw #4ae8ff,
+    0 0 1.3cqw rgb(74 232 255 / 0.85);
+}
+
+/* 兰斯10 风格：覆盖在未行动卡片中央的火焰描边大字 BOOST / 必殺 / 連撃 */
+.choke-center-trigger {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 46%;
+  z-index: 7;
+  transform: translateY(-50%);
+  text-align: center;
+  pointer-events: none;
+  animation: choke-trigger-pulse 1.2s ease-in-out infinite alternate;
+}
+.choke-center-trigger span {
+  font-size: 1.75cqw;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: #ffea59;
+  -webkit-text-stroke: 0.12cqw #b82908;
+  text-shadow:
+    0 0 0.7cqw #ff6a00,
+    0 0.16cqw 0.35cqw #000;
+}
+.choke-center-trigger[data-trigger="critical_art"] span {
+  color: #fff099;
+  -webkit-text-stroke: 0.13cqw #9e0622;
+  text-shadow:
+    0 0 0.9cqw #ff1e42,
+    0 0.16cqw 0.35cqw #000;
+}
+.choke-center-trigger[data-trigger="double_cast"] span {
+  color: #e0ffff;
+  -webkit-text-stroke: 0.12cqw #084c8a;
+  text-shadow:
+    0 0 0.8cqw #1ea8ff,
+    0 0.16cqw 0.35cqw #000;
+}
+
+@keyframes choke-trigger-pulse {
+  from { transform: translateY(-50%) scale(0.96); }
+  to { transform: translateY(-50%) scale(1.04); }
+}
+
+/* 兰斯10 风格：已行动卡片压暗 + 中央红色禁止圆环 + 「行動終了」 */
+.choke-card-slot[data-acted="true"] .choke-card-frame {
+  filter: brightness(0.45) saturate(0.55);
+}
+.choke-card-slot[data-down="true"] .choke-card-frame {
+  filter: grayscale(1) brightness(0.35);
+}
+
+.choke-acted-stamp {
   position: absolute;
   inset: 0;
   z-index: 9;
-  display: grid;
-  place-items: center;
-  border-radius: inherit;
-  background: rgb(10 6 8 / 0.42);
-  color: #fff;
-  font-size: 1.1cqw;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  pointer-events: none;
-  text-shadow: 0 0.1cqw 0.25cqw #000;
-}
-.choke-card-tag[data-down="true"] { color: #ff8a7a; }
-
-/* 右翼：防御 I–IV + 结束回合 */
-.choke-defense {
   display: flex;
   flex-direction: column;
-  gap: 0.25cqw;
-  padding: 0.35cqw;
-  border: 0.12cqw solid #755e36;
-  border-radius: 0.3cqw;
-  background: rgb(18 14 9 / 0.85);
-}
-.choke-defense > span { font-size: 0.72cqw; color: #d8c398; text-align: center; }
-.choke-tier-row { display: flex; gap: 0.2cqw; }
-.choke-tier-btn {
-  flex: 1 1 0;
-  padding: 0.22cqw 0;
-  border: 0.1cqw solid #6e5a35;
-  border-radius: 0.22cqw;
-  background: linear-gradient(180deg, #2e261b, #17130d);
-  color: #f3e6c8;
-  font-size: 0.8cqw;
-  font-weight: 800;
-  cursor: pointer;
-}
-.choke-tier-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.choke-tier-btn[data-active="true"] { border-color: #ffd872; color: #ffe9a6; box-shadow: 0 0 0.5cqw rgb(255 200 72 / 0.5); }
-
-/* 生产页提示条与结算层 */
-.choke-action-error {
-  position: absolute;
-  left: 50%;
-  bottom: 21.5cqw;
-  transform: translateX(-50%);
-  z-index: 20;
-  padding: 0.3cqw 0.9cqw;
-  border: 0.1cqw solid #d05a3c;
-  border-radius: 0.25cqw;
-  background: rgb(48 14 8 / 0.92);
-  color: #ffc8b8;
-  font-size: 0.85cqw;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
 }
+.choke-acted-circle {
+  position: absolute;
+  width: 4.2cqw;
+  height: 4.2cqw;
+  border-radius: 50%;
+  border: 0.34cqw solid rgb(200 22 22 / 0.78);
+  box-shadow: 0 0 0.6cqw rgb(0 0 0 / 0.8);
+  display: grid;
+  place-items: center;
+}
+.choke-acted-circle::after {
+  content: "";
+  width: 100%;
+  height: 0.32cqw;
+  background: rgb(200 22 22 / 0.78);
+  transform: rotate(-35deg);
+}
+.choke-acted-stamp[data-down="true"] .choke-acted-circle::after {
+  display: none;
+}
+.choke-acted-circle svg {
+  width: 2.1cqw;
+  height: 2.1cqw;
+  color: #ff4a4a;
+}
+.choke-acted-stamp b {
+  position: relative;
+  font-size: 1.45cqw;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #e62222;
+  -webkit-text-stroke: 0.08cqw #1a0202;
+  text-shadow: 0 0.14cqw 0.35cqw #000;
+}
+.choke-acted-stamp small {
+  position: relative;
+  margin-top: 0.2cqw;
+  font-size: 0.6cqw;
+  font-weight: 800;
+  color: #ff9e94;
+  text-shadow: 0 0.08cqw 0.2cqw #000;
+}
+
+.choke-card-mp-pill {
+  position: absolute;
+  top: 0.32cqw;
+  left: 0.32cqw;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.14cqw;
+  padding: 0.06cqw 0.34cqw;
+  border-radius: 0.2cqw;
+  background: rgb(10 28 58 / 0.9);
+  border: 0.07cqw solid #6eb8ff;
+  color: #bfe4ff;
+  font-size: 0.55cqw;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.choke-guard-chip {
+  position: absolute;
+  top: -1.4cqw;
+  z-index: 9;
+  padding: 0.18cqw 0.6cqw;
+  border-radius: 0.28cqw;
+  background: #2383d6;
+  border: 0.1cqw solid #a3e2ff;
+  color: #fff;
+  font-size: 0.76cqw;
+  font-weight: 800;
+}
+
+/* 卡面底部技能指令行（主动与被动长成一个样子，仅覆盖卡面下部的技能栏区域，绝不遮挡头像与名字） */
+.choke-card-overlay-skills {
+  position: absolute;
+  left: 0.32cqw;
+  right: 0.32cqw;
+  bottom: 1.35cqw;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2cqw;
+  padding: 0.22cqw;
+  border-radius: 0.28cqw;
+  border: 0.1cqw solid #d8aa50;
+  background: rgb(14 12 10 / 0.94);
+  box-shadow: 0 -0.2cqw 0.7cqw rgb(0 0 0 / 0.85);
+}
+.choke-overlay-skill-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.32cqw;
+  padding: 0.22cqw 0.36cqw;
+  border: 0.08cqw solid #786035;
+  border-radius: 0.2cqw;
+  background: linear-gradient(180deg, #322819, #1b150c);
+  color: #fff4d2;
+  font-size: 0.72cqw;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+.choke-overlay-skill-btn:hover:not(:disabled):not([data-passive="true"]) {
+  border-color: #ffd872;
+  background: linear-gradient(180deg, #523e21, #2c1f0e);
+}
+/* 被动技能与主动技能保持完全一致的条形外观，鼠标指上去可看详情，但点击无动作 */
+.choke-overlay-skill-btn[data-passive="true"] {
+  cursor: help;
+  border-color: #5c6c7d;
+  background: linear-gradient(180deg, #232830, #14171c);
+  color: #d4dde8;
+}
+.choke-overlay-skill-btn[data-passive="true"]:hover {
+  border-color: #8ab8e6;
+}
+.choke-overlay-skill-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.choke-overlay-skill-btn i {
+  flex: 0 0 1.15cqw;
+  height: 1.15cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--el, #d98a12) 75%, #2b1804);
+  border: 0.07cqw solid #ffe299;
+  color: #fff;
+  font-style: normal;
+  font-size: 0.68cqw;
+  font-weight: 900;
+}
+.choke-overlay-skill-btn[data-passive="true"] i {
+  background: #2b394a;
+  border-color: #9ab8d8;
+  color: #cfe4ff;
+}
+.choke-overlay-skill-btn[data-surcharged="true"] i {
+  background: #d9381e;
+  box-shadow: 0 0 0.35cqw #ff6a4d;
+}
+.choke-overlay-skill-btn span {
+  flex: 1 1 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.choke-skill-mp {
+  font-style: normal;
+  font-size: 0.58cqw;
+  color: #82c8ff;
+  font-weight: 800;
+}
+
+/* ---------- 4. 战中换人抽屉 ---------- */
+.choke-swap-drawer {
+  position: absolute;
+  left: 1cqw;
+  right: 1cqw;
+  top: 4.5cqw;
+  bottom: 24.5cqw;
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  padding: 1cqw 1.2cqw;
+  border: 0.16cqw solid #8b7141;
+  border-radius: 0.45cqw;
+  background: rgb(12 14 18 / 0.96);
+  box-shadow: 0 0.8cqw 2.4cqw rgb(0 0 0 / 0.88);
+}
+.choke-swap-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.7cqw;
+  border-bottom: 0.08cqw solid rgb(255 255 255 / 0.12);
+  margin-bottom: 0.7cqw;
+}
+.choke-swap-head b { font-size: 1.2cqw; color: #ffe28a; margin-right: 0.8cqw; }
+.choke-swap-head span { font-size: 0.86cqw; color: #a8cbe8; }
+.choke-swap-close { padding: 0.32cqw 0.85cqw; border: 0.1cqw solid #9b7f48; border-radius: 0.28cqw; background: #292014; color: #ffe8b0; font-size: 0.82cqw; cursor: pointer; }
+.choke-swap-targets {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.45cqw;
+  margin-bottom: 0.7cqw;
+}
+.choke-swap-slot-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.28cqw 0.38cqw;
+  border: 0.1cqw solid #5c6c82;
+  border-radius: 0.26cqw;
+  background: #18202c;
+  color: #dce6f2;
+  cursor: pointer;
+}
+.choke-swap-slot-pill span { font-size: 0.6cqw; color: #8ea8c8; }
+.choke-swap-slot-pill b { font-size: 0.74cqw; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.choke-swap-slot-pill small { font-size: 0.58cqw; color: #ffd88a; }
+.choke-swap-slot-pill[data-active="true"] { border-color: #ffd86b; background: #2e2415; box-shadow: 0 0 0.6cqw rgb(255 210 90 / 0.45); }
+.choke-swap-slot-pill[data-down="true"] { border-color: #e04848; }
+
+.choke-swap-grid {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 0.85cqw;
+  overflow-y: auto;
+  align-content: start;
+}
+.choke-bench-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28cqw;
+  background: none;
+  border: none;
+  color: #e8e0cf;
+  cursor: pointer;
+  padding: 0;
+}
+.choke-bench-item:hover:not(:disabled) .choke-bench-card {
+  transform: translateY(-0.22cqw);
+  box-shadow: 0 0 0 0.16cqw #ffd46b;
+}
+.choke-bench-item:disabled { opacity: 0.42; cursor: not-allowed; }
+.choke-bench-card { position: relative; width: 100%; border-radius: 4.5% / 3%; transition: transform 0.15s ease; }
+.choke-bench-meta { font-size: 0.74cqw; color: #cfc3ab; }
+
+/* ---------- 5. 底栏与 LOG ---------- */
+.choke-footer {
+  flex: 0 0 2.35cqw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1cqw;
+  border-top: 0.1cqw solid #473b24;
+  background: #0b0a0c;
+  font-size: 0.84cqw;
+}
+.choke-ticker { color: #d7ccb5; }
+.choke-log-toggle { padding: 0.18cqw 0.95cqw; border: 0.1cqw solid #7a643b; border-radius: 0.25cqw; background: #211b13; color: #e6d19f; font-size: 0.75cqw; cursor: pointer; }
+.choke-log-drawer {
+  position: absolute;
+  right: 1cqw;
+  bottom: 2.6cqw;
+  z-index: 25;
+  width: 36cqw;
+  max-height: 16cqw;
+  overflow-y: auto;
+  padding: 0.7cqw 1cqw;
+  border: 0.14cqw solid #8b7141;
+  border-radius: 0.35cqw;
+  background: rgb(12 11 14 / 0.95);
+  font-size: 0.8cqw;
+  line-height: 1.5;
+}
+.choke-log-line { padding: 0.16cqw 0; border-bottom: 0.05cqw solid rgb(255 255 255 / 0.08); }
+
+/* ---------- 6. 命中反馈：白闪、兰斯10粉白红边大号伤害数字、回合扫屏 ---------- */
+.choke-hit-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  background: #fff;
+  pointer-events: none;
+  animation: choke-hit-flash 0.15s ease-out forwards;
+}
+@keyframes choke-hit-flash {
+  0% { opacity: 0.42; }
+  100% { opacity: 0; }
+}
+
+.choke-popup {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  font-weight: 900;
+  font-family: Georgia, "Times New Roman", serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  animation: choke-dmg-pop 0.82s ease-out forwards;
+}
+/* 复刻参考图中央 21283 粉红渐变+白边+深红描边大字 */
+.choke-popup--enemy {
+  left: 50%;
+  top: 34%;
+  font-size: 5.2cqw;
+  color: #ff4fa8;
+  -webkit-text-stroke: 0.14cqw #ffeef6;
+  text-shadow:
+    0 0 0.8cqw #ff1e78,
+    0 0.25cqw 0.7cqw #2b0412;
+}
+.choke-popup--enemy[data-crit="true"] {
+  font-size: 6cqw;
+  color: #ffe059;
+  -webkit-text-stroke: 0.15cqw #8a1408;
+  text-shadow: 0 0 1.2cqw #ff6a28, 0 0.3cqw 0.8cqw #000;
+}
+.choke-popup--enemy[data-weak="true"] {
+  color: #ff62b8;
+}
+.choke-popup--enemy[data-kind="wake"],
+.choke-popup--enemy[data-kind="interrupt"] {
+  font-size: 3.4cqw;
+  color: #8ce4ff;
+  -webkit-text-stroke: 0.1cqw #082848;
+}
+.choke-popup--enemy em {
+  display: block;
+  font-style: normal;
+  font-family: var(--font-heading, sans-serif);
+  font-size: 0.92cqw;
+  letter-spacing: 0.2em;
+  color: #ffe285;
+  -webkit-text-stroke: 0;
+  text-align: center;
+}
+.choke-popup--card {
+  left: 50%;
+  top: 28%;
+  font-size: 1.95cqw;
+  color: #ff8a7a;
+  -webkit-text-stroke: 0.07cqw #240505;
+}
+.choke-popup--card[data-kind="heal"] {
+  color: #8df0aa;
+  -webkit-text-stroke-color: #06300f;
+}
+.choke-popup--card[data-kind="miss"] {
+  color: #d8d2c4;
+}
+
+@keyframes choke-dmg-pop {
+  0% { opacity: 0; transform: translate(-50%, -35%) scale(1.45); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; transform: translate(-50%, -55%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -70%) scale(0.95); }
+}
+
+.choke-turn-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 40%;
+  z-index: 34;
+  pointer-events: none;
+  text-align: center;
+  font-size: 4cqw;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #ffe6a8;
+  text-shadow: 0 0.3cqw 1.2cqw #000, 0 0 2cqw rgb(255 190 80 / 0.5);
+  animation: choke-turn-flash 0.78s ease-out forwards;
+}
+.choke-turn-banner[data-owner="enemy"] {
+  color: #ff9b86;
+  text-shadow: 0 0.3cqw 1.2cqw #000, 0 0 2cqw rgb(220 50 40 / 0.6);
+}
+@keyframes choke-turn-flash {
+  0% { opacity: 0; letter-spacing: 0.4em; }
+  25% { opacity: 1; letter-spacing: 0.18em; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------- 7. 结算面板 ---------- */
 .choke-result-layer {
   position: absolute;
   inset: 0;
@@ -610,727 +1678,6 @@
   box-shadow: 0 1cqw 3cqw rgb(0 0 0 / 0.85);
   text-align: center;
 }
-.choke-result-card b { display: block; font-size: 2.2cqw; color: #ffe6a8; margin-bottom: 0.5cqw; }
-.choke-result-card p { font-size: 0.9cqw; color: #c9bda7; margin-bottom: 1.1cqw; }
-.choke-result-actions { display: flex; gap: 0.6cqw; justify-content: center; }
-.choke-result-actions button,
-.choke-result-actions a {
-  padding: 0.45cqw 1.1cqw;
-  border: 0.12cqw solid #8b7141;
-  border-radius: 0.3cqw;
-  background: linear-gradient(180deg, #352b1c, #17120c);
-  color: #ffe7b0;
-  font-size: 0.9cqw;
-  font-weight: 800;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-/* 生产卡槽：HP / 三围 / 选中态 */
-.choke-card-slot[data-selected="true"] .choke-card-frame {
-  box-shadow: 0 0 0 0.18cqw #ffd872, 0 0 1.2cqw rgb(255 216 114 / 0.6);
-}
-.choke-card-meta {
-  width: 100%;
-  padding: 0.12cqw 0.15cqw 0;
-}
-.choke-card-hp--inline {
-  position: relative;
-  left: auto;
-  right: auto;
-  bottom: auto;
-  width: 100%;
-  height: 0.45cqw;
-}
-.choke-card-nums {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.2cqw;
-  margin-top: 0.08cqw;
-  font-size: 0.55cqw;
-  line-height: 1.2;
-  color: #cfc4b0;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.choke-card-nums b {
-  color: #ffe0a0;
-  font-weight: 800;
-}
-.choke-overlay--production {
-  bottom: 1.75cqw;
-}
-.choke-ap-gem[data-locked="true"] {
-  opacity: 0.28;
-}
-
-/* 双层血条：实条瞬缩，残影条延迟滑落 */
-.choke-gauge-track--double {
-  position: relative;
-  overflow: hidden;
-}
-.choke-gauge-track--double .choke-gauge-ghost {
-  position: absolute;
-  inset: 0 auto 0 0;
-  height: 100%;
-  background: linear-gradient(90deg, #ffe9a6, #fff6d8);
-  opacity: 0.85;
-  transition: width 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.22s;
-}
-.choke-gauge-track--double .choke-gauge-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  height: 100%;
-  transition: width 0.08s linear;
-}
-
-/* 命中反馈：白闪、伤害数字、回合扫屏 */
-.choke-hit-flash {
-  position: absolute;
-  inset: 0;
-  z-index: 35;
-  background: #fff;
-  pointer-events: none;
-  animation: choke-hit-flash 0.18s ease-out forwards;
-}
-@keyframes choke-hit-flash {
-  0% { opacity: 0.45; }
-  100% { opacity: 0; }
-}
-
-.choke-popup {
-  position: absolute;
-  z-index: 30;
-  pointer-events: none;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  animation: choke-dmg-pop 0.9s ease-out forwards;
-}
-.choke-popup--enemy {
-  left: 50%;
-  top: 34%;
-  font-size: 4.4cqw;
-  color: #fff1d8;
-  -webkit-text-stroke: 0.12cqw #5c0b0b;
-  text-shadow: 0 0.2cqw 0.8cqw rgb(220 40 30 / 0.75);
-}
-.choke-popup--enemy[data-crit="true"] {
-  font-size: 5.4cqw;
-  color: #ffe07a;
-  text-shadow: 0 0.25cqw 1cqw rgb(255 120 40 / 0.9);
-}
-.choke-popup--enemy em {
-  display: block;
-  font-style: normal;
-  font-size: 0.9cqw;
-  letter-spacing: 0.24em;
-  color: #ffb36a;
-  text-align: center;
-}
-.choke-popup--card {
-  left: 50%;
-  top: 28%;
-  font-size: 1.9cqw;
-  color: #ff8a7a;
-  -webkit-text-stroke: 0.07cqw #240505;
-}
-.choke-popup--card[data-kind="heal"] {
-  color: #8df0aa;
-  -webkit-text-stroke-color: #06300f;
-}
-.choke-popup--card[data-kind="miss"] {
-  color: #d8d2c4;
-}
-
-.choke-turn-banner {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 41%;
-  z-index: 34;
-  pointer-events: none;
-  text-align: center;
-  font-size: 4.2cqw;
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  color: #ffe6a8;
-  text-shadow: 0 0.3cqw 1.2cqw #000, 0 0 2cqw rgb(255 190 80 / 0.5);
-  animation: choke-turn-flash 0.82s ease-out forwards;
-}
-.choke-turn-banner[data-owner="enemy"] {
-  color: #ff9b86;
-  text-shadow: 0 0.3cqw 1.2cqw #000, 0 0 2cqw rgb(220 50 40 / 0.6);
-}
-
-/* =========================================================
-   兰斯10 + 战斗机制 v0.1 深度复刻样式扩展
-   ========================================================= */
-
-/* 战前准备：讨伐目标切换器 */
-.choke-prep-title small {
-  display: block;
-  font-size: 0.72cqw;
-  letter-spacing: 0.16em;
-  color: #ffb899;
-  font-weight: 700;
-}
-.choke-stage-selector {
-  position: absolute;
-  left: 1.8cqw;
-  bottom: 7.2cqw;
-  z-index: 6;
-  width: 28cqw;
-  padding: 0.55cqw 0.75cqw;
-  border: 0.12cqw solid rgb(210 155 82 / 0.65);
-  border-radius: 0.35cqw;
-  background: linear-gradient(90deg, rgb(14 11 15 / 0.92), rgb(24 16 18 / 0.78));
-  box-shadow: 0 0.4cqw 1.2cqw rgb(0 0 0 / 0.7);
-}
-.choke-stage-selector__label {
-  display: flex;
-  align-items: center;
-  gap: 0.35cqw;
-  font-size: 0.75cqw;
-  font-weight: 800;
-  color: #ffd984;
-  margin-bottom: 0.4cqw;
-}
-.choke-stage-selector__btns {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.35cqw;
-}
-.choke-stage-pill {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 0.32cqw 0.45cqw;
-  border: 0.1cqw solid #6b5332;
-  border-radius: 0.25cqw;
-  background: rgb(26 20 16 / 0.9);
-  color: #e9dec7;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-.choke-stage-pill b {
-  font-size: 0.74cqw;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-}
-.choke-stage-pill small {
-  font-size: 0.58cqw;
-  color: #b7a689;
-}
-.choke-stage-pill[data-active="true"] {
-  border-color: #ffd86b;
-  background: linear-gradient(180deg, #5c2716, #2d110a);
-  box-shadow: 0 0 0.6cqw rgb(255 190 70 / 0.45);
-}
-.choke-stage-selector__desc {
-  margin: 0.4cqw 0 0;
-  font-size: 0.68cqw;
-  line-height: 1.35;
-  color: #cfc2aa;
-}
-
-.choke-subjob-badge {
-  position: absolute;
-  top: -0.65cqw;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 8;
-  padding: 0.08cqw 0.5cqw;
-  border: 0.08cqw solid #9b7f48;
-  border-radius: 0.22cqw;
-  background: #1a1510;
-  color: #ffe299;
-  font-size: 0.66cqw;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-/* 左右对称 7 格侧面支援栏（§8.1 敌方在左，我方在右，上限各 7 格） */
-.choke-side-supports {
-  position: absolute;
-  top: 2.8cqw;
-  z-index: 6;
-  width: 16.2cqw;
-  display: flex;
-  flex-direction: column;
-  gap: 0.22cqw;
-}
-.choke-side-supports--enemy {
-  left: 1cqw;
-}
-.choke-side-supports--party {
-  right: 1cqw;
-}
-.choke-side-supports__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.14cqw 0.45cqw;
-  border-radius: 0.22cqw;
-  background: rgb(10 10 14 / 0.82);
-  border: 0.08cqw solid rgb(255 255 255 / 0.15);
-  font-size: 0.66cqw;
-  font-weight: 800;
-  color: #e4d4b0;
-}
-.choke-side-supports__head small {
-  font-size: 0.62cqw;
-  color: #a89d86;
-}
-.choke-support-slot {
-  display: flex;
-  align-items: center;
-  gap: 0.4cqw;
-  height: 2.05cqw;
-  padding: 0.15cqw 0.42cqw;
-  border-radius: 0.24cqw;
-  border: 0.1cqw solid #7a5c38;
-  background: linear-gradient(90deg, rgb(32 22 18 / 0.9), rgb(16 12 14 / 0.86));
-  box-shadow: 0 0.15cqw 0.4cqw rgb(0 0 0 / 0.5);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-.choke-support-slot--enemy {
-  border-color: #b85b38;
-  background: linear-gradient(90deg, rgb(92 26 16 / 0.88), rgb(34 14 12 / 0.86));
-}
-.choke-support-slot--enemy[data-kind="charge"] {
-  border-color: #ff9c42;
-  background: linear-gradient(90deg, rgb(128 52 12 / 0.92), rgb(44 18 8 / 0.88));
-}
-.choke-support-slot--party {
-  border-color: #4c86c4;
-  background: linear-gradient(90deg, rgb(18 44 78 / 0.9), rgb(10 22 40 / 0.88));
-}
-.choke-support-slot--party[data-kind="defense"],
-.choke-support-slot--party[data-kind="armor"] {
-  border-color: #ffe074;
-  background: linear-gradient(90deg, rgb(92 68 16 / 0.92), rgb(32 24 10 / 0.9));
-  box-shadow: 0 0 0.7cqw rgb(255 210 80 / 0.45);
-}
-.choke-support-slot--party[data-active="true"] {
-  transform: translateX(-0.65cqw);
-  border-color: #96e6ff;
-  box-shadow: 0 0 0.9cqw rgb(100 210 255 / 0.75);
-}
-.choke-support-slot--empty {
-  border: 0.08cqw dashed rgb(255 255 255 / 0.14);
-  background: rgb(10 10 14 / 0.42);
-  box-shadow: none;
-  opacity: 0.62;
-}
-.choke-support-slot__idx {
-  width: 1.1cqw;
-  text-align: center;
-  font-size: 0.62cqw;
-  font-weight: 800;
-  color: #7d7464;
-}
-.choke-support-slot__placeholder {
-  font-size: 0.62cqw;
-  color: #7d7464;
-}
-.choke-support-slot__icon {
-  flex: 0 0 1.45cqw;
-  height: 1.45cqw;
-  display: grid;
-  place-items: center;
-  border-radius: 0.2cqw;
-  background: color-mix(in srgb, var(--el, #888) 38%, #121016);
-  border: 0.08cqw solid rgb(255 255 255 / 0.28);
-  color: #fff;
-}
-.choke-support-slot__icon svg {
-  width: 0.95cqw;
-  height: 0.95cqw;
-}
-.choke-support-slot__body {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.12;
-}
-.choke-support-slot__body b {
-  font-size: 0.72cqw;
-  color: #fff5df;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.choke-support-slot__body small {
-  font-size: 0.56cqw;
-  color: #b7cde6;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.choke-support-slot--enemy .choke-support-slot__body small {
-  color: #f0b8a4;
-}
-.choke-support-slot__lock {
-  color: #ffe07d;
-  font-size: 0.78cqw;
-  display: grid;
-  place-items: center;
-}
-
-/* BOSS 硬控状态提示横幅（眠咒/击晕 + 打醒警告） */
-.choke-boss-cc-banner {
-  position: absolute;
-  left: 50%;
-  top: 7.5%;
-  transform: translateX(-50%);
-  z-index: 8;
-  display: flex;
-  align-items: center;
-  gap: 0.55cqw;
-  padding: 0.35cqw 0.95cqw;
-  border: 0.14cqw solid #9ad8ff;
-  border-radius: 0.35cqw;
-  background: rgb(14 26 48 / 0.92);
-  box-shadow: 0 0 1.2cqw rgb(80 180 255 / 0.6);
-  color: #e6f6ff;
-}
-.choke-boss-cc-banner svg {
-  width: 1.7cqw;
-  height: 1.7cqw;
-  color: #7fd4ff;
-}
-.choke-boss-cc-banner b {
-  display: block;
-  font-size: 0.85cqw;
-  color: #fff;
-}
-.choke-boss-cc-banner small {
-  display: block;
-  font-size: 0.64cqw;
-  color: #9fd8ff;
-}
-
-/* COMBO 加成百分比副标 */
-.choke-combo-meta {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.05;
-}
-.choke-combo-meta em {
-  font-style: normal;
-  font-size: 0.74cqw;
-  font-weight: 800;
-  color: #ffe89e;
-  text-shadow: 0 0.08cqw 0.2cqw #000;
-}
-
-/* 中轴：敌方意图预告队列细节 */
-.choke-intents {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.35cqw;
-  padding: 0.2cqw 0.55cqw;
-  border-radius: 0.3cqw;
-  background: rgb(14 10 14 / 0.82);
-  border: 0.08cqw solid rgb(230 185 95 / 0.45);
-}
-.choke-intents__label {
-  font-size: 0.76cqw;
-  font-weight: 800;
-  color: #f3c878;
-  margin-right: 0.15cqw;
-}
-.choke-intent-box {
-  position: relative;
-  width: 2.35cqw;
-  height: 2.35cqw;
-  display: grid;
-  place-items: center;
-  border: 0.12cqw solid #e5bd5a;
-  border-radius: 0.26cqw;
-  background: color-mix(in srgb, var(--el) 34%, #201614);
-  color: #fff;
-  cursor: help;
-  transition: transform 0.15s ease;
-}
-.choke-intent-box:hover {
-  transform: translateY(-0.18cqw);
-}
-.choke-intent-box[data-uninterruptible="true"] {
-  border-color: #ff5252;
-  box-shadow: 0 0 0.5cqw rgb(255 60 60 / 0.55);
-}
-.choke-intent-box[data-down="true"] {
-  border-color: #ff9436;
-}
-.choke-intent-box[data-interrupted="true"],
-.choke-intent-box[data-cc="true"] {
-  filter: grayscale(0.9) brightness(0.55);
-}
-.choke-intent-box__icon svg {
-  width: 1.25cqw;
-  height: 1.25cqw;
-}
-.choke-intent-box__order {
-  position: absolute;
-  left: 0.12cqw;
-  top: 0.05cqw;
-  font-style: normal;
-  font-size: 0.58cqw;
-  font-weight: 900;
-  color: #ffe285;
-}
-.choke-intent-box__tier {
-  position: absolute;
-  right: 0.1cqw;
-  bottom: 0.04cqw;
-  font-style: normal;
-  font-size: 0.54cqw;
-  font-weight: 900;
-  padding: 0 0.14cqw;
-  border-radius: 0.14cqw;
-  background: rgb(0 0 0 / 0.72);
-  color: #ffd884;
-}
-.choke-intent-box__lock {
-  position: absolute;
-  right: -0.22cqw;
-  top: -0.22cqw;
-  width: 0.85cqw;
-  height: 0.85cqw;
-  border-radius: 50%;
-  background: #c91e1e;
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 0.52cqw;
-}
-.choke-intent-box__break {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 1.65cqw;
-  font-weight: 900;
-  color: #ff3b3b;
-  text-shadow: 0 0 0.3cqw #000;
-}
-
-.choke-inline-armor {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2cqw;
-  margin-left: 0.5cqw;
-  padding: 0.06cqw 0.4cqw;
-  border-radius: 0.2cqw;
-  background: rgb(160 65 30 / 0.85);
-  border: 0.08cqw solid #ffb278;
-  font-size: 0.68cqw;
-  color: #fff2dc;
-}
-.choke-inline-armor--party {
-  background: rgb(28 82 140 / 0.88);
-  border-color: #8fd2ff;
-}
-.choke-hp-num small {
-  font-size: 0.92cqw;
-  color: #b8ad99;
-  font-weight: 700;
-}
-
-/* 卡槽顶部 Boost / 必杀 / 连击 三色徽标 */
-.choke-boost-tag[data-trigger="critical_art"] {
-  background: linear-gradient(180deg, #e01b3c, #6e0518);
-  border-color: #ff9eb0;
-  color: #fff;
-}
-.choke-boost-tag[data-trigger="double_cast"] {
-  background: linear-gradient(180deg, #1b7fe0, #083266);
-  border-color: #9ee0ff;
-  color: #fff;
-}
-
-/* 卡面内嵌子职业与法系 MP 角标（无单卡血条，干净利落） */
-.choke-card-badges {
-  position: absolute;
-  top: 0.32cqw;
-  left: 0.32cqw;
-  right: 0.32cqw;
-  z-index: 6;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  pointer-events: none;
-}
-.choke-card-subjob-pill {
-  padding: 0.08cqw 0.38cqw;
-  border-radius: 0.2cqw;
-  background: rgb(12 10 14 / 0.84);
-  border: 0.07cqw solid rgb(230 190 110 / 0.65);
-  color: #ffe39e;
-  font-size: 0.58cqw;
-  font-weight: 800;
-}
-.choke-card-mp-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.15cqw;
-  padding: 0.08cqw 0.36cqw;
-  border-radius: 0.2cqw;
-  background: rgb(14 34 68 / 0.9);
-  border: 0.07cqw solid #6eb8ff;
-  color: #bfe4ff;
-  font-size: 0.56cqw;
-  font-weight: 800;
-}
-.choke-card-status-row {
-  position: absolute;
-  left: 0.32cqw;
-  right: 0.32cqw;
-  bottom: 0.35cqw;
-  z-index: 6;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.2cqw;
-  pointer-events: none;
-}
-.choke-card-status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.15cqw;
-  padding: 0.06cqw 0.34cqw;
-  border-radius: 0.18cqw;
-  background: rgb(22 52 32 / 0.9);
-  border: 0.07cqw solid #7be098;
-  color: #dcffe6;
-  font-size: 0.55cqw;
-  font-weight: 800;
-}
-.choke-card-status-chip--taunt {
-  background: rgb(140 62 18 / 0.92);
-  border-color: #ffd082;
-  color: #fff3d6;
-}
-
-.choke-card-tag {
-  flex-direction: column;
-  gap: 0.15cqw;
-}
-.choke-card-tag b {
-  font-size: 1.15cqw;
-}
-.choke-card-tag small {
-  font-size: 0.58cqw;
-  letter-spacing: 0.04em;
-  color: #e6dac2;
-}
-.choke-card-tag svg {
-  width: 1.6cqw;
-  height: 1.6cqw;
-}
-
-/* 技能悬浮菜单附加项 */
-.choke-overlay-skill-btn i {
-  background: color-mix(in srgb, var(--el, #d98a12) 75%, #2b1804);
-}
-.choke-overlay-skill-btn[data-surcharged="true"] i {
-  background: #d9381e;
-  box-shadow: 0 0 0.35cqw #ff6a4d;
-}
-.choke-skill-mp {
-  font-style: normal;
-  font-size: 0.62cqw;
-  color: #82c8ff;
-  font-weight: 800;
-}
-.choke-overlay-passive {
-  padding: 0.14cqw 0.3cqw;
-  font-size: 0.6cqw;
-  color: #b8ab93;
-  text-align: center;
-  border-top: 0.06cqw solid rgb(255 255 255 / 0.1);
-}
-.choke-tooltip-badge {
-  margin-left: 0.4cqw;
-  padding: 0.06cqw 0.35cqw;
-  border-radius: 0.18cqw;
-  background: #8f2d14;
-  color: #ffd9c2;
-  font-size: 0.65cqw;
-}
-.choke-tooltip-warn {
-  margin-top: 0.25cqw;
-  color: #ff8b78;
-  font-size: 0.7cqw;
-  font-weight: 700;
-}
-
-/* 右翼：四档防御组合面板 */
-.choke-defense-box {
-  flex: 1 1 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3cqw;
-}
-.choke-defense-box .choke-btn-defend {
-  flex: 1 1 0;
-}
-.choke-defense-box .choke-btn-defend b {
-  display: flex;
-  align-items: center;
-  gap: 0.25cqw;
-  font-size: 0.98cqw;
-}
-
-/* 换人抽屉槽位选择条 */
-.choke-swap-targets {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.45cqw;
-  margin-bottom: 0.75cqw;
-}
-.choke-swap-slot-pill {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0.3cqw 0.4cqw;
-  border: 0.1cqw solid #5c6c82;
-  border-radius: 0.26cqw;
-  background: #18202c;
-  color: #dce6f2;
-  cursor: pointer;
-}
-.choke-swap-slot-pill span {
-  font-size: 0.62cqw;
-  color: #8ea8c8;
-}
-.choke-swap-slot-pill b {
-  font-size: 0.76cqw;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.choke-swap-slot-pill small {
-  font-size: 0.6cqw;
-  color: #ffd88a;
-}
-.choke-swap-slot-pill[data-active="true"] {
-  border-color: #ffd86b;
-  background: #2e2415;
-  box-shadow: 0 0 0.6cqw rgb(255 210 90 / 0.45);
-}
-.choke-swap-slot-pill[data-down="true"] {
-  border-color: #e04848;
-}
-
-/* 结算面板：三星评价 */
 .choke-result-badge {
   display: inline-grid;
   place-items: center;
@@ -1342,10 +1689,9 @@
   border: 0.14cqw solid #ffd86b;
   color: #ffe27a;
 }
-.choke-result-badge svg {
-  width: 2cqw;
-  height: 2cqw;
-}
+.choke-result-badge svg { width: 2cqw; height: 2cqw; }
+.choke-result-card b { display: block; font-size: 2.1cqw; color: #ffe6a8; margin-bottom: 0.45cqw; }
+.choke-result-card p { font-size: 0.88cqw; color: #c9bda7; margin-bottom: 1cqw; }
 .choke-stars-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1363,32 +1709,25 @@
   background: rgb(255 255 255 / 0.03);
   color: #7c7568;
 }
-.choke-star-item svg {
-  width: 1.5cqw;
-  height: 1.5cqw;
-}
-.choke-star-item b {
-  font-size: 0.85cqw !important;
-  margin: 0 !important;
-  color: inherit !important;
-}
-.choke-star-item small {
-  font-size: 0.66cqw;
-  color: #9e9585;
-}
+.choke-star-item svg { width: 1.5cqw; height: 1.5cqw; }
+.choke-star-item b { font-size: 0.85cqw !important; margin: 0 !important; color: inherit !important; }
+.choke-star-item small { font-size: 0.66cqw; color: #9e9585; }
 .choke-star-item[data-achieved="true"] {
   border-color: #e5b852;
   background: linear-gradient(180deg, rgb(92 68 18 / 0.45), rgb(32 24 10 / 0.65));
   color: #ffe074;
 }
-.choke-star-item[data-achieved="true"] small {
-  color: #f0e2c4;
-}
-.choke-popup--enemy[data-weak="true"] {
-  color: #ffdc66;
-}
-.choke-popup--enemy[data-kind="wake"],
-.choke-popup--enemy[data-kind="interrupt"] {
-  font-size: 3.4cqw;
-  color: #8ce4ff;
+.choke-star-item[data-achieved="true"] small { color: #f0e2c4; }
+.choke-result-actions { display: flex; gap: 0.6cqw; justify-content: center; }
+.choke-result-actions button,
+.choke-result-actions a {
+  padding: 0.45cqw 1.1cqw;
+  border: 0.12cqw solid #8b7141;
+  border-radius: 0.3cqw;
+  background: linear-gradient(180deg, #352b1c, #17120c);
+  color: #ffe7b0;
+  font-size: 0.9cqw;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
 }
