@@ -13,6 +13,9 @@ const CardLab = lazy(() =>
 const PoolLab = lazy(() =>
   import("@/pool/PoolLab").then((m) => ({ default: m.PoolLab }))
 )
+const BattleSim = lazy(() =>
+  import("@/battle-sim/BattleSim").then((m) => ({ default: m.BattleSim }))
+)
 
 const FALLBACK = (
   <div
@@ -31,6 +34,16 @@ const FALLBACK = (
 
 export function App() {
   const path = window.location.pathname.replace(/\/+$/, "")
+  if (path.endsWith("battle-sim")) {
+    return (
+      <>
+        <Suspense fallback={FALLBACK}>
+          <BattleSim />
+        </Suspense>
+        <BackToDesk />
+      </>
+    )
+  }
   if (path.endsWith("battle")) {
     return (
       <>
