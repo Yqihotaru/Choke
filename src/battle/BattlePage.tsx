@@ -1,15 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react"
+import { useEffect, useRef, useState } from "react"
 
-import { GameCardFace } from "@/card/GameCardFace"
-import {
-  ELEMENT_COLOR,
-  ELEMENT_LABEL,
-} from "@/card/data"
 import { fetchDeck, toFace, type ApiDeck } from "@/desk/api"
 import { GuestLoginButton } from "@/desk/GuestLoginButton"
 import { advanceTutorial, grantExp, useTutorialProgress } from "@/tutorial/store"
 
-import { TUTORIAL_ENEMY_HP, cloneBattle, createBattle, endTurn, enemyDamageTier, playSkill, raiseDefense, teamHpOf } from "./engine"
+import { cloneBattle, createBattle, endTurn, playSkill, raiseDefense } from "./engine"
+import { BattleStage } from "./BattleStage"
 import type { BattleState } from "./types"
 import "./battle.css"
 
@@ -146,48 +142,10 @@ export function BattlePage() {
     )
   }
 
-  if (!battle) {
-    const totalBp = cards.reduce((sum, card) => sum + card.level, 0)
-    const enemyHp = tutorialRun ? TUTORIAL_ENEMY_HP : 24000
-    return (
-      <div className="battle-page battle-page--center">
-        <div className="battle-gate">
-          <span>{tutorialRun ? "TUTORIAL · PRACTICE" : "PVE · PROTOTYPE"}</span>
-          <h1>{tutorialRun ? "教学对手" : "练习对手"} · 谱面幽灵</h1>
-          <p>
-            {tutorialRun
-              ? "新手首战：敌人血量与攻防都调低了，正常出牌就能赢。"
-              : "当前卡组、AP 2 起始、Combo、防御档位和敌方意图预告。"}
-          </p>
-          <div className="battle-gate__stats">
-            <div>
-              <span>卡组</span>
-              <b>{cards.length} / 7</b>
-            </div>
-            <div>
-              <span>敌人 HP</span>
-              <b>{enemyHp.toLocaleString("en-US")}</b>
-            </div>
-            <div>
-              <span>总等级</span>
-              <b>{totalBp}</b>
-            </div>
-          </div>
-          <button type="button" onClick={start}>
-            {tutorialRun ? "开始教学战斗" : "开始战斗"}
-          </button>
-          <a href="/">回桌面</a>
-        </div>
-      </div>
-    )
-  }
-
-  const team = teamHpOf(battle)
-  const enemyPct = (battle.enemy.hp / battle.enemy.hpMax) * 100
-  const teamPct = (team.hp / team.max) * 100
-  const hasTank = battle.cards.some((card) => !card.down && card.subjob.tags.includes("tank"))
+  const enemy = battle?.enemy ?? createBattle([], { tutorial: tutorialRun }).enemy
 
   const play = (index: number, skillId: string) => {
+    if (!battle) return
     const next = cloneBattle(battle)
     const message = playSkill(next, index, skillId)
     setBattle(next)
@@ -195,6 +153,7 @@ export function BattlePage() {
   }
 
   const defend = (tier: number) => {
+    if (!battle) return
     const next = cloneBattle(battle)
     const message = raiseDefense(next, tier)
     setBattle(next)
@@ -202,6 +161,7 @@ export function BattlePage() {
   }
 
   const finishTurn = () => {
+    if (!battle) return
     const next = cloneBattle(battle)
     const message = endTurn(next)
     setBattle(next)
@@ -209,247 +169,19 @@ export function BattlePage() {
   }
 
   return (
-    <div className="battle-page">
-      <header className="battle-top">
-        <a className="battle-top__back" href="/">
-          ‹ 桌面
-        </a>
-        <div className="battle-top__title">
-          <span>{tutorialBattle ? "TUTORIAL · 教学对手" : "PVE · 练习对手"}</span>
-          <b>{battle.enemy.name}</b>
-        </div>
-        <div className="battle-top__stats">
-          <div className="battle-stat">
-            <span>TURN</span>
-            <b>{battle.turn}</b>
-          </div>
-          <div className="battle-stat">
-            <span>COMBO</span>
-            <b>{battle.combo}</b>
-          </div>
-          <div className="battle-stat">
-            <span>防御</span>
-            <b>{["0", "I", "II", "III", "IV"][battle.defenseTier]}</b>
-          </div>
-          <div className="battle-ap">
-            <span>AP</span>
-            {Array.from({ length: battle.apMax }, (_, i) => (
-              <i key={i} className={i < battle.ap ? "is-on" : ""} />
-            ))}
-          </div>
-        </div>
-      </header>
-
-      <main className="battle-main">
-        <aside className="battle-side battle-side--enemy">
-          <div className="battle-enemy-stage">
-            <div className="battle-enemy">
-              <span className="battle-enemy__tag">ENEMY · {ELEMENT_LABEL[battle.enemy.element]}</span>
-              <div
-                className="battle-enemy-token"
-                style={{ "--enemy": ELEMENT_COLOR[battle.enemy.element] ?? "#ed5f9f" } as CSSProperties}
-                aria-hidden
-              >
-                <span>幽</span>
-                <i />
-              </div>
-              <b>{battle.enemy.name}</b>
-              <em>
-                {battle.enemy.hp.toLocaleString("en-US")} / {battle.enemy.hpMax.toLocaleString("en-US")}
-              </em>
-              <div className="battle-hp battle-hp--enemy">
-                <div className="battle-hp__fill battle-hp__fill--enemy" style={{ width: `${enemyPct}%` }} />
-              </div>
-            </div>
-
-            <div className="battle-enemy-side">
-              <div className="battle-panel">
-                <div className="battle-panel__title">意图预告</div>
-                <div className="battle-intents">
-                  {battle.enemy.intents.map((intent) => (
-                    <div className="battle-intent" key={intent.id}>
-                      <span
-                        className="battle-intent__dot"
-                        style={{ background: ELEMENT_COLOR[intent.element] ?? "#8a9099" }}
-                      />
-                      <div>
-                        <b>{intent.label}</b>
-                        <em>
-                          {ELEMENT_LABEL[intent.element] ?? intent.element} · {enemyDamageTier(intent)}
-                        </em>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {battle.supports.length > 0 && (
-                <div className="battle-panel">
-                  <div className="battle-panel__title">侧面支援</div>
-                  <div className="battle-supports">
-                    {battle.supports.map((support) => (
-                      <div className="battle-support" key={support.id}>
-                        <span style={{ background: ELEMENT_COLOR[support.element] ?? "#8a9099" }} />
-                        <b>{support.name}</b>
-                        <em>自动攻击 50%</em>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </aside>
-
-        <section className="battle-center">
-          <div className="battle-team">
-            <div className="battle-team__head">
-              <span>YOUR TEAM · {battle.cards.filter((card) => !card.down).length} / 7</span>
-              <em>
-                {team.hp.toLocaleString("en-US")} / {team.max.toLocaleString("en-US")}
-              </em>
-            </div>
-            <div className="battle-hp battle-hp--team">
-              <div className="battle-hp__fill battle-hp__fill--team" style={{ width: `${teamPct}%` }} />
-            </div>
-          </div>
-
-          <div className="battle-cards">
-            {battle.cards.map((card, index) => {
-              const hpPct = (card.stats.hp / card.stats.hpMax) * 100
-              const canAct = battle.phase === "player" && !card.acted && !card.down
-              return (
-                <div
-                  className={`battle-card ${card.acted ? "is-acted" : ""} ${card.down ? "is-down" : ""}`}
-                  key={card.uid}
-                >
-                  <div className="battle-card__badges">
-                    <span>{card.subjob.label}</span>
-                    {card.face.foil && <em>✦ FLASH</em>}
-                  </div>
-                  <div className="battle-card__face">
-                    <GameCardFace card={card.face} />
-                  </div>
-                  <div className="battle-card__hp">
-                    <div className="battle-hp">
-                      <div className="battle-hp__fill battle-hp__fill--card" style={{ width: `${hpPct}%` }} />
-                    </div>
-                    <em>
-                      {card.stats.hp.toLocaleString("en-US")} / {card.stats.hpMax.toLocaleString("en-US")}
-                    </em>
-                  </div>
-                  <div className="battle-card__stats">
-                    <span>ATK {card.stats.atk.toLocaleString("en-US")}</span>
-                    <span>DEF {card.stats.def.toLocaleString("en-US")}</span>
-                    <span>INT {card.stats.int.toLocaleString("en-US")}</span>
-                  </div>
-                  <div className="battle-card__skills">
-                    {card.skills
-                      .filter((skill) => !skill.passive)
-                      .map((skill) => {
-                        const used = skill.once && card.usedOnce.includes(skill.id)
-                        const disabled = !canAct || battle.ap < skill.ap || used
-                        return (
-                          <button
-                            type="button"
-                            key={skill.id}
-                            className="battle-skill"
-                            onClick={() => play(index, skill.id)}
-                            disabled={disabled}
-                            title={skill.desc}
-                          >
-                            <span
-                              className="battle-skill__el"
-                              style={{ background: ELEMENT_COLOR[skill.element] ?? "#8a9099" }}
-                            />
-                            <b>{skill.name}</b>
-                            <em>
-                              {used ? "已用" : `${skill.ap} AP`}
-                              {skill.hits && skill.hits > 1 ? ` ×${skill.hits}` : ""}
-                            </em>
-                          </button>
-                        )
-                      })}
-                    {card.skills
-                      .filter((skill) => skill.passive)
-                      .map((skill) => (
-                        <span className="battle-passive" key={skill.id} title={skill.desc}>
-                          {skill.name}
-                        </span>
-                      ))}
-                  </div>
-                  {card.down && <div className="battle-card__overlay">DOWN</div>}
-                  {!card.down && card.acted && <div className="battle-card__overlay">已行动</div>}
-                </div>
-              )
-            })}
-          </div>
-
-          {battle.phase === "player" ? (
-            <div className="battle-actions">
-              <div className="battle-defense">
-                <span>防御</span>
-                {[1, 2, 3, 4].map((tier) => (
-                  <button
-                    type="button"
-                    key={tier}
-                    onClick={() => defend(tier)}
-                    disabled={
-                      tier <= battle.defenseTier ||
-                      battle.ap < tier - battle.defenseTier ||
-                      (tier === 4 && !hasTank)
-                    }
-                  >
-                    {["I", "II", "III", "IV"][tier - 1]}
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="battle-end" onClick={finishTurn}>
-                结束回合
-              </button>
-            </div>
-          ) : (
-            <div className="battle-result">
-              <b>
-                {tutorialFinished
-                  ? "教学战结束"
-                  : battle.phase === "won"
-                    ? "战斗胜利"
-                    : "战斗失败"}
-              </b>
-              <div>
-                {tutorialFinished ? (
-                  <a href="/">返回桌面继续教程</a>
-                ) : (
-                  <button type="button" onClick={start}>
-                    {tutorialRun ? "再试一次" : "再来一场"}
-                  </button>
-                )}
-                <a href="/">回桌面</a>
-              </div>
-            </div>
-          )}
-          {actionError && <div className="battle-action-error">{actionError}</div>}
-        </section>
-
-        <aside className="battle-side battle-side--log">
-          <div className="battle-panel battle-panel--log">
-            <div className="battle-panel__title">战斗记录</div>
-            <div className="battle-log">
-              {battle.log.map((line, index) => (
-                <div key={index}>{line}</div>
-              ))}
-            </div>
-          </div>
-          <div className="battle-panel">
-            <div className="battle-panel__title">规则摘要</div>
-            <p className="battle-note">
-              开局 2 AP，每回合 +2，未用 AP 累积，上限 7。Combo 每次命中 +1，回合结束清零。
-              防御档位独立乘算，非坦克最高 III，坦克可到 IV。
-            </p>
-          </div>
-        </aside>
-      </main>
-    </div>
+    <BattleStage
+      battle={battle}
+      deck={cards.map(toFace)}
+      enemyName={enemy.name}
+      enemyElement={enemy.element}
+      enemyHp={enemy.hpMax}
+      tutorial={tutorialRun}
+      actionError={actionError}
+      onStart={start}
+      onPlay={play}
+      onDefend={defend}
+      onEndTurn={finishTurn}
+      onRestart={start}
+    />
   )
 }

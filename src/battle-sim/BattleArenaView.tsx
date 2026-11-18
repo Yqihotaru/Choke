@@ -5,7 +5,7 @@ import { GameCardFace } from "../card/GameCardFace"
 import { ELEMENT_COLOR, ELEMENT_LABEL, JOB_LABEL } from "../card/data"
 import type { Element } from "../card/types"
 import type { BattleArenaProps, BossIntent } from "./battle.types"
-import "./rance-battle.css"
+import "../battle/choke-battle.css"
 
 export function BattleArenaView({
   phase,
@@ -70,29 +70,29 @@ export function BattleArenaView({
   const isOverkill = phase === "battle" && boss.hp <= 0
 
   return (
-    <div className="r10-viewport">
-      <div className="r10-stage" data-phase={phase}>
+    <div className="choke-viewport">
+      <div className="choke-stage" data-phase={phase}>
         {/* ================= 1. 上半区：BOSS 战区 ================= */}
-        <section className="r10-boss-zone">
+        <section className="choke-boss-zone">
           <div
-            className="r10-boss-backdrop"
+            className="choke-boss-backdrop"
             key={bossSlashKey}
             data-slashed={bossSlashKey > 0 ? "true" : undefined}
             data-dead={isOverkill ? "true" : undefined}
           />
 
           {/* 斩击闪光 */}
-          {bossSlashKey > 0 && <div className="r10-slash-fx" key={`slash-${bossSlashKey}`} aria-hidden />}
+          {bossSlashKey > 0 && <div className="choke-slash-fx" key={`slash-${bossSlashKey}`} aria-hidden />}
 
           {/* 敌方攻击红色激光靶线（精确指向被攻击的卡槽） */}
           {enemyLaserTargets.length > 0 && (
-            <svg className="r10-laser-svg" viewBox="0 0 100 56.25" preserveAspectRatio="none" aria-hidden>
+            <svg className="choke-laser-svg" viewBox="0 0 100 56.25" preserveAspectRatio="none" aria-hidden>
               {enemyLaserTargets.map((slotIdx) => {
                 const targetX = 11.4 + (slotIdx + 0.5) * (77.2 / Math.max(1, slots.length))
                 return (
                   <g key={slotIdx}>
-                    <line x1="50" y1="16" x2={targetX} y2="39.5" className="r10-laser-glow" />
-                    <line x1="50" y1="16" x2={targetX} y2="39.5" className="r10-laser-core" />
+                    <line x1="50" y1="16" x2={targetX} y2="39.5" className="choke-laser-glow" />
+                    <line x1="50" y1="16" x2={targetX} y2="39.5" className="choke-laser-core" />
                   </g>
                 )
               })}
@@ -100,11 +100,11 @@ export function BattleArenaView({
           )}
 
           {/* 右上角快捷按钮 */}
-          <div className="r10-top-tools">
+          <div className="choke-top-tools">
             {onRestartDemo && (
               <button
                 type="button"
-                className="r10-tool-btn"
+                className="choke-tool-btn"
                 onClick={() => {
                   setSwapOpen(false)
                   setOpenedChests({})
@@ -119,28 +119,28 @@ export function BattleArenaView({
 
           {phase === "prepare" ? (
             <>
-              <div className="r10-tapes r10-tapes--left" aria-hidden>
-                <span className="r10-tape">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
-                <span className="r10-tape r10-tape--sub">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
+              <div className="choke-tapes choke-tapes--left" aria-hidden>
+                <span className="choke-tape">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
+                <span className="choke-tape choke-tape--sub">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
               </div>
-              <div className="r10-tapes r10-tapes--right" aria-hidden>
-                <span className="r10-tape">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
-                <span className="r10-tape r10-tape--sub">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
+              <div className="choke-tapes choke-tapes--right" aria-hidden>
+                <span className="choke-tape">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
+                <span className="choke-tape choke-tape--sub">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
               </div>
 
-              <div className="r10-vs-giant" aria-hidden>
+              <div className="choke-vs-giant" aria-hidden>
                 VS
               </div>
-              <div className="r10-prep-title">{boss.name}</div>
-              <div className="r10-prep-badge">准备战斗</div>
+              <div className="choke-prep-title">{boss.name}</div>
+              <div className="choke-prep-badge">准备战斗</div>
 
-              <div className="r10-outcome-box">
-                <div className="r10-outcome-head">战斗结果决定路线分支</div>
-                <div className="r10-outcome-row">
+              <div className="choke-outcome-box">
+                <div className="choke-outcome-head">战斗结果决定路线分支</div>
+                <div className="choke-outcome-row">
                   <span>胜利</span>
                   <b>前进</b>
                 </div>
-                <div className="r10-outcome-row">
+                <div className="choke-outcome-row">
                   <span>败北</span>
                   <b>GAMEOVER</b>
                 </div>
@@ -149,31 +149,31 @@ export function BattleArenaView({
           ) : (
             <>
               {/* 左侧 BOSS 特性锁定条 + 结界层数 */}
-              <div className="r10-traits">
+              <div className="choke-traits">
                 {boss.barrierHits > 0 && (
-                  <div className="r10-trait r10-trait--barrier">
-                    <span className="r10-trait-icon" style={{ "--el": "#ffd859" } as CSSProperties}>
+                  <div className="choke-trait choke-trait--barrier">
+                    <span className="choke-trait-icon" style={{ "--el": "#ffd859" } as CSSProperties}>
                       <ElementGlyph element="light" />
                     </span>
-                    <span className="r10-trait-name">无敌结界 ×{boss.barrierHits}</span>
-                    <span className="r10-trait-lock">🔒</span>
+                    <span className="choke-trait-name">无敌结界 ×{boss.barrierHits}</span>
+                    <span className="choke-trait-lock">🔒</span>
                   </div>
                 )}
                 {boss.traits.map((t) => (
-                  <div className="r10-trait" key={t.name}>
-                    <span className="r10-trait-icon" style={{ "--el": ELEMENT_COLOR[t.element] } as CSSProperties}>
+                  <div className="choke-trait" key={t.name}>
+                    <span className="choke-trait-icon" style={{ "--el": ELEMENT_COLOR[t.element] } as CSSProperties}>
                       <ElementGlyph element={t.element} />
                     </span>
-                    <span className="r10-trait-name">{t.name}</span>
-                    {t.locked && <span className="r10-trait-lock">🔒</span>}
+                    <span className="choke-trait-name">{t.name}</span>
+                    {t.locked && <span className="choke-trait-lock">🔒</span>}
                   </div>
                 ))}
                 {boss.awakenStack > 0 && (
-                  <div className="r10-trait r10-trait--stack">
-                    <span className="r10-trait-icon" style={{ "--el": "#ff5b3b" } as CSSProperties}>
+                  <div className="choke-trait choke-trait--stack">
+                    <span className="choke-trait-icon" style={{ "--el": "#ff5b3b" } as CSSProperties}>
                       <ElementGlyph element="fire" />
                     </span>
-                    <span className="r10-trait-name">
+                    <span className="choke-trait-name">
                       知性觉醒 ({boss.awakenStack}/{boss.maxAwaken})
                     </span>
                   </div>
@@ -182,18 +182,18 @@ export function BattleArenaView({
 
               {/* 右侧 3 格支援槽（对应视频 0:11 蓝条上方的支援使徒条） */}
               {supports.length > 0 && (
-                <div className="r10-supports">
+                <div className="choke-supports">
                   {supports.map((sup) => (
                     <div
                       key={sup.id}
-                      className="r10-support-card"
+                      className="choke-support-card"
                       data-active={sup.triggered ? "true" : undefined}
                       style={{ "--el": ELEMENT_COLOR[sup.element] } as CSSProperties}
                     >
-                      <span className="r10-support-icon">
+                      <span className="choke-support-icon">
                         <JobGlyph job={sup.job} />
                       </span>
-                      <div className="r10-support-info">
+                      <div className="choke-support-info">
                         <b>{sup.name}</b>
                         <small>{sup.roleText}</small>
                       </div>
@@ -204,12 +204,12 @@ export function BattleArenaView({
 
               {/* OVER KILL 橙色六边形爆表指示器（BOSS 归零后继续连击触发） */}
               {isOverkill && (
-                <div className="r10-overkill-box">
-                  <div className="r10-overkill-hex">
+                <div className="choke-overkill-box">
+                  <div className="choke-overkill-hex">
                     <i>OVER KILL</i>
                     <b>{overkillPct}%</b>
                   </div>
-                  <button type="button" className="r10-overkill-claim" onClick={onFinishOverkill}>
+                  <button type="button" className="choke-overkill-claim" onClick={onFinishOverkill}>
                     结算战果 ▶
                   </button>
                 </div>
@@ -217,40 +217,40 @@ export function BattleArenaView({
 
               {/* 支援攻击 / 技能施放 / 援护横幅 */}
               {supportCutin && (
-                <div className="r10-skill-banner r10-skill-banner--support">
-                  <span className="r10-banner-tag">SUPPORT</span>
+                <div className="choke-skill-banner choke-skill-banner--support">
+                  <span className="choke-banner-tag">SUPPORT</span>
                   <b>{supportCutin.name}</b>
                   <span>{supportCutin.actionText}</span>
                 </div>
               )}
 
               {activeCutin && (
-                <div className="r10-skill-banner" key={activeCutin.skillName + combo}>
-                  <span className="r10-banner-tag">{activeCutin.jobLabel}</span>
+                <div className="choke-skill-banner" key={activeCutin.skillName + combo}>
+                  <span className="choke-banner-tag">{activeCutin.jobLabel}</span>
                   <b>{activeCutin.cardName}</b>
                   <span>的「{activeCutin.skillName}」！</span>
                 </div>
               )}
 
-              {guardBanner && <div className="r10-guard-banner">{guardBanner}</div>}
+              {guardBanner && <div className="choke-guard-banner">{guardBanner}</div>}
 
               {/* 中央伤害跳字 + COMBO 计数 */}
               {damagePopup && (
-                <div className="r10-damage-stage" key={damagePopup.id}>
+                <div className="choke-damage-stage" key={damagePopup.id}>
                   <div
-                    className="r10-dmg-num"
+                    className="choke-dmg-num"
                     data-weak={damagePopup.isWeak ? "true" : undefined}
                     data-blocked={damagePopup.blocked ? "true" : undefined}
                   >
                     {damagePopup.value.toLocaleString("en-US")}
                   </div>
-                  {damagePopup.blocked && <div className="r10-weak-hit">BARRIER!</div>}
-                  {!damagePopup.blocked && damagePopup.isWeak && <div className="r10-weak-hit">WEAK!</div>}
+                  {damagePopup.blocked && <div className="choke-weak-hit">BARRIER!</div>}
+                  {!damagePopup.blocked && damagePopup.isWeak && <div className="choke-weak-hit">WEAK!</div>}
                 </div>
               )}
 
               {combo > 0 && (
-                <div className="r10-combo-counter" key={`combo-${combo}`}>
+                <div className="choke-combo-counter" key={`combo-${combo}`}>
                   <b>{combo}</b>
                   <span>COMBO!</span>
                 </div>
@@ -258,7 +258,7 @@ export function BattleArenaView({
 
               {/* PLAYER TURN / ENEMY TURN 切换大字 */}
               {turnBanner && (
-                <div className="r10-turn-sweep" data-owner={turnOwner}>
+                <div className="choke-turn-sweep" data-owner={turnOwner}>
                   {turnBanner}
                 </div>
               )}
@@ -267,25 +267,25 @@ export function BattleArenaView({
         </section>
 
         {/* ================= 2. 中轴区：剪影 + 双血条 + 行动预告 + Round + AP ================= */}
-        <section className="r10-hud-band">
-          <div className="r10-hud-meta">
-            <div className="r10-side-info r10-side-info--boss">
-              <div className="r10-army-silhouette r10-army-silhouette--boss" aria-hidden />
-              <div className="r10-side-name">{boss.name}</div>
-              <div className="r10-hp-num">
+        <section className="choke-hud-band">
+          <div className="choke-hud-meta">
+            <div className="choke-side-info choke-side-info--boss">
+              <div className="choke-army-silhouette choke-army-silhouette--boss" aria-hidden />
+              <div className="choke-side-name">{boss.name}</div>
+              <div className="choke-hp-num">
                 <i>Hp</i>
                 <b>{boss.hp.toLocaleString("en-US")}</b>
               </div>
             </div>
 
-            <div className="r10-center-meta">
-              <div className="r10-weakness">
+            <div className="choke-center-meta">
+              <div className="choke-weakness">
                 <span>弱点属性 ▶▶</span>
-                <div className="r10-weakness-icons">
+                <div className="choke-weakness-icons">
                   {boss.weaknesses.map((w) => (
                     <span
                       key={w}
-                      className="r10-weak-el"
+                      className="choke-weak-el"
                       title={ELEMENT_LABEL[w]}
                       style={{ "--el": ELEMENT_COLOR[w] } as CSSProperties}
                     >
@@ -296,11 +296,11 @@ export function BattleArenaView({
               </div>
 
               {phase === "battle" && (
-                <div className="r10-intents">
+                <div className="choke-intents">
                   {boss.intents.map((intent, idx) => (
                     <div
                       key={`${intent.id}-${idx}`}
-                      className="r10-intent-box"
+                      className="choke-intent-box"
                       style={{ "--el": ELEMENT_COLOR[intent.element] } as CSSProperties}
                       onMouseEnter={() => setHoveredIntent(intent)}
                       onMouseLeave={() => setHoveredIntent(null)}
@@ -310,66 +310,66 @@ export function BattleArenaView({
                     </div>
                   ))}
                   {hoveredIntent && (
-                    <div className="r10-tooltip r10-tooltip--intent">
-                      <div className="r10-tooltip-title">{hoveredIntent.name}</div>
-                      <div className="r10-tooltip-sub">{hoveredIntent.kind}</div>
-                      <div className="r10-tooltip-desc">{hoveredIntent.desc}</div>
+                    <div className="choke-tooltip choke-tooltip--intent">
+                      <div className="choke-tooltip-title">{hoveredIntent.name}</div>
+                      <div className="choke-tooltip-sub">{hoveredIntent.kind}</div>
+                      <div className="choke-tooltip-desc">{hoveredIntent.desc}</div>
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            <div className="r10-side-info r10-side-info--party">
-              <div className="r10-army-silhouette r10-army-silhouette--party" aria-hidden />
-              <div className="r10-side-name">{partyName}</div>
-              <div className="r10-hp-num">
+            <div className="choke-side-info choke-side-info--party">
+              <div className="choke-army-silhouette choke-army-silhouette--party" aria-hidden />
+              <div className="choke-side-name">{partyName}</div>
+              <div className="choke-hp-num">
                 <i>Hp</i>
                 <b>{partyHp.toLocaleString("en-US")}</b>
               </div>
             </div>
           </div>
 
-          <div className="r10-gauges">
-            <div className="r10-gauge r10-gauge--boss">
-              <div className="r10-gauge-track">
-                <div className="r10-gauge-fill" style={{ width: `${bossPct}%` }} />
+          <div className="choke-gauges">
+            <div className="choke-gauge choke-gauge--boss">
+              <div className="choke-gauge-track">
+                <div className="choke-gauge-fill" style={{ width: `${bossPct}%` }} />
               </div>
             </div>
 
             <button
               type="button"
-              className="r10-center-orb"
+              className="choke-center-orb"
               onClick={phase === "prepare" ? onStartBattle : undefined}
             >
               {phase === "prepare" ? (
-                <span className="r10-orb-start">战斗开始</span>
+                <span className="choke-orb-start">战斗开始</span>
               ) : (
                 <>
-                  <i className="r10-orb-round">Round</i>
-                  <b className="r10-orb-num">{round}</b>
-                  <span className="r10-orb-vs">VS</span>
+                  <i className="choke-orb-round">Round</i>
+                  <b className="choke-orb-num">{round}</b>
+                  <span className="choke-orb-vs">VS</span>
                 </>
               )}
             </button>
 
-            <div className="r10-gauge r10-gauge--party">
-              <div className="r10-gauge-track">
-                <div className="r10-gauge-fill" style={{ width: `${partyPct}%` }} />
+            <div className="choke-gauge choke-gauge--party">
+              <div className="choke-gauge-track">
+                <div className="choke-gauge-fill" style={{ width: `${partyPct}%` }} />
               </div>
             </div>
           </div>
 
-          <div className="r10-sub-hud">
-            <div className="r10-status-strip r10-status-strip--boss">
+          <div className="choke-sub-hud">
+            <div className="choke-status-strip choke-status-strip--boss">
               {boss.awakenStack > 0 && (
-                <span className="r10-buff-pill r10-buff-pill--bad">魔人觉醒 ×{boss.awakenStack}</span>
+                <span className="choke-buff-pill choke-buff-pill--bad">魔人觉醒 ×{boss.awakenStack}</span>
               )}
             </div>
 
-            <div className="r10-ap-bar">
-              <span className="r10-ap-label">Ap</span>
-              <div className="r10-ap-gems">
+            <div className="choke-ap-bar">
+              <span className="choke-ap-label">Ap</span>
+              <div className="choke-ap-gems">
                 {Array.from({ length: maxAp }, (_, idx) => {
                   const n = idx + 1
                   const active = n <= ap
@@ -377,7 +377,7 @@ export function BattleArenaView({
                   return (
                     <span
                       key={n}
-                      className="r10-ap-gem"
+                      className="choke-ap-gem"
                       data-active={active ? "true" : undefined}
                       data-preview={previewConsume ? "true" : undefined}
                     >
@@ -388,9 +388,9 @@ export function BattleArenaView({
               </div>
             </div>
 
-            <div className="r10-status-strip r10-status-strip--party">
+            <div className="choke-status-strip choke-status-strip--party">
               {partyBuffs.map((b) => (
-                <span className="r10-buff-pill" key={b}>
+                <span className="choke-buff-pill" key={b}>
                   {b}
                 </span>
               ))}
@@ -399,31 +399,31 @@ export function BattleArenaView({
         </section>
 
         {/* ================= 3. 下半区：7 卡指令台 ================= */}
-        <section className="r10-deck">
-          <aside className="r10-wing r10-wing--left">
+        <section className="choke-deck">
+          <aside className="choke-wing choke-wing--left">
             <button
               type="button"
-              className="r10-btn-panel"
+              className="choke-btn-panel"
               disabled={phase !== "battle" || turnOwner !== "player" || swapCooldown > 0 || bench.length === 0}
               onClick={() => setSwapOpen((v) => !v)}
             >
               <span>{swapOpen ? "关闭换人" : "更换人员"}</span>
               <small>{swapCooldown > 0 ? `${swapCooldown} Round后` : `备战 ${bench.length} 张`}</small>
             </button>
-            <div className="r10-wing-toggles">
-              <button type="button" className="r10-btn-mini" onClick={onToggleSpeed}>
+            <div className="choke-wing-toggles">
+              <button type="button" className="choke-btn-mini" onClick={onToggleSpeed}>
                 <span>速度:{speedHigh ? "高速" : "常速"}</span>
               </button>
-              <button type="button" className="r10-btn-mini" onClick={() => setLogOpen((v) => !v)}>
+              <button type="button" className="choke-btn-mini" onClick={() => setLogOpen((v) => !v)}>
                 <span>战报</span>
               </button>
             </div>
-            <button type="button" className="r10-btn-menu" onClick={() => setLogOpen((v) => !v)}>
+            <button type="button" className="choke-btn-menu" onClick={() => setLogOpen((v) => !v)}>
               MENU
             </button>
           </aside>
 
-          <div className="r10-party-grid">
+          <div className="choke-party-grid">
             {slots.map((slot, index) => {
               const { card, cooldown, boost, hitDamage, guarding } = slot
               const isHovered = hoveredSlot === index
@@ -435,7 +435,7 @@ export function BattleArenaView({
               return (
                 <div
                   key={card.id}
-                  className="r10-card-slot"
+                  className="choke-card-slot"
                   data-boost={boost && !onCd ? "true" : undefined}
                   data-cd={onCd ? "true" : undefined}
                   data-guarding={guarding ? "true" : undefined}
@@ -451,24 +451,24 @@ export function BattleArenaView({
                 >
                   {/* 悬浮技能详情 Tooltip */}
                   {!swapOpen && phase === "battle" && hoveredSkill && hoveredSkill.slotIndex === index && (
-                    <div className="r10-tooltip r10-tooltip--skill">
-                      <div className="r10-tooltip-title">{hoveredSkill.name}</div>
-                      <div className="r10-tooltip-sub">
+                    <div className="choke-tooltip choke-tooltip--skill">
+                      <div className="choke-tooltip-title">{hoveredSkill.name}</div>
+                      <div className="choke-tooltip-sub">
                         {tooltipMeta ? `${tooltipMeta.range} · ${tooltipMeta.mult}倍 · 冷却 ${tooltipMeta.cd} 回合` : `消耗 ${hoveredSkill.ap} AP`}
                       </div>
-                      {tooltipMeta?.desc && <div className="r10-tooltip-desc">{tooltipMeta.desc}</div>}
+                      {tooltipMeta?.desc && <div className="choke-tooltip-desc">{tooltipMeta.desc}</div>}
                     </div>
                   )}
 
-                  {boost && !onCd && <span className="r10-boost-tag">BOOST</span>}
-                  {guarding && <span className="r10-guard-chip">援护防御!</span>}
-                  {hitDamage != null && <span className="r10-card-hit">-{hitDamage}</span>}
+                  {boost && !onCd && <span className="choke-boost-tag">BOOST</span>}
+                  {guarding && <span className="choke-guard-chip">援护防御!</span>}
+                  {hitDamage != null && <span className="choke-card-hit">-{hitDamage}</span>}
 
-                  <div className="r10-card-frame">
+                  <div className="choke-card-frame">
                     <GameCardFace card={card} eager />
 
                     {onCd && (
-                      <div className="r10-cd-seal">
+                      <div className="choke-cd-seal">
                         <span>冷却</span>
                         <b>{cooldown}</b>
                       </div>
@@ -480,14 +480,14 @@ export function BattleArenaView({
                       !onCd &&
                       isHovered &&
                       activeSkills.length > 0 && (
-                        <div className="r10-card-overlay-skills">
+                        <div className="choke-card-overlay-skills">
                           {activeSkills.map((sk) => {
                             const affordable = ap >= sk.ap
                             return (
                               <button
                                 key={sk.name}
                                 type="button"
-                                className="r10-overlay-skill-btn"
+                                className="choke-overlay-skill-btn"
                                 disabled={!affordable}
                                 onMouseEnter={() => {
                                   setHoveredSkill({ slotIndex: index, name: sk.name, element: sk.element, ap: sk.ap })
@@ -515,10 +515,10 @@ export function BattleArenaView({
             })}
           </div>
 
-          <aside className="r10-wing r10-wing--right">
+          <aside className="choke-wing choke-wing--right">
             <button
               type="button"
-              className="r10-btn-defend"
+              className="choke-btn-defend"
               disabled={phase !== "battle" || turnOwner !== "player" || ap < 1 || isOverkill}
               onMouseEnter={() => phase === "battle" && ap >= 1 && setPreviewAp(1)}
               onMouseLeave={() => setPreviewAp(0)}
@@ -529,7 +529,7 @@ export function BattleArenaView({
             </button>
             <button
               type="button"
-              className="r10-btn-end"
+              className="choke-btn-end"
               disabled={phase === "battle" && turnOwner !== "player"}
               onClick={isOverkill ? onFinishOverkill : onEndRound}
             >
@@ -540,40 +540,40 @@ export function BattleArenaView({
 
         {/* ================= 4. 战中换人抽屉（对应视频 0:32–0:52） ================= */}
         {swapOpen && phase === "battle" && (
-          <div className="r10-swap-drawer">
-            <div className="r10-swap-head">
+          <div className="choke-swap-drawer">
+            <div className="choke-swap-head">
               <div>
                 <b>部队换人</b>
                 <span>
                   当前选中替换位置：#{swapOutIdx + 1} 【{slots[swapOutIdx]?.card.name}】 → 请在下方选择备战卡牌
                 </span>
               </div>
-              <button type="button" className="r10-swap-close" onClick={() => setSwapOpen(false)}>
+              <button type="button" className="choke-swap-close" onClick={() => setSwapOpen(false)}>
                 返回战斗 ✕
               </button>
             </div>
-            <div className="r10-swap-grid">
+            <div className="choke-swap-grid">
               {bench.map((b) => (
                 <button
                   key={b.card.id}
                   type="button"
-                  className="r10-bench-item"
+                  className="choke-bench-item"
                   disabled={b.cooldown > 0}
                   onClick={() => {
                     onSwapCard(swapOutIdx, b.card.id)
                     setSwapOpen(false)
                   }}
                 >
-                  <div className="r10-bench-card">
+                  <div className="choke-bench-card">
                     <GameCardFace card={b.card} />
                     {b.cooldown > 0 && (
-                      <div className="r10-cd-seal">
+                      <div className="choke-cd-seal">
                         <span>冷却</span>
                         <b>{b.cooldown}</b>
                       </div>
                     )}
                   </div>
-                  <span className="r10-bench-meta">
+                  <span className="choke-bench-meta">
                     {JOB_LABEL[b.card.job]} · LV{b.card.level}
                   </span>
                 </button>
@@ -583,17 +583,17 @@ export function BattleArenaView({
         )}
 
         {/* ================= 5. 最底栏与 LOG 抽屉 ================= */}
-        <footer className="r10-footer">
-          <span className="r10-ticker">{logs[0] ?? ""}</span>
-          <button type="button" className="r10-log-toggle" onClick={() => setLogOpen((v) => !v)}>
+        <footer className="choke-footer">
+          <span className="choke-ticker">{logs[0] ?? ""}</span>
+          <button type="button" className="choke-log-toggle" onClick={() => setLogOpen((v) => !v)}>
             {logOpen ? "▼ LOG ▼" : "▲ LOG ▲"}
           </button>
         </footer>
 
         {logOpen && (
-          <div className="r10-log-drawer">
+          <div className="choke-log-drawer">
             {logs.map((line, i) => (
-              <div key={i} className="r10-log-line">
+              <div key={i} className="choke-log-line">
                 {line}
               </div>
             ))}
@@ -602,18 +602,18 @@ export function BattleArenaView({
 
         {/* ================= 6. 战中剧情插播对话层 ================= */}
         {dialogue && (
-          <div className="r10-dialogue-layer" onClick={onAdvanceDialogue}>
-            <div className="r10-dialogue-box">
-              <div className="r10-dialogue-head">
+          <div className="choke-dialogue-layer" onClick={onAdvanceDialogue}>
+            <div className="choke-dialogue-box">
+              <div className="choke-dialogue-head">
                 <small>{dialogue.title}</small>
                 <b>{dialogue.speaker}</b>
               </div>
-              <p className="r10-dialogue-text">{dialogue.text}</p>
-              <span className="r10-dialogue-next">点击继续 ▶</span>
+              <p className="choke-dialogue-text">{dialogue.text}</p>
+              <span className="choke-dialogue-next">点击继续 ▶</span>
             </div>
             <button
               type="button"
-              className="r10-dialogue-skip"
+              className="choke-dialogue-skip"
               onClick={(e) => {
                 e.stopPropagation()
                 onSkipDialogue()
@@ -626,36 +626,36 @@ export function BattleArenaView({
 
         {/* ================= 7. 战后结算与开宝箱（对应视频 2:39–2:46） ================= */}
         {phase === "victory" && victory && (
-          <div className="r10-victory-layer">
-            <div className="r10-victory-title">WIN</div>
+          <div className="choke-victory-layer">
+            <div className="choke-victory-title">WIN</div>
 
-            <div className="r10-victory-grid">
-              <div className="r10-victory-panel">
-                <div className="r10-v-row r10-v-row--big">
+            <div className="choke-victory-grid">
+              <div className="choke-victory-panel">
+                <div className="choke-v-row choke-v-row--big">
                   <span>宝箱掉落概率</span>
                   <b>{victory.chestRatePct}%</b>
                 </div>
-                <div className="r10-v-sub">包含 OVER KILL +{overkillPct}% 额外加成</div>
+                <div className="choke-v-sub">包含 OVER KILL +{overkillPct}% 额外加成</div>
 
-                <div className="r10-chests-row">
+                <div className="choke-chests-row">
                   {victory.rewards.map((item, idx) => {
                     const opened = Boolean(openedChests[idx])
                     return (
                       <button
                         key={item.id}
                         type="button"
-                        className="r10-chest-slot"
+                        className="choke-chest-slot"
                         data-opened={opened ? "true" : undefined}
                         onClick={() => setOpenedChests((prev) => ({ ...prev, [idx]: true }))}
                       >
                         {!opened ? (
-                          <div className="r10-chest-closed">
+                          <div className="choke-chest-closed">
                             <b>🎁</b>
                             <span>点击开启</span>
                           </div>
                         ) : (
-                          <div className="r10-chest-reward">
-                            {item.isNew && <i className="r10-new-pill">NEW!</i>}
+                          <div className="choke-chest-reward">
+                            {item.isNew && <i className="choke-new-pill">NEW!</i>}
                             <b>{item.title}</b>
                             <small>{item.subtitle}</small>
                           </div>
@@ -666,18 +666,18 @@ export function BattleArenaView({
                 </div>
               </div>
 
-              <div className="r10-victory-panel">
-                <div className="r10-v-row">
+              <div className="choke-victory-panel">
+                <div className="choke-v-row">
                   <span>基本 EXP</span>
                   <b>{victory.baseExp}</b>
                 </div>
                 {victory.bonusRates.map((r) => (
-                  <div className="r10-v-row" key={r.label}>
+                  <div className="choke-v-row" key={r.label}>
                     <span>{r.label}</span>
                     <b>+{r.pct}%</b>
                   </div>
                 ))}
-                <div className="r10-v-row r10-v-row--big r10-v-row--exp">
+                <div className="choke-v-row choke-v-row--big choke-v-row--exp">
                   <span>最终获得 EXP</span>
                   <b>{victory.finalExp.toLocaleString("en-US")}</b>
                 </div>
@@ -685,7 +685,7 @@ export function BattleArenaView({
                 {onRestartDemo && (
                   <button
                     type="button"
-                    className="r10-v-continue"
+                    className="choke-v-continue"
                     onClick={() => {
                       setOpenedChests({})
                       onRestartDemo()
