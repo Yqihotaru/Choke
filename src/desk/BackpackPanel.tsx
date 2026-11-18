@@ -32,7 +32,7 @@ interface PackMeta {
 
 const MYSTERY_ID = "mystery"
 
-/** 背包里的展示顺序是 UI 决定；名称、每包张数从 GET /packs 读。 */
+/** 背包里的展示顺序是 UI 决定；名称、每包张数从 GET /config 读。 */
 const PACK_ORDER = ["idle", "normal", "golden", "radiant", "sky", "prism"] as const
 
 const PACK_TAGLINE: Record<PackPool, string> = {

@@ -11,7 +11,7 @@ export const RARITY_COLOR: Record<Rarity, string> = {
   Prismatic: "#F4F4F6",
 }
 
-/** UI 侧的卡池展示信息。权重/保底/每包张数由 API 的 GET /packs 提供。 */
+/** UI 侧的卡池展示信息。权重/保底/每包张数由 API 的 GET /config 提供。 */
 export interface PoolMeta {
   label: string
   short: string

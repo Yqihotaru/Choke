@@ -1,4 +1,4 @@
-/** 卡包/卡池的唯一权威配置。前端通过 GET /packs 读取，不再维护第二份权重。 */
+/** 卡包/卡池的唯一权威配置。前端通过 GET /config 读取，不再维护第二份权重。 */
 export const PACKS = {
   normal: {
     name: "普通卡包",
