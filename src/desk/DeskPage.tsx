@@ -1,5 +1,4 @@
 import {
-  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -8,9 +7,6 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react"
-import { CardFace } from "@/card/CardFace"
-
-import { cardFromDesk } from "./cardFace"
 
 import { DeskObject, type DealButtonState } from "./DeskObject"
 import { DeskDrawer, type DeskDrawerHandle } from "./DeskDrawer"
@@ -21,7 +17,7 @@ import {
   type PanelId,
 } from "./DeskBook"
 import { DragGhost } from "./DragGhost"
-import { toFace, type ApiUserCard } from "./api"
+import { toFace } from "./api"
 import {
   ALBUM_HOVER_EVENT,
   BACKPACK_HOVER_EVENT,
@@ -43,7 +39,7 @@ import {
   TUTORIAL_CLOSE_BOOK_EVENT,
   TUTORIAL_ENSURE_STARTER_EVENT,
 } from "@/tutorial/events"
-import { expToNextLevel, useTutorialProgress } from "@/tutorial/store"
+import { useTutorialProgress } from "@/tutorial/store"
 import { TutorialOverlay } from "@/tutorial/TutorialOverlay"
 import {
   isModuleUnlocked,
@@ -57,123 +53,21 @@ import { DEFAULT_SKIN } from "./skins"
 import { publishDeskCardIds } from "./presence"
 import { cardsToItems, ITEM_SIZE, newId, sizeOf, useDesk } from "./store"
 import type { CardData, DeskItem, PackPool } from "./types"
-import { PackArt } from "./opening/PackArt"
+import { DeskCard, DeskPack, LevelMeter } from "./DeskBits"
+import {
+  POOL_KEY,
+  SERVER_POOL,
+  acceptsDrop,
+  readSavedPool,
+  tiltOf,
+  type CardResponse,
+  type DeskUser,
+  type FlightSlot,
+  type FlightSource,
+  type OpenResponse,
+} from "./desk-page-model"
 import { PackOpener, type OriginRect } from "./opening/PackOpener"
 import "./desk.css"
-
-/** 卡牌域很重；桌面状态变化时复用同一张卡面。 */
-const DeskCard = memo(function DeskCard({
-  card,
-  hero,
-}: {
-  card: CardData
-  hero: ApiUserCard | null
-}) {
-  return (
-    <CardFace card={card.isHero && hero ? toFace(hero) : cardFromDesk(card)} />
-  )
-})
-
-const DeskPack = memo(function DeskPack({ pool }: { pool: PackPool }) {
-  return (
-    <div className="desk-pack">
-      <PackArt pool={pool} />
-    </div>
-  )
-})
-
-const POOL_KEY = "choke.pool"
-
-const SERVER_POOL: Record<PackPool, string> = {
-  normal: "normal",
-  idle: "idle",
-  golden: "golden",
-  radiant: "radiant",
-  sky: "sky",
-  prism: "prism",
-}
-
-interface OpenResponse {
-  ok: boolean
-  data?: {
-    results: { cardId: string; userCardId: number; foil: boolean }[]
-    pity: { before: number; after: number }
-    packs?: Record<string, number>
-  }
-  error?: { code?: string; message?: string }
-}
-
-type CardRow = Omit<
-  ApiUserCard,
-  "userCardId" | "level" | "constellation" | "exp" | "foil"
->
-
-interface CardResponse {
-  ok: boolean
-  data?: CardRow
-  error?: { message?: string }
-}
-
-interface DeskUser {
-  id: string
-  username: string
-  publicId: number | null
-  avatarUrl: string | null
-  essence: number
-  coins: number
-  hero: ApiUserCard | null
-  onboarded: boolean
-}
-
-/** 松手那一刻物件的位置和姿态，飞行动画从这里接手 */
-interface FlightSource {
-  left: number
-  top: number
-  viewportLeft: number
-  viewportTop: number
-  transform: string
-  transformOrigin: string
-}
-
-/** 飞行落点：物件左上角在桌面里的坐标；scale 是落地时的缩放，fade 为 true 时边飞边淡出 */
-interface FlightSlot {
-  left: number
-  top: number
-  scale?: number
-  fade?: boolean
-}
-
-/** 每个物件一个轻微的固定角度，让桌面看起来是随手摆放的 */
-function tiltOf(id: string) {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return ((h % 7) - 3) * 0.8
-}
-
-/** 卡只能收进卡册，卡包只能放回纸盒 */
-function acceptsDrop(target: DeskObjectId | undefined, item: DeskItem) {
-  return (
-    (target === "album" && item.kind === "card") ||
-    (target === "backpack" && item.kind === "pack")
-  )
-}
-
-/** 顶栏的等级条：教程经验 / 解锁进度都往这里反馈 */
-function LevelMeter({ level, exp }: { level: number; exp: number }) {
-  const need = expToNextLevel(level)
-  const percent = Math.min(100, Math.round((exp / Math.max(1, need)) * 100))
-  return (
-    <div className="desk-level" title={`Lv.${level} · ${exp} / ${need} EXP`}>
-      <b>Lv.{level}</b>
-      <span className="desk-level__track" aria-hidden>
-        <i style={{ width: `${percent}%` }} />
-      </span>
-      <em>
-        {exp}/{need}
-      </em>
-    </div>
-  )
-}
 
 export function DeskPage() {
   const { items, move, front, spawn, remove, reset, stow, unstow } = useDesk()
@@ -194,11 +88,7 @@ export function DeskPage() {
     pool: PackPool
     rect?: OriginRect
   } | null>(null)
-  const [pool, setPool] = useState<PackPool>(() => {
-    const saved = localStorage.getItem(POOL_KEY)
-    const normalized = saved === "quest" ? "golden" : saved
-    return normalized && normalized in POOL_META ? (normalized as PackPool) : "normal"
-  })
+  const [pool, setPool] = useState<PackPool>(readSavedPool)
   const config = useGameConfig()
   const packSize = config?.packSize ?? 5
   const [pressing, setPressing] = useState(false)
