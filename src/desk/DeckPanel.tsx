@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL, battlePower } from "@/card/data"
 import { RARITIES, type Rarity } from "@/card/types"
 import { emitTutorialEvent } from "@/tutorial/events"
@@ -601,5 +601,5 @@ export const DeckPanel = memo(function DeckPanel({
 
 // 卡面只跟随卡实例变化，输入、选槽和拖放高亮不重新生成卡面树。
 const DeckFace = memo(function DeckFace({ row }: { row: ApiUserCard }) {
-  return <CardFace card={toFace(row)} eager />
+  return <GameCardFace card={toFace(row)} eager />
 })

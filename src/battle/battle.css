@@ -824,11 +824,11 @@
   width: 100%;
 }
 
-.battle-card__face .cf {
+.battle-card__face .card-face {
   width: 100%;
 }
 
-.battle-card__face .cf a {
+.battle-card__face .card-face a {
   pointer-events: none;
 }
 

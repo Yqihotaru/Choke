@@ -6,7 +6,7 @@ import {
   type CSSProperties,
 } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import type { CardFaceData, Rarity } from "@/card/types"
 import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
@@ -67,6 +67,8 @@ interface OpenResponse {
       fromPity: boolean
       userCardId: number
       foil: boolean
+      serial: number
+      pulled: number
     }[]
     pity: Pity
     packs?: Record<string, number>
@@ -237,6 +239,8 @@ export function GachaPanel({
               constellation: 0,
               exp: 0,
               foil: item.foil,
+              serial: item.serial,
+              pulled: detail.data.pulled ?? item.pulled,
             }),
             userCardId: item.userCardId,
           }
@@ -435,7 +439,7 @@ export function GachaPanel({
                       }
                       title="拖到桌面"
                     >
-                      <CardFace card={card} />
+                      <GameCardFace card={card} />
                     </div>
                   ))}
             </div>

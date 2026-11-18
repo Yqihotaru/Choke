@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
 
 import {
@@ -119,7 +119,7 @@ export function MarketPanel({
                   {ownListings.map((listing) => (
                     <div className="bk-row" key={listing.id}>
                       <div className="market-own__face">
-                        <CardFace card={toFace(listing.card)} />
+                        <GameCardFace card={toFace(listing.card)} />
                       </div>
                       <div className="market-own__text">
                         <b>{listing.card.name}</b>
@@ -155,7 +155,7 @@ export function MarketPanel({
                 return (
                   <article className="market-card" key={listing.id}>
                     <div className="market-card__face">
-                      <CardFace card={toFace(listing.card)} />
+                      <GameCardFace card={toFace(listing.card)} />
                     </div>
                     <b className="market-card__name">{listing.card.name}</b>
                     <span className="market-card__meta">

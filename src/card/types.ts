@@ -54,6 +54,10 @@ export interface CardFaceData {
   constellation: number
   no: number
   total: number
+  /** 实例序号：这张卡被发出的第几张；没有实例（图鉴、预览）时缺省 */
+  serial?: number
+  /** 这张卡累计发行多少张 */
+  pulled?: number
   skills: CardSkill[]
   /** 立绘；缺省时使用占位图。玩家卡用头像地址，由浏览器随看随载。 */
   art?: string

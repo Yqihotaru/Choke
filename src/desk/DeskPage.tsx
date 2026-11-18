@@ -17,7 +17,7 @@ import {
   type PanelId,
 } from "./DeskBook"
 import { DragGhost } from "./DragGhost"
-import { toFace } from "./api"
+import { fetchUserCards, toFace } from "./api"
 import {
   ALBUM_HOVER_EVENT,
   BACKPACK_HOVER_EVENT,
@@ -70,7 +70,7 @@ import { PackOpener, type OriginRect } from "./opening/PackOpener"
 import "./desk.css"
 
 export function DeskPage() {
-  const { items, move, front, spawn, remove, reset, stow, unstow } = useDesk()
+  const { items, move, front, spawn, remove, reset, stow, unstow, refreshFaces } = useDesk()
   const stageRef = useRef<HTMLDivElement>(null)
   const [stageSize, setStageSize] = useState({ w: 1200, h: 700 })
   const [lifted, setLifted] = useState<{
@@ -95,6 +95,8 @@ export function DeskPage() {
   const pressingRef = useRef(false)
   const pressHandled = useRef(false)
   const [pressId, setPressId] = useState(0)
+  /** 按压动画结束后，请求仍可能进行中；继续拦住重复 /take。 */
+  const dealBusy = useRef(false)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [collecting, setCollecting] = useState<{
     id: string
@@ -384,6 +386,27 @@ export function DeskPage() {
   useEffect(() => {
     itemsRef.current = items
   }, [items])
+
+  const userId = user?.id
+  useEffect(() => {
+    if (!userId) return
+    const ids = [...new Set(itemsRef.current.flatMap((item) =>
+      item.kind === "card" && typeof item.card?.userCardId === "number" ? [item.card.userCardId] : []
+    ))]
+    if (!ids.length) return
+    const controller = new AbortController()
+    const chunks: number[][] = []
+    for (let i = 0; i < ids.length; i += 60) chunks.push(ids.slice(i, i + 60))
+    Promise.all(chunks.map((chunk) => fetchUserCards(userId, { ids: chunk, limit: 60, signal: controller.signal })))
+      .then((pages) => {
+        if (controller.signal.aborted) return
+        refreshFaces(new Map(pages.flatMap((page) => page.rows.map((row) => [row.userCardId, toFace(row)] as const))))
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) showToast("桌面卡牌刷新失败，请刷新重试")
+      })
+    return () => controller.abort()
+  }, [userId, refreshFaces, showToast])
 
   useEffect(() => {
     const ids = items.flatMap((item) =>
@@ -801,6 +824,8 @@ export function DeskPage() {
       showToast("请先登录（osu! 或游客）")
       return
     }
+    if (dealBusy.current) return
+    dealBusy.current = true
     try {
       const res = await fetch(
         `/api/users/${user.id}/packs/${SERVER_POOL[pool]}/take`,
@@ -834,6 +859,8 @@ export function DeskPage() {
       showToast(`${meta.label} · 卡包已发到桌面`)
     } catch {
       showToast("发牌失败")
+    } finally {
+      dealBusy.current = false
     }
   }
 
@@ -1196,6 +1223,15 @@ export function DeskPage() {
   const onTap = async (item: DeskItem) => {
     if (item.kind === "object" && item.object) {
       if (item.object === "button") {
+        if (!user) {
+          showToast("请先登录（osu! 或游客）")
+          return
+        }
+        if (poolPacks <= 0) {
+          showToast(`背包里没有${POOL_META[pool].label}`)
+          return
+        }
+        if (dealBusy.current) return
         // 上一次按压动画还没走完：直接吞掉这次点击，避免 class 在同一帧里被反复擦写
         if (pressingRef.current) return
         pressingRef.current = true
@@ -1284,6 +1320,8 @@ export function DeskPage() {
                 constellation: 0,
                 exp: 0,
                 foil: result.foil,
+                serial: result.serial,
+                pulled: row.pulled ?? result.pulled,
               }),
               result.userCardId
             )

@@ -22,6 +22,9 @@ export interface ApiUserCard {
   constellation: number
   exp: number
   foil?: boolean
+  /** 实例发行序号；pulled 是该卡定义的累计发行数 */
+  serial?: number
+  pulled?: number
   heroBonus?: number
   obtainedAt?: string
 }
@@ -66,7 +69,13 @@ export function toFace(row: ApiUserCard): CardFaceData {
       heroBonus: row.heroBonus,
       version: row.version ?? 1,
     },
-    { level: row.level, constellation: row.constellation, foil: row.foil },
+    {
+      level: row.level,
+      constellation: row.constellation,
+      foil: row.foil,
+      serial: row.serial,
+      pulled: row.pulled,
+    },
   )
 }
 
@@ -86,9 +95,11 @@ export function fetchUserCards(
     page?: number
     limit?: number
     signal?: AbortSignal
+    /** 只取这些 user_cards 实例 */
+    ids?: number[]
   } = {},
 ): Promise<CardPage> {
-  const { rarity, q, sort = "recent", page = 0, limit = 24, signal } = params
+  const { rarity, q, sort = "recent", page = 0, limit = 24, signal, ids } = params
   const search = new URLSearchParams({
     sort,
     limit: String(limit),
@@ -96,6 +107,7 @@ export function fetchUserCards(
   })
   if (rarity) search.set("rarity", rarity)
   if (q) search.set("q", q)
+  if (ids?.length) search.set("ids", ids.join(","))
   return request<CardPage>(`/api/users/${userId}/cards?${search.toString()}`, { signal })
 }
 

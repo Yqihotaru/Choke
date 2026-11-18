@@ -161,7 +161,7 @@ export function CardDragLayer({ root }: { root: RefObject<HTMLElement | null> })
       cleanup?.()
       const drag = (event as CustomEvent<CardPointerStart>).detail
       const { source, pointerId, payload } = drag
-      const face = source.querySelector<HTMLElement>(".cf") ?? source
+      const face = source.querySelector<HTMLElement>(".card-face") ?? source
       const rect = face.getBoundingClientRect()
       const offX = drag.x - rect.left
       const offY = drag.y - rect.top

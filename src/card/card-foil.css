@@ -1,0 +1,160 @@
+/* =========================================================
+   闪卡膜（CardFoil），所有卡面共用：叠在最上面的一层镭射膜，任何稀有度都能叠。
+   克制为主：静止时只有一道淡彩带和零星碎闪，迎着光的地方才明显。
+   · --mx / --my（0–1）是光标在卡面上的位置，由 light.ts 写入，反光跟着它走。
+   · .card-foil 自己不能有 z-index / opacity / filter，否则子层的混合模式
+     就混不到卡面上了；需要压过卡面里带 z-index 的层时，给子层 z-index。
+   ========================================================= */
+
+@property --mx {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0.24;
+}
+
+@property --my {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0.16;
+}
+
+.card-foil {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.card-foil > i {
+  position: absolute;
+  inset: 0;
+  --foil-angle: calc(118deg + (var(--mx) - 0.5) * 36deg);
+  --spectrum: repeating-linear-gradient(
+    var(--foil-angle),
+    hsl(350 92% 62%) 0,
+    hsl(28 96% 60%) 7cqw,
+    hsl(56 96% 58%) 14cqw,
+    hsl(112 76% 56%) 21cqw,
+    hsl(172 86% 50%) 28cqw,
+    hsl(206 96% 60%) 35cqw,
+    hsl(256 92% 68%) 42cqw,
+    hsl(302 86% 66%) 49cqw,
+    hsl(350 92% 62%) 56cqw
+  );
+  --at-light: calc(var(--mx) * 100%) calc(var(--my) * 100%);
+  --at-far: calc((1 - var(--mx)) * 100%) calc((1 - var(--my)) * 100%);
+  transition:
+    --mx 0.55s ease-out,
+    --my 0.55s ease-out;
+}
+
+/* 光标在卡上时逐帧跟手，不再缓动 */
+.card-face[data-lit] .card-foil > i {
+  transition: none;
+}
+
+/* 彩膜：只有迎着光的一道窄彩带，其余地方几乎没有 */
+.card-foil__film {
+  background: var(--spectrum);
+  background-size: 300% 300%;
+  background-position: var(--at-light);
+  mask: linear-gradient(
+      var(--foil-angle),
+      transparent 30%,
+      #000 46%,
+      #000 54%,
+      transparent 70%
+    )
+    var(--at-far) / 250% 250%;
+  mix-blend-mode: screen;
+  opacity: 0.16;
+}
+
+/* 亮彩：光斑附近一小片，离开就消失 */
+.card-foil__dodge {
+  background: var(--spectrum);
+  background-size: 300% 300%;
+  background-position: var(--at-far);
+  mask: radial-gradient(
+    46% 32% at var(--at-light),
+    #000,
+    rgb(0 0 0 / 0.3) 55%,
+    transparent
+  );
+  mix-blend-mode: color-dodge;
+  opacity: 0.16;
+}
+
+/* 碎闪：只在光斑里出现，转动时此起彼伏 */
+.card-foil__glitter {
+  background: var(--spectrum);
+  background-size: 300% 300%;
+  background-position: calc(var(--my) * 100%) calc(var(--mx) * 100%);
+  mask-image:
+    url("./tex/glitter.svg"),
+    radial-gradient(40% 28% at var(--at-light), #000, transparent);
+  mask-size:
+    220px 220px,
+    100% 100%;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  opacity: 0.55;
+}
+
+.card-foil__glitter--b {
+  background: #fff;
+  mask-image:
+    url("./tex/glitter-b.svg"),
+    radial-gradient(30% 22% at var(--at-far), #000, transparent);
+  mask-size:
+    260px 260px,
+    100% 100%;
+  opacity: 0.35;
+}
+
+.card-foil__glare {
+  background: radial-gradient(
+    44% 30% at var(--at-light),
+    rgb(255 255 255 / 0.22),
+    rgb(255 255 255 / 0.05) 45%,
+    transparent 75%
+  );
+  mix-blend-mode: overlay;
+}
+
+/* 静止时每隔几秒扫过一道彩光，让人一眼看出这是闪卡 */
+.card-foil > .card-foil__sweep {
+  inset: -10% -60%;
+  background: linear-gradient(
+    105deg,
+    transparent 43%,
+    hsl(190 100% 62% / 0.1) 46.5%,
+    hsl(300 100% 78% / 0.16) 50%,
+    hsl(45 100% 62% / 0.1) 53.5%,
+    transparent 57%
+  );
+  transform: translateX(-62%);
+  animation: card-foil-sweep 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: calc(var(--seed, 0) * -0.07s);
+}
+
+@keyframes card-foil-sweep {
+  0%,
+  74% {
+    transform: translateX(-62%);
+  }
+  100% {
+    transform: translateX(62%);
+  }
+}
+
+.card-foil:not([data-sweep-visible]) .card-foil__sweep {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-foil > .card-foil__sweep {
+    display: none;
+  }
+}

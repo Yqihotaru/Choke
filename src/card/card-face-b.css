@@ -1,0 +1,699 @@
+/* =========================================================
+   卡面 B — 侧栏版（类名前缀 cfb；cb 已被开包的卡背占用，见 desk/opening/opener.css）
+   · 卡宽 = 100cqw，卡高 = 150cqw（2:3），内部尺寸全部用 cqw。
+   · 稀有度一眼可辨：整圈稀有度色外框 + 实心色侧栏 + 名字下划线 + 技能行左边条；
+     L 以上外框发光，Prismatic 用镭射渐变。
+   · data-tone="dark" | "light" 只换卡纸和墨色，结构不变。
+   ========================================================= */
+
+.cfb {
+  container: cfb / inline-size;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 4.5% / 3%;
+  overflow: hidden;
+  isolation: isolate;
+  user-select: none;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--r) 5%, var(--paper));
+  font-family: var(--font-heading), var(--font-cn), var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.35),
+    1px 2px 2px rgb(0 0 0 / 0.3),
+    4px 8px 16px -5px rgb(0 0 0 / 0.55),
+    var(--glow, 0 0 0 transparent);
+
+  --frame: 1.6cqw;
+  --spine: 13cqw;
+  --r: #a3a3ad;
+  --r-fill: var(--r);
+}
+
+.cfb[data-tone="dark"] {
+  --paper: #16151a;
+  --ink: #f3efe7;
+  --dim: #9c968c;
+  --row: rgb(255 255 255 / 0.055);
+  --spine-bg: color-mix(in srgb, var(--r) 58%, #0d0c10);
+  --spine-ink: #fff;
+}
+
+.cfb[data-tone="light"] {
+  --paper: #f4f1ea;
+  --ink: #1c1a17;
+  --dim: #7b766c;
+  --row: rgb(0 0 0 / 0.05);
+  --spine-bg: var(--r);
+  --spine-ink: #fff;
+}
+
+/* ---------- 七档稀有度色 ---------- */
+.cfb[data-rarity="UC"] { --r: #4fb47a; }
+.cfb[data-rarity="R"] { --r: #4f8ee0; }
+.cfb[data-rarity="E"] { --r: #9566e0; }
+.cfb[data-rarity="L"] {
+  --r: #e2b13c;
+  --glow: 0 0 12px -2px rgb(226 177 60 / 0.55);
+}
+.cfb[data-rarity="Radiant"] {
+  --r: #e8475f;
+  --glow: 0 0 14px -2px rgb(232 71 95 / 0.6);
+}
+.cfb[data-rarity="Prismatic"] {
+  --r: #c58cff;
+  --r-fill: linear-gradient(160deg, #ff7eb6, #ffcf6e 22%, #7dffb2 42%, #6ec8ff 62%, #b98cff 82%, #ff7eb6);
+  --glow: 0 0 16px -2px rgb(197 140 255 / 0.65);
+}
+
+/* ---------- 外框：一整圈稀有度色，带一道金属高光 ---------- */
+.cfb__frame {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  padding: var(--frame);
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.4), transparent 35%, transparent 65%, rgb(0 0 0 / 0.25)),
+    var(--r-fill);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+/* =========================================================
+   1. 侧栏
+   ========================================================= */
+
+.cfb__spine {
+  position: absolute;
+  top: var(--frame);
+  bottom: var(--frame);
+  left: var(--frame);
+  width: var(--spine);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.4cqw;
+  padding: 3cqw 0 3.2cqw;
+  background:
+    linear-gradient(90deg, transparent 70%, rgb(0 0 0 / 0.18)),
+    var(--spine-bg);
+  color: var(--spine-ink);
+}
+
+.cfb[data-rarity="Prismatic"] .cfb__spine {
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.4)),
+    var(--r-fill);
+}
+
+/* 侧栏顶端：黑色半透明小牌 + 稀有度图标（形状复用现版卡面的 tex/emblem-*.svg），
+   图标填稀有度色，Prismatic 是彩虹渐变 */
+.cfb__emblem {
+  flex: 0 0 auto;
+  position: relative;
+  width: 11cqw;
+  height: 11cqw;
+  border-radius: 2.2cqw;
+  background: rgb(0 0 0 / 0.55);
+  box-shadow:
+    inset 0 0 0 0.25cqw rgb(255 255 255 / 0.12),
+    0 0.5cqw 1cqw rgb(0 0 0 / 0.3);
+  --emblem: url("./tex/emblem-c.svg");
+}
+
+.cfb__emblem::after {
+  content: "";
+  position: absolute;
+  inset: 1.6cqw;
+  background: var(--r-fill);
+  -webkit-mask: var(--emblem) center / contain no-repeat;
+  mask: var(--emblem) center / contain no-repeat;
+}
+
+.cfb[data-rarity="UC"] .cfb__emblem { --emblem: url("./tex/emblem-uc.svg"); }
+.cfb[data-rarity="R"] .cfb__emblem { --emblem: url("./tex/emblem-r.svg"); }
+.cfb[data-rarity="E"] .cfb__emblem { --emblem: url("./tex/emblem-e.svg"); }
+.cfb[data-rarity="L"] .cfb__emblem { --emblem: url("./tex/emblem-l.svg"); }
+.cfb[data-rarity="Radiant"] .cfb__emblem { --emblem: url("./tex/emblem-radiant.svg"); }
+.cfb[data-rarity="Prismatic"] .cfb__emblem { --emblem: url("./tex/emblem-prismatic.svg"); }
+
+.cfb__lv {
+  /* Lv、命座星沉到侧栏底部 */
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4cqw;
+}
+
+.cfb__lv i {
+  font-style: normal;
+  font-size: 3.2cqw;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  opacity: 0.8;
+}
+
+/* 侧栏宽 13cqw：两位数等级 8.6cqw 刚好放得下 */
+.cfb__lv b {
+  font-size: 8.6cqw;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0.3cqw 0 rgb(0 0 0 / 0.3);
+}
+
+.cfb__stars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8cqw;
+  margin-top: 0.6cqw;
+  filter: drop-shadow(0 0.3cqw 0.3cqw rgb(0 0 0 / 0.35));
+}
+
+.cfb__stars i {
+  width: 6.2cqw;
+  height: 6.2cqw;
+  background: rgb(0 0 0 / 0.3);
+  clip-path: polygon(50% 0, 62% 35%, 100% 38%, 70% 61%, 80% 100%, 50% 78%, 20% 100%, 30% 61%, 0 38%, 38% 35%);
+}
+
+.cfb__stars i[data-state="copper"] {
+  background: #ffd36a;
+}
+
+.cfb__stars i[data-state="prism"] {
+  background: linear-gradient(135deg, #ff9ad5, #9ae6ff, #c4a2ff);
+}
+
+/* =========================================================
+   2. 主区
+   ========================================================= */
+
+.cfb__main {
+  position: absolute;
+  top: var(--frame);
+  right: var(--frame);
+  bottom: var(--frame);
+  left: calc(var(--frame) + var(--spine));
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- banner + 世界排名水印 ---------- */
+.cfb__banner {
+  position: relative;
+  /* 头像压掉下沿 21cqw，露出 29cqw；技能区下方原本留白约 12cqw，吸收这 8cqw 下移 */
+  flex: 0 0 50cqw;
+  overflow: hidden;
+  background:
+    radial-gradient(80% 90% at 70% 30%, color-mix(in srgb, var(--r) 45%, transparent), transparent 75%),
+    linear-gradient(160deg, color-mix(in srgb, var(--r) 30%, #15141a), #0c0b0e);
+}
+
+.cfb__banner img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.85) saturate(1.05);
+}
+
+/* 下沿渐隐进卡纸，头像和排名压在上面也读得清 */
+.cfb__banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 45%, color-mix(in srgb, var(--r) 5%, var(--paper)) 100%);
+}
+
+.cfb__motif {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: rgb(255 255 255 / 0.2);
+  stroke-width: 0.55;
+  stroke-linejoin: round;
+}
+
+.cfb__motif [data-fill] {
+  fill: rgb(255 255 255 / 0.07);
+  stroke: none;
+}
+
+.cfb__watermark {
+  position: absolute;
+  right: 2.4cqw;
+  bottom: 15cqw;
+  z-index: 1;
+  font-size: 15cqw;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.04em;
+  color: rgb(255 255 255 / 0.2);
+  white-space: nowrap;
+}
+
+/* banner 右上角：稀有度英文全名，稀有度色小牌子 */
+.cfb__tag {
+  position: absolute;
+  top: 2.6cqw;
+  right: 2.6cqw;
+  z-index: 1;
+  padding: 1.6cqw 2.6cqw;
+  border-radius: 1.2cqw;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.3), transparent 60%),
+    var(--r-fill);
+  color: #fff;
+  font-size: 5cqw;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0.2cqw 0 rgb(0 0 0 / 0.3);
+  box-shadow: 0 0.6cqw 1.4cqw rgb(0 0 0 / 0.4);
+}
+
+/* ---------- 头像 + 排名 / pp / BP ---------- */
+.cfb__id {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 3.4cqw;
+  margin-top: -21cqw;
+  padding: 0 4cqw;
+}
+
+.cfb__avatar {
+  position: relative;
+  flex: 0 0 37cqw;
+  height: 37cqw;
+  border: 1cqw solid color-mix(in srgb, var(--r) 5%, var(--paper));
+  border-radius: 4.6cqw;
+  background: #242228;
+  box-shadow:
+    0 0 0 0.6cqw var(--r),
+    0 1.6cqw 3cqw rgb(0 0 0 / 0.45);
+}
+
+.cfb[data-rarity="Prismatic"] .cfb__avatar {
+  box-shadow:
+    0 0 0 0.6cqw #d8b4ff,
+    0 1.6cqw 3cqw rgb(0 0 0 / 0.45);
+}
+
+.cfb__avatar > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 3.6cqw;
+  object-fit: cover;
+}
+
+.cfb__stats {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2cqw;
+  padding-bottom: 0.4cqw;
+}
+
+.cfb__rank {
+  display: flex;
+  align-items: center;
+  gap: 1.4cqw;
+  font-size: 6cqw;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.cfb__rank img {
+  width: 6.8cqw;
+  height: 4.7cqw;
+  object-fit: cover;
+  border-radius: 0.5cqw;
+  box-shadow: 0 0 0 0.2cqw rgb(0 0 0 / 0.25);
+}
+
+.cfb__pp {
+  font-size: 4.6cqw;
+  font-weight: 700;
+  color: var(--dim);
+}
+
+.cfb__pp i {
+  margin-left: 0.6cqw;
+  font-style: normal;
+  font-size: 3.4cqw;
+}
+
+.cfb__bp {
+  display: flex;
+  align-items: baseline;
+  gap: 1.2cqw;
+  margin-top: 0.6cqw;
+  color: var(--bp);
+}
+
+.cfb[data-tone="dark"] .cfb__bp {
+  color: color-mix(in srgb, var(--bp) 55%, #fff);
+}
+
+.cfb__bp i {
+  font-style: normal;
+  font-size: 3.8cqw;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  opacity: 0.85;
+}
+
+.cfb__bp b {
+  font-size: 11.5cqw;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- 名字 ---------- */
+.cfb__title {
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  margin: 3.4cqw 4cqw 0;
+  padding-bottom: 2.2cqw;
+  border-bottom: 0.7cqw solid var(--r);
+}
+
+.cfb[data-rarity="Prismatic"] .cfb__title {
+  border-image: var(--r-fill) 1;
+}
+
+.cfb__name {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--name-size);
+  font-weight: 800;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 技能 ---------- */
+.cfb__skills {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 1.4cqw;
+  padding: 2.2cqw 4cqw;
+}
+
+.cfb__skill {
+  flex: 0 0 14cqw;
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  padding: 0 2cqw 0 1.6cqw;
+  border-left: 0.8cqw solid var(--r);
+  border-radius: 0.8cqw 1.8cqw 1.8cqw 0.8cqw;
+  background: var(--row);
+}
+
+.cfb__skill--empty {
+  border-left-color: transparent;
+  background: none;
+  outline: 0.3cqw dashed color-mix(in srgb, var(--dim) 40%, transparent);
+  outline-offset: -0.3cqw;
+}
+
+.cfb__el {
+  flex: 0 0 10cqw;
+  height: 10cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--el) 28%, transparent);
+  color: color-mix(in srgb, var(--el) 70%, var(--ink));
+}
+
+.cfb__el svg {
+  width: 6.8cqw;
+  height: 6.8cqw;
+}
+
+.cfb__skill-name {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 6.6cqw;
+  font-weight: 700;
+  /* 卡面整体 line-height: 1；中文字形比 1em 高，overflow 裁省略号时会切掉上下沿 */
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfb__ap,
+.cfb__mp {
+  flex: 0 0 9cqw;
+  height: 9cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 5.6cqw;
+  font-weight: 800;
+}
+
+.cfb__ap {
+  background: #d98a12;
+  color: #fff;
+}
+
+.cfb__mp {
+  border: 0.5cqw solid #5c9ee8;
+  color: #5c9ee8;
+}
+
+.cfb__passive {
+  padding: 1.2cqw 1.8cqw;
+  border: 0.3cqw solid color-mix(in srgb, var(--dim) 60%, transparent);
+  border-radius: 3cqw;
+  color: var(--dim);
+  font-size: 4cqw;
+  font-weight: 700;
+}
+
+/* ---------- 底栏：职业 | 序号 ---------- */
+.cfb__foot {
+  flex: 0 0 10cqw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 4cqw;
+  border-top: 0.3cqw solid color-mix(in srgb, var(--dim) 35%, transparent);
+  font-weight: 800;
+}
+
+.cfb__job {
+  display: flex;
+  align-items: center;
+  gap: 1.4cqw;
+  font-size: 5cqw;
+  white-space: nowrap;
+}
+
+.cfb__job svg {
+  width: 6.4cqw;
+  height: 6.4cqw;
+  color: var(--r);
+}
+
+.cfb[data-rarity="Prismatic"] .cfb__job svg {
+  color: #c58cff;
+}
+
+.cfb__serial {
+  font-size: 5.2cqw;
+  white-space: nowrap;
+}
+
+.cfb__serial i {
+  margin-left: 0.4cqw;
+  font-style: normal;
+  font-size: 3.8cqw;
+  color: var(--dim);
+}
+
+/* =========================================================
+   3. MOD 三种摆法
+   ========================================================= */
+
+.cfb__mod {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 3.6cqw;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0.2cqw 0 rgb(0 0 0 / 0.3);
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.3), transparent 55%),
+    var(--mod);
+}
+
+.cfb__mod--hero {
+  background: linear-gradient(135deg, #ff6fa8, #b77bff);
+}
+
+/* A 侧栏：实心六边形，叠在稀有度图标下面 */
+.cfb__mods[data-at="spine"] {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2cqw;
+}
+
+.cfb__mods[data-at="spine"] .cfb__mod,
+.cfb__mods[data-at="portrait"] .cfb__mod {
+  width: 11cqw;
+  height: 10cqw;
+  clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%);
+}
+
+.cfb__mods[data-at="spine"] .cfb__mod--hero,
+.cfb__mods[data-at="portrait"] .cfb__mod--hero {
+  font-size: 2.6cqw;
+}
+
+/* B 头像角标：竖着叠在头像右上角，一半压出头像 */
+.cfb__mods[data-at="portrait"] {
+  position: absolute;
+  top: -2.4cqw;
+  right: -5cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8cqw;
+  filter: drop-shadow(0 0.6cqw 0.8cqw rgb(0 0 0 / 0.45));
+}
+
+.cfb__mods[data-at="portrait"] .cfb__mod {
+  width: 12cqw;
+  height: 10.6cqw;
+  font-size: 3.8cqw;
+}
+
+.cfb:has(.cfb__mods[data-at="portrait"]) .cfb__stats {
+  padding-left: 2.6cqw;
+}
+
+/* C 名字后缀：彩色胶囊排在名字右边 */
+.cfb__mods[data-at="name"] {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 1cqw;
+  margin-left: auto;
+}
+
+.cfb__mods[data-at="name"] .cfb__mod {
+  height: 6.8cqw;
+  padding: 0 2cqw;
+  border-radius: 1.2cqw;
+  font-size: 3.8cqw;
+}
+
+/* B v1：整体放大前的尺寸快照；未覆盖的结构、颜色与 v2 共用。 */
+.cfb[data-version="v1"] .cfb__emblem { width: 9.4cqw; height: 9.4cqw; }
+.cfb[data-version="v1"] .cfb__stars i { width: 4.6cqw; height: 4.6cqw; }
+.cfb[data-version="v1"] .cfb__tag { font-size: 4.4cqw; }
+.cfb[data-version="v1"] .cfb__rank { font-size: 5cqw; }
+.cfb[data-version="v1"] .cfb__rank img { width: 5.6cqw; height: 3.9cqw; }
+.cfb[data-version="v1"] .cfb__pp { font-size: 3.8cqw; }
+.cfb[data-version="v1"] .cfb__pp i { font-size: 2.8cqw; }
+.cfb[data-version="v1"] .cfb__bp i { font-size: 3.2cqw; }
+.cfb[data-version="v1"] .cfb__bp b { font-size: 10cqw; }
+.cfb[data-version="v1"] .cfb__skill { flex-basis: 11.6cqw; }
+.cfb[data-version="v1"] .cfb__el { flex-basis: 7.4cqw; height: 7.4cqw; }
+.cfb[data-version="v1"] .cfb__el svg { width: 5cqw; height: 5cqw; }
+.cfb[data-version="v1"] .cfb__skill-name { font-size: 5.4cqw; }
+.cfb[data-version="v1"] .cfb__ap,
+.cfb[data-version="v1"] .cfb__mp { flex-basis: 7cqw; height: 7cqw; font-size: 4.4cqw; }
+.cfb[data-version="v1"] .cfb__passive { font-size: 3.2cqw; }
+.cfb[data-version="v1"] .cfb__job { font-size: 4.2cqw; }
+.cfb[data-version="v1"] .cfb__job svg { width: 5.4cqw; height: 5.4cqw; }
+.cfb[data-version="v1"] .cfb__serial { font-size: 4.4cqw; }
+.cfb[data-version="v1"] .cfb__serial i { font-size: 3.2cqw; }
+.cfb[data-version="v1"] .cfb__mod { font-size: 2.9cqw; }
+.cfb[data-version="v1"] .cfb__mods[data-at="spine"] .cfb__mod,
+.cfb[data-version="v1"] .cfb__mods[data-at="portrait"] .cfb__mod {
+  width: 9cqw;
+  height: 8cqw;
+}
+.cfb[data-version="v1"] .cfb__mods[data-at="spine"] .cfb__mod--hero,
+.cfb[data-version="v1"] .cfb__mods[data-at="portrait"] .cfb__mod--hero { font-size: 2.1cqw; }
+.cfb[data-version="v1"] .cfb__mods[data-at="portrait"] .cfb__mod {
+  width: 10cqw;
+  height: 8.8cqw;
+  font-size: 3.2cqw;
+}
+.cfb[data-version="v1"] .cfb__mods[data-at="name"] .cfb__mod {
+  height: 5.6cqw;
+  padding: 0 1.6cqw;
+  font-size: 3.2cqw;
+}
+
+/* 闪卡膜（CardFoil）压过外框和侧栏；z-index 只给子层，混合模式才能混到卡面上。 */
+.cfb .card-foil > i {
+  z-index: 4;
+}
+
+/* 战斗态：收起身份信息，保留大肖像和技能；两个尺寸版本共用。 */
+.cfb[data-mode="battle"] :is(.cfb__spine, .cfb__title, .cfb__foot, .cfb__stats, .cfb__tag, .cfb__watermark, .cfb__mods) {
+  display: none;
+}
+
+.cfb[data-mode="battle"] .cfb__main {
+  left: var(--frame);
+}
+
+.cfb[data-mode="battle"] .cfb__banner {
+  position: absolute;
+  inset: 0 0 55cqw;
+}
+
+.cfb[data-mode="battle"] .cfb__id {
+  flex: 1 1 0;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 5cqw;
+}
+
+.cfb[data-mode="battle"] .cfb__avatar {
+  flex-basis: 65cqw;
+  height: 65cqw;
+}
+
+.cfb[data-mode="battle"] .cfb__skills {
+  flex: 0 0 auto;
+  padding: 2cqw 3cqw 3cqw;
+}
+
+.cfb[data-mode="battle"] .cfb__skill {
+  flex-basis: 16cqw;
+}
+
+.cfb[data-mode="battle"] .cfb__skill-name {
+  font-size: 8cqw;
+}

@@ -89,7 +89,7 @@
   width: min(100%, 220px);
   margin: 4px 0;
 }
-.account-hero__face .cf {
+.account-hero__face .card-face {
   width: 100%;
 }
 .account-hero__name {

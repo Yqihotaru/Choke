@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import {
   ELEMENT_COLOR,
   ELEMENT_LABEL,
@@ -328,7 +328,7 @@ export function BattlePage() {
                     {card.face.foil && <em>✦ FLASH</em>}
                   </div>
                   <div className="battle-card__face">
-                    <CardFace card={card.face} />
+                    <GameCardFace card={card.face} />
                   </div>
                   <div className="battle-card__hp">
                     <div className="battle-hp">

@@ -35,6 +35,8 @@ export function faceFromDef(
     constellation?: number
     mods?: CardFaceData["mods"]
     foil?: boolean
+    serial?: number
+    pulled?: number
   } = {},
 ): CardFaceData {
   return makeCard({
@@ -49,6 +51,8 @@ export function faceFromDef(
     isMirror: def.id.startsWith("mirror-"),
     heroBonus: def.heroBonus ?? 0,
     foil: state.foil,
+    serial: state.serial,
+    pulled: state.pulled,
     no: def.no,
     total: def.total,
     country: def.country,

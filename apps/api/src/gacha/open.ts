@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 
 import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
@@ -39,6 +39,30 @@ export interface DrawnCard {
   userCardId: number
   /** 闪卡实例属性 */
   foil: boolean
+  /** 实例序号 / 发出这一张时的累计发行数 */
+  serial: number
+  pulled: number
+}
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+/** 所有新实例都从这里领号；只接受事务，计数和实例写入必须一起提交或回滚。 */
+export async function grantCard(
+  tx: Transaction,
+  values: { userId: string; cardId: string; foil?: boolean },
+): Promise<{ userCardId: number; serial: number }> {
+  const [counted] = await tx
+    .update(cards)
+    .set({ pulled: sql`${cards.pulled} + 1` })
+    .where(eq(cards.id, values.cardId))
+    .returning({ pulled: cards.pulled })
+  if (!counted) throw new Error(`卡不存在：${values.cardId}`)
+  const [inserted] = await tx
+    .insert(userCards)
+    .values({ ...values, serial: counted.pulled })
+    .returning({ id: userCards.id })
+  if (!inserted) throw new Error("卡实例写入失败")
+  return { userCardId: inserted.id, serial: counted.pulled }
 }
 
 export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) {
@@ -88,11 +112,8 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       const cardId = ids[Math.floor(random() * ids.length)]!
       const foil = random() < PACKS[pool].foilRate
 
-      const [inserted] = await tx
-        .insert(userCards)
-        .values({ userId, cardId, foil })
-        .returning({ id: userCards.id })
-      results.push({ cardId, rarity, fromPity, userCardId: inserted!.id, foil })
+      const { userCardId, serial } = await grantCard(tx, { userId, cardId, foil })
+      results.push({ cardId, rarity, fromPity, userCardId, foil, serial, pulled: serial })
     }
 
     await tx
@@ -106,16 +127,19 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
     // 镜像卡作为 bonus 单独返回，前端演完 5 张后再弹第 6 张。
     let bonus: DrawnCard | null = null
     if (mirrorCandidate) {
-      const [inserted] = await tx
-        .insert(userCards)
-        .values({ userId, cardId: mirrorCandidate.id, foil: false })
-        .returning({ id: userCards.id })
+      const granted = await grantCard(tx, {
+        userId,
+        cardId: mirrorCandidate.id,
+        foil: false,
+      })
       bonus = {
         cardId: mirrorCandidate.id,
         rarity: mirrorCandidate.rarity,
         fromPity: false,
-        userCardId: inserted!.id,
+        userCardId: granted.userCardId,
         foil: false,
+        serial: granted.serial,
+        pulled: granted.serial,
       }
     }
 

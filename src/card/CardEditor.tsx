@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 
 import { DEMO_CARDS, ELEMENT_LABEL, JOB_LABEL, MOD_LIST, RARITY_LABEL } from "./data"
-import { CARD_FACES, getCardFace } from "./faces"
+import { DEFAULT_FACE, HISTORY_FACES, getCardFace } from "./faces"
 import { RARITIES, type CardFaceData, type CardSkill, type Element, type Job, type Mod, type Rarity } from "./types"
 import "./card-editor.css"
 
@@ -43,7 +43,7 @@ export function CardEditor() {
   const [slots, setSlots] = useState<SkillSlot[]>(slotsFromCard(DEMO_CARDS[4]))
   const [width, setWidth] = useState(420)
   const [guides, setGuides] = useState(false)
-  const [faceStyle, setFaceStyle] = useState<string>(CARD_FACES[0].id)
+  const [faceStyle, setFaceStyle] = useState<string>(DEFAULT_FACE.id)
   const [theme, setTheme] = useState<"dark" | "light">("dark")
   const [holo, setHolo] = useState<Holo>("none")
   const [exported, setExported] = useState<string | null>(null)
@@ -313,11 +313,16 @@ export function CardEditor() {
               value={faceStyle}
               onChange={(e) => setFaceStyle(e.target.value)}
             >
-              {CARD_FACES.map((face) => (
-                <option key={face.id} value={face.id}>
-                  {face.label}
-                </option>
-              ))}
+              <optgroup label="游戏中">
+                <option value={DEFAULT_FACE.id}>{DEFAULT_FACE.label}</option>
+              </optgroup>
+              <optgroup label="历史版本">
+                {HISTORY_FACES.map((face) => (
+                  <option key={face.id} value={face.id}>
+                    {face.label}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </Field>
           <Field label="主题">

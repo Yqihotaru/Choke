@@ -22,6 +22,7 @@ const cardColumns = {
   level: userCards.level,
   constellation: userCards.constellation,
   exp: userCards.exp,
+  serial: userCards.serial,
   foil: userCards.foil,
   obtainedAt: userCards.obtainedAt,
 }

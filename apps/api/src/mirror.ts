@@ -1,8 +1,8 @@
-import { and, eq, gte } from "drizzle-orm"
+import { and, eq, gte, sql } from "drizzle-orm"
 
 import { CARD_TYPES, MIRROR_PREFIX } from "./card-types"
 import { db } from "./db/client"
-import { cards, users } from "./db/schema"
+import { cards, userCards, users } from "./db/schema"
 import type { PoolId } from "./gacha/pools"
 import type { heroCardDef } from "./hero"
 
@@ -108,6 +108,11 @@ export async function upsertMirrorCard(
       originOsuId: osuId,
       heroBonus: 0,
       version: 1,
+      // 镜像定义被重建时，补回仍存实例的最大发行号。
+      pulled: sql<number>`coalesce((
+        select max(${userCards.serial}) from ${userCards}
+        where ${userCards.cardId} = ${id}
+      ), 0)`,
     })
     .onConflictDoUpdate({
       target: cards.id,
@@ -116,6 +121,7 @@ export async function upsertMirrorCard(
         cardType: CARD_TYPES.mirror,
         originOsuId: osuId,
         heroBonus: 0,
+        pulled: sql`greatest(${cards.pulled}, excluded.pulled)`,
       },
     })
 

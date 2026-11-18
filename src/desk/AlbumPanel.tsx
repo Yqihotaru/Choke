@@ -7,7 +7,7 @@ import {
   type CSSProperties,
 } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
 import { expToNext, isHeroCardId, levelCap } from "@/card/progression"
 import { RARITIES } from "@/card/types"
@@ -332,7 +332,7 @@ const AlbumSlot = memo(function AlbumSlot({
         }
       }}
     >
-      <CardFace card={face} eager />
+      <GameCardFace card={face} eager />
       <div className="album-slot__tags">
         {onDesk && <span className="bk-tag album-slot__on-desk">在桌面</span>}
         {row.level < levelCap(isHeroCardId(row.id)) && <ReadyBadge row={row} />}

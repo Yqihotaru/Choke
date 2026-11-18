@@ -83,6 +83,17 @@
   gap: 8px;
 }
 
+.lab__mod-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lab__toggle[data-on] {
+  border-color: var(--lab-ink);
+  background: color-mix(in srgb, var(--lab-ink) 12%, transparent);
+}
+
 .lab__face-select {
   display: flex;
   align-items: center;
@@ -151,6 +162,19 @@
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.12em;
+  color: var(--lab-dim);
+}
+
+/* 历史版本默认收起，只在版本对比里展开看 */
+.lab__history {
+  margin-top: 20px;
+}
+
+.lab__history > summary {
+  cursor: pointer;
+  margin-bottom: 14px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
   color: var(--lab-dim);
 }
 

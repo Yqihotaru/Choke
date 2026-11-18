@@ -71,10 +71,10 @@
   outline: 2px solid var(--bk-osu);
   outline-offset: 2px;
 }
-.codex-slot .cf {
+.codex-slot .card-face {
   width: 100%;
 }
-.codex-slot .cf a {
+.codex-slot .card-face a {
   pointer-events: none;
 }
 .codex-unknown {

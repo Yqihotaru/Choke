@@ -53,7 +53,7 @@
   border-radius: 6px;
   cursor: pointer;
 }
-.deck-slot .cf {
+.deck-slot .card-face {
   width: 100%;
   pointer-events: none;
 }
@@ -82,7 +82,7 @@
   background: var(--bk-osu-soft);
   color: var(--bk-osu-text);
 }
-.deck-slot.is-on-desk .cf {
+.deck-slot.is-on-desk .card-face {
   opacity: 0.45;
 }
 .deck-slot__no {
@@ -195,7 +195,7 @@
 .deck-pick:active {
   cursor: grabbing;
 }
-.deck-pick .cf {
+.deck-pick .card-face {
   width: 100%;
   pointer-events: none;
 }
@@ -206,7 +206,7 @@
 .deck-pick.is-used {
   cursor: default;
 }
-.deck-pick.is-used .cf {
+.deck-pick.is-used .card-face {
   opacity: 0.4;
 }
 .deck-pick__used {

@@ -27,7 +27,7 @@ export function readSavedPool(): PackPool {
 export interface OpenResponse {
   ok: boolean
   data?: {
-    results: { cardId: string; userCardId: number; foil: boolean }[]
+    results: { cardId: string; userCardId: number; foil: boolean; serial: number; pulled: number }[]
     pity: { before: number; after: number }
     packs?: Record<string, number>
   }

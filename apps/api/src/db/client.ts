@@ -44,6 +44,7 @@ CREATE INDEX IF NOT EXISTS cards_pp_idx ON cards (pp DESC NULLS LAST);
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS hero_bonus integer NOT NULL DEFAULT 0;
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS card_type text NOT NULL DEFAULT 'pool';
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS origin_osu_id bigint;
+ALTER TABLE cards ADD COLUMN IF NOT EXISTS pulled integer NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS cards_type_rarity_idx ON cards (card_type, rarity);
 CREATE UNIQUE INDEX IF NOT EXISTS cards_mirror_origin_idx
   ON cards (origin_osu_id) WHERE card_type = 'mirror';
@@ -88,6 +89,25 @@ CREATE TABLE IF NOT EXISTS user_cards (
 );
 ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS exp integer NOT NULL DEFAULT 0;
 ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS foil boolean NOT NULL DEFAULT false;
+ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS serial integer NOT NULL DEFAULT 0;
+-- 旧库只补未编号实例；从已有最大号和累计发行数之后续号，不能重用已熔掉的号码。
+WITH issued AS (
+  SELECT card_id, max(serial) AS serial FROM user_cards GROUP BY card_id
+), pending AS (
+  SELECT u.id,
+    greatest(coalesce(c.pulled, 0), i.serial)
+      + row_number() OVER (PARTITION BY u.card_id ORDER BY u.id) AS serial
+  FROM user_cards u
+  JOIN issued i ON i.card_id = u.card_id
+  LEFT JOIN cards c ON c.id = u.card_id
+  WHERE u.serial = 0
+)
+UPDATE user_cards u SET serial = p.serial
+  FROM pending p WHERE u.id = p.id AND u.serial = 0;
+-- 不降低累计发行数；卡定义被重新导入后，至少补回仍存实例的最大号。
+UPDATE cards c SET pulled = s.m
+  FROM (SELECT card_id, max(serial) AS m FROM user_cards GROUP BY card_id) s
+  WHERE c.id = s.card_id AND c.pulled < s.m;
 CREATE INDEX IF NOT EXISTS user_cards_user_idx ON user_cards (user_id);
 CREATE INDEX IF NOT EXISTS user_cards_user_obtained_idx ON user_cards (user_id, obtained_at DESC);
 CREATE INDEX IF NOT EXISTS user_cards_user_card_idx ON user_cards (user_id, card_id);

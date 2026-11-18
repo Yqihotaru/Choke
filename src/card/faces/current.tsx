@@ -22,8 +22,8 @@ import "./current.css"
 
 export const faceMeta = {
   id: "current",
-  label: "当前版",
-  note: "主游戏默认卡面副本（cfcur 隔离）",
+  label: "旧默认版 · 黑卡纸",
+  note: "换成 B v2 之前的主游戏默认卡面副本（cfcur 隔离）",
   order: 0,
 } as const
 

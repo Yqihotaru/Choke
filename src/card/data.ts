@@ -47,6 +47,11 @@ export function flagUrl(code: string | undefined): string | null {
   return `https://flagcdn.com/${code.toLowerCase()}.svg`
 }
 
+/** osu! 预设背景不算个人 banner：卡面改用稀有度底纹，避免多数卡长一个样 */
+export function isCustomBanner(url: string | undefined): url is string {
+  return !!url && !/user-cover-presets|\/images\/headers\/profile-covers\//.test(url)
+}
+
 
 /** 七档品质基础值；压缩比固定 3.5×（C 400 → Prismatic 1,400） */
 export const RARITY_BASE: Record<Rarity, number> = {
@@ -76,7 +81,8 @@ export const RARITY_LABEL: Record<Rarity, string> = {
   R: "RARE",
   E: "EPIC",
   L: "LEGENDARY",
-  Radiant: "RADIANT",
+  // 内部 id 仍是 Radiant（数据库和卡池规则不变），只改显示名。
+  Radiant: "MYTHIC",
   Prismatic: "PRISMATIC",
 }
 
@@ -228,6 +234,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: [],
     constellation: 0,
     no: 12,
+    serial: 3,
+    pulled: 41,
     skills: [...SKILL_SETS.tank.slice(0, 2)],
   }),
   makeCard({
@@ -246,6 +254,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["HD"],
     constellation: 1,
     no: 208,
+    serial: 17,
+    pulled: 17,
     skills: [...SKILL_SETS.support.slice(0, 2)],
   }),
   makeCard({
@@ -264,6 +274,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["SD"],
     constellation: 2,
     no: 1471,
+    serial: 128,
+    pulled: 302,
     skills: [...SKILL_SETS.warrior],
   }),
   makeCard({
@@ -282,6 +294,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["HD", "DT"],
     constellation: 3,
     no: 8320,
+    serial: 1,
+    pulled: 9,
     skills: [...SKILL_SETS.mage],
   }),
   makeCard({
@@ -300,6 +314,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["HD", "SD", "DT"],
     constellation: 4,
     no: 20155,
+    serial: 2,
+    pulled: 5,
     skills: [...SKILL_SETS.warrior],
   }),
   makeCard({
@@ -318,6 +334,8 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["DT"],
     constellation: 5,
     no: 48207,
+    serial: 1,
+    pulled: 1,
     skills: [...SKILL_SETS.support],
   }),
   makeCard({

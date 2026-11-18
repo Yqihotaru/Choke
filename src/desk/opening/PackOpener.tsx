@@ -10,7 +10,7 @@ import {
   type PointerEvent,
 } from "react"
 
-import { CardFace } from "@/card/CardFace"
+import { GameCardFace } from "@/card/GameCardFace"
 import { RARITIES } from "@/card/types"
 
 import { cardFromDesk } from "../cardFace"
@@ -57,7 +57,7 @@ type CardPhase = "stack" | "charge" | "show" | "slot"
 
 const keyOf = (card: CardData) => String(card.userCardId ?? `${card.cardId}:${card.name}`)
 const OpenerFace = memo(function OpenerFace({ card }: { card: CardData }) {
-  return <CardFace card={cardFromDesk(card)} />
+  return <GameCardFace card={cardFromDesk(card)} />
 })
 
 /**
