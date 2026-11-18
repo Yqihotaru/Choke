@@ -1,4 +1,5 @@
-import { useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
+import gsap from "gsap"
 
 import { ElementGlyph } from "@/card/CardFace"
 import { GameCardFace } from "@/card/GameCardFace"
@@ -6,6 +7,7 @@ import { ELEMENT_COLOR, ELEMENT_LABEL, battlePower } from "@/card/data"
 import type { CardFaceData, Element } from "@/card/types"
 
 import { enemyDamageTier, teamHpOf } from "./engine"
+import { playHit, playLose, playSfx, playTurn, playWin } from "./sfx"
 import type { BattleState } from "./types"
 import "./choke-battle.css"
 
@@ -54,6 +56,175 @@ export function BattleStage({
   const [previewAp, setPreviewAp] = useState(0)
   const [logOpen, setLogOpen] = useState(false)
   const apMax = battle?.apMax ?? 7
+
+  const stageRef = useRef<HTMLDivElement | null>(null)
+  const bossRef = useRef<HTMLElement | null>(null)
+  const comboRef = useRef<HTMLSpanElement | null>(null)
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([])
+  const lastSeq = useRef(0)
+  const fxTimers = useRef<number[]>([])
+
+  const later = useCallback((fn: () => void, ms: number) => {
+    const id = window.setTimeout(fn, ms)
+    fxTimers.current.push(id)
+    return id
+  }, [])
+
+  useEffect(() => {
+    const timers = fxTimers.current
+    return () => {
+      timers.forEach((id) => window.clearTimeout(id))
+    }
+  }, [])
+
+  const popup = useCallback(
+    (
+      parent: HTMLElement | null,
+      text: string,
+      variant: "enemy" | "card",
+      kind?: "heal" | "miss",
+      crit?: boolean,
+    ) => {
+      if (!parent) return
+      const node = document.createElement("div")
+      node.className = `choke-popup choke-popup--${variant}`
+      node.textContent = text
+      if (kind) node.dataset.kind = kind
+      if (crit) {
+        node.dataset.crit = "true"
+        const em = document.createElement("em")
+        em.textContent = "CRITICAL"
+        node.appendChild(em)
+      }
+      parent.appendChild(node)
+      later(() => node.remove(), 950)
+    },
+    [later],
+  )
+
+  const flash = useCallback(() => {
+    const parent = stageRef.current
+    if (!parent) return
+    const node = document.createElement("div")
+    node.className = "choke-hit-flash"
+    parent.appendChild(node)
+    later(() => node.remove(), 220)
+  }, [later])
+
+  const turnBanner = useCallback(
+    (owner: "player" | "enemy") => {
+      const parent = stageRef.current
+      if (!parent) return
+      const node = document.createElement("div")
+      node.className = "choke-turn-banner"
+      node.dataset.owner = owner
+      node.textContent = owner === "player" ? "PLAYER TURN" : "ENEMY TURN"
+      parent.appendChild(node)
+      later(() => node.remove(), 850)
+    },
+    [later],
+  )
+
+  useEffect(() => {
+    if (!battle) {
+      lastSeq.current = 0
+      return
+    }
+    if (battle.actionSeq === lastSeq.current) return
+    lastSeq.current = battle.actionSeq
+
+    for (const event of battle.events) {
+      if (event.type === "skill") {
+        const node = cardRefs.current[event.cardIndex]
+        if (node) {
+          gsap.fromTo(
+            node,
+            { y: 0, scale: 1 },
+            {
+              y: -10,
+              scale: 1.04,
+              duration: 0.12,
+              yoyo: true,
+              repeat: 1,
+              ease: "power2.out",
+              onComplete: () => gsap.set(node, { clearProps: "transform" }),
+            },
+          )
+        }
+        continue
+      }
+
+      if (event.type === "damage") {
+        if (event.target === "enemy") {
+          flash()
+          popup(bossRef.current, `-${event.amount.toLocaleString("en-US")}`, "enemy", undefined, Boolean(event.crit))
+          if (bossRef.current) {
+            gsap.fromTo(
+              bossRef.current,
+              { x: 0, y: 0 },
+              {
+                x: 5,
+                y: -4,
+                duration: 0.045,
+                repeat: 5,
+                yoyo: true,
+                ease: "power1.inOut",
+                onComplete: () => gsap.set(bossRef.current, { x: 0, y: 0 }),
+              },
+            )
+          }
+          playHit(battle.combo, Boolean(event.crit))
+        } else {
+          popup(
+            cardRefs.current[event.cardIndex ?? -1] ?? null,
+            `-${event.amount.toLocaleString("en-US")}`,
+            "card",
+          )
+          playSfx("hit", { rate: 0.9 })
+        }
+        continue
+      }
+
+      if (event.type === "heal") {
+        popup(
+          cardRefs.current[event.cardIndex ?? -1] ?? stageRef.current,
+          `+${event.amount.toLocaleString("en-US")}`,
+          "card",
+          "heal",
+        )
+        playSfx("heal")
+        continue
+      }
+
+      if (event.type === "miss") {
+        popup(cardRefs.current[event.cardIndex] ?? null, "MISS", "card", "miss")
+        playSfx("miss")
+        continue
+      }
+
+      if (event.type === "guard") {
+        playSfx("guard")
+        continue
+      }
+
+      if (event.type === "turn") {
+        turnBanner(event.owner)
+        playTurn()
+        if (comboRef.current) {
+          gsap.fromTo(comboRef.current, { scale: 1 }, { scale: 1.18, duration: 0.18, yoyo: true, repeat: 1 })
+        }
+        continue
+      }
+
+      if (event.type === "won") playWin()
+      if (event.type === "lost") playLose()
+    }
+  }, [battle, flash, popup, turnBanner])
+
+  const startBattle = () => {
+    playSfx("click")
+    onStart()
+  }
 
   if (!battle) {
     const totalBp = deck.reduce((sum, card) => sum + battlePower(card), 0)
@@ -131,7 +302,7 @@ export function BattleStage({
                   <div className="choke-gauge-fill" style={{ width: "100%" }} />
                 </div>
               </div>
-              <button type="button" className="choke-center-orb" onClick={onStart}>
+              <button type="button" className="choke-center-orb" onClick={startBattle}>
                 <span className="choke-orb-start">战斗开始</span>
               </button>
               <div className="choke-gauge choke-gauge--party">
@@ -178,7 +349,7 @@ export function BattleStage({
               ))}
             </div>
             <aside className="choke-wing choke-wing--right">
-              <button type="button" className="choke-btn-end" onClick={onStart}>
+              <button type="button" className="choke-btn-end" onClick={startBattle}>
                 战斗开始
               </button>
               <a className="choke-btn-menu" href="/">
@@ -211,8 +382,8 @@ export function BattleStage({
 
   return (
     <div className="choke-viewport">
-      <div className="choke-stage" data-phase={battle.phase === "player" ? "battle" : battle.phase} data-production="true">
-        <section className="choke-boss-zone">
+      <div className="choke-stage" data-phase={battle.phase === "player" ? "battle" : battle.phase} data-production="true" ref={stageRef}>
+        <section className="choke-boss-zone" ref={bossRef}>
           <div className="choke-boss-backdrop" aria-hidden />
           <div
             className="choke-boss-emblem"
@@ -290,7 +461,8 @@ export function BattleStage({
 
           <div className="choke-gauges">
             <div className="choke-gauge choke-gauge--boss">
-              <div className="choke-gauge-track">
+              <div className="choke-gauge-track choke-gauge-track--double">
+                <div className="choke-gauge-ghost" style={{ width: `${bossPct}%` }} />
                 <div className="choke-gauge-fill" style={{ width: `${bossPct}%` }} />
               </div>
             </div>
@@ -300,7 +472,8 @@ export function BattleStage({
               <span className="choke-orb-vs">VS</span>
             </button>
             <div className="choke-gauge choke-gauge--party">
-              <div className="choke-gauge-track">
+              <div className="choke-gauge-track choke-gauge-track--double">
+                <div className="choke-gauge-ghost" style={{ width: `${partyPct}%` }} />
                 <div className="choke-gauge-fill" style={{ width: `${partyPct}%` }} />
               </div>
             </div>
@@ -337,7 +510,7 @@ export function BattleStage({
               </div>
             </div>
             <div className="choke-status-strip choke-status-strip--party">
-              <span className="choke-buff-pill">COMBO {battle.combo}</span>
+              <span className="choke-buff-pill" ref={comboRef}>COMBO {battle.combo}</span>
               <span className="choke-buff-pill">防御 {ROMAN[battle.defenseTier] ?? "0"}</span>
               {battle.supports.map((support) => (
                 <span className="choke-buff-pill" key={support.id} title={`${elementLabel(support.element)} 支援`}>
@@ -371,6 +544,9 @@ export function BattleStage({
                 <div
                   className="choke-card-slot"
                   key={card.uid}
+                  ref={(node) => {
+                    cardRefs.current[index] = node
+                  }}
                   data-selected={isSelected ? "true" : undefined}
                   data-acted={card.acted ? "true" : undefined}
                   data-down={card.down ? "true" : undefined}

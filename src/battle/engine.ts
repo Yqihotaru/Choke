@@ -4,6 +4,7 @@ import {
   createBattleCard,
   teamHp,
   type BattleCard,
+  type BattleEvent,
   type BattleState,
   type Enemy,
   type EnemyIntent,
@@ -25,6 +26,15 @@ const ENEMY_ACTIONS: EnemyIntent[] = [
 
 function random(min: number, max: number): number {
   return min + Math.random() * (max - min)
+}
+
+function beginAction(state: BattleState) {
+  state.events = []
+  state.actionSeq += 1
+}
+
+function emit(state: BattleState, event: BattleEvent) {
+  state.events.push(event)
 }
 
 function elementMultiplier(attack: string, defend: string): number {
@@ -146,6 +156,8 @@ export function createBattle(
     enemy,
     log: [options.tutorial ? "教学战开始" : "战斗开始", `敌方：${enemy.name}`],
     selectedCard: null,
+    events: [],
+    actionSeq: 0,
   }
 }
 
@@ -168,6 +180,7 @@ function applyDamageToEnemy(state: BattleState, card: BattleCard, skillPower: nu
     const hitChance = card.stats.hit
     if (Math.random() * 100 > hitChance) {
       state.combo = Math.floor(state.combo / 2)
+      emit(state, { type: "miss", cardIndex: state.cards.indexOf(card) })
       log(state, `${card.name} 未命中，Combo 减半`)
       continue
     }
@@ -183,6 +196,14 @@ function applyDamageToEnemy(state: BattleState, card: BattleCard, skillPower: nu
     )
     total += damage
     state.enemy.hp = Math.max(0, state.enemy.hp - damage)
+    emit(state, {
+      type: "damage",
+      target: "enemy",
+      amount: damage,
+      element,
+      crit,
+      source: card.name,
+    })
     log(
       state,
       `${card.name} ${crit ? "暴击" : "命中"} ${damage.toLocaleString("en-US")}（Combo ${state.combo}）`,
@@ -193,11 +214,13 @@ function applyDamageToEnemy(state: BattleState, card: BattleCard, skillPower: nu
   if (total > 0 && card.subjob.tags.includes("lifesteal")) {
     const heal = Math.round(total * 0.2)
     card.stats.hp = Math.min(card.stats.hpMax, card.stats.hp + heal)
+    emit(state, { type: "heal", target: "card", amount: heal, cardIndex: state.cards.indexOf(card) })
     log(state, `${card.name} 吸血回复 ${heal.toLocaleString("en-US")}`)
   }
 
   if (state.enemy.hp <= 0) {
     state.phase = "won"
+    emit(state, { type: "won" })
     log(state, "战斗胜利")
   }
 }
@@ -210,7 +233,10 @@ function healCards(state: BattleState, cards: BattleCard[], amount: number) {
     card.stats.hp = Math.min(card.stats.hpMax, card.stats.hp + amount)
     healed += card.stats.hp - before
   }
-  if (healed > 0) log(state, `回复 ${healed.toLocaleString("en-US")} HP`)
+  if (healed > 0) {
+    emit(state, { type: "heal", target: "team", amount: healed })
+    log(state, `回复 ${healed.toLocaleString("en-US")} HP`)
+  }
 }
 
 function addStatus(card: BattleCard, status: StatusEffect) {
@@ -233,6 +259,14 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
   if (skill.once && card.usedOnce.includes(skill.id)) return "这个技能本场已经用过"
   if (state.ap < skill.ap) return `AP 不足（需要 ${skill.ap}）`
 
+  beginAction(state)
+  emit(state, {
+    type: "skill",
+    cardIndex,
+    name: skill.name,
+    element: skill.element,
+  })
+
   state.ap -= skill.ap
   card.acted = true
   if (skill.once) card.usedOnce.push(skill.id)
@@ -254,6 +288,12 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
         if (downed) {
           downed.down = false
           downed.stats.hp = Math.round(downed.stats.hpMax * 0.5)
+          emit(state, {
+            type: "heal",
+            target: "card",
+            amount: downed.stats.hp,
+            cardIndex: state.cards.indexOf(downed),
+          })
           log(state, `${card.name} 救回了 ${downed.name}`)
           break
         }
@@ -270,6 +310,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
     case "guard": {
       const tier = Math.min(4, state.defenseTier + (skill.power ?? 1))
       state.defenseTier = tier
+      emit(state, { type: "guard", tier })
       log(state, `${card.name} 提升防御档位至 ${["0", "I", "II", "III", "IV"][tier]}`)
       break
     }
@@ -308,6 +349,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
       break
     case "ap":
       state.ap = Math.min(state.apMax, state.ap + (skill.amount ?? 1))
+      emit(state, { type: "ap", value: state.ap })
       log(state, `${card.name} 回复 ${skill.amount ?? 1} AP`)
       break
     case "summon": {
@@ -341,8 +383,10 @@ export function raiseDefense(state: BattleState, targetTier: number): string | n
   if (targetTier > maxTier) return hasTank ? "最高 IV 档" : "非坦克最高 III 档"
   const cost = targetTier - state.defenseTier
   if (state.ap < cost) return `AP 不足（需要 ${cost}）`
+  beginAction(state)
   state.ap -= cost
   state.defenseTier = targetTier
+  emit(state, { type: "guard", tier: targetTier })
   log(state, `防御档位提升至 ${["0", "I", "II", "III", "IV"][targetTier]}`)
   return null
 }
@@ -359,9 +403,17 @@ function runSupports(state: BattleState) {
         random(0.95, 1.05),
     )
     state.enemy.hp = Math.max(0, state.enemy.hp - damage)
+    emit(state, {
+      type: "damage",
+      target: "enemy",
+      amount: damage,
+      element: support.element,
+      source: support.name,
+    })
     log(state, `${support.name} 支援攻击 ${damage.toLocaleString("en-US")}（Combo ${state.combo}）`)
     if (state.enemy.hp <= 0) {
       state.phase = "won"
+      emit(state, { type: "won" })
       return
     }
   }
@@ -381,9 +433,17 @@ function runPreemptive(state: BattleState) {
         random(0.95, 1.05),
     )
     state.enemy.hp = Math.max(0, state.enemy.hp - damage)
+    emit(state, {
+      type: "damage",
+      target: "enemy",
+      amount: damage,
+      element: "physical",
+      source: card.name,
+    })
     log(state, `${card.name} 抢攻 ${damage.toLocaleString("en-US")}（Combo ${state.combo}）`)
     if (state.enemy.hp <= 0) {
       state.phase = "won"
+      emit(state, { type: "won" })
       return
     }
   }
@@ -413,8 +473,17 @@ function enemyAttack(
     if (target.stats.hp <= 0) break
   }
   log(state, `${intent.label} 命中 ${target.name} ${total.toLocaleString("en-US")}`)
+  emit(state, {
+    type: "damage",
+    target: "card",
+    amount: total,
+    cardIndex: state.cards.indexOf(target),
+    element: intent.element,
+    source: intent.label,
+  })
   if (target.stats.hp <= 0) {
     target.down = true
+    emit(state, { type: "down", cardIndex: state.cards.indexOf(target) })
     log(state, `${target.name} 下场`)
   }
 }
@@ -422,6 +491,8 @@ function enemyAttack(
 export function endTurn(state: BattleState): string | null {
   if (state.phase !== "player") return "战斗已经结束"
 
+  beginAction(state)
+  emit(state, { type: "turn", owner: "enemy", round: state.turn })
   state.combo = 0
 
   if (state.enemy.stun > 0) {
@@ -468,9 +539,18 @@ export function endTurn(state: BattleState): string | null {
       if (status.id.startsWith("poison") || status.id.startsWith("burn")) {
         const loss = Math.round(card.stats.hpMax * 0.03)
         card.stats.hp = Math.max(0, card.stats.hp - loss)
+        emit(state, {
+          type: "damage",
+          target: "card",
+          amount: loss,
+          cardIndex: state.cards.indexOf(card),
+          element: "dark",
+          source: status.name,
+        })
         log(state, `${card.name} 受到 ${loss.toLocaleString("en-US")} 持续伤害`)
         if (card.stats.hp <= 0) {
           card.down = true
+          emit(state, { type: "down", cardIndex: state.cards.indexOf(card) })
           log(state, `${card.name} 下场`)
         }
       }
@@ -485,6 +565,7 @@ export function endTurn(state: BattleState): string | null {
   const living = alive(state.cards)
   if (living.length === 0) {
     state.phase = "lost"
+    emit(state, { type: "lost" })
     log(state, "战斗失败")
     return null
   }
@@ -504,6 +585,8 @@ export function endTurn(state: BattleState): string | null {
   runSupports(state)
   if ((state.phase as string) !== "won") runPreemptive(state)
   if (state.phase === "player") {
+    emit(state, { type: "turn", owner: "player", round: state.turn })
+    emit(state, { type: "ap", value: state.ap })
     log(state, `第 ${state.turn} 回合开始`)
   }
   return null

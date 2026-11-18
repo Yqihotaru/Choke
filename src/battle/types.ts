@@ -51,7 +51,6 @@ export interface BattleCard {
 }
 
 export type IntentKind = "attack" | "magic" | "heavy" | "debuff" | "buff"
-
 export interface EnemyIntent {
   id: string
   kind: IntentKind
@@ -86,6 +85,31 @@ export interface SupportUnit {
 
 export type BattlePhase = "player" | "won" | "lost"
 
+/** 一次行动产生的结构化事件，前端用它们驱动动画与音效。 */
+export type BattleEvent =
+  | {
+      type: "skill"
+      cardIndex: number
+      name: string
+      element: string
+    }
+  | {
+      type: "damage"
+      target: "enemy" | "card"
+      amount: number
+      cardIndex?: number
+      element?: string
+      crit?: boolean
+      source?: string
+    }
+  | { type: "heal"; target: "card" | "team"; amount: number; cardIndex?: number }
+  | { type: "miss"; cardIndex: number }
+  | { type: "down"; cardIndex: number }
+  | { type: "guard"; tier: number }
+  | { type: "ap"; value: number }
+  | { type: "turn"; owner: "player" | "enemy"; round: number }
+  | { type: "won" | "lost" }
+
 export interface BattleState {
   turn: number
   phase: BattlePhase
@@ -98,6 +122,10 @@ export interface BattleState {
   enemy: Enemy
   log: string[]
   selectedCard: number | null
+  /** 最近一次行动的事件；每次 playSkill / raiseDefense / endTurn 重置 */
+  events: BattleEvent[]
+  /** 行动序号；前端用它判断是否要重播动画 */
+  actionSeq: number
 }
 
 function heroLevelFactor(level: number): number {

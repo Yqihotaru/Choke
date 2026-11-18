@@ -1,8 +1,11 @@
 import { lazy, Suspense } from "react"
 
 import { BackToDesk } from "@/components/BackToDesk"
-import { BattlePage } from "@/battle/BattlePage"
 import { DeskPage } from "@/desk/DeskPage"
+
+const BattlePage = lazy(() =>
+  import("@/battle/BattlePage").then((m) => ({ default: m.BattlePage }))
+)
 
 const CardEditor = lazy(() =>
   import("@/card/CardEditor").then((m) => ({ default: m.CardEditor }))
@@ -47,7 +50,9 @@ export function App() {
   if (path.endsWith("battle")) {
     return (
       <>
-        <BattlePage />
+        <Suspense fallback={FALLBACK}>
+          <BattlePage />
+        </Suspense>
         <BackToDesk />
       </>
     )
