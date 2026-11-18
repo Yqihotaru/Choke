@@ -93,7 +93,7 @@ export function BattlePage() {
         <div className="battle-gate">
           <span>CHOKE! · BATTLE</span>
           <h1>需要先登录</h1>
-          <p>战斗读取你账号里保存的 7 张主队卡。</p>
+          <p>战斗读取你账号里保存的出战卡组。</p>
           <a href="/auth/osu">用 osu! 登录</a>
           <GuestLoginButton className="battle-guest" label="以游客身份进入" />
         </div>

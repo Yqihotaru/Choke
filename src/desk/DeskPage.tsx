@@ -21,7 +21,7 @@ import {
   type PanelId,
 } from "./DeskBook"
 import { DragGhost } from "./DragGhost"
-import { fetchPackCatalog, toFace, type ApiUserCard } from "./api"
+import { toFace, type ApiUserCard } from "./api"
 import {
   ALBUM_HOVER_EVENT,
   BACKPACK_HOVER_EVENT,
@@ -52,6 +52,7 @@ import {
   unlockLevelOf,
 } from "@/tutorial/unlocks"
 import { POOL_META } from "./rarity"
+import { useGameConfig } from "./useGameConfig"
 import { DEFAULT_SKIN } from "./skins"
 import { publishDeskCardIds } from "./presence"
 import { cardsToItems, ITEM_SIZE, newId, sizeOf, useDesk } from "./store"
@@ -198,7 +199,8 @@ export function DeskPage() {
     const normalized = saved === "quest" ? "golden" : saved
     return normalized && normalized in POOL_META ? (normalized as PackPool) : "normal"
   })
-  const [packSize, setPackSize] = useState(5)
+  const config = useGameConfig()
+  const packSize = config?.packSize ?? 5
   const [pressing, setPressing] = useState(false)
   const pressingRef = useRef(false)
   const pressHandled = useRef(false)
@@ -271,18 +273,6 @@ export function DeskPage() {
   useEffect(() => {
     localStorage.setItem(POOL_KEY, pool)
   }, [pool])
-
-  useEffect(() => {
-    let cancelled = false
-    fetchPackCatalog()
-      .then((catalog) => {
-        if (!cancelled) setPackSize(catalog.packSize)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const refreshUser = useCallback(() => {
     fetch("/auth/me", { credentials: "include" })

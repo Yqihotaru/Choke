@@ -49,9 +49,16 @@ export interface TutorialContext {
   tutorialDone: boolean
 }
 
+/** 目标按“书合着 / 书翻开”分别配置；台本 JSON 用这个结构 */
+export interface TutorialTargetByView {
+  desktop?: string | string[]
+  book?: string | string[]
+}
+
 export type TutorialTarget =
   | string
   | string[]
+  | TutorialTargetByView
   | ((context: TutorialContext) => string | string[] | null)
 
 export interface TutorialScript {

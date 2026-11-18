@@ -57,3 +57,6 @@ export const STARTER_PACKS = {
   normal: 30,
   mystery: 1,
 } as const
+
+/** 神秘卡包不在公共卡池里，单独一个 id/名字。 */
+export const MYSTERY_PACK = { id: "mystery", name: "神秘卡包" } as const

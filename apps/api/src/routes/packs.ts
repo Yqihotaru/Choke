@@ -3,11 +3,12 @@ import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
 import { requireSelf, requireSession } from "../auth/guard"
+import { DECK_SIZE } from "../config"
 import { db } from "../db/client"
 import { cards, userCards, users } from "../db/schema"
 import { invalidatePublicCardCache } from "./cards"
 import { openPack } from "../gacha/open"
-import { PACKS, PACK_SIZE, PITY, type PackId } from "../gacha/packs"
+import { PACKS, PACK_SIZE, PITY, STARTER_PACKS, MYSTERY_PACK, type PackId } from "../gacha/packs"
 import {
   addPacks,
   consumePack,
@@ -38,7 +39,7 @@ async function loadHero(userId: string, heroId: string) {
 }
 
 export async function packRoutes(app: FastifyInstance) {
-  app.get("/packs", async () => {
+  app.get("/config", async () => {
     return {
       ok: true,
       data: {
@@ -55,6 +56,12 @@ export async function packRoutes(app: FastifyInstance) {
           rarity: PITY.rarity,
         },
         packSize: PACK_SIZE,
+        deckSize: DECK_SIZE,
+        starterPacks: Object.entries(STARTER_PACKS).map(([id, count]) => ({
+          id,
+          count,
+          name: id === MYSTERY_PACK.id ? MYSTERY_PACK.name : PACKS[id as PackId].name,
+        })),
       },
     }
   })

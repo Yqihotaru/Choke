@@ -2,10 +2,10 @@ import { and, eq, gt, sql } from "drizzle-orm"
 import { randomUUID } from "node:crypto"
 
 import { db } from "../db/client"
-import { PACKS, STARTER_PACKS, type PackId } from "../gacha/packs"
+import { PACKS, STARTER_PACKS, MYSTERY_PACK, type PackId } from "../gacha/packs"
 import { packTokens, userPacks } from "../db/schema"
 
-export const PACK_POOLS = [...(Object.keys(PACKS) as PackId[]), "mystery"] as const
+export const PACK_POOLS = [...(Object.keys(PACKS) as PackId[]), MYSTERY_PACK.id] as const
 
 export type PackPoolId = (typeof PACK_POOLS)[number]
 

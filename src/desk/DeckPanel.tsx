@@ -26,6 +26,7 @@ import { Pages, useBook, usePageCache } from "./BookPages"
 import { FitArea } from "./FitArea"
 import { GuestLoginButton } from "./GuestLoginButton"
 import { useDeskCardIds } from "./presence"
+import { useGameConfig } from "./useGameConfig"
 import "./deck-panel.css"
 
 const RARITY_FILTER: (Rarity | "")[] = ["", ...RARITIES]
@@ -54,6 +55,8 @@ export const DeckPanel = memo(function DeckPanel({
   const [notice, setNotice] = useState<string | null>(null)
   const [dropSlot, setDropSlot] = useState<number | null>(null)
   const deskIds = useDeskCardIds()
+  const config = useGameConfig()
+  const deckSize = config?.deckSize ?? 0
 
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
   const [query, setQuery] = useState("")
@@ -177,7 +180,7 @@ export const DeckPanel = memo(function DeckPanel({
   const clear = () => {
     if (!deck || saving) return
     setPickerSlot(null)
-    void commit(Array.from({ length: 7 }, () => null))
+    void commit(deck.slots.map(() => null))
   }
 
   useEffect(() => {
@@ -225,7 +228,7 @@ export const DeckPanel = memo(function DeckPanel({
     return (
       <Pages
         className="deck-panel"
-        left={<p className="bk-note">登录后可以编 7 张卡的出战卡组。</p>}
+        left={<p className="bk-note">登录后可以编辑出战卡组。</p>}
         right={
           <div className="bk-empty">
             <span>登录后编辑卡组</span>
@@ -246,7 +249,11 @@ export const DeckPanel = memo(function DeckPanel({
       <Pages
         className="deck-panel"
         ready={!!error}
-        left={<p className="bk-note">出战卡组最多 7 张，改动自动保存。</p>}
+        left={
+          <p className="bk-note">
+            {deckSize > 0 ? `出战卡组最多 ${deckSize} 张，改动自动保存。` : "改动自动保存。"}
+          </p>
+        }
         right={
           <div className={`bk-empty ${error ? "bk-error" : ""}`}>
             {error ?? "加载中…"}
@@ -280,7 +287,7 @@ export const DeckPanel = memo(function DeckPanel({
     }
 
     let readyDeck = filled > 0
-    const ids = pickerRows.slice(0, 7).map((row) => row.userCardId)
+    const ids = pickerRows.slice(0, deck.slots.length).map((row) => row.userCardId)
     if (!readyDeck && ids.length > 0) {
       const slots = deck.slots.map((_, index) => ids[index] ?? null)
       setSaving(true)
@@ -338,7 +345,7 @@ export const DeckPanel = memo(function DeckPanel({
             <div className="deck-summary">
               <div className="bk-stat">
                 <b>
-                  {filled} <small>/ 7</small>
+                  {filled} <small>/ {deck.slots.length}</small>
                 </b>
                 <span>已上阵</span>
               </div>
@@ -461,7 +468,9 @@ export const DeckPanel = memo(function DeckPanel({
             </div>
 
             <p className="bk-note">
-              不必满 7 张也能出战，但至少要 1 张。桌面上的卡可以直接拖进槽位。
+              {deckSize > 0
+                ? `不必满 ${deckSize} 张也能出战，但至少要 1 张。桌面上的卡可以直接拖进槽位。`
+                : "不必填满也能出战，但至少要 1 张。桌面上的卡可以直接拖进槽位。"}
             </p>
           </>
         }

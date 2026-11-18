@@ -5,12 +5,10 @@ import { CardFace } from "@/card/CardFace"
 import { RARITY_LABEL, battlePower } from "@/card/data"
 
 import {
-  fetchPackCatalog,
   fetchPackInventory,
   openMysteryPack,
   toFace,
   type ApiUserCard,
-  type PackCatalog,
   type PackInventory,
 } from "./api"
 import { Pages } from "./BookPages"
@@ -19,6 +17,7 @@ import { GuestLoginButton } from "./GuestLoginButton"
 import { INVITE_OPEN_EVENT } from "./invite"
 import { PackArt } from "./opening/PackArt"
 import type { PackPool } from "./types"
+import { useGameConfig } from "./useGameConfig"
 import "./backpack-panel.css"
 
 interface PackMeta {
@@ -70,7 +69,7 @@ export function BackpackPanel({
   onHeroClaimed?: () => void
 }) {
   const [inventory, setInventory] = useState<PackInventory | null>(null)
-  const [catalog, setCatalog] = useState<PackCatalog | null>(null)
+  const config = useGameConfig()
   const [hero, setHero] = useState<ApiUserCard | null>(null)
   const [onboarded, setOnboarded] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -82,18 +81,6 @@ export function BackpackPanel({
   const [revision, setRevision] = useState(0)
   /** 没点过就默认选第一个有库存的 */
   const [picked, setPicked] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    fetchPackCatalog()
-      .then((data) => {
-        if (!cancelled) setCatalog(data)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const onHover = (event: Event) => {
@@ -135,13 +122,13 @@ export function BackpackPanel({
   const heroClaimed = inventory?.heroClaimed ?? !!hero
   const totalPacks = Object.values(counts).reduce((sum, value) => sum + (value ?? 0), 0)
   const heroFace = useMemo(() => (hero ? toFace(hero) : result ? toFace(result) : null), [hero, result])
-  const packSize = catalog?.packSize ?? 5
+  const packSize = config?.packSize ?? 5
   const packList = useMemo<PackMeta[]>(() => {
     const list: PackMeta[] = [
       { id: MYSTERY_ID, label: "神秘卡包", note: "只有 1 张卡：你的本体卡" },
     ]
     for (const id of PACK_ORDER) {
-      const meta = catalog?.packs.find((pack) => pack.id === id)
+      const meta = config?.packs.find((pack) => pack.id === id)
       list.push({
         id,
         label: meta?.name ?? id,
@@ -151,7 +138,7 @@ export function BackpackPanel({
       })
     }
     return list
-  }, [catalog, packSize])
+  }, [config, packSize])
   const selected =
     packList.find((pack) => pack.id === picked) ??
     packList.find((pack) => (counts[pack.id] ?? 0) > 0) ??

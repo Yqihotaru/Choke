@@ -183,23 +183,42 @@ export interface PackCatalogEntry {
   foilRate: number
 }
 
-export interface PackCatalog {
+export interface GameConfig {
   packs: PackCatalogEntry[]
   pity: { threshold: number; rarity: string }
   packSize: number
+  deckSize: number
+  starterPacks: { id: string; count: number; name: string }[]
 }
 
-let catalogPromise: Promise<PackCatalog> | null = null
+let configPromise: Promise<GameConfig> | null = null
 
-/** 卡包配置是静态的；同一次会话里多处要用，缓存一份。 */
-export function fetchPackCatalog(): Promise<PackCatalog> {
-  if (!catalogPromise) {
-    catalogPromise = request<PackCatalog>("/api/packs").catch((error) => {
-      catalogPromise = null
+/** 规则配置是静态的；同一次会话里多处要用，缓存一份。 */
+export function fetchGameConfig(): Promise<GameConfig> {
+  if (!configPromise) {
+    configPromise = request<GameConfig>("/api/config").catch((error) => {
+      configPromise = null
       throw error
     })
   }
-  return catalogPromise
+  return configPromise
+}
+
+export interface CardStats {
+  total: number
+  byRarity: Record<string, number>
+}
+
+let statsPromise: Promise<CardStats> | null = null
+
+export function fetchCardStats(): Promise<CardStats> {
+  if (!statsPromise) {
+    statsPromise = request<CardStats>("/api/cards/stats").catch((error) => {
+      statsPromise = null
+      throw error
+    })
+  }
+  return statsPromise
 }
 
 export function fetchPackInventory(userId: string, signal?: AbortSignal): Promise<PackInventory> {

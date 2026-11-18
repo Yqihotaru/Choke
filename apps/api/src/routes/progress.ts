@@ -2,7 +2,7 @@ import { and, eq, lte } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
-import { TUTORIAL_STEPS } from "../../../../src/tutorial/types"
+import { TUTORIAL_STEPS } from "../shared/tutorial"
 import { requireSelf } from "../auth/guard"
 import { db } from "../db/client"
 import { users } from "../db/schema"

@@ -20,7 +20,7 @@ import { invalidatePublicCardCache } from "./cards"
 import { heroCardDef } from "../hero"
 import { addPacks, getPackCounts, grantStarterPacks } from "../packs/inventory"
 import { STARTER_PACKS } from "../gacha/packs"
-import { heroIndex, heroPersonalBonus, heroStatsFromOsu } from "../../../../src/pool/hero"
+import { heroIndex, heroPersonalBonus, heroStatsFromOsu } from "../shared/pool"
 
 /** 登录时把 /me/osu 写成 hero-{id} 卡定义，并放进该用户的卡册 */
 async function claimHeroCard(

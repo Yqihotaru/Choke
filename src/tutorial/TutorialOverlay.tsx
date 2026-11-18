@@ -9,12 +9,17 @@ import {
 } from "react"
 import { createPortal } from "react-dom"
 
+import { useGameConfig } from "@/desk/useGameConfig"
+
+import { MARKET_UNLOCK_LEVEL } from "./constants"
+
 import {
   requestTutorialCloseBook,
   TUTORIAL_EVENT,
   type TutorialEventDetail,
 } from "./events"
 import {
+  formatScriptText,
   TUTORIAL_CHARACTER,
   TUTORIAL_SCRIPTS,
   TUTORIAL_STEP_ORDER,
@@ -144,7 +149,13 @@ function TutorialDialogue({
   const [lineIndex, setLineIndex] = useState(0)
   const [confirmingSkip, setConfirmingSkip] = useState(false)
   const typedRef = useRef<TypedTextHandle>(null)
+  const config = useGameConfig()
   const line = script.lines[Math.min(lineIndex, script.lines.length - 1)]
+  const lineText = formatScriptText(line.text, {
+    packSize: config?.packSize ?? 5,
+    deckSize: config?.deckSize ?? 7,
+    marketUnlockLevel: MARKET_UNLOCK_LEVEL,
+  })
   const waitingForTarget = script.advanceOn !== "continue" && targetMissing
   // 事件/经验步骤不能靠“跳过这一步”伪造完成，只能完整跳过教程
   const canSkipStep =
@@ -205,7 +216,11 @@ function TutorialDialogue({
         </button>
       </header>
 
-      <TypedText key={lineIndex} ref={typedRef} text={line.text} />
+      <TypedText
+        key={`${lineIndex}:${lineText}`}
+        ref={typedRef}
+        text={lineText}
+      />
 
       <footer className="tut-dialog__foot">
         {levelFlash && (
@@ -378,7 +393,11 @@ export function TutorialOverlay({
     const value =
       typeof script.target === "function"
         ? script.target(context)
-        : script.target
+        : Array.isArray(script.target) || typeof script.target === "string"
+          ? script.target
+          : context.bookOpen
+            ? script.target?.book
+            : script.target?.desktop
     const candidates = Array.isArray(value) ? value : value ? [value] : []
     for (const id of candidates) {
       const element = document.querySelector<HTMLElement>(

@@ -2,19 +2,17 @@ import { and, asc, count, desc, eq, getTableColumns, inArray, ne, sql } from "dr
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
+import { requireSelf } from "../auth/guard"
 import {
+  FOIL_COST,
   constellationCap,
+  essenceOf,
   expToNext,
   isHeroCardId,
   levelCap,
   meltExpOf,
-} from "../../../../src/card/progression"
-import {
-  FOIL_COST,
-  essenceOf,
-} from "../../../../src/card/economy"
-import type { Rarity } from "../../../../src/card/types"
-import { requireSelf } from "../auth/guard"
+  type Rarity,
+} from "../shared/cards"
 import { db } from "../db/client"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
 

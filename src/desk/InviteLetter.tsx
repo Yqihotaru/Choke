@@ -12,7 +12,6 @@ import { createPortal, flushSync } from "react-dom"
 import { RARITIES } from "@/card/types"
 
 import { cellScale, type DeskDrawerHandle } from "./DeskDrawer"
-import { fetchPackCatalog } from "./api"
 import { GuestLoginButton } from "./GuestLoginButton"
 import {
   ACHIEVEMENTS,
@@ -24,6 +23,7 @@ import {
   saveInvitePos,
   unlockAchievement,
 } from "./invite"
+import { useCardStats, useGameConfig } from "./useGameConfig"
 import "./invite-letter.css"
 
 const ENV_W = 184
@@ -465,20 +465,8 @@ function LetterModal({
   const [claiming, setClaiming] = useState(false)
   const [granted, setGranted] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  /** 保底阈值由 API 提供；没读到之前先显示占位 */
-  const [pityThreshold, setPityThreshold] = useState<number | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    fetchPackCatalog()
-      .then((catalog) => {
-        if (!cancelled) setPityThreshold(catalog.pity.threshold)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const config = useGameConfig()
+  const stats = useCardStats()
 
   useEffect(() => {
     // 捕获阶段先拦下 Esc，不让底下翻开的书也跟着合上
@@ -546,6 +534,13 @@ function LetterModal({
     </button>
   )
 
+  const pityThreshold = config?.pity.threshold ?? null
+  const cardsLabel = stats
+    ? stats.total >= 10000
+      ? `${Math.floor(stats.total / 10000)} 万+`
+      : String(stats.total)
+    : "—"
+
   let body
   if (granted) {
     body = (
@@ -608,14 +603,14 @@ function LetterModal({
       <>
         <span className="invite-paper__eyebrow">致每一位 osu! 玩家</span>
         <h2>诚邀你入座 Choke!</h2>
-        <p>这里把 osu! 玩家做成一张张卡：开包、收藏、组 7 张卡上桌对战。</p>
+        <p>这里把 osu! 玩家做成一张张卡：开包、收藏、组好卡组上桌对战。</p>
         <p>
           用 osu!
           账号登录后，我们会读取你的公开排名与游玩数据，做出属于你的本体卡，再送你一份新手礼包。
         </p>
         <ul className="invite-paper__facts">
           <li>
-            <b>19 万+</b>
+            <b>{cardsLabel}</b>
             <span>玩家卡池</span>
           </li>
           <li>
@@ -650,10 +645,16 @@ function LetterModal({
           <li>
             点桌上的发牌按钮把卡包发到桌面，点卡包拆开；抽到的卡进卡册，图鉴能看全卡池。
           </li>
-          <li>在卡组卡套槽里排好 7 张卡，就能去对战垫上打一场。</li>
+          <li>在卡组卡套槽里排好卡，就能去对战垫上打一场。</li>
         </ol>
         <p className="invite-paper__hint">
-          新手礼包：30 个普通卡包 + 1 个神秘卡包。
+          新手礼包：
+          {config
+            ? config.starterPacks
+                .map((pack) => `${pack.count} 个${pack.name}`)
+                .join(" + ")
+            : "登录后领取"}
+          。
         </p>
         <div className="invite-paper__actions">{claimButton}</div>
       </>

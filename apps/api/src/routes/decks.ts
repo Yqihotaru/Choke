@@ -3,10 +3,9 @@ import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
 import { requireSelf } from "../auth/guard"
+import { DECK_SIZE } from "../config"
 import { db } from "../db/client"
 import { cards, decks, deckSlots, userCards } from "../db/schema"
-
-const DECK_SIZE = 7
 
 type DeckCardRow = Record<string, unknown>
 

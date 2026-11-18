@@ -11,7 +11,7 @@ import type { CardFaceData, Rarity } from "@/card/types"
 import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
 
-import { fetchPackCatalog, fetchPackInventory, toFace, type ApiUserCard, type PackCatalog } from "./api"
+import { fetchPackInventory, toFace, type ApiUserCard } from "./api"
 import { Pages } from "./BookPages"
 import {
   DESK_ADD_CARDS_EVENT,
@@ -24,6 +24,7 @@ import {
 import { GuestLoginButton } from "./GuestLoginButton"
 import { PackArt } from "./opening/PackArt"
 import { RARITY_COLOR } from "./rarity"
+import { useGameConfig } from "./useGameConfig"
 import "./gacha-panel.css"
 
 const API = "/api"
@@ -98,7 +99,7 @@ export function GachaPanel({
     userId: string
     data: Record<string, number>
   } | null>(null)
-  const [catalog, setCatalog] = useState<PackCatalog | null>(null)
+  const config = useGameConfig()
   const [skipAnim, setSkipAnim] = useState(
     () => localStorage.getItem(SKIP_KEY) === "1"
   )
@@ -127,18 +128,6 @@ export function GachaPanel({
   }, [userId])
 
   useEffect(() => {
-    let cancelled = false
-    fetchPackCatalog()
-      .then((data) => {
-        if (!cancelled) setCatalog(data)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
     if (!userId) return
     let cancelled = false
     fetchPackInventory(userId)
@@ -164,13 +153,13 @@ export function GachaPanel({
   }, [userId])
 
   const current = POOLS.find((item) => item.id === pool) ?? POOLS[0]
-  const pityThreshold = catalog?.pity.threshold ?? 60
-  const pityRarity = catalog?.pity.rarity ?? "L"
-  const packSize = catalog?.packSize ?? 5
+  const pityThreshold = config?.pity.threshold ?? 60
+  const pityRarity = config?.pity.rarity ?? "L"
+  const packSize = config?.packSize ?? 5
   const pityPercent = pity ? Math.min(100, (pity.after / pityThreshold) * 100) : 0
   const currentPacks = packs && packs.userId === userId ? packs.data : null
   const odds = Object.entries(
-    catalog?.packs.find((item) => item.id === pool)?.weights ?? {}
+    config?.packs.find((item) => item.id === pool)?.weights ?? {}
   ).filter(([, weight]) => weight > 0)
   const packCount = currentPacks?.[pool] ?? 0
 

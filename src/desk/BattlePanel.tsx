@@ -151,7 +151,7 @@ export function BattlePanel({
           {enemy}
           <p className="bk-note">
             开局 2 AP，靠 Combo、防御档位和技能应对敌方预告的意图。技能按 14
-            个子职业分池，卡组不满 7 张也可以出战。
+            个子职业分池，卡组不满也可以出战。
           </p>
           {tutorialBattleStep ? (
             cards.length > 0 ? (
