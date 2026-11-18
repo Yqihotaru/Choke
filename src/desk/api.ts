@@ -189,6 +189,7 @@ export interface GameConfig {
   packSize: number
   deckSize: number
   starterPacks: { id: string; count: number; name: string }[]
+  mirrorRate: number
 }
 
 let configPromise: Promise<GameConfig> | null = null

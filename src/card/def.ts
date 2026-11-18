@@ -46,6 +46,7 @@ export function faceFromDef(
     mods: state.mods ?? [],
     constellation: state.constellation ?? 0,
     isHero: def.id.startsWith("hero-"),
+    isMirror: def.id.startsWith("mirror-"),
     heroBonus: def.heroBonus ?? 0,
     foil: state.foil,
     no: def.no,

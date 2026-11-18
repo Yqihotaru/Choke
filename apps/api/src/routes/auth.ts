@@ -14,10 +14,12 @@ import {
   readSession,
 } from "../auth/osu"
 import { WEB_BASE } from "../auth/env"
+import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
 import { cards, userCards, userPacks, users } from "../db/schema"
 import { invalidatePublicCardCache } from "./cards"
 import { heroCardDef } from "../hero"
+import { upsertMirrorCard } from "../mirror"
 import { addPacks, getPackCounts, grantStarterPacks } from "../packs/inventory"
 import { STARTER_PACKS } from "../gacha/packs"
 import { heroIndex, heroPersonalBonus, heroStatsFromOsu } from "../shared/pool"
@@ -49,8 +51,14 @@ async function claimHeroCard(
 
   await db
     .insert(cards)
-    .values({ id, ...rest })
-    .onConflictDoUpdate({ target: cards.id, set: rest })
+    .values({ id, ...rest, cardType: CARD_TYPES.hero })
+    .onConflictDoUpdate({
+      target: cards.id,
+      set: { ...rest, cardType: CARD_TYPES.hero },
+    })
+
+  // 镜像卡定义跟着本体卡走：资料刷新时一起更新，但不发进卡册。
+  await upsertMirrorCard(me.id, def)
 
   invalidatePublicCardCache()
   const [owned] = await db
@@ -173,6 +181,9 @@ export async function authRoutes(app: FastifyInstance) {
     if (!user) {
       return reply.code(401).send({ ok: false, error: { code: "unauthorized", message: "用户不存在" } })
     }
+
+    // 镜像池按最近活跃筛选；/auth/me 是每次进桌面的必经请求。
+    await db.update(users).set({ lastSeenAt: new Date() }).where(eq(users.id, userId))
 
     let hero = null
     if (user.osuId != null) {

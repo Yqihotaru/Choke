@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS cards (
   banner text,
   skills jsonb NOT NULL,
   hero_bonus integer NOT NULL DEFAULT 0,
+  card_type text NOT NULL DEFAULT 'pool',
+  origin_osu_id bigint,
   version integer NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS cards_rarity_idx ON cards (rarity);
@@ -40,6 +42,13 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS cards_name_trgm_idx ON cards USING gin (name gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS cards_pp_idx ON cards (pp DESC NULLS LAST);
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS hero_bonus integer NOT NULL DEFAULT 0;
+ALTER TABLE cards ADD COLUMN IF NOT EXISTS card_type text NOT NULL DEFAULT 'pool';
+ALTER TABLE cards ADD COLUMN IF NOT EXISTS origin_osu_id bigint;
+CREATE INDEX IF NOT EXISTS cards_type_rarity_idx ON cards (card_type, rarity);
+CREATE UNIQUE INDEX IF NOT EXISTS cards_mirror_origin_idx
+  ON cards (origin_osu_id) WHERE card_type = 'mirror';
+UPDATE cards SET card_type = 'hero' WHERE id LIKE 'hero-%' AND card_type = 'pool';
+UPDATE cards SET card_type = 'mirror' WHERE id LIKE 'mirror-%' AND card_type = 'pool';
 
 CREATE TABLE IF NOT EXISTS users (
   id text PRIMARY KEY,
@@ -65,6 +74,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS tutorial_step text NOT NULL DEFAULT '
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tutorial_done boolean NOT NULL DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS progress_updated_at bigint NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tutorial_pack_claimed boolean NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at timestamptz NOT NULL DEFAULT now();
 
 CREATE TABLE IF NOT EXISTS user_cards (
   id serial PRIMARY KEY,

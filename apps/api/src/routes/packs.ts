@@ -9,6 +9,7 @@ import { cards, userCards, users } from "../db/schema"
 import { invalidatePublicCardCache } from "./cards"
 import { openPack } from "../gacha/open"
 import { PACKS, PACK_SIZE, PITY, STARTER_PACKS, MYSTERY_PACK, type PackId } from "../gacha/packs"
+import { MIRROR_RATE } from "../mirror"
 import {
   addPacks,
   consumePack,
@@ -62,6 +63,7 @@ export async function packRoutes(app: FastifyInstance) {
           count,
           name: id === MYSTERY_PACK.id ? MYSTERY_PACK.name : PACKS[id as PackId].name,
         })),
+        mirrorRate: MIRROR_RATE,
       },
     }
   })

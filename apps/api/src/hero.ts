@@ -31,7 +31,9 @@ export function heroCardDef(
   const rankLimited = rankCap(pool?.globalRank)
   const fanLimited = fanCap(me.follower_count)
   const cappedByRank = rankLimited ? lowerRarity(poolRarity, rankLimited) : poolRarity
-  const rarity = fanLimited ? lowerRarity(cappedByRank, fanLimited) : cappedByRank
+  const cappedByFan = fanLimited ? lowerRarity(cappedByRank, fanLimited) : cappedByRank
+  // 本体卡初始品质封顶 L：满养成后才走向 Prismatic，避免开服即终局。
+  const rarity = lowerRarity(cappedByFan, "L")
 
   return {
     id: `hero-${me.id}`,

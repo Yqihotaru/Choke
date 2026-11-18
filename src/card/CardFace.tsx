@@ -70,6 +70,8 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
       data-rarity={card.rarity}
       data-mode={mode}
       data-foil={card.foil ? "true" : undefined}
+      // 镜像卡视觉等美术 PR；先留数据钩子，不做临时样式
+      data-mirror={card.isMirror ? "true" : undefined}
     >
       <div className="cf__stock" aria-hidden />
       <div className="cf__sheen" aria-hidden />

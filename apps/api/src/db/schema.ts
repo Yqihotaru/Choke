@@ -31,6 +31,10 @@ export const cards = pgTable(
     art: text("art"),
     banner: text("banner"),
     skills: jsonb("skills").notNull(),
+    /** pool / hero / mirror；公共卡池只抽 pool */
+    cardType: text("card_type").notNull().default("pool"),
+    /** 镜像卡对应的 osu! 账号；公共卡与本体卡为 null */
+    originOsuId: bigint("origin_osu_id", { mode: "number" }),
     /** 本体卡个人加成（basis point）；池卡为 0 */
     heroBonus: integer("hero_bonus").notNull().default(0),
     version: integer("version").notNull().default(1),
@@ -42,6 +46,7 @@ export const cards = pgTable(
     index("cards_name_idx").on(table.name),
     index("cards_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
     index("cards_pp_idx").on(table.pp.desc().nullsLast()),
+    index("cards_type_rarity_idx").on(table.cardType, table.rarity),
   ],
 )
 
@@ -69,6 +74,8 @@ export const users = pgTable("users", {
   progressUpdatedAt: bigint("progress_updated_at", { mode: "number" }).notNull().default(0),
   /** 回归玩家补发的一次性教程包 */
   tutorialPackClaimed: boolean("tutorial_pack_claimed").notNull().default(false),
+  /** 最近一次活跃（/auth/me 刷新）；镜像池按它筛活跃账号 */
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 })
 

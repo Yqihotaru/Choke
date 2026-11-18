@@ -9,13 +9,13 @@ import {
   ilike,
   isNotNull,
   isNull,
-  notLike,
   sql,
 } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
 import { requireSelf } from "../auth/guard"
+import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
 import { cards, userCards } from "../db/schema"
 
@@ -56,7 +56,7 @@ async function queryPublicCards(query: {
   limit: number
   offset: number
 }) {
-  const filters = [notLike(cards.id, "hero-%")]
+  const filters = [eq(cards.cardType, CARD_TYPES.pool)]
   if (query.rarity) filters.push(eq(cards.rarity, query.rarity))
   if (query.country) filters.push(eq(cards.country, query.country))
   if (query.q) filters.push(ilike(cards.name, `%${query.q}%`))
@@ -120,7 +120,7 @@ export async function cardRoutes(app: FastifyInstance) {
     const rows = await db
       .select({ rarity: cards.rarity, value: count() })
       .from(cards)
-      .where(notLike(cards.id, "hero-%"))
+      .where(eq(cards.cardType, CARD_TYPES.pool))
       .groupBy(cards.rarity)
 
     const byRarity: Record<string, number> = {}
@@ -138,7 +138,7 @@ export async function cardRoutes(app: FastifyInstance) {
     const rows = await db
       .select({ code: cards.country, value: count() })
       .from(cards)
-      .where(notLike(cards.id, "hero-%"))
+      .where(eq(cards.cardType, CARD_TYPES.pool))
       .groupBy(cards.country)
 
     return {
@@ -158,7 +158,7 @@ export async function cardRoutes(app: FastifyInstance) {
     const poolRows = await db
       .select({ rarity: cards.rarity, country: cards.country, total: count() })
       .from(cards)
-      .where(notLike(cards.id, "hero-%"))
+      .where(eq(cards.cardType, CARD_TYPES.pool))
       .groupBy(cards.rarity, cards.country)
 
     const ownedRows = await db
@@ -237,7 +237,7 @@ export async function cardRoutes(app: FastifyInstance) {
       .where(eq(userCards.userId, userId))
       .as("owned_cards")
 
-    const baseFilters = [notLike(cards.id, "hero-%")]
+    const baseFilters = [eq(cards.cardType, CARD_TYPES.pool)]
     if (query.rarity) baseFilters.push(eq(cards.rarity, query.rarity))
     if (query.country) baseFilters.push(eq(cards.country, query.country))
     if (query.q) baseFilters.push(ilike(cards.name, `%${query.q}%`))
@@ -294,7 +294,7 @@ export async function cardRoutes(app: FastifyInstance) {
     const { id } = z.object({ id: z.string() }).parse(request.params)
     const [row] = await db.select().from(cards).where(eq(cards.id, id)).limit(1)
     if (!row) {
-      return reply.code(404).send({ ok: false, error: { code: "not_found", message: "卡不存在" } })
+      return reply.code(404).send({ ok: false, error: { code: "not_found", message: "鍗′笉瀛樺湪" } })
     }
     return { ok: true, data: row }
   })

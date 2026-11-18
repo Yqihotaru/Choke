@@ -70,6 +70,8 @@ export interface CardFaceData {
   foil?: boolean
   /** 本体卡个人加成，单位 basis point：-2000 = -20%，2000 = +20% */
   heroBonus?: number
+  /** 镜像卡：本体卡的复制体，单独卡型 */
+  isMirror?: boolean
 }
 
 /** 卡面显示层：收藏态全显，战斗态只留立绘 + 技能 */
