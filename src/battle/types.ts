@@ -1,33 +1,67 @@
 import { CONSTELLATION_BONUS, RARITY_BASE } from "@/card/data"
 import {
   ARCHETYPE_COEF,
-  POISE_COEF,
-  skillDefsFor,
+  MP_MAX_BY_RARITY,
+  MP_REGEN_BY_RARITY,
+  battleSkillsFor,
   skillSeed,
   subjobFor,
   type SkillDef,
   type SubJob,
 } from "@/card/jobs"
-import type { CardFaceData, Job, Rarity } from "@/card/types"
+import type { CardFaceData, Element, Job, Rarity } from "@/card/types"
+
+export const MAX_SUPPORT_SLOTS = 7
+
+export type CardTrigger = "boost" | "critical_art" | "double_cast"
 
 export interface BattleStats {
-  hpMax: number
-  hp: number
+  /** 该卡对队伍总血条的 HP 贡献值 */
+  hpContribution: number
   atk: number
   def: number
   int: number
-  poiseMax: number
-  poise: number
   hit: number
   crit: number
+  mpMax: number
+  mp: number
+  mpRegen: number
 }
 
+export type StatusId =
+  | "freeze"
+  | "shock"
+  | "burn"
+  | "poison"
+  | "fear"
+  | "charm"
+  | "bleed"
+  | "confuse"
+  | "curse"
+  | "silence"
+  | "armor_break"
+  | "stun"
+  | "sleep"
+  | "heal_block"
+  | "weaken"
+  | "slow"
+  | "support_ban"
+  | "thorns"
+  | "vigilant"
+  | "vulnerable"
+  | "enrage"
+  | "buff_atk"
+  | "buff_def"
+  | "buff_int"
+
 export interface StatusEffect {
-  id: string
+  id: StatusId | string
   name: string
   stat?: "atk" | "int" | "def"
   amount: number
   turns: number
+  stacks?: number
+  isDebuff?: boolean
 }
 
 export interface BattleCard {
@@ -43,88 +77,241 @@ export interface BattleCard {
   face: CardFaceData
   stats: BattleStats
   skills: SkillDef[]
+  /** 本回合是否已行动（回合结束自动恢复，无跨回合 CD） */
   acted: boolean
+  /** 被敌方 Down 技能击倒状态 */
   down: boolean
+  /** 被击倒后自然苏醒剩余回合数（无替补时 3 回合自动清醒） */
+  downTurns: number
+  /** 已用过的单次技能 ID */
   usedOnce: string[]
+  /** 上一回合使用过的技能 ID（用于判定疲惫 +1 AP） */
+  lastTurnSkills: string[]
+  /** 本回合使用过的技能 ID（回合切换时转入 lastTurnSkills） */
+  thisTurnSkills: string[]
+  /** 远征累积型技能已使用次数（每次 +1 AP） */
+  accumulatedUses: Record<string, number>
+  /** 单卡附着状态（荆棘 / 沉默 / 眩晕 / 混乱 / 魅惑 / 迟缓） */
   statuses: StatusEffect[]
+  /** 本回合是否开启嘲讽 */
   taunt: boolean
+  /** 本回合初掷出的特殊触发（Boost 1.5× / 必杀 3.0× / 连击 ×2） */
+  trigger: CardTrigger | null
 }
 
-export type IntentKind = "attack" | "magic" | "heavy" | "debuff" | "buff"
+/** 敌方行动模板（对应战斗机制 v0.1 §12 的 8 类模板） */
+export type IntentKind =
+  | "attack"
+  | "magic"
+  | "buff"
+  | "debuff"
+  | "heavy_phys"
+  | "heavy_magic"
+  | "add_support"
+  | "break_support"
+
 export interface EnemyIntent {
   id: string
   kind: IntentKind
   label: string
-  element: string
+  element: Element
   power: number
   hits: number
+  desc: string
+  /** 是否附带 Down 威胁 */
+  causesDown?: boolean
+  /** 标红「无法打断」（约 1/3 的招牌技） */
+  uninterruptible?: boolean
+  /** 是否已被刺客打断取消 */
+  interrupted?: boolean
+  /** 是否为蓄力满槽释放的大招 */
+  isChargedUltimate?: boolean
+  /** 附加的负面状态 ID */
+  statusId?: StatusId
 }
 
-export interface Enemy {
+/** 侧面支援栏单位（敌方在左侧 7 格，我方在右侧 7 格） */
+export interface SideSupportUnit {
+  id: string
   name: string
-  element: string
+  kind: "attack" | "defense" | "armor" | "aura" | "thorns" | "charge"
+  element: Element
+  job?: Job
+  atk?: number
+  power?: number
+  hits?: number
+  /** 攻击型支援发动率（默认 0.60） */
+  procRate?: number
+  /** 防御/装甲档位 1~4 */
+  defenseTier?: number
+  stat?: "atk" | "int" | "def"
+  amount?: number
+  stacks?: number
+  maxStacks?: number
+  /** 锁定支援不可被拆毁 */
+  locked?: boolean
+  /** 仅本回合生效（如我方主动防御指令） */
+  temporary?: boolean
+  /** 被【支援排除】封印的剩余回合数 */
+  bannedTurns?: number
+  /** 本回合刚触发过动画高亮 */
+  triggered?: boolean
+  roleText: string
+}
+
+export type EnemyTier = "normal" | "elite" | "boss"
+
+export interface Enemy {
+  id: string
+  name: string
+  title: string
+  tier: EnemyTier
+  element: Element
+  weaknesses: Element[]
   hp: number
   hpMax: number
   atk: number
   int: number
   def: number
+  /** 特殊关卡机制：伤害门槛（低于此值只结算 100 点固定伤害，0 为无门槛） */
+  damageThreshold?: number
+  /** 被打断蓄力后是否进入狂暴（而非脆弱） */
+  enrageOnInterrupt?: boolean
   intents: EnemyIntent[]
   statuses: StatusEffect[]
-  stun: number
+  /** 硬控状态：sleep / stun（受到任何命中立即打醒解除！） */
+  hardControl: "sleep" | "stun" | null
+  /** 本场已被硬控次数（精英/BOSS 上限 2 次） */
+  hardControlCount: number
   buff: number
-}
-
-export interface SupportUnit {
-  id: string
-  name: string
-  element: string
-  atk: number
-  power: number
-  hits: number
+  /** 评价基准回合数与基准 AP */
+  parTurns: number
+  parAp: number
 }
 
 export type BattlePhase = "player" | "won" | "lost"
 
-/** 一次行动产生的结构化事件，前端用它们驱动动画与音效。 */
+export interface BattleStarRating {
+  speedStar: boolean
+  noDownStar: boolean
+  efficientStar: boolean
+  parTurns: number
+  parAp: number
+}
+
+/** 结构化战斗事件，前端时间轴序列器用它驱动兰斯10演出与音效 */
 export type BattleEvent =
   | {
-      type: "skill"
-      cardIndex: number
-      name: string
-      element: string
+      type: "cutin"
+      actor: "card" | "support" | "preemptive" | "enemy"
+      cardIndex?: number
+      supportId?: string
+      title: string
+      subtitle: string
+      element: Element
+      trigger?: CardTrigger | null
     }
   | {
       type: "damage"
-      target: "enemy" | "card"
+      target: "enemy" | "party"
       amount: number
       cardIndex?: number
-      element?: string
+      element: Element
       crit?: boolean
+      isWeak?: boolean
+      blocked?: boolean
+      combo?: number
       source?: string
     }
-  | { type: "heal"; target: "card" | "team"; amount: number; cardIndex?: number }
-  | { type: "miss"; cardIndex: number }
-  | { type: "down"; cardIndex: number }
-  | { type: "guard"; tier: number }
-  | { type: "ap"; value: number }
-  | { type: "turn"; owner: "player" | "enemy"; round: number }
-  | { type: "won" | "lost" }
+  | {
+      type: "heal"
+      amount: number
+      source?: string
+    }
+  | {
+      type: "miss"
+      cardIndex?: number
+      actorName: string
+    }
+  | {
+      type: "down"
+      cardIndex: number
+      cardName: string
+    }
+  | {
+      type: "revive"
+      cardIndex: number
+      cardName: string
+    }
+  | {
+      type: "guard"
+      tier: number
+      reductionPct: number
+    }
+  | {
+      type: "interrupt_roll"
+      targetIntentIndex: number
+      intentLabel: string
+      success: boolean
+      reason?: string
+    }
+  | {
+      type: "wake_up"
+      enemyName: string
+    }
+  | {
+      type: "laser"
+      targetSlots: number[]
+      guardedSlot?: number
+    }
+  | {
+      type: "ap"
+      value: number
+    }
+  | {
+      type: "turn"
+      owner: "player" | "enemy"
+      round: number
+    }
+  | {
+      type: "won" | "lost"
+    }
 
 export interface BattleState {
+  stageId: string
   turn: number
   phase: BattlePhase
   ap: number
   apMax: number
   combo: number
+  maxCombo: number
+  apSpentTotal: number
+  downCount: number
+  /** 本回合主动防御档位 0–4 */
   defenseTier: number
+  /** 本回合刺客是否已尝试过打断（每回合限 1 次） */
+  interruptUsedThisTurn: boolean
+  /** 本回合是否已在本回合行动过（一旦行动过，本回合不可再主动换人） */
+  hasActedThisTurn: boolean
+  /** 换人冷却回合数 */
+  swapCooldown: number
+  /** 队伍总血条（= 场上主队卡片 HP 贡献之和） */
+  teamHp: number
+  teamHpMax: number
+  /** 我方队伍级状态（冻结/触电/燃烧/中毒/流血/恐惧/诅咒/破防/治疗阻断/衰弱） */
+  teamStatuses: StatusEffect[]
+  /** 场上 7 张主队卡 */
   cards: BattleCard[]
-  supports: SupportUnit[]
+  /** 替补席备战卡 */
+  bench: BattleCard[]
+  /** 左侧：敌方侧面支援栏（上限 7 格） */
+  enemySupports: SideSupportUnit[]
+  /** 右侧：我方侧面支援栏（上限 7 格，含防御占 1 格） */
+  playerSupports: SideSupportUnit[]
   enemy: Enemy
   log: string[]
   selectedCard: number | null
-  /** 最近一次行动的事件；每次 playSkill / raiseDefense / endTurn 重置 */
   events: BattleEvent[]
-  /** 行动序号；前端用它判断是否要重播动画 */
   actionSeq: number
 }
 
@@ -144,24 +331,36 @@ function basePower(face: CardFaceData): number {
 export function statsFor(face: CardFaceData, subjob: SubJob): BattleStats {
   const base = basePower(face)
   const scaled = base * ARCHETYPE_COEF[face.job]
-  const poiseMax = Math.round(base * POISE_COEF[face.job])
-  const hpMax = Math.round(scaled * subjob.hp)
+  const hpContribution = Math.round(scaled * subjob.hp)
+  const isMagicUser = subjob.tags.includes("magic_user")
+  const mpMax = isMagicUser ? MP_MAX_BY_RARITY[face.rarity] : 0
+  const mpRegen = isMagicUser ? MP_REGEN_BY_RARITY[face.rarity] : 0
   return {
-    hpMax,
-    hp: hpMax,
+    hpContribution,
     atk: Math.round(scaled * subjob.atk),
     def: Math.round(scaled * subjob.def),
     int: Math.round(scaled * subjob.int),
-    poiseMax,
-    poise: poiseMax,
     hit: 95 + (subjob.tags.includes("swift") ? 5 : 0),
     crit: 5,
+    mpMax,
+    mp: Math.ceil(mpMax * 0.5),
+    mpRegen,
   }
 }
 
 export function createBattleCard(face: CardFaceData, uid: number, cardId: string): BattleCard {
   const seed = skillSeed(face.id)
   const subjob = subjobFor(seed, face.job)
+  const skills = battleSkillsFor(seed, face.job, face.rarity, Boolean(face.isHero))
+  const initialStatuses: StatusEffect[] = []
+  if (subjob.tags.includes("thorns")) {
+    initialStatuses.push({
+      id: "thorns",
+      name: "荆棘",
+      amount: 0.35,
+      turns: 2,
+    })
+  }
   return {
     uid,
     cardId,
@@ -174,18 +373,23 @@ export function createBattleCard(face: CardFaceData, uid: number, cardId: string
     art: face.art,
     face,
     stats: statsFor(face, subjob),
-    skills: skillDefsFor(seed, face.job, face.rarity),
+    skills,
     acted: false,
     down: false,
+    downTurns: 0,
     usedOnce: [],
-    statuses: [],
+    lastTurnSkills: [],
+    thisTurnSkills: [],
+    accumulatedUses: {},
+    statuses: initialStatuses,
     taunt: false,
+    trigger: null,
   }
 }
 
-export function teamHp(cards: BattleCard[]): { hp: number; max: number } {
-  return cards.reduce(
-    (sum, card) => ({ hp: sum.hp + Math.max(0, card.stats.hp), max: sum.max + card.stats.hpMax }),
-    { hp: 0, max: 0 },
+export function calcTeamHpMax(cards: BattleCard[]): number {
+  return Math.max(
+    1,
+    cards.reduce((sum, card) => sum + card.stats.hpContribution, 0),
   )
 }

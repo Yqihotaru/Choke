@@ -762,3 +762,633 @@
   color: #ff9b86;
   text-shadow: 0 0.3cqw 1.2cqw #000, 0 0 2cqw rgb(220 50 40 / 0.6);
 }
+
+/* =========================================================
+   兰斯10 + 战斗机制 v0.1 深度复刻样式扩展
+   ========================================================= */
+
+/* 战前准备：讨伐目标切换器 */
+.choke-prep-title small {
+  display: block;
+  font-size: 0.72cqw;
+  letter-spacing: 0.16em;
+  color: #ffb899;
+  font-weight: 700;
+}
+.choke-stage-selector {
+  position: absolute;
+  left: 1.8cqw;
+  bottom: 7.2cqw;
+  z-index: 6;
+  width: 28cqw;
+  padding: 0.55cqw 0.75cqw;
+  border: 0.12cqw solid rgb(210 155 82 / 0.65);
+  border-radius: 0.35cqw;
+  background: linear-gradient(90deg, rgb(14 11 15 / 0.92), rgb(24 16 18 / 0.78));
+  box-shadow: 0 0.4cqw 1.2cqw rgb(0 0 0 / 0.7);
+}
+.choke-stage-selector__label {
+  display: flex;
+  align-items: center;
+  gap: 0.35cqw;
+  font-size: 0.75cqw;
+  font-weight: 800;
+  color: #ffd984;
+  margin-bottom: 0.4cqw;
+}
+.choke-stage-selector__btns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35cqw;
+}
+.choke-stage-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.32cqw 0.45cqw;
+  border: 0.1cqw solid #6b5332;
+  border-radius: 0.25cqw;
+  background: rgb(26 20 16 / 0.9);
+  color: #e9dec7;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.choke-stage-pill b {
+  font-size: 0.74cqw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+.choke-stage-pill small {
+  font-size: 0.58cqw;
+  color: #b7a689;
+}
+.choke-stage-pill[data-active="true"] {
+  border-color: #ffd86b;
+  background: linear-gradient(180deg, #5c2716, #2d110a);
+  box-shadow: 0 0 0.6cqw rgb(255 190 70 / 0.45);
+}
+.choke-stage-selector__desc {
+  margin: 0.4cqw 0 0;
+  font-size: 0.68cqw;
+  line-height: 1.35;
+  color: #cfc2aa;
+}
+
+.choke-subjob-badge {
+  position: absolute;
+  top: -0.65cqw;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  padding: 0.08cqw 0.5cqw;
+  border: 0.08cqw solid #9b7f48;
+  border-radius: 0.22cqw;
+  background: #1a1510;
+  color: #ffe299;
+  font-size: 0.66cqw;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* 左右对称 7 格侧面支援栏（§8.1 敌方在左，我方在右，上限各 7 格） */
+.choke-side-supports {
+  position: absolute;
+  top: 2.8cqw;
+  z-index: 6;
+  width: 16.2cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22cqw;
+}
+.choke-side-supports--enemy {
+  left: 1cqw;
+}
+.choke-side-supports--party {
+  right: 1cqw;
+}
+.choke-side-supports__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.14cqw 0.45cqw;
+  border-radius: 0.22cqw;
+  background: rgb(10 10 14 / 0.82);
+  border: 0.08cqw solid rgb(255 255 255 / 0.15);
+  font-size: 0.66cqw;
+  font-weight: 800;
+  color: #e4d4b0;
+}
+.choke-side-supports__head small {
+  font-size: 0.62cqw;
+  color: #a89d86;
+}
+.choke-support-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.4cqw;
+  height: 2.05cqw;
+  padding: 0.15cqw 0.42cqw;
+  border-radius: 0.24cqw;
+  border: 0.1cqw solid #7a5c38;
+  background: linear-gradient(90deg, rgb(32 22 18 / 0.9), rgb(16 12 14 / 0.86));
+  box-shadow: 0 0.15cqw 0.4cqw rgb(0 0 0 / 0.5);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.choke-support-slot--enemy {
+  border-color: #b85b38;
+  background: linear-gradient(90deg, rgb(92 26 16 / 0.88), rgb(34 14 12 / 0.86));
+}
+.choke-support-slot--enemy[data-kind="charge"] {
+  border-color: #ff9c42;
+  background: linear-gradient(90deg, rgb(128 52 12 / 0.92), rgb(44 18 8 / 0.88));
+}
+.choke-support-slot--party {
+  border-color: #4c86c4;
+  background: linear-gradient(90deg, rgb(18 44 78 / 0.9), rgb(10 22 40 / 0.88));
+}
+.choke-support-slot--party[data-kind="defense"],
+.choke-support-slot--party[data-kind="armor"] {
+  border-color: #ffe074;
+  background: linear-gradient(90deg, rgb(92 68 16 / 0.92), rgb(32 24 10 / 0.9));
+  box-shadow: 0 0 0.7cqw rgb(255 210 80 / 0.45);
+}
+.choke-support-slot--party[data-active="true"] {
+  transform: translateX(-0.65cqw);
+  border-color: #96e6ff;
+  box-shadow: 0 0 0.9cqw rgb(100 210 255 / 0.75);
+}
+.choke-support-slot--empty {
+  border: 0.08cqw dashed rgb(255 255 255 / 0.14);
+  background: rgb(10 10 14 / 0.42);
+  box-shadow: none;
+  opacity: 0.62;
+}
+.choke-support-slot__idx {
+  width: 1.1cqw;
+  text-align: center;
+  font-size: 0.62cqw;
+  font-weight: 800;
+  color: #7d7464;
+}
+.choke-support-slot__placeholder {
+  font-size: 0.62cqw;
+  color: #7d7464;
+}
+.choke-support-slot__icon {
+  flex: 0 0 1.45cqw;
+  height: 1.45cqw;
+  display: grid;
+  place-items: center;
+  border-radius: 0.2cqw;
+  background: color-mix(in srgb, var(--el, #888) 38%, #121016);
+  border: 0.08cqw solid rgb(255 255 255 / 0.28);
+  color: #fff;
+}
+.choke-support-slot__icon svg {
+  width: 0.95cqw;
+  height: 0.95cqw;
+}
+.choke-support-slot__body {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.12;
+}
+.choke-support-slot__body b {
+  font-size: 0.72cqw;
+  color: #fff5df;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.choke-support-slot__body small {
+  font-size: 0.56cqw;
+  color: #b7cde6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.choke-support-slot--enemy .choke-support-slot__body small {
+  color: #f0b8a4;
+}
+.choke-support-slot__lock {
+  color: #ffe07d;
+  font-size: 0.78cqw;
+  display: grid;
+  place-items: center;
+}
+
+/* BOSS 硬控状态提示横幅（眠咒/击晕 + 打醒警告） */
+.choke-boss-cc-banner {
+  position: absolute;
+  left: 50%;
+  top: 7.5%;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 0.55cqw;
+  padding: 0.35cqw 0.95cqw;
+  border: 0.14cqw solid #9ad8ff;
+  border-radius: 0.35cqw;
+  background: rgb(14 26 48 / 0.92);
+  box-shadow: 0 0 1.2cqw rgb(80 180 255 / 0.6);
+  color: #e6f6ff;
+}
+.choke-boss-cc-banner svg {
+  width: 1.7cqw;
+  height: 1.7cqw;
+  color: #7fd4ff;
+}
+.choke-boss-cc-banner b {
+  display: block;
+  font-size: 0.85cqw;
+  color: #fff;
+}
+.choke-boss-cc-banner small {
+  display: block;
+  font-size: 0.64cqw;
+  color: #9fd8ff;
+}
+
+/* COMBO 加成百分比副标 */
+.choke-combo-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.choke-combo-meta em {
+  font-style: normal;
+  font-size: 0.74cqw;
+  font-weight: 800;
+  color: #ffe89e;
+  text-shadow: 0 0.08cqw 0.2cqw #000;
+}
+
+/* 中轴：敌方意图预告队列细节 */
+.choke-intents {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35cqw;
+  padding: 0.2cqw 0.55cqw;
+  border-radius: 0.3cqw;
+  background: rgb(14 10 14 / 0.82);
+  border: 0.08cqw solid rgb(230 185 95 / 0.45);
+}
+.choke-intents__label {
+  font-size: 0.76cqw;
+  font-weight: 800;
+  color: #f3c878;
+  margin-right: 0.15cqw;
+}
+.choke-intent-box {
+  position: relative;
+  width: 2.35cqw;
+  height: 2.35cqw;
+  display: grid;
+  place-items: center;
+  border: 0.12cqw solid #e5bd5a;
+  border-radius: 0.26cqw;
+  background: color-mix(in srgb, var(--el) 34%, #201614);
+  color: #fff;
+  cursor: help;
+  transition: transform 0.15s ease;
+}
+.choke-intent-box:hover {
+  transform: translateY(-0.18cqw);
+}
+.choke-intent-box[data-uninterruptible="true"] {
+  border-color: #ff5252;
+  box-shadow: 0 0 0.5cqw rgb(255 60 60 / 0.55);
+}
+.choke-intent-box[data-down="true"] {
+  border-color: #ff9436;
+}
+.choke-intent-box[data-interrupted="true"],
+.choke-intent-box[data-cc="true"] {
+  filter: grayscale(0.9) brightness(0.55);
+}
+.choke-intent-box__icon svg {
+  width: 1.25cqw;
+  height: 1.25cqw;
+}
+.choke-intent-box__order {
+  position: absolute;
+  left: 0.12cqw;
+  top: 0.05cqw;
+  font-style: normal;
+  font-size: 0.58cqw;
+  font-weight: 900;
+  color: #ffe285;
+}
+.choke-intent-box__tier {
+  position: absolute;
+  right: 0.1cqw;
+  bottom: 0.04cqw;
+  font-style: normal;
+  font-size: 0.54cqw;
+  font-weight: 900;
+  padding: 0 0.14cqw;
+  border-radius: 0.14cqw;
+  background: rgb(0 0 0 / 0.72);
+  color: #ffd884;
+}
+.choke-intent-box__lock {
+  position: absolute;
+  right: -0.22cqw;
+  top: -0.22cqw;
+  width: 0.85cqw;
+  height: 0.85cqw;
+  border-radius: 50%;
+  background: #c91e1e;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 0.52cqw;
+}
+.choke-intent-box__break {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.65cqw;
+  font-weight: 900;
+  color: #ff3b3b;
+  text-shadow: 0 0 0.3cqw #000;
+}
+
+.choke-inline-armor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2cqw;
+  margin-left: 0.5cqw;
+  padding: 0.06cqw 0.4cqw;
+  border-radius: 0.2cqw;
+  background: rgb(160 65 30 / 0.85);
+  border: 0.08cqw solid #ffb278;
+  font-size: 0.68cqw;
+  color: #fff2dc;
+}
+.choke-inline-armor--party {
+  background: rgb(28 82 140 / 0.88);
+  border-color: #8fd2ff;
+}
+.choke-hp-num small {
+  font-size: 0.92cqw;
+  color: #b8ad99;
+  font-weight: 700;
+}
+
+/* 卡槽顶部 Boost / 必杀 / 连击 三色徽标 */
+.choke-boost-tag[data-trigger="critical_art"] {
+  background: linear-gradient(180deg, #e01b3c, #6e0518);
+  border-color: #ff9eb0;
+  color: #fff;
+}
+.choke-boost-tag[data-trigger="double_cast"] {
+  background: linear-gradient(180deg, #1b7fe0, #083266);
+  border-color: #9ee0ff;
+  color: #fff;
+}
+
+/* 卡面内嵌子职业与法系 MP 角标（无单卡血条，干净利落） */
+.choke-card-badges {
+  position: absolute;
+  top: 0.32cqw;
+  left: 0.32cqw;
+  right: 0.32cqw;
+  z-index: 6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+.choke-card-subjob-pill {
+  padding: 0.08cqw 0.38cqw;
+  border-radius: 0.2cqw;
+  background: rgb(12 10 14 / 0.84);
+  border: 0.07cqw solid rgb(230 190 110 / 0.65);
+  color: #ffe39e;
+  font-size: 0.58cqw;
+  font-weight: 800;
+}
+.choke-card-mp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15cqw;
+  padding: 0.08cqw 0.36cqw;
+  border-radius: 0.2cqw;
+  background: rgb(14 34 68 / 0.9);
+  border: 0.07cqw solid #6eb8ff;
+  color: #bfe4ff;
+  font-size: 0.56cqw;
+  font-weight: 800;
+}
+.choke-card-status-row {
+  position: absolute;
+  left: 0.32cqw;
+  right: 0.32cqw;
+  bottom: 0.35cqw;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2cqw;
+  pointer-events: none;
+}
+.choke-card-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15cqw;
+  padding: 0.06cqw 0.34cqw;
+  border-radius: 0.18cqw;
+  background: rgb(22 52 32 / 0.9);
+  border: 0.07cqw solid #7be098;
+  color: #dcffe6;
+  font-size: 0.55cqw;
+  font-weight: 800;
+}
+.choke-card-status-chip--taunt {
+  background: rgb(140 62 18 / 0.92);
+  border-color: #ffd082;
+  color: #fff3d6;
+}
+
+.choke-card-tag {
+  flex-direction: column;
+  gap: 0.15cqw;
+}
+.choke-card-tag b {
+  font-size: 1.15cqw;
+}
+.choke-card-tag small {
+  font-size: 0.58cqw;
+  letter-spacing: 0.04em;
+  color: #e6dac2;
+}
+.choke-card-tag svg {
+  width: 1.6cqw;
+  height: 1.6cqw;
+}
+
+/* 技能悬浮菜单附加项 */
+.choke-overlay-skill-btn i {
+  background: color-mix(in srgb, var(--el, #d98a12) 75%, #2b1804);
+}
+.choke-overlay-skill-btn[data-surcharged="true"] i {
+  background: #d9381e;
+  box-shadow: 0 0 0.35cqw #ff6a4d;
+}
+.choke-skill-mp {
+  font-style: normal;
+  font-size: 0.62cqw;
+  color: #82c8ff;
+  font-weight: 800;
+}
+.choke-overlay-passive {
+  padding: 0.14cqw 0.3cqw;
+  font-size: 0.6cqw;
+  color: #b8ab93;
+  text-align: center;
+  border-top: 0.06cqw solid rgb(255 255 255 / 0.1);
+}
+.choke-tooltip-badge {
+  margin-left: 0.4cqw;
+  padding: 0.06cqw 0.35cqw;
+  border-radius: 0.18cqw;
+  background: #8f2d14;
+  color: #ffd9c2;
+  font-size: 0.65cqw;
+}
+.choke-tooltip-warn {
+  margin-top: 0.25cqw;
+  color: #ff8b78;
+  font-size: 0.7cqw;
+  font-weight: 700;
+}
+
+/* 右翼：四档防御组合面板 */
+.choke-defense-box {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3cqw;
+}
+.choke-defense-box .choke-btn-defend {
+  flex: 1 1 0;
+}
+.choke-defense-box .choke-btn-defend b {
+  display: flex;
+  align-items: center;
+  gap: 0.25cqw;
+  font-size: 0.98cqw;
+}
+
+/* 换人抽屉槽位选择条 */
+.choke-swap-targets {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.45cqw;
+  margin-bottom: 0.75cqw;
+}
+.choke-swap-slot-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.3cqw 0.4cqw;
+  border: 0.1cqw solid #5c6c82;
+  border-radius: 0.26cqw;
+  background: #18202c;
+  color: #dce6f2;
+  cursor: pointer;
+}
+.choke-swap-slot-pill span {
+  font-size: 0.62cqw;
+  color: #8ea8c8;
+}
+.choke-swap-slot-pill b {
+  font-size: 0.76cqw;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.choke-swap-slot-pill small {
+  font-size: 0.6cqw;
+  color: #ffd88a;
+}
+.choke-swap-slot-pill[data-active="true"] {
+  border-color: #ffd86b;
+  background: #2e2415;
+  box-shadow: 0 0 0.6cqw rgb(255 210 90 / 0.45);
+}
+.choke-swap-slot-pill[data-down="true"] {
+  border-color: #e04848;
+}
+
+/* 结算面板：三星评价 */
+.choke-result-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 3.6cqw;
+  height: 3.6cqw;
+  margin: 0 auto 0.4cqw;
+  border-radius: 50%;
+  background: radial-gradient(circle, #5e4314, #1e1508);
+  border: 0.14cqw solid #ffd86b;
+  color: #ffe27a;
+}
+.choke-result-badge svg {
+  width: 2cqw;
+  height: 2cqw;
+}
+.choke-stars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.55cqw;
+  margin-bottom: 1.1cqw;
+}
+.choke-star-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18cqw;
+  padding: 0.55cqw 0.4cqw;
+  border: 0.1cqw solid rgb(255 255 255 / 0.14);
+  border-radius: 0.32cqw;
+  background: rgb(255 255 255 / 0.03);
+  color: #7c7568;
+}
+.choke-star-item svg {
+  width: 1.5cqw;
+  height: 1.5cqw;
+}
+.choke-star-item b {
+  font-size: 0.85cqw !important;
+  margin: 0 !important;
+  color: inherit !important;
+}
+.choke-star-item small {
+  font-size: 0.66cqw;
+  color: #9e9585;
+}
+.choke-star-item[data-achieved="true"] {
+  border-color: #e5b852;
+  background: linear-gradient(180deg, rgb(92 68 18 / 0.45), rgb(32 24 10 / 0.65));
+  color: #ffe074;
+}
+.choke-star-item[data-achieved="true"] small {
+  color: #f0e2c4;
+}
+.choke-popup--enemy[data-weak="true"] {
+  color: #ffdc66;
+}
+.choke-popup--enemy[data-kind="wake"],
+.choke-popup--enemy[data-kind="interrupt"] {
+  font-size: 3.4cqw;
+  color: #8ce4ff;
+}

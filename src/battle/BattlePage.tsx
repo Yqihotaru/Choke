@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from "react"
 
-import { fetchDeck, toFace, type ApiDeck } from "@/desk/api"
+import { fetchDeck, fetchUserCards, toFace, type ApiDeck, type ApiUserCard } from "@/desk/api"
 import { GuestLoginButton } from "@/desk/GuestLoginButton"
 import { advanceTutorial, grantExp, useTutorialProgress } from "@/tutorial/store"
 
-import { cloneBattle, createBattle, endTurn, playSkill, raiseDefense } from "./engine"
+import {
+  STAGE_PRESETS,
+  cloneBattle,
+  createBattle,
+  endTurn,
+  playSkill,
+  raiseDefense,
+  swapBattleCard,
+} from "./engine"
 import { BattleStage } from "./BattleStage"
 import type { BattleState } from "./types"
 import "./battle.css"
@@ -18,15 +26,19 @@ export function BattlePage() {
   const [user, setUser] = useState<ApiUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [deck, setDeck] = useState<ApiDeck | null>(null)
+  const [extraCards, setExtraCards] = useState<ApiUserCard[]>([])
   const [error, setError] = useState<string | null>(null)
   const [battle, setBattle] = useState<BattleState | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const tutorialMode =
-    new URLSearchParams(window.location.search).get("tutorial") === "1"
+
+  const searchParams = new URLSearchParams(window.location.search)
+  const tutorialMode = searchParams.get("tutorial") === "1"
+  const initialStage = searchParams.get("stage") ?? STAGE_PRESETS[0]!.id
+  const [stageId, setStageId] = useState<string>(initialStage)
+
   const progress = useTutorialProgress(user?.id ?? null)
   const tutorialRun = tutorialMode && progress.tutorialStep === "battle-view"
-  const tutorialFinished =
-    tutorialMode && progress.tutorialStep === "battle-result"
+  const tutorialFinished = tutorialMode && progress.tutorialStep === "battle-result"
   const tutorialBattle = tutorialRun || tutorialFinished
   const rewarded = useRef(false)
   const normalRewarded = useRef(false)
@@ -54,9 +66,19 @@ export function BattlePage() {
   useEffect(() => {
     if (!user) return
     let cancelled = false
-    fetchDeck(user.id)
-      .then((data) => {
-        if (!cancelled) setDeck(data)
+    Promise.all([
+      fetchDeck(user.id),
+      fetchUserCards(user.id, { sort: "rarity", limit: 20 }).catch(() => ({
+        rows: [] as ApiUserCard[],
+        total: 0,
+        limit: 20,
+        offset: 0,
+      })),
+    ])
+      .then(([deckData, cardPage]) => {
+        if (cancelled) return
+        setDeck(deckData)
+        setExtraCards(cardPage.rows)
       })
       .catch((reason: unknown) => {
         if (!cancelled) setError(reason instanceof Error ? reason.message : "加载卡组失败")
@@ -79,7 +101,7 @@ export function BattlePage() {
     if (tutorialBattle || !battle || normalRewarded.current) return
     if (battle.phase !== "won" && battle.phase !== "lost") return
     normalRewarded.current = true
-    grantExp(battle.phase === "won" ? 20 : 8)
+    grantExp(battle.phase === "won" ? 25 : 8)
   }, [battle, tutorialBattle])
 
   if (loading) return <div className="battle-page battle-page--center">加载中…</div>
@@ -89,7 +111,7 @@ export function BattlePage() {
         <div className="battle-gate">
           <span>CHOKE! · BATTLE</span>
           <h1>需要先登录</h1>
-          <p>战斗读取你账号里保存的出战卡组。</p>
+          <p>战斗读取你账号里保存的出战卡组与替补席。</p>
           <a href="/auth/osu">用 osu! 登录</a>
           <GuestLoginButton className="battle-guest" label="以游客身份进入" />
         </div>
@@ -100,6 +122,8 @@ export function BattlePage() {
   if (!deck) return <div className="battle-page battle-page--center">加载卡组…</div>
 
   const cards = deck.slots.flatMap((slot) => (slot.card ? [slot.card] : []))
+  const deckCardUids = new Set(cards.map((c) => c.userCardId))
+  const benchCards = extraCards.filter((c) => !deckCardUids.has(c.userCardId)).slice(0, 8)
 
   if (cards.length === 0) {
     return (
@@ -124,7 +148,15 @@ export function BattlePage() {
           cardId: card.id,
           face: toFace(card),
         })),
-        { tutorial: tutorialRun },
+        {
+          tutorial: tutorialRun,
+          stageId,
+          benchInputs: benchCards.map((card) => ({
+            uid: card.userCardId,
+            cardId: card.id,
+            face: toFace(card),
+          })),
+        },
       ),
     )
   }
@@ -142,8 +174,6 @@ export function BattlePage() {
     )
   }
 
-  const enemy = battle?.enemy ?? createBattle([], { tutorial: tutorialRun }).enemy
-
   const play = (index: number, skillId: string) => {
     if (!battle) return
     const next = cloneBattle(battle)
@@ -152,10 +182,18 @@ export function BattlePage() {
     setActionError(message)
   }
 
-  const defend = (tier: number) => {
+  const defend = (tier?: number) => {
     if (!battle) return
     const next = cloneBattle(battle)
     const message = raiseDefense(next, tier)
+    setBattle(next)
+    setActionError(message)
+  }
+
+  const swap = (activeSlotIndex: number, benchUid: number) => {
+    if (!battle) return
+    const next = cloneBattle(battle)
+    const message = swapBattleCard(next, activeSlotIndex, benchUid)
     setBattle(next)
     setActionError(message)
   }
@@ -172,14 +210,14 @@ export function BattlePage() {
     <BattleStage
       battle={battle}
       deck={cards.map(toFace)}
-      enemyName={enemy.name}
-      enemyElement={enemy.element}
-      enemyHp={enemy.hpMax}
+      stageId={stageId}
       tutorial={tutorialRun}
       actionError={actionError}
+      onSelectStage={(nextId) => setStageId(nextId)}
       onStart={start}
       onPlay={play}
       onDefend={defend}
+      onSwap={swap}
       onEndTurn={finishTurn}
       onRestart={start}
     />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import { TUTORIAL_ENEMY_HP } from "@/battle/engine"
+import { STAGE_PRESETS, TUTORIAL_ENEMY_HP } from "@/battle/engine"
 import { battlePower } from "@/card/data"
 import { useTutorialProgress } from "@/tutorial/store"
 
@@ -19,6 +19,7 @@ export function BattlePanel({
   const tutorial = useTutorialProgress(userId)
   const [deck, setDeck] = useState<ApiDeck | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedStageId, setSelectedStageId] = useState<string>(STAGE_PRESETS[0]!.id)
 
   useEffect(() => {
     if (!userId) return
@@ -70,18 +71,37 @@ export function BattlePanel({
     0
   )
   const tutorialBattleStep = tutorial.tutorialStep === "battle-view"
-  const enemyHp = tutorialBattleStep ? TUTORIAL_ENEMY_HP : 24000
+  const activePreset =
+    STAGE_PRESETS.find((s) => s.id === selectedStageId) ?? STAGE_PRESETS[0]!
+  const enemyHp = tutorialBattleStep ? TUTORIAL_ENEMY_HP : activePreset.hp
 
   const enemy = (
     <div className="bk-box battle-enemy">
       <span className="bk-label">
-        {tutorialBattleStep ? "教学对手" : "练习对手"}
+        {tutorialBattleStep ? "教学对手" : activePreset.title}
       </span>
-      <b className="battle-enemy__name">谱面幽灵</b>
+      <b className="battle-enemy__name">
+        {tutorialBattleStep ? "谱面幽灵（教学）" : activePreset.name}
+      </b>
       <div className="bk-stat">
         <b>{enemyHp.toLocaleString("en-US")}</b>
         <span>敌人 HP</span>
       </div>
+      {!tutorialBattleStep && (
+        <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+          {STAGE_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className={`bk-btn ${preset.id === activePreset.id ? "bk-btn--main" : "bk-btn--ghost"}`}
+              style={{ padding: "3px 8px", fontSize: "12px" }}
+              onClick={() => setSelectedStageId(preset.id)}
+            >
+              {preset.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 
@@ -183,9 +203,9 @@ export function BattlePanel({
           ) : (
             <a
               className="bk-btn bk-btn--main bk-btn--block battle-start"
-              href="/battle"
+              href={`/battle?stage=${activePreset.id}`}
             >
-              进入战斗
+              进入战斗（{activePreset.name}）
             </a>
           )}
         </>
