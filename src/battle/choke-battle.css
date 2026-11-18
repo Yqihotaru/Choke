@@ -11,7 +11,16 @@
   background: #050507;
   overflow: hidden;
   user-select: none;
-  font-family: var(--font-heading, serif), var(--font-cn, sans-serif);
+  font-family:
+    "Outfit Variable",
+    "Outfit",
+    "PingFang SC",
+    "Microsoft YaHei",
+    "Noto Sans SC",
+    system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
 }
 
 .choke-stage {
@@ -631,12 +640,15 @@
   color: #e4d6b8;
 }
 .choke-hp-num b {
-  font-size: 2.35cqw;
-  font-weight: 900;
-  font-family: Georgia, "Times New Roman", serif;
-  letter-spacing: 0.02em;
+  font-size: 2.3cqw;
+  font-weight: 800;
+  font-family: inherit;
+  letter-spacing: 0.01em;
   color: #fff;
   font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0.1cqw 0.22cqw rgb(0 0 0 / 0.95),
+    0 0.16cqw 0.4cqw rgb(0 0 0 / 0.7);
 }
 
 .choke-mini-statuses {
@@ -905,7 +917,7 @@
 }
 .choke-orb-start { font-size: 1.12cqw; font-weight: 900; letter-spacing: 0.05em; }
 .choke-orb-round { font-style: normal; font-size: 0.68cqw; font-weight: 800; color: #e8c87d; }
-.choke-orb-num { font-size: 1.85cqw; line-height: 0.95; font-family: Georgia, serif; }
+.choke-orb-num { font-size: 1.85cqw; line-height: 0.95; font-weight: 800; font-variant-numeric: tabular-nums; }
 .choke-orb-vs { font-size: 0.82cqw; font-weight: 900; color: #e03a2b; -webkit-text-stroke: 0.04cqw #fff; }
 
 /* 折线血条正下方、卡牌上方的凹槽里放 AP 齿轮宝石栏（下移后不再压住卡面与右翼按钮） */
@@ -926,8 +938,8 @@
 }
 .choke-ap-label {
   font-size: 0.88cqw;
-  font-weight: 900;
-  font-family: Georgia, serif;
+  font-weight: 800;
+  font-family: inherit;
   color: #e6c473;
 }
 .choke-ap-gems {
@@ -1282,51 +1294,66 @@
   inset: 0;
   z-index: 9;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
+  gap: 0.28cqw;
+  padding: 0 0.25cqw;
+  background: rgb(10 4 6 / 0.42);
   pointer-events: none;
 }
 .choke-acted-circle {
-  position: absolute;
-  width: 4.2cqw;
-  height: 4.2cqw;
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.5cqw;
+  height: 2.5cqw;
   border-radius: 50%;
-  border: 0.34cqw solid rgb(200 22 22 / 0.78);
-  box-shadow: 0 0 0.6cqw rgb(0 0 0 / 0.8);
+  border: 0.24cqw solid rgb(210 26 26 / 0.9);
+  box-shadow: 0 0 0.5cqw rgb(0 0 0 / 0.85);
   display: grid;
   place-items: center;
 }
 .choke-acted-circle::after {
   content: "";
   width: 100%;
-  height: 0.32cqw;
-  background: rgb(200 22 22 / 0.78);
-  transform: rotate(-35deg);
+  height: 0.24cqw;
+  background: rgb(210 26 26 / 0.9);
+  transform: rotate(-45deg);
 }
 .choke-acted-stamp[data-down="true"] .choke-acted-circle::after {
   display: none;
 }
 .choke-acted-circle svg {
-  width: 2.1cqw;
-  height: 2.1cqw;
+  width: 1.5cqw;
+  height: 1.5cqw;
   color: #ff4a4a;
+}
+.choke-stamp-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.05;
+  min-width: 0;
 }
 .choke-acted-stamp b {
   position: relative;
-  font-size: 1.45cqw;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #e62222;
-  -webkit-text-stroke: 0.08cqw #1a0202;
-  text-shadow: 0 0.14cqw 0.35cqw #000;
+  font-size: 1.05cqw;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ff2f2f;
+  white-space: nowrap;
+  text-shadow:
+    0 0.1cqw 0.24cqw rgb(0 0 0 / 0.95),
+    0 0 0.3cqw rgb(0 0 0 / 0.8);
 }
 .choke-acted-stamp small {
   position: relative;
-  margin-top: 0.2cqw;
-  font-size: 0.6cqw;
-  font-weight: 800;
-  color: #ff9e94;
+  margin-top: 0.12cqw;
+  font-size: 0.56cqw;
+  font-weight: 700;
+  color: #ffb0a6;
+  white-space: nowrap;
   text-shadow: 0 0.08cqw 0.2cqw #000;
 }
 
@@ -1569,8 +1596,8 @@
   position: absolute;
   z-index: 30;
   pointer-events: none;
-  font-weight: 900;
-  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 800;
+  font-family: inherit;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   animation: choke-dmg-pop 0.82s ease-out forwards;

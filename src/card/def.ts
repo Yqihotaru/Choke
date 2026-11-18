@@ -1,4 +1,5 @@
 import { makeCard } from "./data"
+import { normalizeCardSkill } from "./jobs"
 import type { CardFaceData, CardSkill, Job, Rarity } from "./types"
 
 /**
@@ -60,7 +61,8 @@ export function faceFromDef(
     profileUrl: def.profileUrl,
     art: def.art,
     banner: def.banner,
-    skills: def.skills,
+    // 卡面技能与战斗技能共用同一份规范化结果，避免出现「卡上 1 AP、实战 2 AP」
+    skills: def.skills.map((skill) => normalizeCardSkill(skill, def.job)),
   })
 }
 

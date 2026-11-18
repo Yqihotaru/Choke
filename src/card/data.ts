@@ -1,4 +1,4 @@
-import { cardSkillsFor } from "./jobs"
+import { cardSkillsFor, normalizeCardSkill } from "./jobs"
 import type { CardFaceData, CardSkill, Job, Mod, Rarity, StarState } from "./types"
 
 /** 十二种 MOD；卡面只显示前三个，多余的收进 +N */
@@ -174,7 +174,13 @@ export function formatNo(no: number, total: number): string {
 type CardInit = Omit<CardFaceData, "no" | "total"> & { no?: number; total?: number }
 
 export function makeCard(init: CardInit): CardFaceData {
-  return { no: 1, total: 100000, ...init }
+  return {
+    no: 1,
+    total: 100000,
+    ...init,
+    // 卡面技能统一走一遍现行技能规范化：名字保留，费用/属性以现行机制为准
+    skills: init.skills.map((skill) => normalizeCardSkill(skill, init.job)),
+  }
 }
 
 export const JOB_ORDER: Job[] = ["tank", "warrior", "mage", "support"]

@@ -116,6 +116,7 @@ pnpm build:cards     # 由 rankings 生成 choke-cards.json
 - `Design/前后端需求清单 v0.1.md`：功能范围和里程碑
 - `Design/经济与养成系统 v0.2.md`：经济、养成、卡包
 - `Design/卡牌数值与战斗机制 v0.1.md`：回合制战斗
+- `Design/职业与技能总表 v0.1.md`：14 子职业与全部技能（代码实装快照）
 - `Design/M1-验收清单.md`：早期验收记录
 
 PR #3 的实时边线战斗在独立 worktree 试验，不在 `master`。

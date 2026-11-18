@@ -1210,8 +1210,10 @@ export function BattleStage({
                         <div className="choke-acted-circle">
                           <GiSkullCrossedBones />
                         </div>
-                        <b>DOWN</b>
-                        <small>{card.downTurns} 回合苏醒</small>
+                        <div className="choke-stamp-text">
+                          <b>DOWN</b>
+                          <small>{card.downTurns} 回合苏醒</small>
+                        </div>
                       </div>
                     )}
 
@@ -1219,7 +1221,9 @@ export function BattleStage({
                     {!card.down && card.acted && (
                       <div className="choke-acted-stamp">
                         <div className="choke-acted-circle" />
-                        <b>行動終了</b>
+                        <div className="choke-stamp-text">
+                          <b>行動終了</b>
+                        </div>
                       </div>
                     )}
 

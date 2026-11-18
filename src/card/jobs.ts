@@ -1196,22 +1196,43 @@ const SWIFT_BY_JOB: Record<Job, string> = {
   support: "bard_aura",
 }
 
+const SKILL_BY_NAME: Record<string, SkillDef> = Object.fromEntries(
+  Object.values(SKILLS).map((def) => [def.name, def]),
+)
+
+/** 解析卡面技能名 → 现行技能定义（先按名字，再按别名，最后按职业补迅捷） */
+function resolveSkillDef(skill: CardSkill, job: Job): SkillDef | undefined {
+  const direct = SKILL_BY_NAME[skill.name]
+  if (direct) return direct
+  if (skill.name === "迅捷") return SKILLS[SWIFT_BY_JOB[job]]
+  const aliasId = SKILL_NAME_ALIAS[skill.name]
+  return aliasId ? SKILLS[aliasId] : undefined
+}
+
+/**
+ * 把卡面技能规范化成现行技能的费用/属性。
+ * 卡面展示与战斗共用同一份结果，避免「卡上写 1 AP、实战扣 2 AP」这类不一致。
+ */
+export function normalizeCardSkill(skill: CardSkill, job: Job): CardSkill {
+  const def = resolveSkillDef(skill, job)
+  if (!def) return skill
+  const passive = Boolean(skill.passive || def.passive)
+  return {
+    name: skill.name,
+    element: def.element,
+    ap: passive ? 0 : def.ap,
+    mp: passive ? undefined : def.mp,
+    passive: passive || undefined,
+  }
+}
+
 /**
  * 把卡面上的一条 `CardSkill` 解析成战斗内可执行的 `SkillDef`。
- * - 卡面字段（名字 / 属性 / AP / MP / 是否被动）一律以卡面为准，保证显示与实战完全一致；
+ * - 费用 / 属性 / 被动与否与卡面完全一致（卡面已由 `normalizeCardSkill` 规范化）；
  * - 技能行为（倍率 / 段数 / 附加状态）从现行技能表按名字或别名取。
  */
 export function skillDefFromCardSkill(skill: CardSkill, job: Job): SkillDef {
-  const direct = Object.values(SKILLS).find((def) => def.name === skill.name)
-  let base: SkillDef | undefined = direct
-  if (!base) {
-    if (skill.name === "迅捷") {
-      base = SKILLS[SWIFT_BY_JOB[job]]
-    } else {
-      const aliasId = SKILL_NAME_ALIAS[skill.name]
-      base = aliasId ? SKILLS[aliasId] : undefined
-    }
-  }
+  const base = resolveSkillDef(skill, job)
 
   if (!base) {
     if (skill.passive) {
@@ -1252,12 +1273,10 @@ export function skillDefFromCardSkill(skill: CardSkill, job: Job): SkillDef {
     }
   }
 
+  // 费用与属性一律以现行技能定义为准：卡面已由 normalizeCardSkill 同步成同一份数值
   return {
     ...base,
     name: skill.name,
-    element: skill.element,
-    ap: skill.ap,
-    mp: skill.mp,
     passive: false,
   }
 }
