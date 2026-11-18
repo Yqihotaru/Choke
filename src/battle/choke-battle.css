@@ -497,7 +497,7 @@
   position: relative;
   z-index: 6;
   margin-top: -7.2cqw;
-  padding: 0 0.8cqw 0.2cqw;
+  padding: 0 0.8cqw 2.1cqw;
   pointer-events: none;
 }
 
@@ -908,11 +908,11 @@
 .choke-orb-num { font-size: 1.85cqw; line-height: 0.95; font-family: Georgia, serif; }
 .choke-orb-vs { font-size: 0.82cqw; font-weight: 900; color: #e03a2b; -webkit-text-stroke: 0.04cqw #fff; }
 
-/* 嵌在折线内侧抬高段正下方凹槽里的 AP 齿轮宝石栏 */
+/* 折线血条正下方、卡牌上方的凹槽里放 AP 齿轮宝石栏（下移后不再压住卡面与右翼按钮） */
 .choke-ap-pocket {
   position: absolute;
   left: 50%;
-  bottom: -0.15cqw;
+  bottom: -1.75cqw;
   transform: translateX(-50%);
   z-index: 4;
   display: flex;

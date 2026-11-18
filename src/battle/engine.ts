@@ -210,8 +210,7 @@ export function canUseSkillReason(state: BattleState, cardIndex: number, skillId
   }
   if (
     card.statuses.some((s) => s.id === "silence") &&
-    (card.job === "mage" || card.job === "support") &&
-    skill.id !== "basic_slash"
+    (card.job === "mage" || card.job === "support")
   ) {
     return "处于【沉默】状态，无法使用法术/辅助主动技"
   }

@@ -59,14 +59,6 @@ const AP_SLOTS = 10
 const BOSS_GAUGE_POLYGON = "4,26 250,26 278,6 456,6 448,30 286,30 258,50 14,50"
 const PARTY_GAUGE_POLYGON = "4,6 182,6 210,26 456,26 446,50 202,50 174,30 12,30"
 
-interface HpLossPillar {
-  id: number
-  side: "boss" | "party"
-  /** 扣血区间在对应半侧血条上的百分比起点与宽度（0~100） */
-  startPct: number
-  widthPct: number
-}
-
 interface Props {
   battle: BattleState | null
   deck: CardFaceData[]
@@ -176,15 +168,12 @@ export function BattleStage({
   const [slashKey, setSlashKey] = useState(0)
   const [laserTargets, setLaserTargets] = useState<number[]>([])
   const [guardChipSlot, setGuardChipSlot] = useState<number | null>(null)
-  const [pillars, setPillars] = useState<HpLossPillar[]>([])
 
   const stageRef = useRef<HTMLDivElement | null>(null)
   const bossRef = useRef<HTMLElement | null>(null)
   const comboRef = useRef<HTMLDivElement | null>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const lastSeq = useRef(0)
-  const prevBossPctRef = useRef(100)
-  const prevPartyPctRef = useRef(100)
   const fxTimers = useRef<number[]>([])
 
   const later = useCallback((fn: () => void, ms: number) => {
@@ -199,49 +188,6 @@ export function BattleStage({
       timers.forEach((id) => window.clearTimeout(id))
     }
   }, [])
-
-  // 监听 BOSS 与我方血量百分比变化，生成兰斯10标志性的「扣血段垂直冲顶红白光柱」
-  useEffect(() => {
-    if (!battle) {
-      prevBossPctRef.current = 100
-      prevPartyPctRef.current = 100
-      return
-    }
-    const curBossPct = Math.max(
-      0,
-      Math.min(100, (battle.enemy.hp / Math.max(1, battle.enemy.hpMax)) * 100),
-    )
-    const team = teamHpOf(battle)
-    const curPartyPct = Math.max(0, Math.min(100, (team.hp / Math.max(1, team.max)) * 100))
-
-    if (curBossPct < prevBossPctRef.current - 0.1) {
-      const lossWidth = Math.max(1.8, prevBossPctRef.current - curBossPct)
-      const id = Date.now() + Math.random()
-      setPillars((prev) => [
-        ...prev,
-        { id, side: "boss", startPct: curBossPct, widthPct: lossWidth },
-      ])
-      later(() => {
-        setPillars((prev) => prev.filter((p) => p.id !== id))
-      }, 360)
-    }
-    prevBossPctRef.current = curBossPct
-
-    if (curPartyPct < prevPartyPctRef.current - 0.1) {
-      const lossWidth = Math.max(1.8, prevPartyPctRef.current - curPartyPct)
-      const id = Date.now() + Math.random() + 1
-      // 我方血条从右侧外沿向左缩减，或从内侧向外缩减：这里与右条左端对齐
-      const startFromLeft = 100 - prevPartyPctRef.current
-      setPillars((prev) => [
-        ...prev,
-        { id, side: "party", startPct: startFromLeft, widthPct: lossWidth },
-      ])
-      later(() => {
-        setPillars((prev) => prev.filter((p) => p.id !== id))
-      }, 360)
-    }
-    prevPartyPctRef.current = curPartyPct
-  }, [battle, battle?.enemy.hp, battle?.teamHp, later])
 
   const popup = useCallback(
     (
@@ -856,23 +802,8 @@ export function BattleStage({
           )}
         </section>
 
-        {/* ================= 2. 中轴区：兰斯10 阶梯折线双血条 + 冲顶红白扣血光柱 + 弱点/意图台阶 + COMBO 台阶 + 底部内嵌 AP ================= */}
+        {/* ================= 2. 中轴区：兰斯10 阶梯折线双血条 + 弱点/意图台阶 + COMBO 台阶 + 底部内嵌 AP ================= */}
         <section className="choke-hud-band">
-          {/* 扣血垂直红白光柱（从被扣减的那一段血条直接冲到屏幕最顶端 y=0 然后闪光消散！） */}
-          {pillars.map((pillar) => (
-            <div
-              key={pillar.id}
-              className={`choke-hp-loss-pillar choke-hp-loss-pillar--${pillar.side}`}
-              style={
-                {
-                  "--p-start": `${pillar.startPct}%`,
-                  "--p-width": `${pillar.widthPct}%`,
-                } as CSSProperties
-              }
-              aria-hidden
-            />
-          ))}
-
           {/* 折线血条上方的四段信息区：左外(BOSS名+HP) | 左内高台(意图+弱点) | 右内高台(COMBO!) | 右外(讨伐队名+HP) */}
           <div className="choke-hud-upper">
             {/* 左外低段上方：红军剪影 + 敌方名 + 大号衬线 HP */}

@@ -152,20 +152,6 @@ export const MP_REGEN_BY_RARITY: Record<Rarity, number> = {
 const S = (skill: SkillDef) => skill
 
 export const SKILLS: Record<string, SkillDef> = {
-  /* 通用 0 费平刀起手（保证任何未行动卡片在 0 AP 时仍可出刀铺 Combo） */
-  basic_slash: S({
-    id: "basic_slash",
-    name: "突击·零式",
-    element: "physical",
-    ap: 0,
-    kind: "damage",
-    costTag: "normal",
-    power: 0.6,
-    hits: 1,
-    target: "enemy",
-    desc: "0 AP 单段轻击（0.6×），用于起手铺垫 Combo",
-  }),
-
   /* ==================== 坦克：肉坦 (bulwark) ==================== */
   bulwark_taunt: S({
     id: "bulwark_taunt",
@@ -1140,10 +1126,140 @@ export function skillDefsFor(seed: string, job: Job, rarity: Rarity, wantThree =
 }
 
 /**
- * 战斗内卡片拥有的技能（与卡面 100% 同源，只有 2～3 个槽位，包含主动与被动）
+ * 旧版技能名（数据库里存量卡面 / 早期池卡）→ 现行技能定义 ID。
+ * 战斗读取的是卡面自己 `skills` 字段，靠这张表把老名字映射到现行机制，
+ * 从而保证「卡面印的技能」和「战斗中能点的技能」永远一一对应。
  */
-export function battleSkillsFor(seed: string, job: Job, rarity: Rarity, isHero = false): SkillDef[] {
-  return skillDefsFor(seed, job, rarity, isHero)
+const SKILL_NAME_ALIAS: Record<string, string> = {
+  铁壁: "bulwark_guard",
+  反震: "bulwark_thorns",
+  震地: "bulwark_quake",
+  嘲讽: "bulwark_taunt",
+  盾击: "warden_bash",
+  重装甲: "warden_armor",
+  击晕: "warden_stun",
+  坚守: "warden_hold",
+  裂空斩: "berserker_cleave",
+  追风: "berserker_wind",
+  血怒: "berserker_blood",
+  吸血: "berserker_blood",
+  圣光斩: "paladin_smite",
+  庇护: "paladin_protect",
+  审判: "paladin_judgment",
+  守护光环: "paladin_aura",
+  破盾: "breaker_break",
+  法术反制: "breaker_rift",
+  裂法: "breaker_rift",
+  穿甲箭: "ranger_pierce",
+  连射: "ranger_volley",
+  收割: "ranger_harvest",
+  背刺: "assassin_backstab",
+  打断: "assassin_interrupt",
+  暗杀: "assassin_execute",
+  星火: "warlock_starfire",
+  霜缚: "warlock_frost",
+  陨石: "warlock_meteor",
+  残血增幅: "warlock_lowhp",
+  回春: "life_renew",
+  群体治疗: "life_mass",
+  复苏: "life_revive",
+  生生不息: "life_regen",
+  眠咒: "binder_sleep",
+  魅惑: "binder_charm",
+  束缚: "binder_bind",
+  专注: "binder_focus",
+  召唤: "summoner_call",
+  毒藤: "summoner_poison",
+  守护召唤: "summoner_ward",
+  召唤共鸣: "summoner_aura",
+  舞步: "dancer_step",
+  狂热之舞: "dancer_frenzy",
+  舞者增幅: "dancer_grace",
+  回旋: "dancer_veil",
+  治疗: "healer_heal",
+  净化: "healer_cleanse",
+  抬人: "healer_revive",
+  医者仁心: "healer_plus",
+  鼓舞: "bard_inspire",
+  战歌: "bard_ward",
+  英勇颂: "bard_anthem",
+  余音: "bard_aura",
+  回响: "bard_ward",
+  共鸣: "summoner_aura",
+  静默: "binder_charm",
+}
+
+const SWIFT_BY_JOB: Record<Job, string> = {
+  tank: "warden_hold",
+  warrior: "ranger_swift",
+  mage: "binder_focus",
+  support: "bard_aura",
+}
+
+/**
+ * 把卡面上的一条 `CardSkill` 解析成战斗内可执行的 `SkillDef`。
+ * - 卡面字段（名字 / 属性 / AP / MP / 是否被动）一律以卡面为准，保证显示与实战完全一致；
+ * - 技能行为（倍率 / 段数 / 附加状态）从现行技能表按名字或别名取。
+ */
+export function skillDefFromCardSkill(skill: CardSkill, job: Job): SkillDef {
+  const direct = Object.values(SKILLS).find((def) => def.name === skill.name)
+  let base: SkillDef | undefined = direct
+  if (!base) {
+    if (skill.name === "迅捷") {
+      base = SKILLS[SWIFT_BY_JOB[job]]
+    } else {
+      const aliasId = SKILL_NAME_ALIAS[skill.name]
+      base = aliasId ? SKILLS[aliasId] : undefined
+    }
+  }
+
+  if (!base) {
+    if (skill.passive) {
+      return {
+        id: `card-passive-${skill.name}`,
+        name: skill.name,
+        element: skill.element,
+        ap: 0,
+        kind: "passive",
+        passive: true,
+        desc: "被动技能：常驻自动生效。",
+      }
+    }
+    return {
+      id: `card-skill-${skill.name}`,
+      name: skill.name,
+      element: skill.element,
+      ap: skill.ap,
+      mp: skill.mp,
+      kind: "damage",
+      costTag: "normal",
+      power: 0.55 + skill.ap * 0.4,
+      hits: 1,
+      target: "enemy",
+      desc: `${skill.ap} AP 单体攻击技能。`,
+    }
+  }
+
+  if (skill.passive) {
+    return {
+      ...base,
+      name: skill.name,
+      element: skill.element,
+      ap: 0,
+      mp: undefined,
+      passive: true,
+      kind: "passive",
+    }
+  }
+
+  return {
+    ...base,
+    name: skill.name,
+    element: skill.element,
+    ap: skill.ap,
+    mp: skill.mp,
+    passive: false,
+  }
 }
 
 export function cardSkillsFor(seed: string, job: Job, rarity: Rarity, wantThree = false): CardSkill[] {

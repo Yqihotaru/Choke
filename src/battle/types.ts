@@ -3,7 +3,7 @@ import {
   ARCHETYPE_COEF,
   MP_MAX_BY_RARITY,
   MP_REGEN_BY_RARITY,
-  battleSkillsFor,
+  skillDefFromCardSkill,
   skillSeed,
   subjobFor,
   type SkillDef,
@@ -351,17 +351,9 @@ export function statsFor(face: CardFaceData, subjob: SubJob): BattleStats {
 export function createBattleCard(face: CardFaceData, uid: number, cardId: string): BattleCard {
   const seed = skillSeed(face.id)
   const subjob = subjobFor(seed, face.job)
-  const skills = battleSkillsFor(seed, face.job, face.rarity, Boolean(face.isHero))
-  const syncedFace: CardFaceData = {
-    ...face,
-    skills: skills.map((s) => ({
-      name: s.name,
-      element: s.element,
-      ap: s.ap,
-      mp: s.mp,
-      passive: s.passive,
-    })),
-  }
+  // 战斗技能直接来自卡面自己的 skills 字段（名字、属性、AP、被动与否完全一致）。
+  // 不做任何兜底补技能：卡面上没印的技能，战斗里就不存在。
+  const skills: SkillDef[] = face.skills.map((skill) => skillDefFromCardSkill(skill, face.job))
   const initialStatuses: StatusEffect[] = []
   if (subjob.tags.includes("thorns")) {
     initialStatuses.push({
@@ -381,7 +373,7 @@ export function createBattleCard(face: CardFaceData, uid: number, cardId: string
     level: face.level,
     constellation: face.constellation,
     art: face.art,
-    face: syncedFace,
+    face,
     stats: statsFor(face, subjob),
     skills,
     acted: false,
