@@ -137,33 +137,80 @@
 .r10-tool-btn b { font-size: 1.25cqw; line-height: 1; }
 
 /* 准备战斗 WARNING 警戒带 */
-.r10-tapes { position: absolute; top: 0; width: 50cqw; height: 22cqw; pointer-events: none; z-index: 3; }
-.r10-tapes--left { left: -4cqw; }
-.r10-tapes--right { right: -4cqw; }
+.r10-tapes { position: absolute; top: 0; width: 38cqw; height: 18cqw; pointer-events: none; z-index: 3; }
+.r10-tapes--left { left: -3cqw; }
+.r10-tapes--right { right: -3cqw; }
 .r10-tape {
   position: absolute;
-  left: -8cqw;
-  right: -8cqw;
-  padding: 0.35cqw 0;
-  border-top: 0.12cqw solid #d92b2b;
-  border-bottom: 0.12cqw solid #d92b2b;
-  background: rgb(42 6 6 / 0.78);
-  color: rgb(255 68 68 / 0.85);
-  font-size: 0.9cqw;
+  left: -6cqw;
+  right: -6cqw;
+  padding: 0.24cqw 0;
+  border-top: 0.1cqw solid rgb(217 43 43 / 0.7);
+  border-bottom: 0.1cqw solid rgb(217 43 43 / 0.7);
+  background: rgb(36 6 8 / 0.72);
+  color: rgb(255 82 82 / 0.55);
+  font-size: 0.75cqw;
   font-weight: 800;
-  letter-spacing: 0.25em;
+  letter-spacing: 0.24em;
   text-align: center;
   white-space: nowrap;
 }
-.r10-tapes--left .r10-tape { top: 4cqw; transform: rotate(-28deg); }
-.r10-tapes--left .r10-tape--sub { top: 10cqw; transform: rotate(-17deg); }
-.r10-tapes--right .r10-tape { top: 4cqw; transform: rotate(28deg); }
-.r10-tapes--right .r10-tape--sub { top: 10cqw; transform: rotate(17deg); }
-.r10-vs-giant { position: absolute; top: -1cqw; left: 1.5cqw; z-index: 4; font-size: 10cqw; font-weight: 900; color: #8f0f15; text-shadow: 0 0.25cqw 0.6cqw rgb(0 0 0 / 0.85); line-height: 0.9; }
-.r10-prep-title { position: absolute; top: 4.5cqw; left: 3.5cqw; z-index: 4; font-size: 2.8cqw; font-weight: 900; color: #1a0606; -webkit-text-stroke: 0.08cqw #ff6b6b; transform: rotate(-16deg); }
-.r10-prep-badge { position: absolute; top: 3.5cqw; right: 7cqw; z-index: 4; font-size: 3.4cqw; font-weight: 900; color: #a8151b; text-shadow: 0 0.2cqw 0.5cqw rgb(0 0 0 / 0.9); transform: rotate(22deg); }
+.r10-tapes--left .r10-tape { top: 2.8cqw; transform: rotate(-26deg); }
+.r10-tapes--left .r10-tape--sub { top: 7.4cqw; transform: rotate(-14deg); }
+.r10-tapes--right .r10-tape { top: 2.8cqw; transform: rotate(26deg); }
+.r10-tapes--right .r10-tape--sub { top: 7.4cqw; transform: rotate(14deg); }
 
-.r10-outcome-box { position: absolute; right: 0; bottom: 4.5cqw; z-index: 4; width: 22cqw; border-top: 0.14cqw solid #aa3333; border-bottom: 0.14cqw solid #705532; background: linear-gradient(90deg, transparent, rgb(14 10 12 / 0.9) 22%); }
+.r10-vs-giant {
+  position: absolute;
+  top: 0.2cqw;
+  left: 1.6cqw;
+  z-index: 4;
+  font-size: 8.2cqw;
+  font-weight: 900;
+  color: #a6131a;
+  text-shadow: 0 0.25cqw 0.7cqw rgb(0 0 0 / 0.9);
+  line-height: 0.9;
+}
+
+/* Boss 名字改为实心亮字+重阴影，放在警戒带下方偏左 */
+.r10-prep-title {
+  position: absolute;
+  top: 7.4cqw;
+  left: 2cqw;
+  z-index: 5;
+  padding: 0.2cqw 1cqw 0.2cqw 0.6cqw;
+  font-size: 2.3cqw;
+  font-weight: 900;
+  color: #ffeae0;
+  text-shadow: 0 0.18cqw 0.45cqw #000, 0 0 0.8cqw rgb(180 20 20 / 0.85);
+  background: linear-gradient(90deg, rgb(24 6 8 / 0.85), transparent);
+  border-left: 0.3cqw solid #e03636;
+  transform: rotate(-8deg);
+}
+
+.r10-prep-badge {
+  position: absolute;
+  top: 5.4cqw;
+  right: 6.2cqw;
+  z-index: 5;
+  font-size: 2.8cqw;
+  font-weight: 900;
+  color: #e03838;
+  text-shadow: 0 0.2cqw 0.55cqw #000;
+  transform: rotate(15deg);
+}
+
+/* 战果分支框抬高一点，给右下角“魔人讨伐队”留足呼吸感 */
+.r10-outcome-box {
+  position: absolute;
+  right: 0;
+  bottom: 7.4cqw;
+  z-index: 4;
+  width: 21cqw;
+  border-top: 0.14cqw solid #aa3333;
+  border-bottom: 0.14cqw solid #705532;
+  background: linear-gradient(90deg, transparent, rgb(14 10 12 / 0.9) 22%);
+}
 .r10-outcome-head { padding: 0.45cqw 1cqw; background: linear-gradient(90deg, transparent, #9e1818 30%); text-align: right; font-size: 1cqw; font-weight: 800; }
 .r10-outcome-row { display: flex; justify-content: space-between; padding: 0.45cqw 1.2cqw 0.45cqw 4.5cqw; font-size: 0.95cqw; border-top: 0.06cqw solid rgb(255 255 255 / 0.1); }
 .r10-outcome-row span { color: #b97575; }
@@ -220,8 +267,14 @@
 @keyframes r10-turn-flash { 0% { opacity: 0; letter-spacing: 0.4em; } 25% { opacity: 1; letter-spacing: 0.18em; } 80% { opacity: 1; } 100% { opacity: 0; } }
 
 /* ---------- 2. 中轴 HUD ---------- */
-.r10-hud-band { position: relative; z-index: 5; margin-top: -5.6cqw; padding: 0 1.4cqw 0.35cqw; pointer-events: none; }
-.r10-hud-meta { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: -0.35cqw; }
+.r10-hud-band {
+  position: relative;
+  z-index: 5;
+  margin-top: -6.4cqw;
+  padding: 0 1.4cqw 0.45cqw;
+  pointer-events: none;
+}
+.r10-hud-meta { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 0.25cqw; }
 .r10-side-info { position: relative; width: 28cqw; }
 .r10-side-info--party { text-align: right; }
 
@@ -235,7 +288,8 @@
 .r10-hp-num i { font-style: normal; font-size: 1.05cqw; color: #d1c4a8; }
 .r10-hp-num b { font-size: 2.15cqw; font-weight: 900; font-variant-numeric: tabular-nums; }
 
-.r10-center-meta { display: flex; align-items: center; gap: 0.7cqw; margin-bottom: 1.25cqw; pointer-events: auto; }
+/* 只把中间“弱点属性+预告”抬高，避开圆钮；左右 HP 贴近血条 */
+.r10-center-meta { display: flex; align-items: center; gap: 0.7cqw; margin-bottom: 2.55cqw; pointer-events: auto; }
 .r10-weakness { display: flex; align-items: center; gap: 0.45cqw; padding: 0.24cqw 0.65cqw; border-radius: 0.3cqw; background: rgb(10 14 22 / 0.78); border: 0.08cqw solid rgb(120 175 245 / 0.35); font-size: 0.82cqw; color: #82b8ff; }
 .r10-weakness-icons { display: flex; gap: 0.3cqw; }
 .r10-weak-el { width: 1.4cqw; height: 1.4cqw; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--el) 32%, #111); color: #fff; }
@@ -263,14 +317,38 @@
 .r10-gauge--boss .r10-gauge-fill { background: linear-gradient(90deg, #a61414, #eb4b1c 58%, #ffd259); box-shadow: inset 0 0.25cqw 0 rgb(255 255 255 / 0.35); }
 .r10-gauge--party .r10-gauge-fill { background: linear-gradient(90deg, #6bf0ff, #2697e8 50%, #144d9e); box-shadow: inset 0 0.25cqw 0 rgb(255 255 255 / 0.35); }
 
-.r10-center-orb { pointer-events: auto; position: relative; z-index: 3; flex: 0 0 auto; width: 6.2cqw; height: 6.2cqw; margin-top: -1cqw; border-radius: 50%; border: 0.3cqw solid #c8a359; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff6df; background: radial-gradient(circle at 35% 30%, #4b3822, #18120c 72%); box-shadow: inset 0 0 0 0.18cqw rgb(0 0 0 / 0.7), 0 0.35cqw 1cqw rgb(0 0 0 / 0.85); }
-.r10-stage[data-phase="prepare"] .r10-center-orb { width: 8.2cqw; height: 8.2cqw; cursor: pointer; background: radial-gradient(circle at 40% 35%, #e83232, #7a0909 74%); box-shadow: 0 0 1.6cqw rgb(235 55 40 / 0.55), inset 0 0.3cqw 0.6cqw rgb(255 215 160 / 0.4); }
-.r10-orb-start { font-size: 1.45cqw; font-weight: 900; letter-spacing: 0.06em; }
+.r10-center-orb {
+  pointer-events: auto;
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  width: 5.8cqw;
+  height: 5.8cqw;
+  margin-top: 0;
+  border-radius: 50%;
+  border: 0.28cqw solid #c8a359;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff6df;
+  background: radial-gradient(circle at 35% 30%, #4b3822, #18120c 72%);
+  box-shadow: inset 0 0 0 0.16cqw rgb(0 0 0 / 0.7), 0 0.35cqw 1cqw rgb(0 0 0 / 0.85);
+}
+/* 准备态圆钮收敛到 6.6cqw，上下各突出血条 2.1cqw */
+.r10-stage[data-phase="prepare"] .r10-center-orb {
+  width: 6.6cqw;
+  height: 6.6cqw;
+  cursor: pointer;
+  background: radial-gradient(circle at 40% 35%, #e83232, #7a0909 74%);
+  box-shadow: 0 0 1.5cqw rgb(235 55 40 / 0.55), inset 0 0.25cqw 0.5cqw rgb(255 215 160 / 0.4);
+}
+.r10-orb-start { font-size: 1.2cqw; font-weight: 900; letter-spacing: 0.05em; }
 .r10-orb-round { font-style: normal; font-size: 0.7cqw; color: #e2c179; }
 .r10-orb-num { font-size: 1.95cqw; line-height: 1; }
 .r10-orb-vs { font-size: 0.7cqw; font-weight: 800; color: #c96248; }
 
-.r10-sub-hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1cqw; margin-top: 0.25cqw; }
+.r10-sub-hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1cqw; margin-top: 2.45cqw; }
 .r10-status-strip { display: flex; gap: 0.35cqw; min-height: 1.4cqw; }
 .r10-status-strip--party { justify-content: flex-end; }
 .r10-buff-pill { padding: 0.15cqw 0.45cqw; border-radius: 0.25cqw; border: 0.08cqw solid #569ce3; background: rgb(20 48 84 / 0.82); color: #b8dcff; font-size: 0.7cqw; }
@@ -284,8 +362,17 @@
 .r10-ap-gem[data-preview="true"] { background: radial-gradient(circle at 35% 30%, #ffb5a8, #e03c2b 75%); border-color: #ff9c8a; color: #fff; }
 
 /* ---------- 3. 底部 7 卡指令台 ---------- */
-.r10-deck { flex: 0 0 21.6cqw; display: flex; align-items: stretch; gap: 0.8cqw; padding: 0.75cqw 1cqw 0.55cqw; border-top: 0.2cqw solid #7a6338; background: radial-gradient(60% 90% at 50% 0%, rgb(38 68 58 / 0.28), transparent 70%), linear-gradient(180deg, #101715, #090b0c); }
-.r10-wing { flex: 0 0 9.6cqw; display: flex; flex-direction: column; gap: 0.55cqw; }
+/* 收紧底部高度和左右翼宽度，7 张卡正好撑满指令台 */
+.r10-deck {
+  flex: 0 0 19.4cqw;
+  display: flex;
+  align-items: stretch;
+  gap: 0.7cqw;
+  padding: 0.65cqw 0.9cqw 0.5cqw;
+  border-top: 0.2cqw solid #7a6338;
+  background: radial-gradient(60% 90% at 50% 0%, rgb(38 68 58 / 0.28), transparent 70%), linear-gradient(180deg, #101715, #090b0c);
+}
+.r10-wing { flex: 0 0 8.2cqw; display: flex; flex-direction: column; gap: 0.45cqw; }
 .r10-wing button { cursor: pointer; color: #f0e4ca; font-family: inherit; border-radius: 0.35cqw; }
 .r10-btn-panel { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25cqw; border: 0.14cqw solid #5c6c82; background: linear-gradient(180deg, #273140, #161c26); font-size: 1cqw; font-weight: 700; }
 .r10-btn-panel small { font-size: 0.76cqw; color: #9bb1cc; }
@@ -310,7 +397,25 @@
 .r10-card-slot[data-boost="true"] .r10-card-frame { box-shadow: 0 0 0 0.18cqw #ffdc6b, 0 0 1cqw rgb(255 212 82 / 0.65); }
 .r10-card-slot[data-cd="true"] .r10-card-frame { filter: brightness(0.45) saturate(0.5); }
 
-.r10-boost-tag { position: absolute; top: 4cqw; left: 50%; z-index: 7; transform: translateX(-50%); font-size: 1.35cqw; font-weight: 900; font-style: italic; letter-spacing: 0.06em; color: #ffea83; -webkit-text-stroke: 0.08cqw #b3280c; text-shadow: 0 0.18cqw 0.45cqw rgb(0 0 0 / 0.9); pointer-events: none; }
+/* BOOST 挪到卡槽顶边正中悬浮，不挡头像也不挡 BP */
+.r10-boost-tag {
+  position: absolute;
+  top: -0.78cqw;
+  left: 50%;
+  z-index: 8;
+  transform: translateX(-50%);
+  padding: 0.1cqw 0.65cqw;
+  border: 0.1cqw solid #ffe175;
+  border-radius: 0.28cqw;
+  background: linear-gradient(180deg, #c93312, #6b1104);
+  font-size: 0.92cqw;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  color: #fff2a8;
+  box-shadow: 0 0.2cqw 0.6cqw rgb(0 0 0 / 0.85);
+  pointer-events: none;
+}
 .r10-guard-chip { position: absolute; top: -1.6cqw; z-index: 9; padding: 0.2cqw 0.65cqw; border-radius: 0.3cqw; background: #2383d6; border: 0.1cqw solid #a3e2ff; color: #fff; font-size: 0.8cqw; font-weight: 800; }
 .r10-card-hit { position: absolute; top: 38%; z-index: 9; font-size: 2cqw; font-weight: 900; color: #ff6262; -webkit-text-stroke: 0.08cqw #210303; animation: r10-dmg-pop 0.8s ease-out forwards; pointer-events: none; }
 
