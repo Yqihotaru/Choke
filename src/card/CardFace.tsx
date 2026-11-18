@@ -18,12 +18,11 @@ import {
 import { CardFoil } from "./CardFoil"
 import { trackCardLight } from "./light"
 import { motifTriangles } from "./motif"
-import type { CardFaceData, CardFaceMode, Element, Job } from "./types"
+import type { CardFaceData, Element, Job } from "./types"
 import "./card-face.css"
 
 interface Props {
   card: CardFaceData
-  mode?: CardFaceMode
   className?: string
   /** 书里的邻页提前加载，避免翻过去时才开始请求插画 */
   eager?: boolean
@@ -34,9 +33,9 @@ interface Props {
  * 肖像窗（大头像居中；背景是本人自定义 banner 虚化压暗，没有或是 osu! 预设图时换成稀有度底纹；
  * 左上品阶、右上 Lv / 已装 MOD，底部命座星）→ 卡名（名字 + 国旗排名 · pp 一行）
  * → 技能行（1–3 行）→ 底栏（职业 + BP / 编号）。
- * 战斗态只留肖像窗和技能行。材质、烫印在 card-face.css；闪卡膜是共用的 CardFoil。
+ * 材质、烫印在 card-face.css；闪卡膜是共用的 CardFoil。
  */
-export const CardFace = memo(function CardFace({ card, mode = "collection", className, eager = false }: Props) {
+export const CardFace = memo(function CardFace({ card, className, eager = false }: Props) {
   useEffect(trackCardLight, [])
 
   const bp = battlePower(card)
@@ -55,7 +54,6 @@ export const CardFace = memo(function CardFace({ card, mode = "collection", clas
     <div
       className={cn("cf card-face", className)}
       data-rarity={card.rarity}
-      data-mode={mode}
       data-foil={card.foil ? "true" : undefined}
       // 镜像卡视觉等美术 PR；先留数据钩子，不做临时样式
       data-mirror={card.isMirror ? "true" : undefined}

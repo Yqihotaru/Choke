@@ -19,7 +19,7 @@ import {
 } from "./data"
 import { trackCardLight } from "./light"
 import { motifTriangles } from "./motif"
-import type { CardFaceData, CardFaceMode } from "./types"
+import type { CardFaceData } from "./types"
 import "./card-face-b.css"
 
 /** MOD 的三种摆法：侧栏六边形 / 头像右上角 / 名字后面的胶囊 */
@@ -27,7 +27,6 @@ export type ModPlacement = "spine" | "portrait" | "name"
 
 interface Props {
   card: CardFaceData
-  mode?: CardFaceMode
   tone?: "dark" | "light"
   mods?: ModPlacement
   version?: "v1" | "v2"
@@ -38,12 +37,11 @@ interface Props {
 /**
  * 卡面 B（侧栏版）。左边一条稀有度色竖栏，全部横排：稀有度图标、MOD，底部 Lv、命座；
  * 右边从上到下：banner（世界排名水印）→ 头像压 banner 下沿 + 国旗排名 / pp / 大号 BP
- * → 名字 → 技能 → 底标。战斗态只留肖像和技能行。类名前缀 cfb（cb 已被开包卡背占用）。
+ * → 名字 → 技能 → 底标。类名前缀 cfb（cb 已被开包卡背占用）。
  * 闪卡膜是和肖像版共用的 CardFoil，跟着光标反光。
  */
 export const CardFaceB = memo(function CardFaceB({
   card,
-  mode = "collection",
   tone = "dark",
   mods: placement = "spine",
   version = "v2",
@@ -83,7 +81,6 @@ export const CardFaceB = memo(function CardFaceB({
       data-rarity={card.rarity}
       data-tone={tone}
       data-version={version}
-      data-mode={mode}
       data-foil={card.foil ? "true" : undefined}
       // 镜像卡视觉等美术 PR；先留数据钩子，不做临时样式
       data-mirror={card.isMirror ? "true" : undefined}

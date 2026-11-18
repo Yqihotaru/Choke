@@ -543,11 +543,6 @@
   font-size: 4.3cqw;
   font-weight: 800;
 }
-
-.cfn2__battle-stage {
-  display: none;
-}
-
 .cfn2__title {
   flex: 0 0 auto;
   display: flex;
@@ -1189,72 +1184,6 @@
     display: none;
   }
 }
-
-/* 战斗态 */
-.cfn2[data-mode="battle"] .cfn2__obi,
-.cfn2[data-mode="battle"] .cfn2__cover,
-.cfn2[data-mode="battle"] .cfn2__hero-row,
-.cfn2[data-mode="battle"] .cfn2__title,
-.cfn2[data-mode="battle"] .cfn2__colophon {
-  display: none;
-}
-
-.cfn2[data-mode="battle"] .cfn2__poster {
-  padding: 2.8cqw;
-  gap: 2.4cqw;
-}
-
-.cfn2[data-mode="battle"] .cfn2__battle-stage {
-  flex: 1 1 0;
-  min-height: 0;
-  display: block;
-  overflow: hidden;
-  border-radius: 2.2cqw;
-  box-shadow: 0 6px 16px rgb(0 0 0 / 0.45);
-}
-
-.cfn2[data-mode="battle"] .cfn2__battle-stage img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.cfn2[data-mode="battle"] .cfn2__skills {
-  flex: 0 0 auto;
-  padding: 0;
-}
-
-.cfn2[data-mode="battle"] .cfn2__skill {
-  height: 16cqw;
-  gap: 2.2cqw;
-}
-
-.cfn2[data-mode="battle"] .cfn2__el {
-  flex-basis: 11cqw;
-  height: 11cqw;
-}
-
-.cfn2[data-mode="battle"] .cfn2__el svg {
-  width: 7.8cqw;
-  height: 7.8cqw;
-}
-
-.cfn2[data-mode="battle"] .cfn2__skill-name {
-  font-size: 8.2cqw;
-}
-
-.cfn2[data-mode="battle"] :is(.cfn2__ap, .cfn2__mp) {
-  width: 10.6cqw;
-  height: 10.6cqw;
-  font-size: 6.4cqw;
-}
-
-.cfn2[data-mode="battle"] .cfn2__passive {
-  height: 8cqw;
-  padding: 0 1.8cqw;
-  font-size: 4.2cqw;
-}
-
 /* 小尺寸自适应 */
 @container cfn2 (max-width: 170px) {
   .cfn2__obi {

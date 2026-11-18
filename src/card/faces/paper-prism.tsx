@@ -17,7 +17,7 @@ import {
   starStates,
 } from "../data"
 import { trackCardLight } from "../light"
-import type { CardFaceData, CardFaceMode, Element, Job } from "../types"
+import type { CardFaceData, Element, Job } from "../types"
 import "./paper-prism.css"
 
 export const faceMeta = {
@@ -29,7 +29,6 @@ export const faceMeta = {
 
 interface Props {
   card: CardFaceData
-  mode?: CardFaceMode
   className?: string
   /** 书里的邻页提前加载，避免翻过去时才开始请求插画 */
   eager?: boolean
@@ -45,7 +44,6 @@ interface Props {
  */
 export const CardFaceGemini = memo(function CardFaceGemini({
   card,
-  mode = "collection",
   className,
   eager = false,
 }: Props) {
@@ -81,7 +79,6 @@ export const CardFaceGemini = memo(function CardFaceGemini({
       ref={cardRef}
       className={cn("cfg", className)}
       data-rarity={card.rarity}
-      data-mode={mode}
       data-foil={card.foil ? "true" : undefined}
     >
       <div className="cfg__stock" aria-hidden />

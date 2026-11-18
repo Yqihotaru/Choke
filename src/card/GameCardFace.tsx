@@ -1,9 +1,8 @@
 import { CardFaceB } from "./CardFaceB"
-import type { CardFaceData, CardFaceMode } from "./types"
+import type { CardFaceData } from "./types"
 
 interface Props {
   card: CardFaceData
-  mode?: CardFaceMode
   className?: string
   /** 书里的邻页提前加载，避免翻过去时才开始请求插画 */
   eager?: boolean

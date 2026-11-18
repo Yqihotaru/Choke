@@ -921,32 +921,6 @@
   height: 0;
   overflow: hidden;
 }
-
-/* ---------- 战斗态：隐藏顶栏 / 底栏 / 外骨架 ---------- */
-
-.cfv1[data-mode="battle"] .cfv1__head,
-.cfv1[data-mode="battle"] .cfv1__foot,
-.cfv1[data-mode="battle"] .cfv1__frame-svg {
-  display: none;
-}
-
-.cfv1[data-mode="battle"] .cfv1__body {
-  padding: 2cqw;
-}
-
-.cfv1[data-mode="battle"] .cfv1__frame {
-  gap: 2cqw;
-}
-
-.cfv1[data-mode="battle"] .cfv1__art {
-  margin: 0;
-}
-
-.cfv1[data-mode="battle"] .cfv1__skills {
-  flex: 0 0 38cqw;
-  margin: 0;
-}
-
 /* ---------- 小尺寸适配 ---------- */
 
 @container (max-width: 140px) {
@@ -968,12 +942,7 @@
     flex: 0 0 30cqw;
     gap: 1.6cqw;
   }
-
-  .cfv1[data-mode="battle"] .cfv1__skills {
-    flex: 0 0 32cqw;
-  }
-
-  .cfv1__el {
+.cfv1__el {
     width: 8.8cqw;
     height: 8.8cqw;
   }

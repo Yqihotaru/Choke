@@ -17,7 +17,7 @@ import {
   starStates,
 } from "../data"
 import { trackCardLight } from "../light"
-import type { CardFaceData, CardFaceMode, Element, Job } from "../types"
+import type { CardFaceData, Element, Job } from "../types"
 import "./current.css"
 
 export const faceMeta = {
@@ -29,7 +29,6 @@ export const faceMeta = {
 
 interface Props {
   card: CardFaceData
-  mode?: CardFaceMode
   className?: string
   /** 书里的邻页提前加载，避免翻过去时才开始请求插画 */
   eager?: boolean
@@ -39,9 +38,9 @@ interface Props {
  * 纸质卡面。分区从上到下：
  * 顶栏（品阶徽记 / 品阶名 / Lv / MOD 三槽）→ 插画窗（banner，右下压一块头像，左下命座星）
  * → 卡名条（名字 / 排名 / pp）→ 技能行（1–3 行，行数少时插画窗自动拉高）→ 底栏（职业 / BP / 编号）。
- * 战斗态只留插画窗和技能行。材质、压印、闪卡膜全在 card-face.css。
+ * 材质、压印、闪卡膜全在 card-face.css。
  */
-export const CardFaceCurrent = memo(function CardFaceCurrent({ card, mode = "collection", className, eager = false }: Props) {
+export const CardFaceCurrent = memo(function CardFaceCurrent({ card, className, eager = false }: Props) {
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(trackCardLight, [])
@@ -75,7 +74,6 @@ export const CardFaceCurrent = memo(function CardFaceCurrent({ card, mode = "col
       ref={cardRef}
       className={cn("cfcur", className)}
       data-rarity={card.rarity}
-      data-mode={mode}
       data-foil={card.foil ? "true" : undefined}
     >
       <div className="cfcur__stock" aria-hidden />

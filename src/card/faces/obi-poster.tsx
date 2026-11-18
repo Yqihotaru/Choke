@@ -17,7 +17,7 @@ import {
   starStates,
 } from "../data"
 import { trackCardLight } from "../light"
-import type { CardFaceData, CardFaceMode, Element, Job } from "../types"
+import type { CardFaceData, Element, Job } from "../types"
 import "./obi-poster.css"
 
 export const faceMeta = {
@@ -29,7 +29,6 @@ export const faceMeta = {
 
 interface Props {
   card: CardFaceData
-  mode?: CardFaceMode
   className?: string
   eager?: boolean
 }
@@ -41,7 +40,6 @@ interface Props {
  */
 export const CardFaceObi = memo(function CardFaceObi({
   card,
-  mode = "collection",
   className,
   eager = false,
 }: Props) {
@@ -77,7 +75,6 @@ export const CardFaceObi = memo(function CardFaceObi({
       ref={cardRef}
       className={cn("cfo", className)}
       data-rarity={card.rarity}
-      data-mode={mode}
       data-foil={card.foil ? "true" : undefined}
     >
       <div className="cfo__stock" aria-hidden />
@@ -220,20 +217,6 @@ export const CardFaceObi = memo(function CardFaceObi({
                 <b>{bp.toLocaleString("en-US")}</b>
               </div>
             </div>
-          </div>
-
-          {/* 战斗模式精简头像区（平时隐藏，battle 态接管） */}
-          <div className="cfo__battle-stage" aria-hidden={mode !== "battle"}>
-            {card.art && (
-              <img
-                src={card.art}
-                alt=""
-                draggable={false}
-                loading={eager ? "eager" : "lazy"}
-                decoding="async"
-                referrerPolicy="no-referrer"
-              />
-            )}
           </div>
 
           {/* 大号海报名字栏 */}

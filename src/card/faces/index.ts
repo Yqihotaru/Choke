@@ -1,10 +1,9 @@
 import type { ComponentType } from "react"
 
-import type { CardFaceData, CardFaceMode } from "../types"
+import type { CardFaceData } from "../types"
 
 export interface CardFaceProps {
   card: CardFaceData
-  mode?: CardFaceMode
   theme?: "dark" | "light"
   modPlacement?: "spine" | "portrait" | "name"
   className?: string

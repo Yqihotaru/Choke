@@ -583,12 +583,6 @@
   font-size: 3.8cqw;
   font-weight: 800;
 }
-
-/* 战斗态专用的大头像容器，平时隐藏 */
-.cfo__battle-stage {
-  display: none;
-}
-
 /* 大号海报标题区 */
 .cfo__title {
   display: flex;
@@ -1048,75 +1042,6 @@
     display: none;
   }
 }
-
-/* =========================================================
-   7. 战斗态：收起腰封与印刷文字，只留超大头像和技能行
-   ========================================================= */
-
-.cfo[data-mode="battle"] .cfo__obi,
-.cfo[data-mode="battle"] .cfo__cover,
-.cfo[data-mode="battle"] .cfo__hero-row,
-.cfo[data-mode="battle"] .cfo__title,
-.cfo[data-mode="battle"] .cfo__colophon {
-  display: none;
-}
-
-.cfo[data-mode="battle"] .cfo__poster {
-  padding: 3cqw;
-  gap: 2.6cqw;
-}
-
-.cfo[data-mode="battle"] .cfo__battle-stage {
-  flex: 1 1 0;
-  min-height: 0;
-  display: block;
-  overflow: hidden;
-  border-radius: 2.4cqw;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);
-}
-
-.cfo[data-mode="battle"] .cfo__battle-stage img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.cfo[data-mode="battle"] .cfo__skills {
-  flex: 0 0 auto;
-  padding: 0;
-}
-
-.cfo[data-mode="battle"] .cfo__skill {
-  height: 16cqw;
-  gap: 2.2cqw;
-}
-
-.cfo[data-mode="battle"] .cfo__el {
-  flex-basis: 11cqw;
-  height: 11cqw;
-}
-
-.cfo[data-mode="battle"] .cfo__el svg {
-  width: 7.8cqw;
-  height: 7.8cqw;
-}
-
-.cfo[data-mode="battle"] .cfo__skill-name {
-  font-size: 8.2cqw;
-}
-
-.cfo[data-mode="battle"] :is(.cfo__ap, .cfo__mp) {
-  width: 10.6cqw;
-  height: 10.6cqw;
-  font-size: 6.4cqw;
-}
-
-.cfo[data-mode="battle"] .cfo__passive {
-  height: 8cqw;
-  padding: 0 1.8cqw;
-  font-size: 4.2cqw;
-}
-
 /* =========================================================
    8. 小尺寸自适应
    ========================================================= */

@@ -1108,67 +1108,6 @@
     display: none;
   }
 }
-
-/* =========================================================
-   9. 战斗态：只留大头像画幅和放大的技能行
-   ========================================================= */
-
-.cfg[data-mode="battle"] {
-  --bezel-in: 2.2cqw;
-  --bezel-gap: 0.8cqw;
-}
-
-.cfg[data-mode="battle"] :is(.cfg__head, .cfg__dock, .cfg__foot),
-.cfg[data-mode="battle"] .cfg__bezel::after {
-  display: none;
-}
-
-.cfg[data-mode="battle"] .cfg__art {
-  margin: 0 0 2.4cqw;
-}
-
-.cfg[data-mode="battle"] .cfg__avatar {
-  width: 54cqw;
-  padding: 1.6cqw;
-}
-
-.cfg[data-mode="battle"] .cfg__skills {
-  gap: 1.4cqw;
-  padding: 0;
-}
-
-.cfg[data-mode="battle"] .cfg__skill {
-  height: 15.2cqw;
-  gap: 2cqw;
-  padding: 0 1.6cqw 0 2.2cqw;
-}
-
-.cfg[data-mode="battle"] .cfg__el {
-  flex-basis: 10.6cqw;
-  height: 10.6cqw;
-}
-
-.cfg[data-mode="battle"] .cfg__el svg {
-  width: 7.4cqw;
-  height: 7.4cqw;
-}
-
-.cfg[data-mode="battle"] .cfg__skill-name {
-  font-size: 8cqw;
-}
-
-.cfg[data-mode="battle"] :is(.cfg__ap, .cfg__mp) {
-  width: 10.4cqw;
-  height: 10.4cqw;
-  font-size: 6.4cqw;
-}
-
-.cfg[data-mode="battle"] .cfg__passive {
-  height: 7.8cqw;
-  padding: 0 1.8cqw;
-  font-size: 4cqw;
-}
-
 /* =========================================================
    10. 小尺寸自适应
    ========================================================= */

@@ -78,7 +78,5 @@ export interface CardFaceData {
   isMirror?: boolean
 }
 
-/** 卡面显示层：收藏态全显，战斗态只留立绘 + 技能 */
-export type CardFaceMode = "collection" | "battle"
 
 export type StarState = "empty" | "copper" | "prism"

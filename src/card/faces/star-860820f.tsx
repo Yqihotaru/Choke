@@ -16,7 +16,7 @@ import {
   nameSizeOf,
   starStates,
 } from "../data"
-import type { CardFaceData, CardFaceMode, CardSkill, Element, Job, Rarity, StarState } from "../types"
+import type { CardFaceData, CardSkill, Element, Job, Rarity, StarState } from "../types"
 import "./star-860820f.css"
 
 export const faceMeta = {
@@ -31,11 +31,10 @@ const STAR_PATH =
 
 interface Props {
   card: CardFaceData
-  mode?: CardFaceMode
   className?: string
 }
 
-export function CardFaceV1({ card, mode = "collection", className }: Props) {
+export function CardFaceV1({ card, className }: Props) {
   const rawId = useId().replace(/:/g, "")
   const prismId = `star-prism-v1-${rawId}`
   const [artReady, setArtReady] = useState(!(card.banner || card.art))
@@ -48,7 +47,6 @@ export function CardFaceV1({ card, mode = "collection", className }: Props) {
     <div
       className={cn("cfv1", className)}
       data-rarity={card.rarity}
-      data-mode={mode}
       data-foil={card.foil ? "true" : undefined}
     >
       <div className="cfv1__body">

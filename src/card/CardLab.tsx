@@ -3,26 +3,24 @@ import { useEffect, useState, type ReactNode } from "react"
 import type { ModPlacement } from "./CardFaceB"
 import { DEMO_CARDS, RARITY_LABEL, makeCard } from "./data"
 import { CARD_FACES, DEFAULT_FACE, HISTORY_FACES, getCardFace } from "./faces"
-import type { CardFaceData, CardFaceMode } from "./types"
+import type { CardFaceData } from "./types"
 import "./card-lab.css"
 
 function FaceView({
   style,
   card,
-  mode,
   theme,
   className,
   mods,
 }: {
   style: string
   card: CardFaceData
-  mode?: CardFaceMode
   theme?: "dark" | "light"
   className?: string
   mods?: ModPlacement
 }) {
   const Face = getCardFace(style).Component
-  return <Face card={card} mode={mode} theme={theme} modPlacement={mods} className={className} />
+  return <Face card={card} theme={theme} modPlacement={mods} className={className} />
 }
 
 const MOD_OPTIONS: { id: ModPlacement; label: string }[] = [
@@ -110,13 +108,12 @@ export function CardLab() {
     const base = DEMO_CARDS[index] ?? DEMO_CARDS[4]
     const card = params.get("foil") === "1" ? { ...base, foil: true } : base
     const width = Math.min(Math.max(Number(params.get("w")) || 480, 240), 960)
-    const battle = params.get("mode") === "battle"
     const guides = params.get("guides") === "1"
 
     if (embed) {
       return (
         <div style={{ width: "100%", padding: 0 }}>
-          <FaceView mods={mods} style={faceStyle} theme={theme} card={card} mode={battle ? "battle" : "collection"} />
+          <FaceView mods={mods} style={faceStyle} theme={theme} card={card} />
         </div>
       )
     }
@@ -126,7 +123,6 @@ export function CardLab() {
         <div style={{ width }}>
           <FaceView mods={mods} style={faceStyle}
             card={card}
-            mode={battle ? "battle" : "collection"}
             theme={theme}
             className={guides ? "cf--guides" : undefined}
           />
@@ -283,12 +279,8 @@ export function CardLab() {
         </div>
       </Section>
 
-      <Section label="三档尺寸" note="100px 上场 / 200px 卡册 / 360px 全屏详情">
+      <Section label="三档尺寸" note="140px 卡册 / 220px 网格 / 360px 全屏详情">
         <div className="lab__row lab__row--baseline">
-          <div className="lab__slot" style={{ width: 100 }}>
-            <FaceView mods={mods} style={faceStyle} theme={theme} card={DEMO_CARDS[4]} mode="battle" />
-            <span className="lab__tag">100 · 战斗态</span>
-          </div>
           <div className="lab__slot" style={{ width: 140 }}>
             <FaceView mods={mods} style={faceStyle} theme={theme} card={DEMO_CARDS[4]} />
             <span className="lab__tag">140 · 卡册</span>
@@ -300,19 +292,6 @@ export function CardLab() {
           <div className="lab__slot" style={{ width: 360 }}>
             <FaceView mods={mods} style={faceStyle} theme={theme} card={DEMO_CARDS[4]} />
             <span className="lab__tag">360 · 详情</span>
-          </div>
-        </div>
-      </Section>
-
-      <Section label="战斗态" note="顶栏与底栏淡出，只留立绘与技能行；血量条在卡牌下方单独渲染">
-        <div className="lab__row">
-          <div className="lab__slot" style={{ width: 120 }}>
-            <FaceView mods={mods} style={faceStyle} theme={theme} card={DEMO_CARDS[3]} mode="battle" />
-            <span className="lab__tag">120</span>
-          </div>
-          <div className="lab__slot" style={{ width: 200 }}>
-            <FaceView mods={mods} style={faceStyle} theme={theme} card={DEMO_CARDS[3]} mode="battle" />
-            <span className="lab__tag">200</span>
           </div>
         </div>
       </Section>

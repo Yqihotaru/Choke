@@ -17,7 +17,7 @@ import {
   starStates,
 } from "../data"
 import { trackCardLight } from "../light"
-import type { CardFaceData, CardFaceMode, Element, Job, Rarity } from "../types"
+import type { CardFaceData, Element, Job, Rarity } from "../types"
 import "./night-obi.css"
 
 export const faceMeta = {
@@ -29,14 +29,12 @@ export const faceMeta = {
 
 interface Props {
   card: CardFaceData
-  mode?: CardFaceMode
   className?: string
   eager?: boolean
 }
 
 export const CardFaceNightObi = memo(function CardFaceNightObi({
   card,
-  mode = "collection",
   className,
   eager = false,
 }: Props) {
@@ -72,7 +70,6 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
       ref={cardRef}
       className={cn("cfn", className)}
       data-rarity={card.rarity}
-      data-mode={mode}
       data-foil={card.foil ? "true" : undefined}
     >
       <div className="cfn__stock" aria-hidden />
@@ -213,19 +210,6 @@ export const CardFaceNightObi = memo(function CardFaceNightObi({
                 <b>{bp.toLocaleString("en-US")}</b>
               </div>
             </div>
-          </div>
-
-          <div className="cfn__battle-stage" aria-hidden={mode !== "battle"}>
-            {card.art && (
-              <img
-                src={card.art}
-                alt=""
-                draggable={false}
-                loading={eager ? "eager" : "lazy"}
-                decoding="async"
-                referrerPolicy="no-referrer"
-              />
-            )}
           </div>
 
           <div className="cfn__title">

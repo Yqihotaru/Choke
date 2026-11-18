@@ -927,66 +927,6 @@
     transition: none;
   }
 }
-
-/* =========================================================
-   10. 战斗态：只留肖像窗和技能行，字放大
-   ========================================================= */
-
-.cf[data-mode="battle"] {
-  --rim-gap: 1.4cqw;
-}
-
-.cf[data-mode="battle"] :is(.cf__title, .cf__foot, .cf__grade, .cf__corner, .cf__mods) {
-  display: none;
-}
-
-.cf[data-mode="battle"] .cf__art {
-  margin-bottom: 2.4cqw;
-}
-
-.cf[data-mode="battle"] .cf__portrait {
-  top: 50%;
-  width: 66cqw;
-}
-
-.cf[data-mode="battle"] .cf__skills {
-  gap: 1.4cqw;
-  margin-inline: 0;
-}
-
-.cf[data-mode="battle"] .cf__skill {
-  height: 15.6cqw;
-  gap: 2cqw;
-  padding: 0 1.2cqw;
-}
-
-.cf[data-mode="battle"] .cf__el {
-  flex-basis: 11.2cqw;
-  height: 11.2cqw;
-}
-
-.cf[data-mode="battle"] .cf__el svg {
-  width: 7.8cqw;
-  height: 7.8cqw;
-}
-
-.cf[data-mode="battle"] .cf__skill-name {
-  font-size: 8.4cqw;
-}
-
-.cf[data-mode="battle"] :is(.cf__ap, .cf__mp) {
-  width: 10.8cqw;
-  height: 10.8cqw;
-  font-size: 6.6cqw;
-}
-
-.cf[data-mode="battle"] .cf__passive {
-  height: 8cqw;
-  padding: 0 1.6cqw;
-  font-size: 4.2cqw;
-  letter-spacing: 0.08em;
-}
-
 /* =========================================================
    11. 小尺寸：读不清的小字直接收掉
    ========================================================= */
