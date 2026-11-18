@@ -23,14 +23,11 @@ import { heroCardDef } from "../hero"
 import { upsertMirrorCard } from "../mirror"
 import { addPacks, getPackCounts, grantStarterPacks } from "../packs/inventory"
 import { STARTER_PACKS } from "../gacha/packs"
-import { heroIndex, heroPersonalBonus, heroStatsFromOsu } from "../shared/pool"
 
 /** 登录时把 /me/osu 写成 hero-{id} 卡定义，并放进该用户的卡册 */
 async function claimHeroCard(
   userId: string,
   me: Awaited<ReturnType<typeof fetchMe>>,
-  onboarded: boolean,
-  personalBonusBp: number,
   grant: boolean,
 ) {
   const [pool] = await db
@@ -45,10 +42,8 @@ async function claimHeroCard(
     .where(eq(cards.id, `pool-${me.id}`))
     .limit(1)
 
-  const def = heroCardDef(me, pool ?? null, onboarded, personalBonusBp)
-  const { id, heroIndex: _index, heroPower: _power, ...rest } = def
-  void _index
-  void _power
+  const def = heroCardDef(me, pool ?? null)
+  const { id, ...rest } = def
 
   await db
     .insert(cards)
@@ -107,7 +102,6 @@ export async function authRoutes(app: FastifyInstance) {
         id: userId,
         username: `游客 ${suffix.slice(0, 4).toUpperCase()}`,
         onboarded: true,
-        heroBonus: 0,
       })
       .returning()
 
@@ -139,8 +133,6 @@ export async function authRoutes(app: FastifyInstance) {
       const accessToken = await exchangeCode(code)
       const me = await fetchMe(accessToken)
       const userId = `osu-${me.id}`
-      const hero = heroIndex(heroStatsFromOsu(me))
-      const personalBonusBp = Math.round(heroPersonalBonus(hero.index) * 10000)
 
       const [user] = await db
         .insert(users)
@@ -149,18 +141,17 @@ export async function authRoutes(app: FastifyInstance) {
           username: me.username,
           osuId: me.id,
           onboarded: false,
-          heroBonus: personalBonusBp,
         })
         .onConflictDoUpdate({
           target: users.id,
-          set: { username: me.username, heroBonus: personalBonusBp },
+          set: { username: me.username },
         })
         .returning()
 
       if (!user) throw new Error("用户写入失败")
 
       try {
-        await claimHeroCard(userId, me, user.onboarded, user.heroBonus, false)
+        await claimHeroCard(userId, me, false)
       } catch (error) {
         // 认领失败不能挡住登录
         request.log.warn({ err: error }, "claim hero card failed")
@@ -209,6 +200,7 @@ export async function authRoutes(app: FastifyInstance) {
           constellation: userCards.constellation,
           exp: userCards.exp,
           serial: userCards.serial,
+          rollBp: userCards.rollBp,
           foil: userCards.foil,
         })
         .from(userCards)
@@ -228,7 +220,6 @@ export async function authRoutes(app: FastifyInstance) {
         avatarUrl: user.osuId == null ? null : `https://a.ppy.sh/${user.osuId}`,
         profileUrl: user.osuId == null ? null : `https://osu.ppy.sh/users/${user.osuId}`,
         onboarded: user.onboarded,
-        heroBonus: user.heroBonus,
         essence: user.essence,
         coins: user.coins,
         hero,
@@ -254,21 +245,13 @@ export async function authRoutes(app: FastifyInstance) {
       .returning({ id: users.id })
     const starterGranted = claimed.length > 0
 
-    if (user.osuId != null) {
-      await db
-        .update(cards)
-        .set({ heroBonus: user.heroBonus })
-        .where(eq(cards.id, `hero-${user.osuId}`))
-      invalidatePublicCardCache()
-    }
-
     if (starterGranted) {
       await grantStarterPacks(userId)
     }
 
     return {
       ok: true,
-      data: { onboarded: true, heroBonus: user.heroBonus, starterGranted },
+      data: { onboarded: true, starterGranted },
     }
   })
 

@@ -1,6 +1,5 @@
 import { JOB_ORDER, hashOf, skillsFor } from "../../../src/card/data"
 import type { Rarity } from "../../../src/card/types"
-import { heroIndex, heroStatsFromOsu } from "../../../src/pool/hero"
 import { fanCap, lowerRarity, rankCap } from "../../../src/pool/score"
 
 import type { OsuMe } from "./auth/osu"
@@ -15,15 +14,12 @@ export interface PoolCardSeed {
 
 /**
  * 把 osu! 的 /me/osu 变成本人卡定义。
- * 稀有度取公开池卡；osu! 数据只给个人加成（basis point），不影响稀有度。
+ * 稀有度取公开池卡；个人数据不参与强度与稀有度。
  */
 export function heroCardDef(
   me: OsuMe,
   pool?: PoolCardSeed | null,
-  onboarded = false,
-  personalBonusBp = 0,
 ) {
-  const hero = heroIndex(heroStatsFromOsu(me))
   const seed = `${me.id}|${me.username}`
   const job = JOB_ORDER[hashOf(seed) % JOB_ORDER.length]
   const pp = pool?.pp ?? (me.statistics?.pp == null ? null : String(me.statistics.pp))
@@ -51,8 +47,5 @@ export function heroCardDef(
     banner: me.cover?.url ?? null,
     skills: skillsFor(job, rarity, false, String(me.id)),
     version: 1,
-    heroBonus: onboarded ? personalBonusBp : -2000,
-    heroIndex: hero.index,
-    heroPower: hero.power,
   }
 }

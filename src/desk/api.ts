@@ -25,7 +25,8 @@ export interface ApiUserCard {
   /** 实例发行序号；pulled 是该卡定义的累计发行数 */
   serial?: number
   pulled?: number
-  heroBonus?: number
+  /** 实例个体值，千分比 970–1030 */
+  rollBp?: number
   obtainedAt?: string
 }
 
@@ -66,13 +67,13 @@ export function toFace(row: ApiUserCard): CardFaceData {
       art: row.art ?? undefined,
       banner: row.banner ?? undefined,
       skills: row.skills,
-      heroBonus: row.heroBonus,
       version: row.version ?? 1,
     },
     {
       level: row.level,
       constellation: row.constellation,
       foil: row.foil,
+      rollBp: row.rollBp,
       serial: row.serial,
       pulled: row.pulled,
     },
@@ -260,7 +261,6 @@ export interface AccountMe {
   avatarUrl: string | null
   profileUrl: string | null
   onboarded: boolean
-  heroBonus: number
   essence: number
   coins: number
   hero: ApiUserCard | null

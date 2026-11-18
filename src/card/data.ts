@@ -139,17 +139,17 @@ export function bpColor(bp: number): string {
   return tier.color
 }
 
-/** 本体卡：lv1–6 每级 +3%，lv7–12 每级 +20% 复利，满级 ≈ 1,409 */
+/** 本体卡：lv1–6 每级 +3%，lv7–12 每级 +20% 复利，满级 ≈ 1,400（= Prismatic） */
 export function battlePower(card: CardFaceData): number {
+  const roll = (card.rollBp ?? 1000) / 1000
   if (card.isHero) {
     const lv = Math.min(Math.max(card.level, 1), 12)
     const factor = lv <= 6 ? 1 + 0.03 * (lv - 1) : 1.18 * 1.2 ** (lv - 6)
-    const bonus = 1 + (card.heroBonus ?? 0) / 10000
-    return Math.round(400 * factor * bonus)
+    return Math.round(400 * factor * roll)
   }
   const levelFactor = 1 + 0.06 * (Math.max(card.level, 1) - 1)
   const starFactor = 1 + CONSTELLATION_BONUS[card.rarity] * card.constellation
-  return Math.round(RARITY_BASE[card.rarity] * levelFactor * starFactor)
+  return Math.round(RARITY_BASE[card.rarity] * levelFactor * starFactor * roll)
 }
 
 /** 六颗星；本体卡每颗两档（铜 → 虹彩） */

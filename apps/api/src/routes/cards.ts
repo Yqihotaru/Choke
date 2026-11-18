@@ -353,6 +353,7 @@ export async function cardRoutes(app: FastifyInstance) {
         constellation: userCards.constellation,
         exp: userCards.exp,
         serial: userCards.serial,
+        rollBp: userCards.rollBp,
         foil: userCards.foil,
         obtainedAt: userCards.obtainedAt,
       })

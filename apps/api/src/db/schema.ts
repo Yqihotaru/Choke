@@ -35,7 +35,7 @@ export const cards = pgTable(
     cardType: text("card_type").notNull().default("pool"),
     /** 镜像卡对应的 osu! 账号；公共卡与本体卡为 null */
     originOsuId: bigint("origin_osu_id", { mode: "number" }),
-    /** 本体卡个人加成（basis point）；池卡为 0 */
+    /** 已废弃：旧版本体卡个人加成，恒为 0；列保留只为兼容旧库 */
     heroBonus: integer("hero_bonus").notNull().default(0),
     version: integer("version").notNull().default(1),
     /** 累计发行数；每发一张 +1，给新实例当序号，不随熔卡减少 */
@@ -60,9 +60,9 @@ export const users = pgTable("users", {
   publicId: integer("public_id")
     .notNull()
     .default(sql`nextval('users_public_id_seq')`),
-  /** 是否完成新手引导；引导完成后才激活本体卡个人加成 */
+  /** 是否完成新手引导；完成前不发新手包 */
   onboarded: boolean("onboarded").notNull().default(false),
-  /** 由 /me/osu 算出的个人加成（basis point），0–2000 */
+  /** 已废弃：旧版个人加成，恒为 0；列保留只为兼容旧库 */
   heroBonus: integer("hero_bonus").notNull().default(0),
   /** 分解/闪卡用精华 */
   essence: integer("essence").notNull().default(0),
@@ -95,6 +95,8 @@ export const userCards = pgTable(
     foil: boolean("foil").notNull().default(false),
     /** 这张卡的第几张：发行时从 cards.pulled 领号，熔卡、转手都不变 */
     serial: integer("serial").notNull().default(0),
+    /** 实例个体值，千分比：970–1030；抽到时掷一次，之后不变 */
+    rollBp: integer("roll_bp").notNull().default(1000),
     mods: jsonb("mods").notNull().default(sql`'[]'::jsonb`),
     obtainedAt: timestamp("obtained_at", { withTimezone: true }).defaultNow().notNull(),
   },

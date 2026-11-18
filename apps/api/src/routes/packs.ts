@@ -6,7 +6,7 @@ import { requireSelf, requireSession } from "../auth/guard"
 import { DECK_SIZE } from "../config"
 import { db } from "../db/client"
 import { cards, userCards, users } from "../db/schema"
-import { invalidatePublicCardCache, invalidatePublicCardRows } from "./cards"
+import { invalidatePublicCardRows } from "./cards"
 import { grantCard, openPack } from "../gacha/open"
 import { PACKS, PACK_SIZE, PITY, STARTER_PACKS, MYSTERY_PACK, type PackId } from "../gacha/packs"
 import { MIRROR_RATE } from "../mirror"
@@ -31,6 +31,7 @@ async function loadHero(userId: string, heroId: string) {
       constellation: userCards.constellation,
       exp: userCards.exp,
       serial: userCards.serial,
+      rollBp: userCards.rollBp,
       foil: userCards.foil,
     })
     .from(userCards)
@@ -210,8 +211,6 @@ export async function packRoutes(app: FastifyInstance) {
       })
     }
 
-    await db.update(cards).set({ heroBonus: user.heroBonus }).where(eq(cards.id, heroId))
-    invalidatePublicCardCache()
     await db.transaction((tx) => grantCard(tx, { userId, cardId: heroId }))
 
     return {

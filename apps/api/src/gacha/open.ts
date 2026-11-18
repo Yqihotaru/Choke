@@ -42,6 +42,8 @@ export interface DrawnCard {
   /** 实例序号 / 发出这一张时的累计发行数 */
   serial: number
   pulled: number
+  /** 个体值，千分比 970–1030 */
+  rollBp: number
 }
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
@@ -50,19 +52,21 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 export async function grantCard(
   tx: Transaction,
   values: { userId: string; cardId: string; foil?: boolean },
-): Promise<{ userCardId: number; serial: number }> {
+): Promise<{ userCardId: number; serial: number; rollBp: number }> {
   const [counted] = await tx
     .update(cards)
     .set({ pulled: sql`${cards.pulled} + 1` })
     .where(eq(cards.id, values.cardId))
     .returning({ pulled: cards.pulled })
   if (!counted) throw new Error(`卡不存在：${values.cardId}`)
+  // 个体值：970–1030（±3%），抽到时掷一次
+  const rollBp = 970 + Math.floor(Math.random() * 61)
   const [inserted] = await tx
     .insert(userCards)
-    .values({ ...values, serial: counted.pulled })
+    .values({ ...values, serial: counted.pulled, rollBp })
     .returning({ id: userCards.id })
   if (!inserted) throw new Error("卡实例写入失败")
-  return { userCardId: inserted.id, serial: counted.pulled }
+  return { userCardId: inserted.id, serial: counted.pulled, rollBp }
 }
 
 export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) {
@@ -112,8 +116,8 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       const cardId = ids[Math.floor(random() * ids.length)]!
       const foil = random() < PACKS[pool].foilRate
 
-      const { userCardId, serial } = await grantCard(tx, { userId, cardId, foil })
-      results.push({ cardId, rarity, fromPity, userCardId, foil, serial, pulled: serial })
+      const { userCardId, serial, rollBp } = await grantCard(tx, { userId, cardId, foil })
+      results.push({ cardId, rarity, fromPity, userCardId, foil, serial, pulled: serial, rollBp })
     }
 
     await tx
@@ -140,6 +144,7 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
         foil: false,
         serial: granted.serial,
         pulled: granted.serial,
+        rollBp: granted.rollBp,
       }
     }
 

@@ -106,10 +106,11 @@ function heroLevelFactor(level: number): number {
 }
 
 function basePower(face: CardFaceData): number {
-  if (face.isHero) return 400 * heroLevelFactor(face.level) * (1 + (face.heroBonus ?? 0) / 10000)
+  const roll = (face.rollBp ?? 1000) / 1000
+  if (face.isHero) return 400 * heroLevelFactor(face.level) * roll
   const levelFactor = 1 + 0.06 * (Math.max(face.level, 1) - 1)
   const starFactor = 1 + CONSTELLATION_BONUS[face.rarity] * face.constellation
-  return RARITY_BASE[face.rarity] * levelFactor * starFactor
+  return RARITY_BASE[face.rarity] * levelFactor * starFactor * roll
 }
 
 export function statsFor(face: CardFaceData, subjob: SubJob): BattleStats {

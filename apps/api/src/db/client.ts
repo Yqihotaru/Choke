@@ -42,6 +42,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS cards_name_trgm_idx ON cards USING gin (name gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS cards_pp_idx ON cards (pp DESC NULLS LAST);
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS hero_bonus integer NOT NULL DEFAULT 0;
+UPDATE cards SET hero_bonus = 0 WHERE hero_bonus <> 0;
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS card_type text NOT NULL DEFAULT 'pool';
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS origin_osu_id bigint;
 ALTER TABLE cards ADD COLUMN IF NOT EXISTS pulled integer NOT NULL DEFAULT 0;
@@ -67,6 +68,7 @@ UPDATE users SET public_id = nextval('users_public_id_seq') WHERE public_id IS N
 CREATE UNIQUE INDEX IF NOT EXISTS users_public_id_idx ON users (public_id);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarded boolean NOT NULL DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS hero_bonus integer NOT NULL DEFAULT 0;
+UPDATE users SET hero_bonus = 0 WHERE hero_bonus <> 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS essence integer NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS coins integer NOT NULL DEFAULT 100;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS player_level integer NOT NULL DEFAULT 1;
@@ -90,6 +92,7 @@ CREATE TABLE IF NOT EXISTS user_cards (
 ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS exp integer NOT NULL DEFAULT 0;
 ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS foil boolean NOT NULL DEFAULT false;
 ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS serial integer NOT NULL DEFAULT 0;
+ALTER TABLE user_cards ADD COLUMN IF NOT EXISTS roll_bp integer NOT NULL DEFAULT 1000;
 -- 旧库只补未编号实例；从已有最大号和累计发行数之后续号，不能重用已熔掉的号码。
 WITH issued AS (
   SELECT card_id, max(serial) AS serial FROM user_cards GROUP BY card_id

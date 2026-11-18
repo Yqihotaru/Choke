@@ -88,15 +88,8 @@ export async function upsertMirrorCard(
   osuId: number,
   def: ReturnType<typeof heroCardDef>,
 ) {
-  const {
-    id: _heroId,
-    heroIndex: _index,
-    heroPower: _power,
-    ...rest
-  } = def
+  const { id: _heroId, ...rest } = def
   void _heroId
-  void _index
-  void _power
   const id = `${MIRROR_PREFIX}${osuId}`
 
   await db
@@ -106,7 +99,6 @@ export async function upsertMirrorCard(
       ...rest,
       cardType: CARD_TYPES.mirror,
       originOsuId: osuId,
-      heroBonus: 0,
       version: 1,
       // 镜像定义被重建时，补回仍存实例的最大发行号。
       pulled: sql<number>`coalesce((
@@ -120,7 +112,6 @@ export async function upsertMirrorCard(
         ...rest,
         cardType: CARD_TYPES.mirror,
         originOsuId: osuId,
-        heroBonus: 0,
         pulled: sql`greatest(${cards.pulled}, excluded.pulled)`,
       },
     })
