@@ -3,11 +3,12 @@ import type { CardFaceProps } from "./index"
 
 export const faceMeta = {
   id: "b-v3",
-  label: "B v3 · Gemini 修版",
-  note: "本体徽章 / 断图回退 / 100px 容器查询（实验室预览）",
+  label: "B v3 · 游戏版",
+  note: "本体徽章 / 断图回退 / 100px 容器查询",
   order: 72,
   supportsTheme: true,
   supportsModPlacement: true,
+  inGame: true,
 } as const
 
 export default function CardFaceBV3({ theme, modPlacement, ...props }: CardFaceProps) {
