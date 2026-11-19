@@ -1,5 +1,9 @@
-import { cardSkillsFor, normalizeCardSkill } from "./jobs"
-import type { CardFaceData, CardSkill, Job, Mod, Rarity, StarState } from "./types"
+import { CONSTELLATION_BONUS, RARITY_BASE } from "@choke/shared/config"
+import { JOB_ORDER, SKILL_SETS, hashOf, skillsFor } from "@choke/shared/skills"
+import { normalizeCardSkill } from "./jobs"
+
+export { CONSTELLATION_BONUS, JOB_ORDER, RARITY_BASE, hashOf, skillsFor }
+import type { CardFaceData, Mod, Rarity, StarState } from "./types"
 
 /** 十二种 MOD；卡面只显示前三个，多余的收进 +N */
 export const MOD_LIST: Mod[] = [
@@ -52,28 +56,6 @@ export function isCustomBanner(url: string | undefined): url is string {
   return !!url && !/user-cover-presets|\/images\/headers\/profile-covers\//.test(url)
 }
 
-
-/** 七档品质基础值；压缩比固定 3.5×（C 400 → Prismatic 1,400） */
-export const RARITY_BASE: Record<Rarity, number> = {
-  C: 400,
-  UC: 480,
-  R: 600,
-  E: 740,
-  L: 960,
-  Radiant: 1160,
-  Prismatic: 1400,
-}
-
-/** 命座单颗收益率：品阶越低越高，满命 E ≈ 4 命 L */
-export const CONSTELLATION_BONUS: Record<Rarity, number> = {
-  C: 0.1,
-  UC: 0.09,
-  R: 0.08,
-  E: 0.07,
-  L: 0.05,
-  Radiant: 0.04,
-  Prismatic: 0.03,
-}
 
 export const RARITY_LABEL: Record<Rarity, string> = {
   C: "COMMON",
@@ -181,46 +163,6 @@ export function makeCard(init: CardInit): CardFaceData {
     // 卡面技能统一走一遍现行技能规范化：名字保留，费用/属性以现行机制为准
     skills: init.skills.map((skill) => normalizeCardSkill(skill, init.job)),
   }
-}
-
-export const JOB_ORDER: Job[] = ["tank", "warrior", "mage", "support"]
-
-const SKILL_SETS: Record<Job, CardSkill[]> = {
-  tank: [
-    { name: "铁壁", element: "earth", ap: 1 },
-    { name: "反震", element: "metal", ap: 0, passive: true },
-    { name: "震地", element: "earth", ap: 2 },
-  ],
-  warrior: [
-    { name: "裂空斩", element: "physical", ap: 2 },
-    { name: "追风", element: "thunder", ap: 1 },
-    { name: "血怒", element: "dark", ap: 0, passive: true },
-  ],
-  mage: [
-    { name: "霜缚", element: "ice", ap: 1, mp: 3 },
-    { name: "星火", element: "fire", ap: 2, mp: 5 },
-    { name: "静默", element: "light", ap: 2, mp: 4 },
-  ],
-  support: [
-    { name: "回响", element: "light", ap: 1 },
-    { name: "庇护", element: "wood", ap: 1, mp: 2 },
-    { name: "共鸣", element: "light", ap: 0, passive: true },
-  ],
-}
-
-/** 按职业/子职业 + 稀有度取技能；seed 相同则结果恒定 */
-export function skillsFor(job: Job, rarity: Rarity, wantThree = false, seed?: string): CardSkill[] {
-  if (seed) return cardSkillsFor(seed, job, rarity, wantThree)
-
-  const pool = SKILL_SETS[job]
-  const count = rarity === "Radiant" || rarity === "Prismatic" || wantThree ? 3 : 2
-  return pool.slice(0, count)
-}
-
-export function hashOf(seed: string): number {
-  let h = 0
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
-  return h
 }
 
 export const DEMO_CARDS: CardFaceData[] = [

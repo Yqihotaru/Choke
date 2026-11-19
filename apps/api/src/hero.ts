@@ -1,6 +1,6 @@
-import { JOB_ORDER, hashOf, skillsFor } from "../../../src/card/data"
-import type { Rarity } from "../../../src/card/types"
-import { fanCap, lowerRarity, rankCap } from "../../../src/pool/score"
+import { JOB_ORDER, hashOf, skillsFor } from "@choke/shared/skills"
+import type { Rarity } from "@choke/shared/types"
+import { fanCap, lowerRarity, rankCap } from "@choke/shared/pool/score"
 
 import type { OsuMe } from "./auth/osu"
 

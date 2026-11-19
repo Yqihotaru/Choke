@@ -1,6 +1,6 @@
 import { makeCard } from "./data"
-import { normalizeCardSkill } from "./jobs"
-import type { CardFaceData, CardSkill, Job, Rarity } from "./types"
+import { cardSkillsFromRefs, normalizeCardSkill } from "./jobs"
+import type { CardFaceData, CardSkill, CardSkillRef, Job, Rarity } from "./types"
 
 /**
  * 卡的静态定义：只放不会随玩家等级/命座变化的东西。
@@ -22,6 +22,8 @@ export interface CardDef {
   art?: string
   banner?: string
   skills: CardSkill[]
+  /** 技能引用：存在时优先于 skills */
+  skillRefs?: CardSkillRef[]
   /** 定义版本，用于热更和回滚 */
   version: number
 }
@@ -61,8 +63,12 @@ export function faceFromDef(
     profileUrl: def.profileUrl,
     art: def.art,
     banner: def.banner,
+    skillRefs: def.skillRefs,
     // 卡面技能与战斗技能共用同一份规范化结果，避免出现「卡上 1 AP、实战 2 AP」
-    skills: def.skills.map((skill) => normalizeCardSkill(skill, def.job)),
+    skills:
+      def.skillRefs && def.skillRefs.length > 0
+        ? cardSkillsFromRefs(def.skillRefs, def.job)
+        : def.skills.map((skill) => normalizeCardSkill(skill, def.job)),
   })
 }
 
@@ -83,6 +89,7 @@ export function defFromFace(face: CardFaceData, version = 1): CardDef {
     art: face.art,
     banner: face.banner,
     skills: face.skills,
+    skillRefs: face.skillRefs,
     version,
   }
 }
@@ -103,6 +110,7 @@ export interface CardDefRow {
   art?: string
   banner?: string
   skills: CardSkill[]
+  skillRefs?: CardSkillRef[]
 }
 
 export function defRow(def: CardDef): CardDefRow {
@@ -121,5 +129,6 @@ export function defRow(def: CardDef): CardDefRow {
     art: def.art,
     banner: def.banner,
     skills: def.skills,
+    skillRefs: def.skillRefs,
   }
 }

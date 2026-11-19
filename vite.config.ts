@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": resolve(import.meta.dirname, "./src"),
+        "@choke/shared": resolve(import.meta.dirname, "./packages/shared/src"),
       },
     },
     server: {

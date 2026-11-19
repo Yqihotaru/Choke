@@ -12,7 +12,8 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "paths": {
-      "@/*": ["../../src/*"]
+      "@/*": ["../../src/*"],
+      "@choke/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": ["src", "scripts"]

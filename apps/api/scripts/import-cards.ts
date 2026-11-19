@@ -1,6 +1,9 @@
 import fs from "node:fs"
 import path from "node:path"
 
+import { refsFromCardSkills } from "@choke/shared/skills"
+import type { CardSkill, Job } from "@choke/shared/types"
+
 import { db } from "../src/db/client"
 import { cards } from "../src/db/schema"
 import { invalidateCardCache } from "../src/gacha/open"
@@ -64,6 +67,7 @@ for (let i = 0; i < rows.length; i += BATCH) {
     art: row.art ?? null,
     banner: row.banner ?? null,
     skills: row.skills,
+    skillRefs: refsFromCardSkills(row.skills as CardSkill[], row.job as Job),
     version: 1,
   }))
 

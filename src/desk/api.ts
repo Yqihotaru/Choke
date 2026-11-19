@@ -1,5 +1,5 @@
 import { faceFromDef } from "@/card/def"
-import type { CardFaceData, CardSkill, Job, Rarity } from "@/card/types"
+import type { CardFaceData, CardSkill, CardSkillRef, Job, Rarity } from "@/card/types"
 
 /** `/users/:id/cards` 和 `/users/:id/deck` 共用的卡行 */
 export interface ApiUserCard {
@@ -16,6 +16,8 @@ export interface ApiUserCard {
   art: string | null
   banner: string | null
   skills: CardSkill[]
+  /** 技能引用（新）：存在时优先于 skills */
+  skillRefs?: CardSkillRef[]
   version: number
   userCardId: number
   level: number
@@ -67,6 +69,7 @@ export function toFace(row: ApiUserCard): CardFaceData {
       art: row.art ?? undefined,
       banner: row.banner ?? undefined,
       skills: row.skills,
+      skillRefs: row.skillRefs,
       version: row.version ?? 1,
     },
     {

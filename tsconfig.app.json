@@ -23,7 +23,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@choke/shared/*": ["./packages/shared/src/*"]
     }
   },
   "include": ["src"]

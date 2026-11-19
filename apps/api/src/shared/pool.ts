@@ -1,5 +1,2 @@
-/** 前后端共用的卡池 / 本体卡计算。实现暂在仓库根 src/pool/。 */
-export {
-  heroIndex,
-  heroStatsFromOsu,
-} from "../../../../src/pool/hero"
+/** 前后端共用的卡池 / 本体卡计算。 */
+export { heroIndex, heroStatsFromOsu } from "@choke/shared/pool/hero"
