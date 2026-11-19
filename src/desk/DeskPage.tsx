@@ -54,6 +54,7 @@ import { publishDeskCardIds } from "./presence"
 import { cardsToItems, ITEM_SIZE, newId, sizeOf, useDesk } from "./store"
 import type { CardData, DeskItem, PackPool } from "./types"
 import { DeskCard, DeskPack, LevelMeter } from "./DeskBits"
+import { useTheme } from "@/components/theme-provider"
 import {
   POOL_KEY,
   SERVER_POOL,
@@ -68,9 +69,11 @@ import {
 } from "./desk-page-model"
 import { PackOpener, type OriginRect } from "./opening/PackOpener"
 import "./desk.css"
+import "./light.css"
 
 export function DeskPage() {
   const { items, move, front, spawn, remove, reset, stow, unstow, refreshFaces } = useDesk()
+  const { resolvedTheme, setTheme } = useTheme()
   const stageRef = useRef<HTMLDivElement>(null)
   const [stageSize, setStageSize] = useState({ w: 1200, h: 700 })
   const [lifted, setLifted] = useState<{
@@ -1445,13 +1448,27 @@ export function DeskPage() {
           <div className="desk-topbar__brand-group">
             <img
               className="desk-topbar__brand"
-              src="/brand/choke-lockup-horizontal-light.svg"
+              src={
+                resolvedTheme === "light"
+                  ? "/brand/choke-lockup-horizontal.svg"
+                  : "/brand/choke-lockup-horizontal-light.svg"
+              }
               alt="Choke!"
             />
             {user && <LevelMeter level={progress.level} exp={progress.exp} />}
           </div>
-          {user && (
-            <div className="desk-topbar__actions">
+          <div className="desk-topbar__actions">
+            <button
+              type="button"
+              className="desk-button"
+              onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
+              aria-label={resolvedTheme === "light" ? "切换到暗色" : "切换到亮色"}
+              title={resolvedTheme === "light" ? "切换到暗色" : "切换到亮色"}
+            >
+              {resolvedTheme === "light" ? "☾ 暗色" : "☀ 亮色"}
+            </button>
+            {user && (
+            <>
               <button
                 type="button"
                 className="desk-button"
@@ -1472,8 +1489,9 @@ export function DeskPage() {
               >
                 重置桌面
               </button>
-            </div>
-          )}
+            </>
+            )}
+          </div>
         </div>
       </header>
 
