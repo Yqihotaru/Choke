@@ -8,7 +8,6 @@ export const faceMeta = {
   order: 71,
   supportsTheme: true,
   supportsModPlacement: true,
-  inGame: true,
 } as const
 
 export default function CardFaceBV2({ theme, modPlacement, ...props }: CardFaceProps) {
