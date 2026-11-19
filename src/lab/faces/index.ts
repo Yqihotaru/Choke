@@ -1,6 +1,6 @@
 import type { ComponentType } from "react"
 
-import type { CardFaceData } from "../types"
+import type { CardFaceData } from "../../card/types"
 
 export interface CardFaceProps {
   card: CardFaceData

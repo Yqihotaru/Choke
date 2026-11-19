@@ -3,14 +3,9 @@ import "./about-panel.css"
 
 const TOOLS = [
   {
-    href: "/battle-sim",
-    label: "战斗模拟",
-    note: "兰斯10 风格战斗界面模拟：回合、意图、Combo、BOOST、援护和战中对话，不需要卡组。",
-  },
-  {
     href: "/card-lab",
     label: "卡面实验室",
-    note: "自动加载 src/card/faces/ 下所有卡面版本，并排对比材质、尺寸、战斗态和本体卡命座。",
+    note: "自动加载 src/lab/faces/ 下所有卡面版本，并排对比材质、尺寸、战斗态和本体卡命座。",
   },
   {
     href: "/card-editor",

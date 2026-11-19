@@ -15,16 +15,16 @@ import {
   hashOf,
   nameSizeOf,
   starStates,
-} from "../data"
-import { trackCardLight } from "../light"
-import type { CardFaceData, Element, Job } from "../types"
-import "./obi-poster.css"
+} from "../../card/data"
+import { trackCardLight } from "../../card/light"
+import type { CardFaceData, Element, Job, Rarity } from "../../card/types"
+import "./night-obi.css"
 
 export const faceMeta = {
-  id: "obi-poster",
-  label: "黑胶腰封 v4",
-  note: "左侧 18cqw 腰封 + 右侧全景海报",
-  order: 30,
+  id: "night-obi",
+  label: "暗夜腰封 v5.1",
+  note: "v5 清理版：修复 SVG 徽记与星级",
+  order: 40,
 } as const
 
 interface Props {
@@ -33,12 +33,7 @@ interface Props {
   eager?: boolean
 }
 
-/**
- * 卡面 v4 — 黑胶腰封 × 音游海报（Obi & Beatmap Poster）
- * 左侧 18cqw 贯穿全高的「腰封竖脊」承载品阶/MOD/Lv/职业/编号；
- * 右侧 82cqw 为全景 Banner + 骑跨边界的 1:1 头像 + 数据看板 + 大字标题 + 瑞士网格技能表。
- */
-export const CardFaceObi = memo(function CardFaceObi({
+export const CardFaceNightObi = memo(function CardFaceNightObi({
   card,
   className,
   eager = false,
@@ -73,70 +68,41 @@ export const CardFaceObi = memo(function CardFaceObi({
   return (
     <div
       ref={cardRef}
-      className={cn("cfo", className)}
+      className={cn("cfn", className)}
       data-rarity={card.rarity}
       data-foil={card.foil ? "true" : undefined}
     >
-      <div className="cfo__stock" aria-hidden />
-      <div className="cfo__sheen" aria-hidden />
+      <div className="cfn__stock" aria-hidden />
+      <div className="cfn__sheen" aria-hidden />
 
-      <div className="cfo__layout">
-        {/* 左侧贯穿全高的黑胶腰封（Obi Spine） */}
-        <aside className="cfo__obi">
-          <span className="cfo__seal" title={RARITY_LABEL[card.rarity]}>
-            <i className="cfo__emblem" />
+      <div className="cfn__layout">
+        {/* 左侧精简黑胶腰封 */}
+        <aside className="cfn__obi">
+          <span className="cfn__seal" title={RARITY_LABEL[card.rarity]}>
+            <EmblemGlyph rarity={card.rarity} />
           </span>
 
-          <div className="cfo__obi-mid">
-            <span className="cfo__rarity">{RARITY_LABEL[card.rarity]}</span>
-            {card.isHero && <em className="cfo__hero">HERO</em>}
+          <div className="cfn__obi-mid">
+            <span className="cfn__rarity">{RARITY_LABEL[card.rarity]}</span>
+            {card.isHero && <em className="cfn__hero">HERO</em>}
           </div>
 
-          <div className="cfo__mods">
-            {[0, 1, 2].map((slot) => {
-              if (modOverflow && slot === 2) {
-                return (
-                  <span className="cfo__mod cfo__mod--more" key={slot}>
-                    +{card.mods.length - 2}
-                  </span>
-                )
-              }
-              const mod = mods[slot]
-              return mod ? (
-                <span
-                  className="cfo__mod cfo__mod--on"
-                  key={slot}
-                  style={{ "--mod": MOD_COLOR[mod] } as CSSProperties}
-                >
-                  {mod}
-                </span>
-              ) : (
-                <span className="cfo__mod" key={slot} aria-hidden />
-              )
-            })}
-          </div>
-
-          <div className="cfo__obi-foot">
-            <span className="cfo__lv">
-              <i>LV</i>
-              <b>{card.level}</b>
-            </span>
-            <span className="cfo__job" title={JOB_LABEL[card.job]}>
+          <div className="cfn__obi-foot">
+            <span className="cfn__job" title={JOB_LABEL[card.job]}>
               <JobGlyph job={card.job} />
             </span>
-            <span className="cfo__no">{formatNo(card.no, card.total)}</span>
+            <span className="cfn__no">{formatNo(card.no, card.total)}</span>
           </div>
         </aside>
 
-        {/* 右侧海报主画幅 */}
-        <main className="cfo__poster">
-          {/* 全景 Banner 条：符合 osu! 真实宽幅封面比例 */}
-          <div className="cfo__cover">
+        {/* 右侧暗黑海报主画幅 */}
+        <main className="cfn__poster">
+          <div className="cfn__cover">
             {(card.banner || card.art) && (
               <img
                 className={cn(
-                  "cfo__banner",
-                  !card.banner && "cfo__banner--blur"
+                  "cfn__banner",
+                  !card.banner && "cfn__banner--blur"
                 )}
                 src={card.banner || card.art}
                 alt=""
@@ -149,18 +115,46 @@ export const CardFaceObi = memo(function CardFaceObi({
             )}
             <OsuBeatmapMotif hasBanner={Boolean(card.banner)} />
             {card.globalRank != null && (
-              <span className="cfo__watermark" aria-hidden>
+              <span className="cfn__watermark" aria-hidden>
                 #{card.globalRank.toLocaleString("en-US")}
               </span>
             )}
-            <span className="cfo__series" aria-hidden>
-              CHOKE! · S26
-            </span>
+
+            <div className="cfn__cover-top">
+              <span className="cfn__lv">
+                <i>LV</i>
+                <b>{card.level}</b>
+              </span>
+
+              <div className="cfn__mods">
+                {[0, 1, 2].map((slot) => {
+                  if (modOverflow && slot === 2) {
+                    return (
+                      <span className="cfn__mod cfn__mod--more" key={slot}>
+                        +{card.mods.length - 2}
+                      </span>
+                    )
+                  }
+                  const mod = mods[slot]
+                  return mod ? (
+                    <span
+                      className="cfn__mod cfn__mod--on"
+                      key={slot}
+                      style={{ "--mod": MOD_COLOR[mod] } as CSSProperties}
+                    >
+                      {mod}
+                    </span>
+                  ) : (
+                    <span className="cfn__mod" key={slot} aria-hidden />
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
-          {/* 破界叠加的头像 + 右侧数据看板 */}
-          <div className="cfo__hero-row">
-            <div className="cfo__avatar">
+          {/* 干净无脏点的 42cqw 大头像 + 右侧数据看板 */}
+          <div className="cfn__hero-row">
+            <div className="cfn__avatar">
               {card.art && (
                 <img
                   src={card.art}
@@ -171,14 +165,13 @@ export const CardFaceObi = memo(function CardFaceObi({
                   referrerPolicy="no-referrer"
                 />
               )}
-              <i className="cfo__approach" aria-hidden />
             </div>
 
-            <div className="cfo__hud">
-              <div className="cfo__rank-line">
+            <div className="cfn__hud">
+              <div className="cfn__rank-line">
                 {flag && (
                   <img
-                    className="cfo__flag"
+                    className="cfn__flag"
                     src={flag}
                     alt=""
                     loading="lazy"
@@ -186,7 +179,7 @@ export const CardFaceObi = memo(function CardFaceObi({
                     referrerPolicy="no-referrer"
                   />
                 )}
-                <b className="cfo__rank">
+                <b className="cfn__rank">
                   {card.globalRank != null
                     ? `#${card.globalRank.toLocaleString("en-US")}`
                     : card.country || "OSU!"}
@@ -194,23 +187,23 @@ export const CardFaceObi = memo(function CardFaceObi({
               </div>
 
               {card.pp != null && (
-                <div className="cfo__pp">
+                <div className="cfn__pp">
                   <b>{Math.round(card.pp).toLocaleString("en-US")}</b>
                   <i>PP</i>
                 </div>
               )}
 
               <div
-                className="cfo__stars"
+                className="cfn__stars"
                 aria-label={`命座 ${card.constellation}`}
               >
                 {starStates(card).map((state, i) => (
-                  <i className="cfo__star" data-state={state} key={i} />
+                  <StarGlyph state={state} key={i} />
                 ))}
               </div>
 
               <div
-                className="cfo__bp"
+                className="cfn__bp"
                 style={{ "--bp": bpColor(bp) } as CSSProperties}
               >
                 <i>BP</i>
@@ -219,11 +212,10 @@ export const CardFaceObi = memo(function CardFaceObi({
             </div>
           </div>
 
-          {/* 大号海报名字栏 */}
-          <div className="cfo__title">
+          <div className="cfn__title">
             {card.profileUrl ? (
               <a
-                className="cfo__name"
+                className="cfn__name"
                 href={card.profileUrl}
                 title={card.name}
                 target="_blank"
@@ -233,35 +225,34 @@ export const CardFaceObi = memo(function CardFaceObi({
                 {card.name}
               </a>
             ) : (
-              <h3 className="cfo__name" title={card.name} style={nameStyle}>
+              <h3 className="cfn__name" title={card.name} style={nameStyle}>
                 {card.name}
               </h3>
             )}
-            <span className="cfo__title-rule" aria-hidden />
+            <span className="cfn__title-rule" aria-hidden />
           </div>
 
-          {/* 瑞士网格极简技能行 */}
-          <div className="cfo__skills">
+          <div className="cfn__skills">
             {card.skills.slice(0, 3).map((skill, i) => (
               <div
-                className="cfo__skill"
+                className="cfn__skill"
                 key={i}
                 style={{ "--el": ELEMENT_COLOR[skill.element] } as CSSProperties}
               >
-                <span className="cfo__el" title={ELEMENT_LABEL[skill.element]}>
+                <span className="cfn__el" title={ELEMENT_LABEL[skill.element]}>
                   <ElementGlyph element={skill.element} />
                 </span>
-                <span className="cfo__skill-name">{skill.name}</span>
-                <span className="cfo__cost">
+                <span className="cfn__skill-name">{skill.name}</span>
+                <span className="cfn__cost">
                   {skill.mp !== undefined && (
-                    <span className="cfo__mp" title="MP">
+                    <span className="cfn__mp" title="MP">
                       {skill.mp}
                     </span>
                   )}
                   {skill.passive ? (
-                    <span className="cfo__passive">PAS</span>
+                    <span className="cfn__passive">PAS</span>
                   ) : (
-                    <span className="cfo__ap" title="AP">
+                    <span className="cfn__ap" title="AP">
                       {skill.ap}
                     </span>
                   )}
@@ -270,37 +261,106 @@ export const CardFaceObi = memo(function CardFaceObi({
             ))}
           </div>
 
-          <footer className="cfo__colophon" aria-hidden>
+          <footer className="cfn__colophon" aria-hidden>
             <span>CHOKE! TRADING CARD</span>
             <span>SERIES 2026</span>
           </footer>
         </main>
       </div>
 
-      <div className="cfo__frame" aria-hidden />
+      <div className="cfn__frame" aria-hidden />
 
       {card.foil && (
         <div
-          className="cfo__foil"
+          className="cfn__foil"
           style={{ "--seed": hashOf(card.id) % 97 } as CSSProperties}
           aria-hidden
         >
-          <i className="cfo__foil-film" />
-          <i className="cfo__foil-dodge" />
-          <i className="cfo__foil-glitter" />
-          <i className="cfo__foil-glitter cfo__foil-glitter--b" />
-          <i className="cfo__foil-glare" />
-          <i className="cfo__foil-sweep" />
+          <i className="cfn__foil-film" />
+          <i className="cfn__foil-dodge" />
+          <i className="cfn__foil-glitter" />
+          <i className="cfn__foil-glitter cfn__foil-glitter--b" />
+          <i className="cfn__foil-glare" />
+          <i className="cfn__foil-sweep" />
         </div>
       )}
     </div>
   )
 })
 
+function EmblemGlyph({ rarity }: { rarity: Rarity }) {
+  switch (rarity) {
+    case "C":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" strokeWidth="2.2" />
+        </svg>
+      )
+    case "UC":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path d="M12 4.5L18.5 12 12 19.5 5.5 12z" fill="none" stroke="currentColor" strokeWidth="2.1" />
+        </svg>
+      )
+    case "R":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z" fill="currentColor" />
+        </svg>
+      )
+    case "E":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path d="M12 3.2l7.4 4.3v9L12 20.8l-7.4-4.3v-9z" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M12 7.2l3.8 4.8-3.8 4.8L8.2 12z" fill="currentColor" />
+        </svg>
+      )
+    case "L":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path
+            d="M12 3l2.65 5.55 6.1.85-4.45 4.25 1.1 6.05L12 16.8l-5.4 2.9 1.1-6.05L3.25 9.4l6.1-.85z"
+            fill="currentColor"
+          />
+        </svg>
+      )
+    case "Radiant":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path
+            d="M12 2l2 6.2 6-2.2-2.2 6 6.2 2-6.2 2 2.2 6-6-2.2L12 22l-2-6.2-6 2.2 2.2-6L0 12l6.2-2L4 4l6 2.2z"
+            fill="currentColor"
+          />
+        </svg>
+      )
+    case "Prismatic":
+      return (
+        <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
+          <path d="M12 2.5l8 5.2v8.6l-8 5.2-8-5.2V7.7z" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 5.2l2.1 4.7 4.7 2.1-4.7 2.1-2.1 4.7-2.1-4.7-4.7-2.1 4.7-2.1z" fill="currentColor" />
+        </svg>
+      )
+  }
+}
+
+function StarGlyph({ state }: { state: "empty" | "copper" | "prism" }) {
+  return (
+    <svg className="cfn__star-svg" data-state={state} viewBox="0 0 24 24">
+      <path
+        d="M12 2.6l2.8 5.8 6.4.9-4.6 4.5 1.1 6.3-5.7-3-5.7 3 1.1-6.3-4.6-4.5 6.4-.9z"
+        fill={state === "empty" ? "none" : "currentColor"}
+        stroke="currentColor"
+        strokeWidth={state === "empty" ? "2" : "0"}
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function OsuBeatmapMotif({ hasBanner }: { hasBanner: boolean }) {
   return (
     <svg
-      className={cn("cfo__motif", hasBanner && "cfo__motif--subtle")}
+      className={cn("cfn__motif", hasBanner && "cfn__motif--subtle")}
       viewBox="0 0 240 100"
       preserveAspectRatio="xMidYMid slice"
       aria-hidden
@@ -311,7 +371,7 @@ function OsuBeatmapMotif({ hasBanner }: { hasBanner: boolean }) {
         stroke="currentColor"
         strokeWidth="16"
         strokeLinecap="round"
-        opacity="0.16"
+        opacity="0.14"
       />
       <path
         d="M -10 78 Q 55 18, 128 52 T 250 24"
@@ -319,7 +379,7 @@ function OsuBeatmapMotif({ hasBanner }: { hasBanner: boolean }) {
         stroke="currentColor"
         strokeWidth="0.9"
         strokeLinecap="round"
-        opacity="0.5"
+        opacity="0.45"
       />
       <circle
         cx="196"
@@ -329,16 +389,7 @@ function OsuBeatmapMotif({ hasBanner }: { hasBanner: boolean }) {
         stroke="currentColor"
         strokeWidth="0.9"
         strokeDasharray="3 3"
-        opacity="0.55"
-      />
-      <circle
-        cx="196"
-        cy="42"
-        r="30"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="0.6"
-        opacity="0.35"
+        opacity="0.45"
       />
     </svg>
   )
@@ -466,4 +517,4 @@ function ElementGlyph({ element }: { element: Element }) {
   }
 }
 
-export default CardFaceObi
+export default CardFaceNightObi

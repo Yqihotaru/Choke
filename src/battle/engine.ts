@@ -868,6 +868,7 @@ function applyDamageToEnemy(
       isWeak,
       combo: state.combo,
       source: card.name,
+      enemyHpAfter: state.enemy.hp,
     })
     log(
       state,
@@ -890,6 +891,7 @@ function applyDamageToEnemy(
         cardIndex: state.cards.indexOf(card),
         element: "wood",
         source: enemyThorns.name,
+        hpAfter: state.teamHp,
       })
       log(state, `敌方【${enemyThorns.name}】反弹 ${thornDmg} 魔法伤害！`)
       if (state.teamHp <= 0) {
@@ -924,7 +926,7 @@ function healParty(state: BattleState, rawAmount: number, label = "治疗") {
   state.teamHp = Math.min(state.teamHpMax, state.teamHp + amount)
   const actual = state.teamHp - before
   if (actual > 0) {
-    emit(state, { type: "heal", amount: actual, source: label })
+    emit(state, { type: "heal", amount: actual, source: label, hpAfter: state.teamHp })
     log(state, `${label} 为队伍恢复 ${actual.toLocaleString("en-US")} HP`)
   }
 }
@@ -1397,6 +1399,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
         isWeak: elMult >= 1.2,
         combo: state.combo,
         source: support.name,
+        enemyHpAfter: state.enemy.hp,
       })
       log(state, `【支援】${support.name} 命中 ${damage.toLocaleString("en-US")}（Combo ${state.combo}）`)
       if (state.enemy.hp <= 0) {
@@ -1448,6 +1451,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
         element: "physical",
         combo: state.combo,
         source: `${card.name}·抢攻`,
+        enemyHpAfter: state.enemy.hp,
       })
       log(state, `⚡【抢攻】${card.name} 先手突袭 ${damage.toLocaleString("en-US")}（Combo ${state.combo}）`)
       if (state.enemy.hp <= 0) {
@@ -1475,6 +1479,7 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
       amount: selfDmg,
       element: intent.element,
       source: "魅惑自残",
+      enemyHpAfter: state.enemy.hp,
     })
     log(state, `💞 ${state.enemy.name} 受【魅惑】影响攻击失误，对自己造成 ${selfDmg.toLocaleString("en-US")} 伤害！`)
     return
@@ -1598,6 +1603,17 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
     total += damage
     state.teamHp = Math.max(0, state.teamHp - damage)
 
+    // 每一段单独结算并立刻发出事件：血条与数字按段推进，不再合成一个总数
+    emit(state, {
+      type: "damage",
+      target: "party",
+      amount: damage,
+      cardIndex: targetSlotIdx,
+      element: intent.element,
+      source: intent.label,
+      hpAfter: state.teamHp,
+    })
+
     // 我方【荆棘】反伤（单卡荆棘或右侧支援栏荆棘藤阵 §11.1）
     if ((cardHasThorns || partyThornsSupport) && reflectedTimes < 3 && state.enemy.hp > 0) {
       reflectedTimes += 1
@@ -1613,19 +1629,14 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
         amount: reflectDmg,
         element: "wood",
         source: "荆棘反伤",
+        enemyHpAfter: state.enemy.hp,
       })
       log(state, `🌿【荆棘】反击敌方 ${reflectDmg.toLocaleString("en-US")} 魔法伤害！`)
     }
+
+    if (state.teamHp <= 0) break
   }
 
-  emit(state, {
-    type: "damage",
-    target: "party",
-    amount: total,
-    cardIndex: targetSlotIdx,
-    element: intent.element,
-    source: intent.label,
-  })
   log(
     state,
     `${state.enemy.name}「${intent.label}」命中 ${primaryTarget.name}，队伍承受 ${total.toLocaleString("en-US")} 伤害${tierRed > 0 ? `（防御减免 ${Math.round(tierRed * 100)}%）` : ""}`,
@@ -1715,6 +1726,7 @@ export function endTurn(state: BattleState): string | null {
           cardIndex: state.cards.indexOf(target),
           element: esup.element,
           source: esup.name,
+          hpAfter: state.teamHp,
         })
         log(state, `敌方支援【${esup.name}】追击造成 ${dmg.toLocaleString("en-US")} 伤害`)
       } else if (esup.kind === "charge") {
@@ -1746,6 +1758,7 @@ export function endTurn(state: BattleState): string | null {
         amount: dot,
         element: "wood",
         source: status.name,
+        enemyHpAfter: state.enemy.hp,
       })
       log(state, `敌方受到【${status.name}】${dot.toLocaleString("en-US")} 持续伤害`)
     }
@@ -1771,6 +1784,7 @@ export function endTurn(state: BattleState): string | null {
         amount: loss,
         element: "dark",
         source: status.name,
+        hpAfter: state.teamHp,
       })
       log(state, `队伍受到【${status.name}】${loss.toLocaleString("en-US")} 持续伤害`)
     }

@@ -8,16 +8,13 @@ const BattlePage = lazy(() =>
 )
 
 const CardEditor = lazy(() =>
-  import("@/card/CardEditor").then((m) => ({ default: m.CardEditor }))
+  import("@/lab/CardEditor").then((m) => ({ default: m.CardEditor }))
 )
 const CardLab = lazy(() =>
-  import("@/card/CardLab").then((m) => ({ default: m.CardLab }))
+  import("@/lab/CardLab").then((m) => ({ default: m.CardLab }))
 )
 const PoolLab = lazy(() =>
   import("@/pool/PoolLab").then((m) => ({ default: m.PoolLab }))
-)
-const BattleSim = lazy(() =>
-  import("@/battle-sim/BattleSim").then((m) => ({ default: m.BattleSim }))
 )
 
 const FALLBACK = (
@@ -37,16 +34,6 @@ const FALLBACK = (
 
 export function App() {
   const path = window.location.pathname.replace(/\/+$/, "")
-  if (path.endsWith("battle-sim")) {
-    return (
-      <>
-        <Suspense fallback={FALLBACK}>
-          <BattleSim />
-        </Suspense>
-        <BackToDesk />
-      </>
-    )
-  }
   if (path.endsWith("battle")) {
     return (
       <>

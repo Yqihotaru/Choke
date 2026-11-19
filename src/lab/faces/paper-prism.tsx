@@ -15,9 +15,9 @@ import {
   hashOf,
   nameSizeOf,
   starStates,
-} from "../data"
-import { trackCardLight } from "../light"
-import type { CardFaceData, Element, Job } from "../types"
+} from "../../card/data"
+import { trackCardLight } from "../../card/light"
+import type { CardFaceData, Element, Job } from "../../card/types"
 import "./paper-prism.css"
 
 export const faceMeta = {

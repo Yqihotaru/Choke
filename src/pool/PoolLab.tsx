@@ -10,7 +10,7 @@ import { defFromPool } from "./def"
 import { buildPool, claim, faceFromPool, revoke, type PoolCard } from "./index"
 import type { OsuSelf } from "./hero"
 import "./pool-lab.css"
-import "@/card/card-lab.css"
+import "@/lab/card-lab.css"
 
 const RARITY_ORDER = RARITIES
 

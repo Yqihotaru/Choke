@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react"
 
-import { DEMO_CARDS, ELEMENT_LABEL, JOB_LABEL, MOD_LIST, RARITY_LABEL } from "./data"
+import { DEMO_CARDS, ELEMENT_LABEL, JOB_LABEL, MOD_LIST, RARITY_LABEL } from "@/card/data"
 import { DEFAULT_FACE, HISTORY_FACES, getCardFace } from "./faces"
-import { RARITIES, type CardFaceData, type CardSkill, type Element, type Job, type Mod, type Rarity } from "./types"
+import { RARITIES, type CardFaceData, type CardSkill, type Element, type Job, type Mod, type Rarity } from "@/card/types"
 import "./card-editor.css"
 
 const JOBS: Job[] = ["tank", "warrior", "mage", "support"]

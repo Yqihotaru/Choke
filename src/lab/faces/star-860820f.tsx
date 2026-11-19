@@ -15,8 +15,8 @@ import {
   formatNo,
   nameSizeOf,
   starStates,
-} from "../data"
-import type { CardFaceData, CardSkill, Element, Job, Rarity, StarState } from "../types"
+} from "../../card/data"
+import type { CardFaceData, CardSkill, Element, Job, Rarity, StarState } from "../../card/types"
 import "./star-860820f.css"
 
 export const faceMeta = {

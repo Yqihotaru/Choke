@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react"
 
-import type { ModPlacement } from "./CardFaceB"
-import { DEMO_CARDS, RARITY_LABEL, makeCard } from "./data"
+import type { ModPlacement } from "@/card/CardFaceB"
+import { DEMO_CARDS, RARITY_LABEL, makeCard } from "@/card/data"
 import { CARD_FACES, DEFAULT_FACE, HISTORY_FACES, getCardFace } from "./faces"
-import type { CardFaceData } from "./types"
+import type { CardFaceData } from "@/card/types"
 import "./card-lab.css"
 
 function FaceView({

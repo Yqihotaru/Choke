@@ -168,6 +168,8 @@ export function BattleStage({
   const [slashKey, setSlashKey] = useState(0)
   const [laserTargets, setLaserTargets] = useState<number[]>([])
   const [guardChipSlot, setGuardChipSlot] = useState<number | null>(null)
+  // 血条演出投影：由事件逐段推进；为空时回落到引擎的真实值
+  const [hpView, setHpView] = useState<{ party?: number; enemy?: number }>({})
 
   const stageRef = useRef<HTMLDivElement | null>(null)
   const bossRef = useRef<HTMLElement | null>(null)
@@ -243,6 +245,7 @@ export function BattleStage({
   useEffect(() => {
     if (!battle) {
       lastSeq.current = 0
+      setHpView({})
       return
     }
     if (battle.actionSeq === lastSeq.current) return
@@ -295,6 +298,9 @@ export function BattleStage({
 
         if (event.type === "damage") {
           if (event.target === "enemy") {
+            if (event.enemyHpAfter != null) {
+              setHpView((prev) => ({ ...prev, enemy: event.enemyHpAfter }))
+            }
             setSlashKey((k) => k + 1)
             flash()
             const tag = event.crit ? "CRITICAL!" : event.isWeak ? "WEAK!" : undefined
@@ -331,6 +337,9 @@ export function BattleStage({
             }
             playHit(event.combo ?? battle.combo, Boolean(event.crit))
           } else {
+            if (event.hpAfter != null) {
+              setHpView((prev) => ({ ...prev, party: event.hpAfter }))
+            }
             const targetNode = cardRefs.current[event.cardIndex ?? -1] ?? stageRef.current
             popup(targetNode, `-${event.amount.toLocaleString("en-US")}`, "card", event.source)
             playSfx("hit", { rate: 0.88 })
@@ -339,6 +348,9 @@ export function BattleStage({
         }
 
         if (event.type === "heal") {
+          if (event.hpAfter != null) {
+            setHpView((prev) => ({ ...prev, party: event.hpAfter }))
+          }
           popup(stageRef.current, `+${event.amount.toLocaleString("en-US")}`, "card", event.source, "heal")
           playSfx("heal")
           return
@@ -402,6 +414,9 @@ export function BattleStage({
         if (event.type === "lost") playLose()
       }, delay)
     })
+
+    // 事件全部播完后回落到引擎真实值，保证长时间挂机也不会和状态脱节
+    later(() => setHpView({}), battle.events.length * stepGap + 520)
   }, [battle, flash, later, popup, speedHigh, turnBanner])
 
   const startBattle = () => {
@@ -626,8 +641,11 @@ export function BattleStage({
 
   // ==================== 2. 正式战斗画面（1:1 兰斯10 折线血条 + 垂直红白扣血光柱） ====================
   const team = teamHpOf(battle)
-  const bossPct = Math.max(0, Math.min(100, (battle.enemy.hp / Math.max(1, battle.enemy.hpMax)) * 100))
-  const partyPct = Math.max(0, Math.min(100, (team.hp / Math.max(1, team.max)) * 100))
+  // 演出投影：血条与数字跟随「已播放到的事件」推进，而不是直接读引擎的终值
+  const shownEnemyHp = hpView.enemy ?? battle.enemy.hp
+  const shownPartyHp = hpView.party ?? team.hp
+  const bossPct = Math.max(0, Math.min(100, (shownEnemyHp / Math.max(1, battle.enemy.hpMax)) * 100))
+  const partyPct = Math.max(0, Math.min(100, (shownPartyHp / Math.max(1, team.max)) * 100))
   const tankPresent = hasTankAlive(battle.cards)
   const maxDefenseTier = tankPresent ? 4 : 2
   const canRaiseDefense =
@@ -812,7 +830,7 @@ export function BattleStage({
               <div className="choke-side-name">{battle.enemy.name}</div>
               <div className="choke-hp-num">
                 <i>Hp</i>
-                <b>{battle.enemy.hp.toLocaleString("en-US")}</b>
+                <b>{shownEnemyHp.toLocaleString("en-US")}</b>
               </div>
               {battle.enemy.statuses.length > 0 && (
                 <div className="choke-mini-statuses">
@@ -920,7 +938,7 @@ export function BattleStage({
               <div className="choke-side-name">魔人讨伐队</div>
               <div className="choke-hp-num">
                 <i>Hp</i>
-                <b>{team.hp.toLocaleString("en-US")}</b>
+                <b>{shownPartyHp.toLocaleString("en-US")}</b>
               </div>
               {battle.teamStatuses.length > 0 && (
                 <div className="choke-mini-statuses choke-mini-statuses--party">

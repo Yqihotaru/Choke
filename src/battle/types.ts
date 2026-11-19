@@ -222,11 +222,16 @@ export type BattleEvent =
       blocked?: boolean
       combo?: number
       source?: string
+      /** 这一击结算后队伍总血量的快照，用于让血条跟着演出逐段下降 */
+      hpAfter?: number
+      /** 这一击结算后敌方血量的快照 */
+      enemyHpAfter?: number
     }
   | {
       type: "heal"
       amount: number
       source?: string
+      hpAfter?: number
     }
   | {
       type: "miss"

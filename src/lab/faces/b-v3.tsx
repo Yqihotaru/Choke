@@ -1,4 +1,4 @@
-import { CardFaceB2 } from "../CardFaceB2"
+import { CardFaceB2 } from "../../card/CardFaceB2"
 import type { CardFaceProps } from "./index"
 
 export const faceMeta = {

@@ -1,4 +1,4 @@
-import { CardFace } from "../CardFace"
+import { CardFace } from "../../card/CardFace"
 
 export const faceMeta = {
   id: "portrait",
