@@ -207,6 +207,7 @@ export function BattlePage() {
   return (
     <BattleStage
       battle={battle}
+      playerName={user?.username ?? "玩家"}
       deck={cards.map(toFace)}
       stageId={stageId}
       tutorial={tutorialRun}

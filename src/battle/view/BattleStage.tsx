@@ -45,6 +45,7 @@ import {
   hasTankAlive,
   teamHpOf,
 } from "../engine"
+import { BentGauge } from "./BentGauge"
 import { playHit, playLose, playSfx, playTurn, playWin } from "../sfx"
 import type { BattleState, EnemyIntent, SideSupportUnit } from "../types"
 import "./choke-battle.css"
@@ -61,6 +62,7 @@ const PARTY_GAUGE_POLYGON = "4,6 182,6 210,26 456,26 446,50 202,50 174,30 12,30"
 
 interface Props {
   battle: BattleState | null
+  playerName: string
   deck: CardFaceData[]
   stageId: string
   tutorial: boolean
@@ -131,6 +133,7 @@ function SupportKindIcon({ unit }: { unit: SideSupportUnit }) {
 
 export function BattleStage({
   battle,
+  playerName,
   deck,
   stageId,
   tutorial,
@@ -170,6 +173,13 @@ export function BattleStage({
   const [guardChipSlot, setGuardChipSlot] = useState<number | null>(null)
   // 血条演出投影：由事件逐段推进；为空时回落到引擎的真实值
   const [hpView, setHpView] = useState<{ party?: number; enemy?: number }>({})
+  // 引擎真实血量。事件播完后落到这里，而不是清空：清空会让下一轮一开始就先显示最终值，再被首个事件拉高
+  const hpTruth = useRef<{ party?: number; enemy?: number }>({})
+  const liveHp = useRef<{ party: number; enemy: number }>({ party: 0, enemy: 0 })
+  const [lossPillars, setLossPillars] = useState<
+    { id: number; side: "boss" | "party"; left: number; width: number }[]
+  >([])
+  const pillarId = useRef(1)
 
   const stageRef = useRef<HTMLDivElement | null>(null)
   const bossRef = useRef<HTMLElement | null>(null)
@@ -190,6 +200,22 @@ export function BattleStage({
       timers.forEach((id) => window.clearTimeout(id))
     }
   }, [])
+
+  // 扣血光柱：从实际掉血的那一段血条位置垂直冲顶（位置以 .choke-bent-gauges 宽度的百分比计）
+  const spawnLossPillar = useCallback(
+    (side: "boss" | "party", beforePct: number, afterPct: number) => {
+      if (beforePct <= afterPct) return
+      const id = pillarId.current++
+      const start = side === "boss" ? 0.407 + 0.4598 * afterPct : 53.607 + 0.4598 * (100 - beforePct)
+      const end = side === "boss" ? 0.407 + 0.4598 * beforePct : 53.607 + 0.4598 * (100 - afterPct)
+      const raw = end - start
+      const width = Math.max(0.85, raw)
+      const left = raw < 0.85 ? (side === "boss" ? start : end) - width / 2 : start
+      setLossPillars((prev) => [...prev, { id, side, left, width }])
+      later(() => setLossPillars((prev) => prev.filter((p) => p.id !== id)), 520)
+    },
+    [later],
+  )
 
   const popup = useCallback(
     (
@@ -228,6 +254,42 @@ export function BattleStage({
     later(() => node.remove(), 150)
   }, [later])
 
+  // 受击演出：属性色爆光 + 放射线 + 斩痕，规模随伤害占敌方血量的比例放大
+  const hitBurst = useCallback(
+    (element: Element, ratio: number, crit: boolean) => {
+      const parent = bossRef.current
+      if (!parent) return
+      const tier = crit || ratio > 0.08 ? 3 : ratio > 0.03 ? 2 : 1
+      const color = elementColor(element)
+      const jitter = () => `${(Math.random() - 0.5) * 8}cqw`
+      const root = document.createElement("div")
+      root.className = "choke-burst"
+      root.dataset.tier = String(tier)
+      root.style.setProperty("--el", color)
+      root.style.setProperty("--jx", jitter())
+      root.style.setProperty("--rot", `${-30 + Math.random() * 60}deg`)
+      root.innerHTML = '<i class="choke-burst-glow"></i><i class="choke-burst-rays"></i><i class="choke-burst-slash"></i>'
+      parent.appendChild(root)
+      later(() => root.remove(), 520)
+
+      const amp = 3 + tier * 4
+      gsap.fromTo(
+        parent,
+        { x: 0, y: 0 },
+        {
+          x: amp,
+          y: -amp * 0.6,
+          duration: 0.035,
+          repeat: 3 + tier * 2,
+          yoyo: true,
+          ease: "power1.inOut",
+          onComplete: () => gsap.set(parent, { x: 0, y: 0 }),
+        },
+      )
+    },
+    [later],
+  )
+
   const turnBanner = useCallback(
     (owner: "player" | "enemy", round: number) => {
       const parent = stageRef.current
@@ -245,17 +307,31 @@ export function BattleStage({
   useEffect(() => {
     if (!battle) {
       lastSeq.current = 0
+      hpTruth.current = {}
       setHpView({})
       return
     }
+    const truth = { enemy: battle.enemy.hp, party: teamHpOf(battle).hp }
+    if (hpTruth.current.enemy === undefined) {
+      hpTruth.current = truth
+      setHpView(truth)
+    }
     if (battle.actionSeq === lastSeq.current) return
     lastSeq.current = battle.actionSeq
+    liveHp.current = {
+      enemy: hpTruth.current.enemy ?? truth.enemy,
+      party: hpTruth.current.party ?? truth.party,
+    }
+    hpTruth.current = truth
+    const partyMax = Math.max(1, teamHpOf(battle).max)
+    const enemyMax = Math.max(1, battle.enemy.hpMax)
 
     const stepGap = speedHigh ? 110 : 190
     battle.events.forEach((event, idx) => {
       const delay = idx * stepGap
       later(() => {
         if (event.type === "cutin") {
+          playSfx("cutin")
           setCutinBanner({
             actor: event.actor,
             title: event.title,
@@ -299,6 +375,9 @@ export function BattleStage({
         if (event.type === "damage") {
           if (event.target === "enemy") {
             if (event.enemyHpAfter != null) {
+              const before = liveHp.current.enemy
+              liveHp.current.enemy = event.enemyHpAfter
+              spawnLossPillar("boss", (before / enemyMax) * 100, (event.enemyHpAfter / enemyMax) * 100)
               setHpView((prev) => ({ ...prev, enemy: event.enemyHpAfter }))
             }
             setSlashKey((k) => k + 1)
@@ -313,18 +392,19 @@ export function BattleStage({
               Boolean(event.crit),
               Boolean(event.isWeak),
             )
-            if (bossRef.current) {
+            hitBurst(event.element, event.amount / Math.max(1, battle.enemy.hpMax), Boolean(event.crit))
+            const attacker = cardRefs.current[event.cardIndex ?? -1]
+            if (attacker) {
               gsap.fromTo(
-                bossRef.current,
-                { x: 0, y: 0 },
+                attacker,
+                { y: 0 },
                 {
-                  x: 6,
-                  y: -4,
-                  duration: 0.04,
-                  repeat: 5,
+                  y: -18,
+                  duration: 0.07,
                   yoyo: true,
-                  ease: "power1.inOut",
-                  onComplete: () => gsap.set(bossRef.current, { x: 0, y: 0 }),
+                  repeat: 1,
+                  ease: "power2.out",
+                  onComplete: () => gsap.set(attacker, { clearProps: "transform" }),
                 },
               )
             }
@@ -335,9 +415,12 @@ export function BattleStage({
                 { scale: 1, duration: 0.2, ease: "back.out(2)" },
               )
             }
-            playHit(event.combo ?? battle.combo, Boolean(event.crit))
+            playHit(event.combo ?? battle.combo, Boolean(event.crit), event.element)
           } else {
             if (event.hpAfter != null) {
+              const before = liveHp.current.party
+              liveHp.current.party = event.hpAfter
+              spawnLossPillar("party", (before / partyMax) * 100, (event.hpAfter / partyMax) * 100)
               setHpView((prev) => ({ ...prev, party: event.hpAfter }))
             }
             const targetNode = cardRefs.current[event.cardIndex ?? -1] ?? stageRef.current
@@ -349,6 +432,7 @@ export function BattleStage({
 
         if (event.type === "heal") {
           if (event.hpAfter != null) {
+            liveHp.current.party = event.hpAfter
             setHpView((prev) => ({ ...prev, party: event.hpAfter }))
           }
           popup(stageRef.current, `+${event.amount.toLocaleString("en-US")}`, "card", event.source, "heal")
@@ -377,7 +461,7 @@ export function BattleStage({
             "interrupt",
             event.success,
           )
-          playSfx(event.success ? "crit" : "miss")
+          playSfx(event.success ? "break" : "miss")
           return
         }
 
@@ -389,7 +473,7 @@ export function BattleStage({
 
         if (event.type === "down") {
           popup(cardRefs.current[event.cardIndex] ?? stageRef.current, "DOWN!", "card", event.cardName, "miss")
-          playSfx("lose", { rate: 1.25 })
+          playSfx("down")
           return
         }
 
@@ -416,8 +500,8 @@ export function BattleStage({
     })
 
     // 事件全部播完后回落到引擎真实值，保证长时间挂机也不会和状态脱节
-    later(() => setHpView({}), battle.events.length * stepGap + 520)
-  }, [battle, flash, later, popup, speedHigh, turnBanner])
+    later(() => setHpView(hpTruth.current), battle.events.length * stepGap + 520)
+  }, [battle, flash, hitBurst, later, popup, spawnLossPillar, speedHigh, turnBanner])
 
   const startBattle = () => {
     playSfx("click")
@@ -513,7 +597,6 @@ export function BattleStage({
           <section className="choke-hud-band">
             <div className="choke-hud-upper">
               <div className="choke-side-info choke-side-info--boss">
-                <div className="choke-army-silhouette choke-army-silhouette--boss" aria-hidden />
                 <div className="choke-side-name">{enemyName}</div>
                 <div className="choke-hp-num">
                   <i>Hp</i>
@@ -543,8 +626,7 @@ export function BattleStage({
               <div className="choke-shelf-right" />
 
               <div className="choke-side-info choke-side-info--party">
-                <div className="choke-army-silhouette choke-army-silhouette--party" aria-hidden />
-                <div className="choke-side-name">魔人讨伐队</div>
+                <div className="choke-side-name">{playerName}</div>
                 <div className="choke-hp-num">
                   <i>BP</i>
                   <b>{totalBp.toLocaleString("en-US")}</b>
@@ -553,33 +635,13 @@ export function BattleStage({
             </div>
 
             <div className="choke-bent-gauges">
-              <svg className="choke-bent-svg choke-bent-svg--boss" viewBox="0 0 460 54" preserveAspectRatio="none">
-                <polygon points={BOSS_GAUGE_POLYGON} fill="#140d10" stroke="#b89146" strokeWidth="3" />
-                <polygon points={BOSS_GAUGE_POLYGON} fill="url(#bossHpGradPrep)" />
-                <defs>
-                  <linearGradient id="bossHpGradPrep" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#9c140e" />
-                    <stop offset="55%" stopColor="#eb4b1c" />
-                    <stop offset="100%" stopColor="#ffd859" />
-                  </linearGradient>
-                </defs>
-              </svg>
+              <BentGauge side="boss" polygon={BOSS_GAUGE_POLYGON} pct={100} fillX={4} fillWidth={452} />
 
               <button type="button" className="choke-center-orb" onClick={startBattle}>
                 <span className="choke-orb-start">战斗开始</span>
               </button>
 
-              <svg className="choke-bent-svg choke-bent-svg--party" viewBox="0 0 460 54" preserveAspectRatio="none">
-                <polygon points={PARTY_GAUGE_POLYGON} fill="#0d131a" stroke="#b89146" strokeWidth="3" />
-                <polygon points={PARTY_GAUGE_POLYGON} fill="url(#partyHpGradPrep)" />
-                <defs>
-                  <linearGradient id="partyHpGradPrep" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#72f2ff" />
-                    <stop offset="48%" stopColor="#1e8de0" />
-                    <stop offset="100%" stopColor="#0d3b82" />
-                  </linearGradient>
-                </defs>
-              </svg>
+              <BentGauge side="party" polygon={PARTY_GAUGE_POLYGON} pct={100} fillX={4} fillWidth={452} />
 
               <div className="choke-ap-pocket">
                 <span className="choke-ap-label">Ap</span>
@@ -760,9 +822,12 @@ export function BattleStage({
                     <small>{unit.roleText}</small>
                   </div>
                   {unit.locked && (
-                    <span className="choke-plate-lock" title="锁定支援">
-                      <GiPadlock />
-                    </span>
+                    <>
+                      <span className="choke-plate-chains" aria-hidden />
+                      <span className="choke-plate-lock" title="锁定支援">
+                        <GiPadlock />
+                      </span>
+                    </>
                   )}
                 </div>
               ))}
@@ -790,9 +855,12 @@ export function BattleStage({
                     <small>{unit.roleText}</small>
                   </div>
                   {unit.locked && (
-                    <span className="choke-plate-lock" title="锁定保护">
-                      <GiPadlock />
-                    </span>
+                    <>
+                      <span className="choke-plate-chains" aria-hidden />
+                      <span className="choke-plate-lock" title="锁定保护">
+                        <GiPadlock />
+                      </span>
+                    </>
                   )}
                 </div>
               ))}
@@ -826,7 +894,6 @@ export function BattleStage({
           <div className="choke-hud-upper">
             {/* 左外低段上方：红军剪影 + 敌方名 + 大号衬线 HP */}
             <div className="choke-side-info choke-side-info--boss">
-              <div className="choke-army-silhouette choke-army-silhouette--boss" aria-hidden />
               <div className="choke-side-name">{battle.enemy.name}</div>
               <div className="choke-hp-num">
                 <i>Hp</i>
@@ -845,7 +912,8 @@ export function BattleStage({
                       {status.id === "freeze" && <GiIceBolt />}
                       {status.id === "shock" && <GiLightningBow />}
                       {status.name}
-                      {status.stacks && status.stacks > 1 ? `×${status.stacks}` : ""}({status.turns})
+                      {status.stacks && status.stacks > 1 ? `×${status.stacks}` : ""}
+                      <i>{status.turns}</i>
                     </span>
                   ))}
                 </div>
@@ -930,16 +998,6 @@ export function BattleStage({
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* 右外低段上方：蓝军剪影 + 魔人讨伐队 + 大号衬线 HP */}
-            <div className="choke-side-info choke-side-info--party">
-              <div className="choke-army-silhouette choke-army-silhouette--party" aria-hidden />
-              <div className="choke-side-name">魔人讨伐队</div>
-              <div className="choke-hp-num">
-                <i>Hp</i>
-                <b>{shownPartyHp.toLocaleString("en-US")}</b>
-              </div>
               {battle.teamStatuses.length > 0 && (
                 <div className="choke-mini-statuses choke-mini-statuses--party">
                   {battle.teamStatuses.map((status) => (
@@ -947,115 +1005,45 @@ export function BattleStage({
                       className={`choke-buff-pill ${status.isDebuff ? "choke-buff-pill--bad" : ""}`}
                       key={status.id}
                     >
-                      {status.name}({status.turns})
+                      {status.name}
+                      <i>{status.turns}</i>
                     </span>
                   ))}
                 </div>
               )}
             </div>
+
+            {/* 右外低段上方：魔人讨伐队 + 大号衬线 HP */}
+            <div className="choke-side-info choke-side-info--party">
+              <div className="choke-side-name">{playerName}</div>
+              <div className="choke-hp-num">
+                <i>Hp</i>
+                <b>{shownPartyHp.toLocaleString("en-US")}</b>
+              </div>
+            </div>
           </div>
 
           {/* 兰斯10 阶梯折线双血条 + 中央盾形 Round/VS + 折线凹槽下的 AP 齿轮宝石栏 */}
           <div className="choke-bent-gauges">
-            {/* 左：BOSS 阶梯折线血条 */}
-            <svg className="choke-bent-svg choke-bent-svg--boss" viewBox="0 0 460 54" preserveAspectRatio="none">
-              <defs>
-                <clipPath id="bossBentClip">
-                  <polygon points={BOSS_GAUGE_POLYGON} />
-                </clipPath>
-                <linearGradient id="bossHpGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#9c140e" />
-                  <stop offset="55%" stopColor="#eb4b1c" />
-                  <stop offset="100%" stopColor="#ffd859" />
-                </linearGradient>
-                <linearGradient id="bossFlashGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#ffffff" />
-                  <stop offset="50%" stopColor="#ff94a8" />
-                  <stop offset="100%" stopColor="#ff2e4c" />
-                </linearGradient>
-              </defs>
-              {/* 暗色槽底 */}
-              <polygon points={BOSS_GAUGE_POLYGON} fill="#140c0e" />
-              {/* 扣血瞬间的红白闪光残影条 + 实血条 */}
-              <g clipPath="url(#bossBentClip)">
-                <rect
-                  className="choke-bent-ghost"
-                  x="4"
-                  y="0"
-                  width={bossFillWidth}
-                  height="54"
-                  fill="url(#bossFlashGrad)"
-                />
-                <rect
-                  className="choke-bent-fill"
-                  x="4"
-                  y="0"
-                  width={bossFillWidth}
-                  height="54"
-                  fill="url(#bossHpGrad)"
-                />
-                {/* 顶部玻璃高光带 */}
-                <rect x="4" y="6" width={bossFillWidth} height="5" fill="rgba(255,255,255,0.28)" />
-              </g>
-              {/* 金属折线外框 */}
-              <polygon
-                points={BOSS_GAUGE_POLYGON}
-                fill="none"
-                stroke="#c79c4e"
-                strokeWidth="2.8"
-                strokeLinejoin="bevel"
+            {lossPillars.map((p) => (
+              <div
+                key={p.id}
+                className={`choke-hp-loss-pillar choke-hp-loss-pillar--${p.side}`}
+                style={{ left: `${p.left}%`, width: `${p.width}%` }}
+                aria-hidden
               />
-            </svg>
+            ))}
+            {/* 左：BOSS 阶梯折线血条 */}
+            <BentGauge side="boss" polygon={BOSS_GAUGE_POLYGON} pct={bossPct} fillX={4} fillWidth={bossFillWidth} />
 
-            {/* 中央：Round N VS 盾章 */}
             <button type="button" className="choke-center-orb" disabled>
               <i className="choke-orb-round">Round</i>
               <b className="choke-orb-num">{battle.turn}</b>
               <span className="choke-orb-vs">VS</span>
             </button>
 
-            {/* 右：我方阶梯折线血条 */}
-            <svg className="choke-bent-svg choke-bent-svg--party" viewBox="0 0 460 54" preserveAspectRatio="none">
-              <defs>
-                <clipPath id="partyBentClip">
-                  <polygon points={PARTY_GAUGE_POLYGON} />
-                </clipPath>
-                <linearGradient id="partyHpGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#72f2ff" />
-                  <stop offset="48%" stopColor="#1e8de0" />
-                  <stop offset="100%" stopColor="#0d3b82" />
-                </linearGradient>
-              </defs>
-              <polygon points={PARTY_GAUGE_POLYGON} fill="#0b1118" />
-              <g clipPath="url(#partyBentClip)">
-                <rect
-                  className="choke-bent-ghost"
-                  x={partyFillX}
-                  y="0"
-                  width={partyFillWidth}
-                  height="54"
-                  fill="url(#bossFlashGrad)"
-                />
-                <rect
-                  className="choke-bent-fill"
-                  x={partyFillX}
-                  y="0"
-                  width={partyFillWidth}
-                  height="54"
-                  fill="url(#partyHpGrad)"
-                />
-                <rect x={partyFillX} y="6" width={partyFillWidth} height="5" fill="rgba(255,255,255,0.28)" />
-              </g>
-              <polygon
-                points={PARTY_GAUGE_POLYGON}
-                fill="none"
-                stroke="#c79c4e"
-                strokeWidth="2.8"
-                strokeLinejoin="bevel"
-              />
-            </svg>
+            <BentGauge side="party" polygon={PARTY_GAUGE_POLYGON} pct={partyPct} fillX={partyFillX} fillWidth={partyFillWidth} />
 
-            {/* 嵌在折线内侧抬高段正下方的 AP 齿轮宝石栏 */}
             <div className="choke-ap-pocket">
               <span className="choke-ap-label">Ap</span>
               <div className="choke-ap-gems">
@@ -1147,6 +1135,7 @@ export function BattleStage({
                   data-down={card.down ? "true" : undefined}
                   data-boost={card.trigger && !card.acted && !card.down ? card.trigger : undefined}
                   data-guarding={guardChipSlot === index ? "true" : undefined}
+                  data-bursting={laserTargets.includes(index) ? "true" : undefined}
                   data-swap-target={swapOpen && swapOutIdx === index ? "true" : undefined}
                   onClick={() => {
                     if (swapOpen) {
@@ -1444,7 +1433,7 @@ export function BattleStage({
               <p>
                 {battle.phase === "won"
                   ? `在第 ${battle.turn} 回合击败了【${battle.enemy.name}】（最高 ${battle.maxCombo} Combo）`
-                  : `讨伐队在第 ${battle.turn} 回合生命归零。`}
+                  : `${playerName} 的队伍在第 ${battle.turn} 回合生命归零。`}
               </p>
 
               {battle.phase === "won" && (

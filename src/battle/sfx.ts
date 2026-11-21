@@ -1,55 +1,268 @@
-import { Howl } from "howler"
+import type { Element } from "@/card/types"
 
-type SfxName = "click" | "hit" | "crit" | "miss" | "heal" | "guard" | "turn" | "win" | "lose"
+type SfxName =
+  | "click"
+  | "hit"
+  | "crit"
+  | "miss"
+  | "heal"
+  | "guard"
+  | "turn"
+  | "win"
+  | "lose"
+  | "cutin"
+  | "break"
+  | "down"
 
-const SOURCES: Record<SfxName, string> = {
-  click: "/sfx/click.wav",
-  hit: "/sfx/hit.wav",
-  crit: "/sfx/crit.wav",
-  miss: "/sfx/miss.wav",
-  heal: "/sfx/heal.wav",
-  guard: "/sfx/guard.wav",
-  turn: "/sfx/turn.wav",
-  win: "/sfx/win.wav",
-  lose: "/sfx/lose.wav",
+interface SfxOptions {
+  rate?: number
+  volume?: number
 }
 
-const VOLUME: Record<SfxName, number> = {
-  click: 0.25,
-  hit: 0.45,
-  crit: 0.55,
-  miss: 0.3,
-  heal: 0.4,
-  guard: 0.4,
-  turn: 0.35,
-  win: 0.45,
-  lose: 0.4,
+const STORAGE_KEY = "choke:sfx-volume"
+
+let ctx: AudioContext | null = null
+let master: GainNode | null = null
+let noiseBuf: AudioBuffer | null = null
+let volume = readVolume()
+
+function readVolume() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    const n = raw == null ? 0.8 : Number(raw)
+    return Number.isFinite(n) ? Math.min(Math.max(n, 0), 1) : 0.8
+  } catch {
+    return 0.8
+  }
 }
 
-let sounds: Record<SfxName, Howl> | null = null
+export function getSfxVolume() {
+  return volume
+}
+
+export function setSfxVolume(next: number) {
+  volume = Math.min(Math.max(next, 0), 1)
+  try {
+    window.localStorage.setItem(STORAGE_KEY, String(volume))
+  } catch {
+    // 存储不可用时只保留内存值
+  }
+  if (master && ctx) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.02)
+}
 
 function ensure() {
-  if (sounds) return sounds
-  sounds = Object.fromEntries(
-    (Object.keys(SOURCES) as SfxName[]).map((name) => [
-      name,
-      new Howl({ src: [SOURCES[name]], preload: true, volume: VOLUME[name] }),
-    ]),
-  ) as Record<SfxName, Howl>
-  return sounds
+  if (ctx && master) {
+    if (ctx.state === "suspended") void ctx.resume()
+    return { ctx, master }
+  }
+  const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+  ctx = new Ctor()
+  const comp = ctx.createDynamicsCompressor()
+  comp.threshold.value = -14
+  comp.ratio.value = 6
+  master = ctx.createGain()
+  master.gain.value = volume
+  master.connect(comp)
+  comp.connect(ctx.destination)
+  const len = ctx.sampleRate
+  noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate)
+  const data = noiseBuf.getChannelData(0)
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
+  return { ctx, master }
 }
 
-export function playSfx(name: SfxName, options: { rate?: number; volume?: number } = {}) {
-  const sound = ensure()[name]
-  const id = sound.play()
-  if (id == null) return
-  if (options.rate) sound.rate(options.rate, id)
-  if (options.volume != null) sound.volume(options.volume, id)
+interface ToneSpec {
+  type?: OscillatorType
+  f0: number
+  f1?: number
+  dur: number
+  gain?: number
+  at?: number
+  attack?: number
 }
 
-/** Combo 越高音调越高，模仿街机连击的兴奋感。 */
-export function playHit(combo: number, crit = false) {
-  playSfx(crit ? "crit" : "hit", { rate: 1 + Math.min(combo, 8) * 0.07 })
+function tone(c: AudioContext, out: AudioNode, spec: ToneSpec, rate: number) {
+  const t = c.currentTime + (spec.at ?? 0)
+  const attack = spec.attack ?? 0.004
+  const osc = c.createOscillator()
+  const g = c.createGain()
+  osc.type = spec.type ?? "sine"
+  osc.frequency.setValueAtTime(spec.f0 * rate, t)
+  if (spec.f1 != null) osc.frequency.exponentialRampToValueAtTime(Math.max(spec.f1 * rate, 1), t + spec.dur)
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.linearRampToValueAtTime(spec.gain ?? 0.3, t + attack)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + spec.dur)
+  osc.connect(g)
+  g.connect(out)
+  osc.start(t)
+  osc.stop(t + spec.dur + 0.02)
+}
+
+interface NoiseSpec {
+  filter?: BiquadFilterType
+  f0: number
+  f1?: number
+  q?: number
+  dur: number
+  gain?: number
+  at?: number
+}
+
+function noise(c: AudioContext, out: AudioNode, spec: NoiseSpec, rate: number) {
+  if (!noiseBuf) return
+  const t = c.currentTime + (spec.at ?? 0)
+  const src = c.createBufferSource()
+  src.buffer = noiseBuf
+  src.loop = true
+  const f = c.createBiquadFilter()
+  f.type = spec.filter ?? "bandpass"
+  f.Q.value = spec.q ?? 1
+  f.frequency.setValueAtTime(spec.f0 * rate, t)
+  if (spec.f1 != null) f.frequency.exponentialRampToValueAtTime(Math.max(spec.f1 * rate, 20), t + spec.dur)
+  const g = c.createGain()
+  g.gain.setValueAtTime(spec.gain ?? 0.3, t)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + spec.dur)
+  src.connect(f)
+  f.connect(g)
+  g.connect(out)
+  src.start(t, Math.random() * 0.5)
+  src.stop(t + spec.dur + 0.02)
+}
+
+/** 基础冲击：瞬态 + 噪声拍击 + 低频体 */
+function impact(c: AudioContext, o: AudioNode, r: number, power = 1) {
+  noise(c, o, { filter: "bandpass", f0: 2400, f1: 400, q: 0.8, dur: 0.07, gain: 0.5 * power }, r)
+  tone(c, o, { type: "sine", f0: 190, f1: 55, dur: 0.16, gain: 0.7 * power }, r)
+  tone(c, o, { type: "triangle", f0: 900, f1: 200, dur: 0.05, gain: 0.25 * power }, r)
+}
+
+/** 属性层：叠在基础冲击上，让不同属性一听就能分辨 */
+function elementLayer(c: AudioContext, o: AudioNode, el: Element, r: number) {
+  switch (el) {
+    case "fire":
+      noise(c, o, { filter: "lowpass", f0: 600, f1: 3200, q: 0.7, dur: 0.28, gain: 0.45 }, r)
+      for (let i = 0; i < 4; i++)
+        noise(c, o, { filter: "highpass", f0: 3500, dur: 0.025, gain: 0.25, at: 0.05 + i * 0.05 + Math.random() * 0.02 }, r)
+      break
+    case "ice":
+      tone(c, o, { type: "sine", f0: 2600, f1: 2400, dur: 0.35, gain: 0.22 }, r)
+      tone(c, o, { type: "sine", f0: 3900, f1: 3600, dur: 0.28, gain: 0.14, at: 0.02 }, r)
+      noise(c, o, { filter: "highpass", f0: 6000, dur: 0.12, gain: 0.3 }, r)
+      break
+    case "thunder":
+      tone(c, o, { type: "sawtooth", f0: 2400, f1: 120, dur: 0.14, gain: 0.3 }, r)
+      noise(c, o, { filter: "highpass", f0: 2000, dur: 0.05, gain: 0.5 }, r)
+      noise(c, o, { filter: "highpass", f0: 2500, dur: 0.05, gain: 0.4, at: 0.07 }, r)
+      break
+    case "light":
+      ;[1318, 1760, 2349].forEach((f, i) => tone(c, o, { type: "sine", f0: f, dur: 0.4, gain: 0.2, at: i * 0.045 }, r))
+      break
+    case "dark":
+      tone(c, o, { type: "sawtooth", f0: 140, f1: 38, dur: 0.45, gain: 0.35 }, r)
+      tone(c, o, { type: "sawtooth", f0: 148, f1: 40, dur: 0.45, gain: 0.3 }, r)
+      break
+    case "metal":
+      tone(c, o, { type: "square", f0: 1180, dur: 0.3, gain: 0.1 }, r)
+      tone(c, o, { type: "square", f0: 1770, dur: 0.26, gain: 0.08 }, r)
+      noise(c, o, { filter: "highpass", f0: 5000, dur: 0.06, gain: 0.3 }, r)
+      break
+    case "wood":
+      tone(c, o, { type: "triangle", f0: 520, f1: 240, dur: 0.1, gain: 0.35 }, r)
+      noise(c, o, { filter: "bandpass", f0: 1400, q: 2, dur: 0.09, gain: 0.3 }, r)
+      break
+    case "earth":
+      tone(c, o, { type: "sine", f0: 90, f1: 38, dur: 0.38, gain: 0.7 }, r)
+      noise(c, o, { filter: "lowpass", f0: 700, f1: 120, dur: 0.3, gain: 0.5 }, r)
+      break
+    default:
+      break
+  }
+}
+
+const SYNTH: Record<SfxName, (c: AudioContext, o: AudioNode, r: number) => void> = {
+  click: (c, o, r) => {
+    tone(c, o, { type: "square", f0: 1900, f1: 1100, dur: 0.035, gain: 0.12 }, r)
+    tone(c, o, { type: "sine", f0: 700, dur: 0.05, gain: 0.1 }, r)
+  },
+  hit: (c, o, r) => impact(c, o, r),
+  crit: (c, o, r) => {
+    impact(c, o, r, 1.25)
+    tone(c, o, { type: "sine", f0: 52, f1: 30, dur: 0.5, gain: 0.8 }, r)
+    tone(c, o, { type: "triangle", f0: 1568, dur: 0.6, gain: 0.2, at: 0.02 }, r)
+    tone(c, o, { type: "triangle", f0: 2349, dur: 0.5, gain: 0.14, at: 0.02 }, r)
+    noise(c, o, { filter: "highpass", f0: 4000, dur: 0.22, gain: 0.35 }, r)
+  },
+  miss: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 600, f1: 3000, q: 1.5, dur: 0.16, gain: 0.3 }, r)
+  },
+  heal: (c, o, r) => {
+    ;[523, 659, 784, 1047].forEach((f, i) => tone(c, o, { type: "sine", f0: f, dur: 0.35, gain: 0.2, at: i * 0.06 }, r))
+  },
+  guard: (c, o, r) => {
+    tone(c, o, { type: "square", f0: 420, f1: 300, dur: 0.12, gain: 0.18 }, r)
+    tone(c, o, { type: "sine", f0: 1320, dur: 0.4, gain: 0.16 }, r)
+    noise(c, o, { filter: "highpass", f0: 3000, dur: 0.05, gain: 0.35 }, r)
+  },
+  turn: (c, o, r) => {
+    tone(c, o, { type: "sine", f0: 392, dur: 0.18, gain: 0.25 }, r)
+    tone(c, o, { type: "sine", f0: 587, dur: 0.3, gain: 0.25, at: 0.1 }, r)
+    tone(c, o, { type: "triangle", f0: 1174, dur: 0.3, gain: 0.08, at: 0.1 }, r)
+  },
+  cutin: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 300, f1: 5000, q: 1.2, dur: 0.22, gain: 0.35 }, r)
+    tone(c, o, { type: "sawtooth", f0: 220, f1: 660, dur: 0.18, gain: 0.1 }, r)
+  },
+  break: (c, o, r) => {
+    impact(c, o, r, 1.1)
+    noise(c, o, { filter: "highpass", f0: 3000, dur: 0.3, gain: 0.45 }, r)
+    tone(c, o, { type: "square", f0: 880, f1: 110, dur: 0.25, gain: 0.15 }, r)
+  },
+  down: (c, o, r) => {
+    tone(c, o, { type: "sawtooth", f0: 330, f1: 55, dur: 0.6, gain: 0.3 }, r)
+    tone(c, o, { type: "sine", f0: 70, f1: 30, dur: 0.6, gain: 0.7 }, r)
+  },
+  win: (c, o, r) => {
+    ;[523, 659, 784, 1047, 1319].forEach((f, i) => {
+      tone(c, o, { type: "triangle", f0: f, dur: 0.5, gain: 0.22, at: i * 0.1 }, r)
+      tone(c, o, { type: "sine", f0: f * 2, dur: 0.4, gain: 0.08, at: i * 0.1 }, r)
+    })
+    tone(c, o, { type: "triangle", f0: 1047, dur: 1.1, gain: 0.2, at: 0.55 }, r)
+    tone(c, o, { type: "triangle", f0: 1319, dur: 1.1, gain: 0.18, at: 0.55 }, r)
+    tone(c, o, { type: "triangle", f0: 1568, dur: 1.1, gain: 0.16, at: 0.55 }, r)
+  },
+  lose: (c, o, r) => {
+    ;[392, 349, 311, 262].forEach((f, i) => tone(c, o, { type: "sawtooth", f0: f, dur: 0.55, gain: 0.14, at: i * 0.22 }, r))
+    tone(c, o, { type: "sine", f0: 65, f1: 40, dur: 1.2, gain: 0.5, at: 0.5 }, r)
+  },
+}
+
+export function playSfx(name: SfxName, options: SfxOptions = {}) {
+  if (volume <= 0) return
+  try {
+    const { ctx: c, master: m } = ensure()
+    const out = c.createGain()
+    out.gain.value = options.volume ?? 1
+    out.connect(m)
+    SYNTH[name](c, out, options.rate ?? 1)
+  } catch {
+    // 无音频设备或被浏览器拦截时静默
+  }
+}
+
+/** Combo 越高音调越高，最高 +8 级；传入属性则叠加对应属性层。 */
+export function playHit(combo: number, crit = false, element?: Element) {
+  const rate = 1 + Math.min(combo, 8) * 0.05
+  playSfx(crit ? "crit" : "hit", { rate })
+  if (!element || element === "physical") return
+  try {
+    const { ctx: c, master: m } = ensure()
+    const out = c.createGain()
+    out.gain.value = 0.8
+    out.connect(m)
+    elementLayer(c, out, element, rate)
+  } catch {
+    // 同上
+  }
 }
 
 export function playClick() {
