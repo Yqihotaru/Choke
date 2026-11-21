@@ -30,16 +30,14 @@ import {
   type OpenPackResult,
 } from "./api"
 import {
-  DESK_ADD_CARDS_EVENT,
   DECK_ASSIGN_EVENT,
   GACHA_OPEN_EVENT,
-  PACKS_CHANGED_EVENT,
   CARD_POINTER_DROP_EVENT,
   type CardPointerDrop,
   type GachaOpenDetail,
   toDeskCard,
 } from "./drag"
-import { emitDeskHover } from "./events"
+import { emitDeskData, emitDeskHover, onDeskData } from "./events"
 import { useDeskSession } from "./useDeskSession"
 import { InviteLetter } from "./InviteLetter"
 import { INVITE_OPEN_EVENT, readInviteStowed, saveInviteStowed } from "./invite"
@@ -217,7 +215,7 @@ export function DeskPage() {
 
   const onInviteClaimed = useCallback(() => {
     refreshUser()
-    window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+    emitDeskData("packs")
   }, [refreshUser])
 
   useEffect(() => {
@@ -280,7 +278,7 @@ export function DeskPage() {
 
       refreshUser()
       refreshPacks()
-      window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+      emitDeskData("packs")
     })().finally(() => {
       starterGrant.current = null
     })
@@ -423,14 +421,11 @@ export function DeskPage() {
   )
 
   useEffect(() => {
-    const onAddCards = (event: Event) => {
-      const cards = (event as CustomEvent<CardData[]>).detail
+    return onDeskData<CardData[]>("cards", (cards) => {
       if (!Array.isArray(cards) || cards.length === 0) return
       spawnCards(cards)
       showToast(`已发到桌面 ×${cards.length}`)
-    }
-    window.addEventListener(DESK_ADD_CARDS_EVENT, onAddCards)
-    return () => window.removeEventListener(DESK_ADD_CARDS_EVENT, onAddCards)
+    })
   }, [spawnCards, showToast])
 
   useEffect(() => {
@@ -719,7 +714,7 @@ export function DeskPage() {
           .find((payload) => payload?.ok && payload.data)
         if (latest?.data && userId) {
           setPackState({ userId, data: latest.data.packs })
-          window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+          emitDeskData("packs")
         } else {
           refreshPacks()
         }
@@ -778,7 +773,7 @@ export function DeskPage() {
     try {
       const payload = await takePack(user.id, SERVER_POOL[pool])
       setPackState({ userId: user.id, data: payload.packs })
-      window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+      emitDeskData("packs")
       const topZ = Math.max(0, ...items.map((it) => it.z)) + 1
       const packCount = items.filter((it) => it.kind === "pack").length
       const offset = ((packCount % 3) - 1) * 0.045
@@ -860,7 +855,7 @@ export function DeskPage() {
     const [payload] = await Promise.all([request, landed])
     if (payload?.ok && payload.data) {
       setPackState({ userId, data: payload.data.packs })
-      window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+      emitDeskData("packs")
       showToast("卡包已放回背包")
       return
     }
@@ -1217,7 +1212,7 @@ export function DeskPage() {
         remove(item.id)
         if (opened.packs && user) {
           setPackState({ userId: user.id, data: opened.packs })
-          window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+          emitDeskData("packs")
         }
 
         const cards: CardData[] = await Promise.all(

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { fetchMe, fetchPackInventory, logout as apiLogout } from "./api"
-import { PACKS_CHANGED_EVENT } from "./events"
+import { onDeskData } from "./events"
 import type { DeskUser } from "./desk-page-model"
 
 export interface DeskPackState {
@@ -55,9 +55,7 @@ export function useDeskSession() {
   }, [refreshPacks])
 
   useEffect(() => {
-    const handler = () => refreshPacks()
-    window.addEventListener(PACKS_CHANGED_EVENT, handler)
-    return () => window.removeEventListener(PACKS_CHANGED_EVENT, handler)
+    return onDeskData("packs", () => refreshPacks())
   }, [refreshPacks])
 
   const logout = useCallback(() => {

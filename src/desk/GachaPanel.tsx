@@ -12,11 +12,10 @@ import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
 
 import { fetchCardDetail, fetchPackInventory, openPack as apiOpenPack, toFace } from "./api"
+import { emitDeskData, onDeskData } from "./events"
 import { Pages } from "./BookPages"
 import {
-  DESK_ADD_CARDS_EVENT,
   GACHA_OPEN_EVENT,
-  PACKS_CHANGED_EVENT,
   startCardPointerDrag,
   toDeskCard,
   type GachaOpenDetail,
@@ -115,13 +114,11 @@ export function GachaPanel({
   // 桌面补发新手卡包后，面板里的库存数字要跟上
   useEffect(() => {
     if (!userId) return
-    const handler = () => {
+    return onDeskData("packs", () => {
       fetchPackInventory(userId)
         .then((data) => setPacks({ userId, data: data.packs }))
         .catch(() => {})
-    }
-    window.addEventListener(PACKS_CHANGED_EVENT, handler)
-    return () => window.removeEventListener(PACKS_CHANGED_EVENT, handler)
+    })
   }, [userId])
 
   const current = POOLS.find((item) => item.id === pool) ?? POOLS[0]
@@ -175,7 +172,7 @@ export function GachaPanel({
       if (!isCurrent()) return
       setPity(result.pity)
       if (result.packs) setPacks({ userId, data: result.packs })
-      window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+      emitDeskData("packs")
       if (!isCurrent()) return
 
       const faces = await Promise.all(
@@ -246,9 +243,7 @@ export function GachaPanel({
   const sendAllToDesk = () => {
     if (!cards.length) return
     const payload = cards.map((card) => toDeskCard(card, card.userCardId))
-    window.dispatchEvent(
-      new CustomEvent(DESK_ADD_CARDS_EVENT, { detail: payload })
-    )
+    emitDeskData("cards", payload)
     setCards([])
   }
 

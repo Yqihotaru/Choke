@@ -7,12 +7,11 @@ import type { CardData, PackPool } from "./types"
 export {
   CARD_POINTER_DROP_EVENT,
   CARD_POINTER_START_EVENT,
-  DESK_ADD_CARDS_EVENT,
+  DESK_DATA_CHANGED_EVENT,
   DESK_HOVER_EVENT,
-  DESK_ITEMS_EVENT,
   DECK_ASSIGN_EVENT,
   GACHA_OPEN_EVENT,
-  PACKS_CHANGED_EVENT,
+  type DeskDataScope,
   type DeskHoverDetail,
   type DeskHoverTarget,
 } from "./events"

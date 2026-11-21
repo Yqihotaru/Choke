@@ -28,7 +28,7 @@ import { DeckPanel } from "./DeckPanel"
 import { GachaPanel, type PoolId } from "./GachaPanel"
 import { MarketPanel } from "./MarketPanel"
 import { OBJECT_META } from "./objects"
-import { DESK_ADD_CARDS_EVENT, PACKS_CHANGED_EVENT } from "./drag"
+import { onDeskData } from "./events"
 import { isModuleUnlocked, unlockLevelOf } from "@/tutorial/unlocks"
 import "./book.css"
 
@@ -173,12 +173,7 @@ export function DeskBook({
   const [revision, setRevision] = useState(0)
   const invalidate = useCallback(() => setRevision((value) => value + 1), [])
   useEffect(() => {
-    window.addEventListener(DESK_ADD_CARDS_EVENT, invalidate)
-    window.addEventListener(PACKS_CHANGED_EVENT, invalidate)
-    return () => {
-      window.removeEventListener(DESK_ADD_CARDS_EVENT, invalidate)
-      window.removeEventListener(PACKS_CHANGED_EVENT, invalidate)
-    }
+    return onDeskData(null, invalidate)
   }, [invalidate])
   const whenIdle = useCallback(async () => {
     while (activeTransition.current)

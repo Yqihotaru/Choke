@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useState } from "react"
 
-import { DESK_ITEMS_EVENT } from "./drag"
+import { emitDeskData, onDeskData } from "./events"
 
 const DESK_KEY = "choke.desk.v2"
 
@@ -10,7 +10,7 @@ let currentIds: number[] | null = null
 export function publishDeskCardIds(ids: number[]) {
   if (currentIds && currentIds.length === ids.length && ids.every((id, index) => id === currentIds![index])) return
   currentIds = ids
-  window.dispatchEvent(new CustomEvent(DESK_ITEMS_EVENT, { detail: ids }))
+  emitDeskData("items", ids)
 }
 
 export function readDeskCardIds(): number[] {
@@ -36,9 +36,8 @@ export function useDeskCardIds(): Set<number> {
   const [ids, setIds] = useState<Set<number>>(() => new Set(readDeskCardIds()))
 
   useEffect(() => {
-    const onChanged = (event: Event) => {
-      const detail = (event as CustomEvent<number[] | undefined>).detail
-      const next = new Set(Array.isArray(detail) ? detail : readDeskCardIds())
+    return onDeskData<number[]>("items", (payload) => {
+      const next = new Set(Array.isArray(payload) ? payload : readDeskCardIds())
       // 坐标和层级变化不改变归属；收卡提示让位给拖拽影子的卸载。
       startTransition(() => {
         setIds((previous) =>
@@ -47,9 +46,7 @@ export function useDeskCardIds(): Set<number> {
             : next,
         )
       })
-    }
-    window.addEventListener(DESK_ITEMS_EVENT, onChanged)
-    return () => window.removeEventListener(DESK_ITEMS_EVENT, onChanged)
+    })
   }, [])
 
   return ids

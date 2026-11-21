@@ -13,8 +13,7 @@ import {
   type PackInventory,
 } from "./api"
 import { Pages } from "./BookPages"
-import { PACKS_CHANGED_EVENT } from "./drag"
-import { onDeskHover } from "./events"
+import { emitDeskData, onDeskData, onDeskHover } from "./events"
 import { GuestLoginButton } from "./GuestLoginButton"
 import { INVITE_OPEN_EVENT } from "./invite"
 import { PackArt } from "./opening/PackArt"
@@ -86,11 +85,10 @@ export function BackpackPanel({
 
   useEffect(() => {
     const offHover = onDeskHover("backpack", (value) => setDropHover(Boolean(value)))
-    const onPacksChanged = () => setRevision((value) => value + 1)
-    window.addEventListener(PACKS_CHANGED_EVENT, onPacksChanged)
+    const offPacks = onDeskData("packs", () => setRevision((value) => value + 1))
     return () => {
       offHover()
-      window.removeEventListener(PACKS_CHANGED_EVENT, onPacksChanged)
+      offPacks()
     }
   }, [])
 
@@ -161,7 +159,7 @@ export function BackpackPanel({
       setQuestionStep(null)
       // 开完留在神秘卡包这一栏，右页直接看到本体卡
       setPicked(MYSTERY_ID)
-      window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
+      emitDeskData("packs")
       onHeroClaimed?.()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "开启神秘卡包失败")
