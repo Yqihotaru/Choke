@@ -41,3 +41,47 @@
   height: 44px;
   font-size: 15px;
 }
+
+/* 资源副本 */
+.dungeon-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dungeon-stamina {
+  height: 8px;
+}
+.dungeon-stamina > i {
+  background: linear-gradient(90deg, #6bf0ff, #2697e8);
+}
+.dungeon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dungeon-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.03);
+}
+.dungeon-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dungeon-row__text b {
+  font-size: 14px;
+}
+.dungeon-row__text span {
+  font-size: 11px;
+  color: var(--bk-dim);
+}
+.dungeon-message {
+  font-size: 12px;
+}

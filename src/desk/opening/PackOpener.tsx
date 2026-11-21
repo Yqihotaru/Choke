@@ -37,6 +37,10 @@ interface Props {
   onDone: () => void
   /** 直接收进卡册（卡已经落库，关掉开包层即可） */
   onQuick: () => void
+  /** 背包里同等级卡包还剩几个 */
+  remaining?: number
+  /** 继续开下一个同等级卡包 */
+  onOpenNext?: () => void
   /** 单张拖到桌面 */
   onDropCard: (card: CardData) => void
 }
@@ -64,7 +68,7 @@ const OpenerFace = memo(function OpenerFace({ card }: { card: CardData }) {
  * 开包：拖住撕条往左撕开 → 5 张卡背朝上滑出叠成一摞 → 点最上面那张翻开（或全部翻开）。
  * 从低到高翻，最好的一张留到最后；L 以上翻开前先抬起蓄光，桌面暗下来，翻开时扫一道光。
  */
-export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard }: Props) {
+export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, remaining = 0, onOpenNext }: Props) {
   const [stage, setStage] = useState<Stage>("seal")
   const [progress, setProgress] = useState(0)
   const [snapping, setSnapping] = useState(false)
@@ -375,6 +379,11 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard }:
             <button type="button" className="op__btn op__btn--main" onClick={onDone}>
               全部放到桌面
             </button>
+            {remaining > 0 && onOpenNext && (
+              <button type="button" className="op__btn op__btn--main" onClick={onOpenNext}>
+                继续开包（剩 {remaining}）
+              </button>
+            )}
           </div>
         )}
       </div>

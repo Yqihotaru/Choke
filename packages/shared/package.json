@@ -13,6 +13,8 @@
     "./pool/types": "./src/pool/types.ts",
     "./pool/score": "./src/pool/score.ts",
     "./pool/rarity": "./src/pool/rarity.ts",
-    "./pool/hero": "./src/pool/hero.ts"
+    "./pool/hero": "./src/pool/hero.ts",
+    "./stamina": "./src/stamina.ts",
+    "./dungeons": "./src/dungeons.ts"
   }
 }

@@ -2,9 +2,17 @@ import { useEffect, useState } from "react"
 
 import { STAGE_PRESETS, TUTORIAL_ENEMY_HP } from "@/battle/engine"
 import { battlePower } from "@/card/data"
+import { DUNGEONS } from "@choke/shared/dungeons"
 import { useTutorialProgress } from "@/tutorial/store"
 
-import { fetchDeck, toFace, type ApiDeck } from "./api"
+import {
+  fetchDeck,
+  fetchStamina,
+  runDungeon,
+  toFace,
+  type ApiDeck,
+  type StaminaState,
+} from "./api"
 import { Pages } from "./BookPages"
 import { GuestLoginButton } from "./GuestLoginButton"
 import "./battle-panel.css"
@@ -20,6 +28,37 @@ export function BattlePanel({
   const [deck, setDeck] = useState<ApiDeck | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedStageId, setSelectedStageId] = useState<string>(STAGE_PRESETS[0]!.id)
+  const [stamina, setStamina] = useState<StaminaState | null>(null)
+  const [dungeonBusy, setDungeonBusy] = useState<string | null>(null)
+  const [dungeonMessage, setDungeonMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!userId) return
+    const controller = new AbortController()
+    fetchStamina(userId, controller.signal)
+      .then((data) => setStamina(data))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [userId])
+
+  const runDungeonById = async (dungeonId: string) => {
+    if (!userId || dungeonBusy) return
+    setDungeonBusy(dungeonId)
+    setDungeonMessage(null)
+    try {
+      const result = await runDungeon(userId, dungeonId)
+      setStamina(result.stamina)
+      const parts: string[] = []
+      if (result.rewards.essence) parts.push(`精华 +${result.rewards.essence}`)
+      if (result.rewards.coins) parts.push(`金币 +${result.rewards.coins}`)
+      if (result.rewards.packs) parts.push(`普通卡包 +${result.rewards.packs}`)
+      setDungeonMessage(`通关：${parts.join(" · ")}`)
+    } catch (reason) {
+      setDungeonMessage(reason instanceof Error ? reason.message : "副本失败")
+    } finally {
+      setDungeonBusy(null)
+    }
+  }
 
   useEffect(() => {
     if (!userId) return
@@ -208,6 +247,52 @@ export function BattlePanel({
               进入战斗（{activePreset.name}）
             </a>
           )}
+
+          <hr className="bk-divider" />
+
+          <div className="dungeon-head">
+            <span className="bk-label">资源副本</span>
+            <b className="bk-num">
+              {stamina ? `${stamina.value} / ${stamina.max}` : "—"}
+            </b>
+          </div>
+          <div className="bk-bar dungeon-stamina">
+            <i
+              style={{
+                width: `${stamina ? (stamina.value / stamina.max) * 100 : 0}%`,
+              }}
+            />
+          </div>
+          {stamina && stamina.value < stamina.max && (
+            <p className="bk-note">
+              下一点体力：{Math.ceil(stamina.nextIn / 60000)} 分钟后
+            </p>
+          )}
+
+          <div className="dungeon-list">
+            {DUNGEONS.map((dungeon) => {
+              const disabled =
+                !stamina || stamina.value < dungeon.cost || dungeonBusy !== null
+              return (
+                <div className="dungeon-row" key={dungeon.id}>
+                  <div className="dungeon-row__text">
+                    <b>{dungeon.name}</b>
+                    <span>{dungeon.summary}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="bk-btn bk-btn--sm"
+                    disabled={disabled}
+                    onClick={() => void runDungeonById(dungeon.id)}
+                  >
+                    {dungeonBusy === dungeon.id ? "挑战中…" : `${dungeon.cost} 体力`}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+
+          {dungeonMessage && <div className="bk-box dungeon-message">{dungeonMessage}</div>}
         </>
       }
     />

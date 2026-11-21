@@ -1285,6 +1285,54 @@ export function DeskPage() {
     emitTutorialEvent("pack-opened")
   }
 
+  /** 从背包直接取下一个同等级卡包并开掉，供开包结算页的「继续开包」使用。 */
+  const openNextPack = async (pool: PackPool) => {
+    if (!user || openingBusy.current) return
+    openingBusy.current = true
+    try {
+      const taken = await takePack(user.id, SERVER_POOL[pool])
+      setPackState({ userId: user.id, data: taken.packs })
+      emitDeskData("packs")
+
+      const opened = await openPack(SERVER_POOL[pool], packSize, taken.token)
+      if (opened.packs) {
+        setPackState({ userId: user.id, data: opened.packs })
+        emitDeskData("packs")
+      }
+
+      const cards: CardData[] = await Promise.all(
+        opened.results.map(async (result) => {
+          const row = await fetchCardDetail(result.cardId)
+          return toDeskCard(
+            toFace({
+              ...row,
+              userCardId: result.userCardId,
+              level: 1,
+              constellation: 0,
+              exp: 0,
+              foil: result.foil,
+              serial: result.serial,
+              pulled: row.pulled ?? result.pulled,
+            }),
+            result.userCardId,
+          )
+        }),
+      )
+
+      setOpening({
+        key: newId("open"),
+        x: 0.5,
+        y: 0.42,
+        cards,
+        pool,
+      })
+    } catch (reason) {
+      showToast(reason instanceof Error ? reason.message : "继续开包失败")
+      openingBusy.current = false
+      setOpening(null)
+    }
+  }
+
   const visibleItems = user
     ? items.filter((item) => {
         if (item.card?.isHero && !user.hero) return false
@@ -1624,6 +1672,12 @@ export function DeskPage() {
           onDone={finishOpening}
           onQuick={quickFinishOpening}
           onDropCard={dropOpeningCard}
+          remaining={packState?.data[SERVER_POOL[opening.pool]] ?? 0}
+          onOpenNext={() => {
+            const pool = opening.pool
+            finishOpening()
+            void openNextPack(pool)
+          }}
         />
       )}
 

@@ -534,3 +534,37 @@ export function saveProgress(
     }),
   }).catch(() => null)
 }
+
+/* ============================ 体力 / 副本 ============================ */
+
+export interface StaminaState {
+  value: number
+  max: number
+  nextIn: number
+}
+
+export function fetchStamina(userId: string, signal?: AbortSignal): Promise<StaminaState> {
+  return request<StaminaState>(`/api/users/${userId}/stamina`, { signal })
+}
+
+export interface DungeonRunResult {
+  rewards: { essence?: number; coins?: number; packs?: number }
+  stamina: StaminaState
+  essence: number
+  coins: number
+}
+
+export function runDungeon(userId: string, dungeonId: string): Promise<DungeonRunResult> {
+  return request<DungeonRunResult>(`/api/users/${userId}/dungeons/${dungeonId}/run`, {
+    method: "POST",
+  })
+}
+
+export function dismantleCard(
+  userId: string,
+  userCardId: number,
+): Promise<{ removedUserCardId: number; gained: number; essence: number }> {
+  return request(`/api/users/${userId}/cards/${userCardId}/dismantle`, {
+    method: "POST",
+  })
+}

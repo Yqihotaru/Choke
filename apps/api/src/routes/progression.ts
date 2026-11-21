@@ -348,4 +348,65 @@ export async function progressionRoutes(app: FastifyInstance) {
       },
     }
   })
+
+  /**
+   * 通用分解：任意卡 → 精华。与「融卡升命座」不同，这里不需要同名卡。
+   * 仍然保留最后一张，避免把某张卡彻底分解光。
+   */
+  app.post("/users/:userId/cards/:userCardId/dismantle", async (request, reply) => {
+    const params = paramsSchema.parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+    const { userCardId } = params
+
+    const target = await loadCard(userId, userCardId)
+    if (!target) {
+      return reply.code(404).send({
+        ok: false,
+        error: { code: "not_found", message: "这不是你账号里的卡" },
+      })
+    }
+    if (isHeroCardId(target.id)) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "hero_protected", message: "本体卡不能分解" },
+      })
+    }
+
+    const [{ value: copies }] = await db
+      .select({ value: count() })
+      .from(userCards)
+      .where(and(eq(userCards.userId, userId), eq(userCards.cardId, target.id)))
+    if (Number(copies) < 2) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "last_copy", message: "这是最后一张，不能分解" },
+      })
+    }
+
+    const gained = essenceOf(target.rarity as Rarity, target.foil)
+
+    const [wallet] = await db.transaction(async (tx) => {
+      await tx.delete(deckSlots).where(eq(deckSlots.userCardId, userCardId))
+      await tx
+        .update(marketListings)
+        .set({ status: "cancelled" })
+        .where(eq(marketListings.userCardId, userCardId))
+      await tx.delete(userCards).where(eq(userCards.id, userCardId))
+      return tx
+        .update(users)
+        .set({ essence: sql`${users.essence} + ${gained}` })
+        .where(eq(users.id, userId))
+        .returning({ essence: users.essence })
+    })
+
+    return {
+      ok: true,
+      data: {
+        removedUserCardId: userCardId,
+        gained,
+        essence: wallet?.essence ?? 0,
+      },
+    }
+  })
 }

@@ -5,6 +5,7 @@ import Fastify from "fastify"
 import { authRoutes } from "./routes/auth"
 import { cardRoutes } from "./routes/cards"
 import { deckRoutes } from "./routes/decks"
+import { dungeonRoutes } from "./routes/dungeons"
 import { marketRoutes } from "./routes/market"
 import { packRoutes } from "./routes/packs"
 import { progressionRoutes } from "./routes/progression"
@@ -21,6 +22,7 @@ await app.register(cardRoutes)
 await app.register(deckRoutes)
 await app.register(marketRoutes)
 await app.register(progressionRoutes)
+await app.register(dungeonRoutes)
 await app.register(progressRoutes)
 
 app.get("/health", async () => ({ ok: true, data: { status: "up" } }))

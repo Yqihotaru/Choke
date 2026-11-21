@@ -81,6 +81,9 @@ export const users = pgTable("users", {
   progressUpdatedAt: bigint("progress_updated_at", { mode: "number" }).notNull().default(0),
   /** 回归玩家补发的一次性教程包 */
   tutorialPackClaimed: boolean("tutorial_pack_claimed").notNull().default(false),
+  /** 体力：每 6 分钟 1 点，上限 360；updatedAt 为上次结算时间戳 */
+  stamina: integer("stamina").notNull().default(240),
+  staminaUpdatedAt: bigint("stamina_updated_at", { mode: "number" }).notNull().default(0),
   /** 最近一次活跃（/auth/me 刷新）；镜像池按它筛活跃账号 */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -194,4 +197,17 @@ export const marketListings = pgTable(
       .on(table.userCardId)
       .where(sql`${table.status} = 'active'`),
   ],
+)
+
+export const dungeonRuns = pgTable(
+  "dungeon_runs",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    dungeon: text("dungeon").notNull(),
+    cost: integer("cost").notNull(),
+    rewards: jsonb("rewards").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("dungeon_runs_user_idx").on(table.userId, table.createdAt.desc())],
 )

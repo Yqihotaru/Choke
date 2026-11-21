@@ -12,6 +12,7 @@ import {
 import { skillSeed, subjobFor } from "@/card/jobs"
 import {
   FOIL_COST,
+  essenceOf,
 } from "@/card/economy"
 import {
   constellationCap,
@@ -26,6 +27,7 @@ import { isModuleUnlocked, unlockLevelOf } from "@/tutorial/unlocks"
 
 import {
   ascendCard,
+  dismantleCard,
   enhanceCard,
   fetchFuel,
   fetchMe,
@@ -163,6 +165,25 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
     )
   }
 
+  /** 通用分解：任意卡 → 精华，保留最后一张。 */
+  const dismantle = async () => {
+    if (!userId || busy !== null) return
+    const gained = essenceOf(current.rarity, current.foil)
+    if (!window.confirm(`分解这张卡？获得 ${gained} 精华（最后一张不能分解）`)) return
+    setBusy("dismantle")
+    setMessage(null)
+    try {
+      const result = await dismantleCard(userId, current.userCardId)
+      setEssence(result.essence)
+      onChanged?.()
+      onClose()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "分解失败")
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const list = async () => {
     if (!userId || busy !== null) return
     if (!marketUnlocked) {
@@ -292,6 +313,14 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   disabled={current.foil || busy !== null || (essence ?? 0) < FOIL_COST}
                 >
                   {current.foil ? "已是闪卡" : `精华镀闪 · ${FOIL_COST}`}
+                </button>
+                <button
+                  type="button"
+                  className="bk-btn bk-btn--danger"
+                  onClick={() => void dismantle()}
+                  disabled={busy !== null}
+                >
+                  {busy === "dismantle" ? "分解中…" : "分解（换精华）"}
                 </button>
               </div>
               {message && <p className="card-detail__message">{message}</p>}
