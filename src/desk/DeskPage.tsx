@@ -1675,7 +1675,8 @@ export function DeskPage() {
           remaining={packState?.data[SERVER_POOL[opening.pool]] ?? 0}
           onOpenNext={() => {
             const pool = opening.pool
-            finishOpening()
+            // 继续开包默认收进卡册，避免桌面上堆一片卡
+            quickFinishOpening()
             void openNextPack(pool)
           }}
         />
