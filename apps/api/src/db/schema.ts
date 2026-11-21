@@ -58,6 +58,9 @@ export const users = pgTable("users", {
   id: text("id").primaryKey(),
   username: text("username").notNull(),
   osuId: bigint("osu_id", { mode: "number" }).unique(),
+  /** 邮箱登录：邮箱唯一，密码只存 scrypt 哈希 */
+  email: text("email"),
+  passwordHash: text("password_hash"),
   /** 对外展示的 Choke! 数字 ID，与 osu! id 解耦 */
   publicId: integer("public_id")
     .notNull()

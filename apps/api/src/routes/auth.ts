@@ -1,8 +1,16 @@
 import { randomBytes } from "node:crypto"
 
 import { and, eq, getTableColumns, sql } from "drizzle-orm"
-import type { FastifyInstance } from "fastify"
+import type { FastifyInstance, FastifyReply } from "fastify"
+import { z } from "zod"
 
+import {
+  emailUserId,
+  hashPassword,
+  isEmail,
+  normalizeEmail,
+  verifyPassword,
+} from "../auth/email"
 import {
   COOKIE_NAME,
   authorizeUrl,
@@ -83,9 +91,116 @@ async function claimHeroCard(
 }
 
 export async function authRoutes(app: FastifyInstance) {
+  function setSessionCookie(reply: FastifyReply, userId: string) {
+    reply.setCookie(COOKIE_NAME, makeSession(userId), {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30,
+    })
+  }
+
   app.get("/auth/osu", async (_request, reply) => {
     const state = createState()
     return reply.redirect(authorizeUrl(state))
+  })
+
+  const emailAuthSchema = z.object({
+    email: z.string(),
+    password: z.string().min(8).max(200),
+    username: z.string().trim().min(1).max(24).optional(),
+  })
+
+  /** 邮箱注册：建号后与 osu 用户一样走 onboard（领新手包）。 */
+  app.post("/auth/email/register", async (request, reply) => {
+    const body = emailAuthSchema.safeParse(request.body)
+    if (!body.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "invalid_input", message: "邮箱或密码格式不正确（密码至少 8 位）" },
+      })
+    }
+    const email = normalizeEmail(body.data.email)
+    if (!isEmail(email)) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "invalid_email", message: "邮箱格式不正确" },
+      })
+    }
+
+    const [existing] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(sql`lower(${users.email}) = ${email}`)
+      .limit(1)
+    if (existing) {
+      return reply.code(409).send({
+        ok: false,
+        error: { code: "email_taken", message: "这个邮箱已经注册过了" },
+      })
+    }
+
+    const userId = emailUserId(email)
+    const username = body.data.username || email.split("@")[0]!.slice(0, 24)
+    const [user] = await db
+      .insert(users)
+      .values({
+        id: userId,
+        username,
+        email,
+        passwordHash: hashPassword(body.data.password),
+        onboarded: false,
+      })
+      .returning()
+
+    if (!user) throw new Error("邮箱账号写入失败")
+    request.log.info({ userId }, "email account created")
+    setSessionCookie(reply, userId)
+
+    return {
+      ok: true,
+      data: { id: user.id, username: user.username, email: user.email, onboarded: user.onboarded },
+    }
+  })
+
+  app.post("/auth/email/login", async (request, reply) => {
+    const body = emailAuthSchema.pick({ email: true, password: true }).safeParse(request.body)
+    if (!body.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "invalid_input", message: "请输入邮箱和密码" },
+      })
+    }
+    const email = normalizeEmail(body.data.email)
+    const [user] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        passwordHash: users.passwordHash,
+        onboarded: users.onboarded,
+      })
+      .from(users)
+      .where(sql`lower(${users.email}) = ${email}`)
+      .limit(1)
+
+    if (!user || !verifyPassword(body.data.password, user.passwordHash)) {
+      return reply.code(401).send({
+        ok: false,
+        error: { code: "bad_credentials", message: "邮箱或密码不正确" },
+      })
+    }
+
+    setSessionCookie(reply, user.id)
+    return {
+      ok: true,
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        onboarded: user.onboarded,
+      },
+    }
   })
 
   /**
@@ -217,6 +332,9 @@ export async function authRoutes(app: FastifyInstance) {
         publicId: user.publicId,
         username: user.username,
         osuId: user.osuId,
+        email: user.email ?? null,
+        /** 游客：既没有 osu! 也没有邮箱 */
+        isGuest: user.osuId == null && !user.email,
         avatarUrl: user.osuId == null ? null : `https://a.ppy.sh/${user.osuId}`,
         profileUrl: user.osuId == null ? null : `https://osu.ppy.sh/users/${user.osuId}`,
         onboarded: user.onboarded,

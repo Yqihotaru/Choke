@@ -27,6 +27,7 @@ export function MarketPanel({
   const [listings, setListings] = useState<MarketListing[]>([])
   const [own, setOwn] = useState<OwnMarketListing[]>([])
   const [coins, setCoins] = useState<number | null>(null)
+  const [isGuest, setIsGuest] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<number | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -38,7 +39,12 @@ export function MarketPanel({
       fetchMarketListings(controller.signal).then((data) => setListings(data)),
     ]
     if (userId) {
-      tasks.push(fetchMe(controller.signal).then((data) => setCoins(data.coins)))
+      tasks.push(
+        fetchMe(controller.signal).then((data) => {
+          setCoins(data.coins)
+          setIsGuest(!!data.isGuest)
+        }),
+      )
       tasks.push(
         fetchOwnListings(userId, controller.signal).then((data) => setOwn(data)),
       )
@@ -105,6 +111,12 @@ export function MarketPanel({
             用金币买卖卡。上架入口在卡册的卡牌详情里。精华只用于给卡镀闪，分解闪卡会得到 3 倍精华。
             {!userId && " 登录后才能买卖。"}
           </p>
+
+          {isGuest && (
+            <div className="bk-box market-message">
+              游客账号不能使用市场。请先退出，用 osu! 或邮箱登录后再交易。
+            </div>
+          )}
 
           {message && <div className="bk-box market-message">{message}</div>}
 
@@ -181,9 +193,9 @@ export function MarketPanel({
                         type="button"
                         className="bk-btn bk-btn--sm bk-btn--block"
                         onClick={() => void buy(listing)}
-                        disabled={busy !== null || !userId}
+                        disabled={busy !== null || !userId || isGuest}
                       >
-                        {busy === listing.id ? "购买中…" : "购买"}
+                        {busy === listing.id ? "购买中…" : isGuest ? "游客不可购买" : "购买"}
                       </button>
                     )}
                   </article>

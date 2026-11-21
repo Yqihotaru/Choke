@@ -39,7 +39,7 @@ export function AccountPanel({
         left={
           <>
             <p className="account-text">
-              用 osu! 登录后，抽到的卡和保底进度都会绑定到你的账号。
+              用 osu! 或邮箱登录后，抽到的卡和保底进度都会绑定到你的账号。
             </p>
             <div className="login-actions">
               <a
@@ -47,6 +47,9 @@ export function AccountPanel({
                 href="/auth/osu"
               >
                 用 osu! 登录
+              </a>
+              <a className="bk-btn account-action" href="/login">
+                用邮箱登录 / 注册
               </a>
               <GuestLoginButton className="bk-btn bk-btn--ghost account-action" />
             </div>

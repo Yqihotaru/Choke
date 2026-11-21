@@ -23,13 +23,21 @@ const paramsSchema = z.object({ userId: z.string() })
 const listingParams = z.object({ userId: z.string(), listingId: z.coerce.number().int().positive() })
 
 /** 市场是等级门槛功能：上架和购买都要服务端校验，不能只靠前端藏按钮 */
-async function marketAllowed(userId: string) {
+async function marketDenyReason(userId: string): Promise<"guest_market" | "market_locked" | null> {
   const [row] = await db
-    .select({ level: users.playerLevel, done: users.tutorialDone })
+    .select({
+      level: users.playerLevel,
+      done: users.tutorialDone,
+      osuId: users.osuId,
+      email: users.email,
+    })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1)
-  return !!row && row.done && row.level >= MARKET_UNLOCK_LEVEL
+  // 游客（无 osu!、无邮箱）不能用市场：否则市场与卡牌稀缺性都失去意义。
+  if (!row || (!row.osuId && !row.email)) return "guest_market"
+  if (!row.done || row.level < MARKET_UNLOCK_LEVEL) return "market_locked"
+  return null
 }
 
 async function loadCard(userId: string, userCardId: number) {
@@ -153,12 +161,16 @@ export async function marketRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
-    if (!(await marketAllowed(userId))) {
+    const deny = await marketDenyReason(userId)
+    if (deny) {
       return reply.code(403).send({
         ok: false,
         error: {
-          code: "market_locked",
-          message: `市场达到 Lv.${MARKET_UNLOCK_LEVEL} 解锁后才能上架`,
+          code: deny,
+          message:
+            deny === "guest_market"
+              ? "游客账号不能使用市场，请先用 osu! 或邮箱登录"
+              : `市场达到 Lv.${MARKET_UNLOCK_LEVEL} 解锁后才能上架`,
         },
       })
     }
@@ -266,12 +278,16 @@ export async function marketRoutes(app: FastifyInstance) {
     const params = listingParams.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
-    if (!(await marketAllowed(userId))) {
+    const deny = await marketDenyReason(userId)
+    if (deny) {
       return reply.code(403).send({
         ok: false,
         error: {
-          code: "market_locked",
-          message: `市场达到 Lv.${MARKET_UNLOCK_LEVEL} 解锁后才能购买`,
+          code: deny,
+          message:
+            deny === "guest_market"
+              ? "游客账号不能使用市场，请先用 osu! 或邮箱登录"
+              : `市场达到 Lv.${MARKET_UNLOCK_LEVEL} 解锁后才能购买`,
         },
       })
     }

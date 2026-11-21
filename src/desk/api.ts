@@ -272,12 +272,38 @@ export interface AccountMe {
   publicId: number | null
   username: string
   osuId: number | null
+  email?: string | null
+  /** 游客：既没有 osu! 也没有邮箱 */
+  isGuest?: boolean
   avatarUrl: string | null
   profileUrl: string | null
   onboarded: boolean
   essence: number
   coins: number
   hero: ApiUserCard | null
+}
+
+export function emailRegister(
+  email: string,
+  password: string,
+  username?: string,
+): Promise<{ id: string; username: string; email: string; onboarded: boolean }> {
+  return request("/auth/email/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, username }),
+  })
+}
+
+export function emailLogin(
+  email: string,
+  password: string,
+): Promise<{ id: string; username: string; email: string; onboarded: boolean }> {
+  return request("/auth/email/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  })
 }
 
 export function fetchMe(signal?: AbortSignal): Promise<AccountMe> {

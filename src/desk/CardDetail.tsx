@@ -54,6 +54,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [message, setMessage] = useState<string | null>(null)
   const [essence, setEssence] = useState<number | null>(null)
   const [coins, setCoins] = useState<number | null>(null)
+  const [isGuest, setIsGuest] = useState(false)
   const [price, setPrice] = useState("30")
   const progress = useTutorialProgress(userId)
   const marketUnlocked = isModuleUnlocked("market", progress)
@@ -68,6 +69,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
         if (!cancelled) {
           setEssence(data.essence)
           setCoins(data.coins)
+          setIsGuest(!!data.isGuest)
         }
       })
       .catch(() => {})
@@ -331,7 +333,11 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
           {!readOnly && !hero && (
             <div className="card-detail__market">
               <div className="bk-label">市场 · 金币 {coins ?? "—"}</div>
-              {marketUnlocked ? (
+              {isGuest ? (
+                <p className="bk-note">
+                  游客账号不能使用市场。请先退出，用 osu! 或邮箱登录后再交易。
+                </p>
+              ) : marketUnlocked ? (
                 <>
                   <div className="card-detail__market-row">
                     <input
