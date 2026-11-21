@@ -1,6 +1,6 @@
 import { DEMO_CARDS } from "@/card/data"
 import type { SkillDef } from "@/card/jobs"
-import type { CardFaceData, Element } from "@/card/types"
+import type { CardFaceData } from "@/card/types"
 
 import {
   MAX_SUPPORT_SLOTS,
@@ -18,81 +18,31 @@ import {
   type StatusId,
 } from "./types"
 
-const ELEMENT_CYCLE: Element[] = ["metal", "wood", "earth", "ice", "fire", "thunder", "light", "dark"]
+import {
+  PREEMPTIVE_RATE,
+  STAGE_PRESETS,
+  SUPPORT_PROC_RATE,
+  TUTORIAL_ENEMY_HP,
+} from "./config"
+import {
+  comboMultiplier,
+  defenseReductionOf,
+  elementMultiplier,
+  mitigation,
+} from "./rules"
 
-/** Combo 曲线（§9.2）：1-2 为 0%，3 为 12%，线性爬升至 10 Combo = +180%（2.80×）封顶 */
-const COMBO_BONUS = [1, 1, 1, 1.12, 1.26, 1.51, 1.77, 2.03, 2.29, 2.54, 2.8]
-
-export const ROMAN_TIER = ["0", "I", "II", "III", "IV"] as const
-
-/** 教程首战用的练习幽灵：血量、攻防都压低，保证新号也能在 1–2 回合内打完 */
-export const TUTORIAL_ENEMY_HP = 3600
-
-export interface StagePreset {
-  id: string
-  name: string
-  title: string
-  tier: Enemy["tier"]
-  element: Element
-  weaknesses: Element[]
-  hp: number
-  atk: number
-  int: number
-  def: number
-  parTurns: number
-  parAp: number
-  damageThreshold?: number
-  enrageOnInterrupt?: boolean
-  summary: string
-}
-
-export const STAGE_PRESETS: StagePreset[] = [
-  {
-    id: "ghost",
-    name: "谱面幽灵",
-    title: "深渊徘徊灵体",
-    tier: "normal",
-    element: "dark",
-    weaknesses: ["light", "physical"],
-    hp: 28_000,
-    atk: 620,
-    int: 680,
-    def: 1_100,
-    parTurns: 5,
-    parAp: 10,
-    summary: "灵体属性（受物理 +20%），每回合 2 动，适合熟悉 Combo 与支援铺垫。",
-  },
-  {
-    id: "vanguard",
-    name: "断音重装卫队",
-    title: "高 T 多动精锐",
-    tier: "elite",
-    element: "thunder",
-    weaknesses: ["fire", "ice"],
-    hp: 52_000,
-    atk: 820,
-    int: 760,
-    def: 2_200,
-    parTurns: 7,
-    parAp: 15,
-    summary: "高 T 精英：每回合 3–4 动，左侧带【重装甲 II】与【荆棘栅栏】，需破甲拆支援并善用防御档位。",
-  },
-  {
-    id: "silky",
-    name: "魔人希尔基·利特尔",
-    title: "深渊魔人 · BOSS",
-    tier: "boss",
-    element: "dark",
-    weaknesses: ["light", "ice", "fire"],
-    hp: 120_000,
-    atk: 1_080,
-    int: 1_180,
-    def: 2_800,
-    parTurns: 10,
-    parAp: 22,
-    summary: "魔人 BOSS：每回合 3–4 动，带侧面蓄力大招、高额 Down 威胁与拆支援技能，全面检验打断、硬控与坦克开罐。",
-  },
-]
+export {
+  ROMAN_TIER,
+  STAGE_PRESETS,
+  TUTORIAL_ENEMY_HP,
+} from "./config"
+export {
+  comboMultiplier,
+  defenseReductionOf,
+  elementMultiplier,
+  enemyDamageTier,
+  mitigation,
+} from "./rules"
 
 function random(min: number, max: number): number {
   return min + Math.random() * (max - min)
@@ -118,58 +68,6 @@ export function aliveCards(cards: BattleCard[]): BattleCard[] {
 
 export function hasTankAlive(cards: BattleCard[]): boolean {
   return aliveCards(cards).some((card) => card.subjob.tags.includes("tank"))
-}
-
-/**
- * 防御档位减伤率（§6.7）：
- * - 坦克在场：最高可升至 Lv4（1=20%, 2=40%, 3=70%, 4=90%）
- * - 无坦克在场：最高只能升至 Lv2（1=20%, 2=35%）
- */
-export function defenseReductionOf(tier: number, tankPresent: boolean): number {
-  const clamped = Math.min(Math.max(tier, 0), tankPresent ? 4 : 2)
-  if (tankPresent) {
-    return [0, 0.2, 0.4, 0.7, 0.9][clamped] ?? 0
-  }
-  return [0, 0.2, 0.35, 0.35, 0.35][clamped] ?? 0
-}
-
-/**
- * 九属性相克环（§1.2）：
- * 金 → 木 → 土 → 冰 → 火 → 雷 → 光 → 暗 → 金
- * 顺时针 1 位 +25%，顺时针 2 位 +10%，逆时针 1 位 -20%，逆时针 2 位 -10%，同属性 -10%
- * 物理对灵体（ghost）+20%
- */
-export function elementMultiplier(attack: Element, defend: Element, enemyId?: string, weaknesses: Element[] = []): number {
-  let mult = 1
-  if (attack === "physical") {
-    if (enemyId === "ghost" || enemyId === "tutorial-ghost") {
-      mult = 1.2
-    }
-  } else if (defend !== "physical") {
-    const ai = ELEMENT_CYCLE.indexOf(attack)
-    const di = ELEMENT_CYCLE.indexOf(defend)
-    if (ai >= 0 && di >= 0) {
-      const diff = (ai - di + ELEMENT_CYCLE.length) % ELEMENT_CYCLE.length
-      if (diff === 0) mult = 0.9
-      else if (diff === 1) mult = 1.25
-      else if (diff === 2) mult = 1.1
-      else if (diff === ELEMENT_CYCLE.length - 1) mult = 0.8
-      else if (diff === ELEMENT_CYCLE.length - 2) mult = 0.9
-    }
-  }
-  if (weaknesses.includes(attack)) {
-    mult = Math.max(mult, 1.3)
-  }
-  return mult
-}
-
-export function comboMultiplier(combo: number): number {
-  const capped = Math.min(Math.max(combo, 0), 10)
-  return COMBO_BONUS[capped] ?? 2.8
-}
-
-export function mitigation(defence: number): number {
-  return Math.min(Math.max(0, defence) / (Math.max(0, defence) + 10000), 0.7)
 }
 
 /**
@@ -1241,7 +1139,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
             atk: attack,
             power: def.power ?? 0.5,
             hits: def.hits ?? 1,
-            procRate: def.procRate ?? 0.6,
+            procRate: def.procRate ?? SUPPORT_PROC_RATE,
             defenseTier: def.armorTier,
             stat: def.stat,
             amount: def.amount,
@@ -1352,7 +1250,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
     if (support.bannedTurns && support.bannedTurns > 0) continue
     if (support.kind !== "attack") continue
 
-    const procRate = Math.min(0.95, (support.procRate ?? 0.6) + summonerBonus)
+    const procRate = Math.min(0.95, (support.procRate ?? SUPPORT_PROC_RATE) + summonerBonus)
     if (Math.random() > procRate) continue
 
     support.triggered = true
@@ -1418,7 +1316,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
       if (card.down || !card.subjob.tags.includes("swift")) continue
       if (card.statuses.some((s) => s.id === "slow" || s.id === "stun")) continue
       // 游侠/刺客/破法者抢攻率（默认 12% 让战中能稳定体验到抢攻垫刀，文档基础 4%+迅捷专精）
-      if (Math.random() > 0.14) continue
+      if (Math.random() > PREEMPTIVE_RATE) continue
 
       checkEnemyWakeUp(state)
       state.combo += 1
@@ -1866,13 +1764,6 @@ export function endTurn(state: BattleState): string | null {
 
 export function cloneBattle(state: BattleState): BattleState {
   return structuredClone(state)
-}
-
-export function enemyDamageTier(intent: EnemyIntent): "低" | "中" | "高" | "特大" {
-  if (intent.isChargedUltimate) return "特大"
-  if (intent.kind === "heavy_phys" || intent.kind === "heavy_magic") return "高"
-  if (intent.kind === "magic" || intent.kind === "break_support") return "中"
-  return "低"
 }
 
 export function teamHpOf(state: BattleState): { hp: number; max: number } {

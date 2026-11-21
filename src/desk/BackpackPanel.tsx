@@ -13,7 +13,8 @@ import {
   type PackInventory,
 } from "./api"
 import { Pages } from "./BookPages"
-import { PACKS_CHANGED_EVENT, BACKPACK_HOVER_EVENT } from "./drag"
+import { PACKS_CHANGED_EVENT } from "./drag"
+import { onDeskHover } from "./events"
 import { GuestLoginButton } from "./GuestLoginButton"
 import { INVITE_OPEN_EVENT } from "./invite"
 import { PackArt } from "./opening/PackArt"
@@ -84,14 +85,11 @@ export function BackpackPanel({
   const [picked, setPicked] = useState<string | null>(null)
 
   useEffect(() => {
-    const onHover = (event: Event) => {
-      setDropHover(!!(event as CustomEvent<boolean>).detail)
-    }
+    const offHover = onDeskHover("backpack", (value) => setDropHover(Boolean(value)))
     const onPacksChanged = () => setRevision((value) => value + 1)
-    window.addEventListener(BACKPACK_HOVER_EVENT, onHover)
     window.addEventListener(PACKS_CHANGED_EVENT, onPacksChanged)
     return () => {
-      window.removeEventListener(BACKPACK_HOVER_EVENT, onHover)
+      offHover()
       window.removeEventListener(PACKS_CHANGED_EVENT, onPacksChanged)
     }
   }, [])

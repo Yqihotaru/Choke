@@ -3,24 +3,21 @@ import type { CardFaceData } from "@/card/types"
 
 import type { CardData, PackPool } from "./types"
 
-/** 书页和开包层共用指针拖卡；桌面拖卡仍使用已有的指针路径。 */
-export const CARD_POINTER_START_EVENT = "choke:card-pointer-start"
-export const CARD_POINTER_DROP_EVENT = "choke:card-pointer-drop"
-/** 桌面卡拖到卡组槽位时广播 */
-export const DECK_HOVER_EVENT = "choke:deck-hover"
-export const DECK_ASSIGN_EVENT = "choke:deck-assign"
-/** 卡包库存变化，让桌面的发牌按钮刷新 */
-export const PACKS_CHANGED_EVENT = "choke:packs-changed"
-/** 把卡片直接发到桌面（按钮快捷方式） */
-export const DESK_ADD_CARDS_EVENT = "choke:desk-add-cards"
-/** 桌面上的 user_card id 列表变化 */
-export const DESK_ITEMS_EVENT = "choke:desk-items"
-/** 桌面卡拖到卡册面板 */
-export const ALBUM_HOVER_EVENT = "choke:album-hover"
-/** 桌面卡包拖到背包面板 */
-export const BACKPACK_HOVER_EVENT = "choke:backpack-hover"
-/** 抽卡面板开出卡后交给桌面播放开包动画（rect 是卡包图在视口里的位置） */
-export const GACHA_OPEN_EVENT = "choke:gacha-open"
+/** 事件名统一定义在 events.ts，这里转出以保持既有 import 不变。 */
+export {
+  CARD_POINTER_DROP_EVENT,
+  CARD_POINTER_START_EVENT,
+  DESK_ADD_CARDS_EVENT,
+  DESK_HOVER_EVENT,
+  DESK_ITEMS_EVENT,
+  DECK_ASSIGN_EVENT,
+  GACHA_OPEN_EVENT,
+  PACKS_CHANGED_EVENT,
+  type DeskHoverDetail,
+  type DeskHoverTarget,
+} from "./events"
+
+import { CARD_POINTER_START_EVENT } from "./events"
 
 export interface GachaOpenDetail {
   /** 开包结果只属于发起请求时的账号；桌面必须拒绝其他账号的迟到事件 */

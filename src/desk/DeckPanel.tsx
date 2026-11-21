@@ -15,13 +15,13 @@ import {
   type ApiUserCard,
 } from "./api"
 import {
-  DECK_ASSIGN_EVENT,
-  DECK_HOVER_EVENT,
   CARD_POINTER_DROP_EVENT,
+  DECK_ASSIGN_EVENT,
   startCardPointerDrag,
   toDeskCard,
   type CardPointerDrop,
 } from "./drag"
+import { onDeskHover } from "./events"
 import { Pages, useBook, usePageCache } from "./BookPages"
 import { FitArea } from "./FitArea"
 import { GuestLoginButton } from "./GuestLoginButton"
@@ -184,19 +184,18 @@ export const DeckPanel = memo(function DeckPanel({
   }
 
   useEffect(() => {
-    const onHover = (event: Event) => {
-      setDropSlot((event as CustomEvent<number | null>).detail)
-    }
+    const offHover = onDeskHover("deck", (value) =>
+      setDropSlot(typeof value === "number" ? value : null),
+    )
     const onAssign = (event: Event) => {
       const detail = (
         event as CustomEvent<{ userCardId: number; slot: number }>
       ).detail
       if (detail) assignRef.current(detail.userCardId, detail.slot)
     }
-    window.addEventListener(DECK_HOVER_EVENT, onHover)
     window.addEventListener(DECK_ASSIGN_EVENT, onAssign)
     return () => {
-      window.removeEventListener(DECK_HOVER_EVENT, onHover)
+      offHover()
       window.removeEventListener(DECK_ASSIGN_EVENT, onAssign)
     }
   }, [])

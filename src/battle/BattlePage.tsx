@@ -13,7 +13,7 @@ import {
   raiseDefense,
   swapBattleCard,
 } from "./engine"
-import { BattleStage } from "./BattleStage"
+import { BattleStage } from "./view/BattleStage"
 import type { BattleState } from "./types"
 import "./battle.css"
 

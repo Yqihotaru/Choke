@@ -16,7 +16,8 @@ import { fetchUserCards, toFace, type ApiUserCard, type CardSort } from "./api"
 import { Pages, useBook, usePageCache } from "./BookPages"
 import { CardDetail } from "./CardDetail"
 import { FitArea } from "./FitArea"
-import { ALBUM_HOVER_EVENT, startCardPointerDrag, toDeskCard } from "./drag"
+import { startCardPointerDrag, toDeskCard } from "./drag"
+import { onDeskHover } from "./events"
 import { GuestLoginButton } from "./GuestLoginButton"
 import { useDeskCardIds } from "./presence"
 import { RARITY_COLOR } from "./rarity"
@@ -53,14 +54,9 @@ export const AlbumPanel = memo(function AlbumPanel({
   const openDetail = useCallback((row: ApiUserCard) => setDetail(row), [])
 
   useEffect(() => {
-    const onHover = (event: Event) => {
-      rootRef.current?.classList.toggle(
-        "is-drop-target",
-        !!(event as CustomEvent<boolean>).detail
-      )
-    }
-    window.addEventListener(ALBUM_HOVER_EVENT, onHover)
-    return () => window.removeEventListener(ALBUM_HOVER_EVENT, onHover)
+    return onDeskHover("album", (value) => {
+      rootRef.current?.classList.toggle("is-drop-target", Boolean(value))
+    })
   }, [])
 
   useEffect(() => {

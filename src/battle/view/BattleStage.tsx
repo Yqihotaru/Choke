@@ -44,9 +44,9 @@ import {
   evaluateStars,
   hasTankAlive,
   teamHpOf,
-} from "./engine"
-import { playHit, playLose, playSfx, playTurn, playWin } from "./sfx"
-import type { BattleState, EnemyIntent, SideSupportUnit } from "./types"
+} from "../engine"
+import { playHit, playLose, playSfx, playTurn, playWin } from "../sfx"
+import type { BattleState, EnemyIntent, SideSupportUnit } from "../types"
 import "./choke-battle.css"
 
 const AP_SLOTS = 10

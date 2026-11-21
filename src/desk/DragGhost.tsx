@@ -4,10 +4,10 @@ import { createPortal } from "react-dom"
 import {
   CARD_POINTER_DROP_EVENT,
   CARD_POINTER_START_EVENT,
-  DECK_HOVER_EVENT,
   type CardPointerDrop,
   type CardPointerStart,
 } from "./drag"
+import { emitDeskHover } from "./events"
 
 interface Props {
   w: number
@@ -178,7 +178,7 @@ export function CardDragLayer({ root }: { root: RefObject<HTMLElement | null> })
         target?.classList.remove("is-card-drop", "is-return-target")
         target = next
         const slot = next?.matches(".deck-slot") ? Number(next.dataset.slot) : null
-        window.dispatchEvent(new CustomEvent(DECK_HOVER_EVENT, { detail: slot }))
+        emitDeskHover("deck", slot)
         if (next?.matches(".desk-stage")) next.classList.add("is-card-drop")
         if (next?.matches(".deck-panel")) next.classList.add("is-return-target")
       }

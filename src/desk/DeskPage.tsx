@@ -21,10 +21,7 @@ import {
   ApiError,
   claimTutorialPack,
   fetchCardDetail,
-  fetchMe,
-  fetchPackInventory,
   fetchUserCards,
-  logout as apiLogout,
   onboard,
   openPack,
   returnPack as apiReturnPack,
@@ -33,11 +30,8 @@ import {
   type OpenPackResult,
 } from "./api"
 import {
-  ALBUM_HOVER_EVENT,
-  BACKPACK_HOVER_EVENT,
   DESK_ADD_CARDS_EVENT,
   DECK_ASSIGN_EVENT,
-  DECK_HOVER_EVENT,
   GACHA_OPEN_EVENT,
   PACKS_CHANGED_EVENT,
   CARD_POINTER_DROP_EVENT,
@@ -45,6 +39,8 @@ import {
   type GachaOpenDetail,
   toDeskCard,
 } from "./drag"
+import { emitDeskHover } from "./events"
+import { useDeskSession } from "./useDeskSession"
 import { InviteLetter } from "./InviteLetter"
 import { INVITE_OPEN_EVENT, readInviteStowed, saveInviteStowed } from "./invite"
 import { OBJECT_META, type DeskObjectId } from "./objects"
@@ -76,7 +72,6 @@ import {
   acceptsDrop,
   readSavedPool,
   tiltOf,
-  type DeskUser,
   type FlightSlot,
   type FlightSource,
 } from "./desk-page-model"
@@ -147,14 +142,16 @@ export function DeskPage() {
     { dx: number; dy: number; index: number }
   > | null>(null)
   const [toast, setToast] = useState<string | null>(null)
-  const [user, setUser] = useState<DeskUser | null>(null)
+  const {
+    user,
+    userReady,
+    packState,
+    setPackState,
+    refreshUser,
+    refreshPacks,
+    logout,
+  } = useDeskSession()
   const progress = useTutorialProgress(user?.id ?? null)
-  /** /auth/me 回来过一次（登没登录都算），邀请函等它再决定要不要弹 */
-  const [userReady, setUserReady] = useState(false)
-  const [packState, setPackState] = useState<{
-    userId: string
-    data: Record<string, number>
-  } | null>(null)
   const [book, setBook] = useState<{
     panel: PanelId
     origin: { x: number; y: number } | null
@@ -189,47 +186,6 @@ export function DeskPage() {
     localStorage.setItem(POOL_KEY, pool)
   }, [pool])
 
-  const refreshUser = useCallback(() => {
-    fetchMe()
-      .then((d) => {
-        setUser({
-          id: d.id,
-          username: d.username,
-          publicId: d.publicId ?? null,
-          avatarUrl: d.avatarUrl ?? null,
-          essence: Number(d.essence ?? 0),
-          coins: Number(d.coins ?? 0),
-          hero: d.hero ?? null,
-          onboarded: !!d.onboarded,
-        })
-      })
-      .catch(() => setUser(null))
-      .finally(() => setUserReady(true))
-  }, [])
-
-  useEffect(() => {
-    refreshUser()
-  }, [refreshUser])
-
-  const refreshPacks = useCallback(() => {
-    if (!user) return
-    fetchPackInventory(user.id)
-      .then((d) => {
-        setPackState({ userId: user.id, data: d.packs })
-      })
-      .catch(() => {})
-  }, [user])
-
-  useEffect(() => {
-    refreshPacks()
-  }, [refreshPacks])
-
-  useEffect(() => {
-    const handler = () => refreshPacks()
-    window.addEventListener(PACKS_CHANGED_EVENT, handler)
-    return () => window.removeEventListener(PACKS_CHANGED_EVENT, handler)
-  }, [refreshPacks])
-
   // 背包里点「打开邀请函」：先合上书，让信封从桌面底边弹上来时看得见
   useEffect(() => {
     const handler = () => bookRef.current?.close()
@@ -263,12 +219,6 @@ export function DeskPage() {
     refreshUser()
     window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
   }, [refreshUser])
-
-  const logout = () => {
-    apiLogout()
-      .catch(() => {})
-      .finally(() => setUser(null))
-  }
 
   useEffect(() => {
     const el = stageRef.current
@@ -1011,21 +961,15 @@ export function DeskPage() {
       const nextSlot = Number.isInteger(parsed) ? parsed : null
       if (nextSlot !== deckSlot) {
         deckSlot = nextSlot
-        window.dispatchEvent(
-          new CustomEvent(DECK_HOVER_EVENT, { detail: nextSlot })
-        )
+        emitDeskHover("deck", nextSlot)
       }
       if (overAlbum !== albumPanelHover) {
         albumPanelHover = overAlbum
-        window.dispatchEvent(
-          new CustomEvent(ALBUM_HOVER_EVENT, { detail: overAlbum })
-        )
+        emitDeskHover("album", overAlbum)
       }
       if (overBackpack !== backpackPanelHover) {
         backpackPanelHover = overBackpack
-        window.dispatchEvent(
-          new CustomEvent(BACKPACK_HOVER_EVENT, { detail: overBackpack })
-        )
+        emitDeskHover("backpack", overBackpack)
       }
       // 抽屉压在物件层上面：指在抽屉上时不算悬在底下的桌面物件
       overDrawer = !!elements[0]?.closest(".desk-drawer")
@@ -1091,18 +1035,9 @@ export function DeskPage() {
         transformOrigin: pose?.transformOrigin ?? "50% 50%",
       }
       setLifted(null)
-      if (deckSlot != null)
-        window.dispatchEvent(
-          new CustomEvent(DECK_HOVER_EVENT, { detail: null })
-        )
-      if (albumPanelHover)
-        window.dispatchEvent(
-          new CustomEvent(ALBUM_HOVER_EVENT, { detail: false })
-        )
-      if (backpackPanelHover)
-        window.dispatchEvent(
-          new CustomEvent(BACKPACK_HOVER_EVENT, { detail: false })
-        )
+      if (deckSlot != null) emitDeskHover("deck", null)
+      if (albumPanelHover) emitDeskHover("album", false)
+      if (backpackPanelHover) emitDeskHover("backpack", false)
       setDropTarget(null)
       if (drawerTimer) window.clearTimeout(drawerTimer)
       if (drawerHot) drawerRef.current?.hint(false)
