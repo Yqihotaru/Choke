@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 
-import { fetchDeck, fetchUserCards, toFace, type ApiDeck, type ApiUserCard } from "@/desk/api"
+import { fetchDeck, fetchMe, fetchUserCards, toFace, type ApiDeck, type ApiUserCard } from "@/desk/api"
 import { GuestLoginButton } from "@/desk/GuestLoginButton"
 import { advanceTutorial, grantExp, useTutorialProgress } from "@/tutorial/store"
 
@@ -45,12 +45,10 @@ export function BattlePage() {
 
   useEffect(() => {
     let cancelled = false
-    fetch("/auth/me", { credentials: "include" })
-      .then((response) => response.json())
+    fetchMe()
       .then((data) => {
         if (cancelled) return
-        if (data.ok) setUser({ id: data.data.id, username: data.data.username })
-        else setUser(null)
+        setUser({ id: data.id, username: data.username })
       })
       .catch(() => {
         if (!cancelled) setUser(null)

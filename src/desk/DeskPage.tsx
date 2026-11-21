@@ -17,7 +17,21 @@ import {
   type PanelId,
 } from "./DeskBook"
 import { DragGhost } from "./DragGhost"
-import { fetchUserCards, toFace } from "./api"
+import {
+  ApiError,
+  claimTutorialPack,
+  fetchCardDetail,
+  fetchMe,
+  fetchPackInventory,
+  fetchUserCards,
+  logout as apiLogout,
+  onboard,
+  openPack,
+  returnPack as apiReturnPack,
+  takePack,
+  toFace,
+  type OpenPackResult,
+} from "./api"
 import {
   ALBUM_HOVER_EVENT,
   BACKPACK_HOVER_EVENT,
@@ -60,14 +74,18 @@ import {
   acceptsDrop,
   readSavedPool,
   tiltOf,
-  type CardResponse,
   type DeskUser,
   type FlightSlot,
   type FlightSource,
-  type OpenResponse,
 } from "./desk-page-model"
 import { PackOpener, type OriginRect } from "./opening/PackOpener"
 import "./desk.css"
+
+interface PackReturnResult {
+  ok: boolean
+  data?: { pool: string; packs: Record<string, number> }
+  error?: { code?: string }
+}
 
 export function DeskPage() {
   const { items, move, front, spawn, remove, reset, stow, unstow, refreshFaces } = useDesk()
@@ -167,23 +185,20 @@ export function DeskPage() {
   }, [pool])
 
   const refreshUser = useCallback(() => {
-    fetch("/auth/me", { credentials: "include" })
-      .then((r) => r.json())
+    fetchMe()
       .then((d) => {
-        if (d.ok)
-          setUser({
-            id: d.data.id,
-            username: d.data.username,
-            publicId: d.data.publicId ?? null,
-            avatarUrl: d.data.avatarUrl ?? null,
-            essence: Number(d.data.essence ?? 0),
-            coins: Number(d.data.coins ?? 0),
-            hero: d.data.hero ?? null,
-            onboarded: !!d.data.onboarded,
-          })
-        else setUser(null)
+        setUser({
+          id: d.id,
+          username: d.username,
+          publicId: d.publicId ?? null,
+          avatarUrl: d.avatarUrl ?? null,
+          essence: Number(d.essence ?? 0),
+          coins: Number(d.coins ?? 0),
+          hero: d.hero ?? null,
+          onboarded: !!d.onboarded,
+        })
       })
-      .catch(() => {})
+      .catch(() => setUser(null))
       .finally(() => setUserReady(true))
   }, [])
 
@@ -193,10 +208,9 @@ export function DeskPage() {
 
   const refreshPacks = useCallback(() => {
     if (!user) return
-    fetch(`/api/users/${user.id}/packs`, { credentials: "include" })
-      .then((r) => r.json())
+    fetchPackInventory(user.id)
       .then((d) => {
-        if (d.ok) setPackState({ userId: user.id, data: d.data.packs })
+        setPackState({ userId: user.id, data: d.packs })
       })
       .catch(() => {})
   }, [user])
@@ -246,7 +260,7 @@ export function DeskPage() {
   }, [refreshUser])
 
   const logout = () => {
-    fetch("/auth/logout", { method: "POST", credentials: "include" })
+    apiLogout()
       .catch(() => {})
       .finally(() => setUser(null))
   }
@@ -294,32 +308,17 @@ export function DeskPage() {
     const task = (async () => {
       if (!user.onboarded) {
         try {
-          const res = await fetch("/auth/onboard", {
-            method: "POST",
-            credentials: "include",
-          })
-          if (!res.ok) {
-            const payload = (await res.json().catch(() => null)) as
-              | { error?: { message?: string } }
-              | null
-            showToast(
-              payload?.error?.message ?? "新手礼包领取失败，请刷新重试"
-            )
-          }
-        } catch {
-          showToast("新手礼包领取失败，请刷新重试")
+          await onboard()
+        } catch (reason) {
+          showToast(
+            reason instanceof Error ? reason.message : "新手礼包领取失败，请刷新重试"
+          )
         }
       }
 
       try {
-        const res = await fetch("/auth/tutorial-pack", {
-          method: "POST",
-          credentials: "include",
-        })
-        const payload = (await res.json().catch(() => null)) as
-          | { ok?: boolean; data?: { granted?: boolean } }
-          | null
-        if (payload?.data?.granted) showToast("已补发 1 个新手卡包")
+        const payload = await claimTutorialPack()
+        if (payload?.granted) showToast("已补发 1 个新手卡包")
       } catch {
         // 老玩家补包失败不阻塞教程；抽卡面板会显示“领取新手卡包”重试
       }
@@ -679,22 +678,17 @@ export function DeskPage() {
   }, [collecting])
 
   /** 把一个桌面卡包的 token 还给服务端。null = 请求没送到或回来的不是 JSON，这时 token 在服务端还有效 */
-  const postPackReturn = (userId: string, token: string) =>
-    fetch(`/api/users/${userId}/packs/return`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    })
-      .then(
-        async (res) =>
-          (await res.json().catch(() => null)) as {
-            ok: boolean
-            data?: { packs: Record<string, number> }
-            error?: { code?: string }
-          } | null
+  const postPackReturn = (
+    userId: string,
+    token: string,
+  ): Promise<PackReturnResult | null> =>
+    apiReturnPack(userId, token)
+      .then((data) => ({ ok: true, data }))
+      .catch((error: unknown) =>
+        error instanceof ApiError
+          ? { ok: false, error: { code: error.code } }
+          : null,
       )
-      .catch(() => null)
 
   /** 快速收卡：卡飞进卡册，卡包飞进卡盒并还给背包 */
   const quickCollectAll = () => {
@@ -827,21 +821,8 @@ export function DeskPage() {
     if (dealBusy.current) return
     dealBusy.current = true
     try {
-      const res = await fetch(
-        `/api/users/${user.id}/packs/${SERVER_POOL[pool]}/take`,
-        { method: "POST", credentials: "include" }
-      )
-      const payload = (await res.json().catch(() => null)) as {
-        ok: boolean
-        data?: { token: string; packs: Record<string, number> }
-        error?: { message?: string }
-      } | null
-      if (!res.ok || !payload?.ok || !payload.data) {
-        showToast(payload?.error?.message ?? `背包里没有${meta.label}`)
-        refreshPacks()
-        return
-      }
-      setPackState({ userId: user.id, data: payload.data.packs })
+      const payload = await takePack(user.id, SERVER_POOL[pool])
+      setPackState({ userId: user.id, data: payload.packs })
       window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
       const topZ = Math.max(0, ...items.map((it) => it.z)) + 1
       const packCount = items.filter((it) => it.kind === "pack").length
@@ -853,12 +834,15 @@ export function DeskPage() {
         y: 0.3,
         z: topZ,
         pool,
-        token: payload.data.token,
+        token: payload.token,
       }
       spawn([pack])
       showToast(`${meta.label} · 卡包已发到桌面`)
-    } catch {
-      showToast("发牌失败")
+    } catch (reason) {
+      showToast(
+        reason instanceof Error ? reason.message : `背包里没有${meta.label}`,
+      )
+      refreshPacks()
     } finally {
       dealBusy.current = false
     }
@@ -1275,43 +1259,30 @@ export function DeskPage() {
       showToast("开包中…")
       let showingResults = false
       try {
-        const res = await fetch(`/api/packs/${SERVER_POOL[packPool]}/open`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ count: packSize, token: item.token }),
-        })
-        const payload = (await res.json()) as OpenResponse
-        if (!res.ok || !payload.ok || !payload.data) {
-          if (
-            payload.error?.code === "no_packs" ||
-            payload.error?.code === "invalid_token"
-          ) {
+        let opened: OpenPackResult
+        try {
+          opened = await openPack(SERVER_POOL[packPool], packSize, item.token)
+        } catch (reason) {
+          const code = reason instanceof ApiError ? reason.code : undefined
+          if (code === "no_packs" || code === "invalid_token") {
             remove(item.id)
             refreshPacks()
             showToast("这个桌面卡包已经失效，已移除")
           } else {
-            showToast(payload.error?.message ?? "开包失败")
+            showToast(reason instanceof Error ? reason.message : "开包失败")
           }
           return
         }
         // 服务端已核销 token，卡面加载失败也不能留下可重复开的桌面包。
         remove(item.id)
-        if (payload.data.packs && user) {
-          setPackState({ userId: user.id, data: payload.data.packs })
+        if (opened.packs && user) {
+          setPackState({ userId: user.id, data: opened.packs })
           window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
         }
 
         const cards: CardData[] = await Promise.all(
-          payload.data.results.map(async (result) => {
-            const detailRes = await fetch(`/api/cards/${result.cardId}`, {
-              credentials: "include",
-            })
-            const detail = (await detailRes.json()) as CardResponse
-            if (!detailRes.ok || !detail.ok || !detail.data) {
-              throw new Error(detail.error?.message ?? "卡牌详情加载失败")
-            }
-            const row = detail.data
+          opened.results.map(async (result) => {
+            const row = await fetchCardDetail(result.cardId)
             return toDeskCard(
               toFace({
                 ...row,

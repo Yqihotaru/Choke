@@ -1,3 +1,5 @@
+import { fetchProgress, saveProgress } from "@/desk/api"
+
 import { TUTORIAL_STEPS, type PlayerProgress, type TutorialStep } from "./types"
 
 /**
@@ -25,10 +27,6 @@ export interface ServerProgress {
   updatedAt?: number
 }
 
-function endpoint(userId: string) {
-  return `/api/users/${encodeURIComponent(userId)}/progress`
-}
-
 function isStep(value: unknown): value is TutorialStep {
   return (
     typeof value === "string" &&
@@ -40,32 +38,22 @@ export async function fetchServerProgress(
   userId: string
 ): Promise<ServerProgress | null> {
   if (!PROGRESS_SYNC_ENABLED) return null
-  try {
-    const res = await fetch(endpoint(userId), { credentials: "include" })
-    if (!res.ok) return null
-    const payload = (await res.json()) as {
-      ok?: boolean
-      data?: Partial<ServerProgress>
-    }
-    if (!payload.ok || !payload.data) return null
-    const data = payload.data
-    if (
-      typeof data.level !== "number" ||
-      typeof data.exp !== "number" ||
-      !isStep(data.tutorialStep) ||
-      typeof data.tutorialDone !== "boolean"
-    ) {
-      return null
-    }
-    return {
-      level: data.level,
-      exp: data.exp,
-      tutorialStep: data.tutorialStep,
-      tutorialDone: data.tutorialDone,
-      updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
-    }
-  } catch {
+  const data = await fetchProgress(userId)
+  if (!data) return null
+  if (
+    typeof data.level !== "number" ||
+    typeof data.exp !== "number" ||
+    !isStep(data.tutorialStep) ||
+    typeof data.tutorialDone !== "boolean"
+  ) {
     return null
+  }
+  return {
+    level: data.level,
+    exp: data.exp,
+    tutorialStep: data.tutorialStep,
+    tutorialDone: data.tutorialDone,
+    updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
   }
 }
 
@@ -74,20 +62,11 @@ export async function pushServerProgress(
   progress: PlayerProgress
 ): Promise<void> {
   if (!PROGRESS_SYNC_ENABLED) return
-  try {
-    await fetch(endpoint(userId), {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        level: progress.level,
-        exp: progress.exp,
-        tutorialStep: progress.tutorialStep,
-        tutorialDone: progress.tutorialDone,
-        updatedAt: progress.updatedAt,
-      }),
-    })
-  } catch {
-    // 后端不可用时静默回退到本地缓存
-  }
+  await saveProgress(userId, {
+    level: progress.level,
+    exp: progress.exp,
+    tutorialStep: progress.tutorialStep,
+    tutorialDone: progress.tutorialDone,
+    updatedAt: progress.updatedAt,
+  })
 }

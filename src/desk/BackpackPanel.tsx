@@ -5,6 +5,7 @@ import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL, battlePower } from "@/card/data"
 
 import {
+  fetchMe,
   fetchPackInventory,
   openMysteryPack,
   toFace,
@@ -105,12 +106,11 @@ export function BackpackPanel({
       .catch((reason: unknown) => {
         if (!cancelled) setError(reason instanceof Error ? reason.message : "加载背包失败")
       })
-    fetch("/auth/me", { credentials: "include" })
-      .then((response) => response.json())
+    fetchMe()
       .then((data) => {
-        if (cancelled || !data.ok) return
-        setHero((data.data.hero as ApiUserCard | null) ?? null)
-        setOnboarded(!!data.data.onboarded)
+        if (cancelled) return
+        setHero((data.hero as ApiUserCard | null) ?? null)
+        setOnboarded(!!data.onboarded)
       })
       .catch(() => {})
     return () => {

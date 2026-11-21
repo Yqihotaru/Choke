@@ -24,26 +24,10 @@ export function readSavedPool(): PackPool {
     : "normal"
 }
 
-export interface OpenResponse {
-  ok: boolean
-  data?: {
-    results: { cardId: string; userCardId: number; foil: boolean; serial: number; pulled: number }[]
-    pity: { before: number; after: number }
-    packs?: Record<string, number>
-  }
-  error?: { code?: string; message?: string }
-}
-
 export type CardRow = Omit<
   ApiUserCard,
   "userCardId" | "level" | "constellation" | "exp" | "foil"
 >
-
-export interface CardResponse {
-  ok: boolean
-  data?: CardRow
-  error?: { message?: string }
-}
 
 export interface DeskUser {
   id: string

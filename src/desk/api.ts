@@ -86,8 +86,19 @@ export function toFace(row: ApiUserCard): CardFaceData {
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { credentials: "include", ...init })
   const data = await res.json()
-  if (!data.ok) throw new Error(data.error?.message ?? "请求失败")
+  if (!data.ok) throw new ApiError(data.error?.message ?? "请求失败", data.error?.code)
   return data.data as T
+}
+
+/** 带机器码的接口错误，调用方可以按 code 分支处理（例如 NO_PACK）。 */
+export class ApiError extends Error {
+  code?: string
+
+  constructor(message: string, code?: string) {
+    super(message)
+    this.name = "ApiError"
+    this.code = code
+  }
 }
 
 export function fetchUserCards(
@@ -344,4 +355,156 @@ export function buyMarketListing(
   return request(`/api/users/${userId}/market/buy/${listingId}`, {
     method: "POST",
   })
+}
+
+/* ============================ 认证 ============================ */
+
+export function logout(): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>("/auth/logout", { method: "POST" })
+}
+
+export function onboard(): Promise<{ onboarded: boolean }> {
+  return request<{ onboarded: boolean }>("/auth/onboard", { method: "POST" })
+}
+
+export function claimTutorialPack(): Promise<{ granted?: boolean }> {
+  return request<{ granted?: boolean }>("/auth/tutorial-pack", { method: "POST" })
+}
+
+/* ============================ 卡包 ============================ */
+
+export interface OpenPackResult {
+  results: {
+    cardId: string
+    rarity?: Rarity
+    fromPity?: boolean
+    userCardId: number
+    foil: boolean
+    serial: number
+    pulled: number
+  }[]
+  pity: { before: number; after: number }
+  packs?: Record<string, number>
+}
+
+export function takePack(
+  userId: string,
+  pool: string,
+): Promise<{ token: string; packs: Record<string, number> }> {
+  return request(`/api/users/${userId}/packs/${pool}/take`, { method: "POST" })
+}
+
+export function returnPack(
+  userId: string,
+  token: string,
+): Promise<{ pool: string; packs: Record<string, number> }> {
+  return request(`/api/users/${userId}/packs/return`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  })
+}
+
+export function openPack(
+  pool: string,
+  count: number,
+  token?: string,
+): Promise<OpenPackResult> {
+  return request<OpenPackResult>(`/api/packs/${pool}/open`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ count, token }),
+  })
+}
+
+/* ============================ 卡牌详情 / 图鉴 ============================ */
+
+export interface ApiCardDef {
+  id: string
+  name: string
+  rarity: Rarity
+  job: Job
+  no: number
+  total: number
+  country: string | null
+  globalRank: number | null
+  pp: string | null
+  profileUrl: string | null
+  art: string | null
+  banner: string | null
+  skills: CardSkill[]
+  skillRefs?: CardSkillRef[]
+  version: number
+  pulled?: number
+  owned?: boolean
+}
+
+export function fetchCardDetail(id: string, signal?: AbortSignal): Promise<ApiCardDef> {
+  return request<ApiCardDef>(`/api/cards/${encodeURIComponent(id)}`, { signal })
+}
+
+export function fetchCardCountries(
+  signal?: AbortSignal,
+): Promise<{ code: string; total: number }[]> {
+  return request(`/api/cards/countries`, { signal })
+}
+
+export function fetchUserCodexStats(userId: string, signal?: AbortSignal): Promise<unknown> {
+  return request(`/api/users/${userId}/codex/stats`, { signal })
+}
+
+export function fetchCodexPage(
+  params: {
+    userId?: string | null
+    rarity?: string
+    q?: string
+    country?: string
+    sort?: string
+    owned?: string
+    limit?: number
+    offset?: number
+    signal?: AbortSignal
+  } = {},
+): Promise<CardPage & { ownedTotal?: number }> {
+  const { userId, rarity, q, country, sort = "rarity", owned, limit = 24, offset = 0, signal } = params
+  const search = new URLSearchParams({ sort, limit: String(limit), offset: String(offset) })
+  if (rarity) search.set("rarity", rarity)
+  if (q) search.set("q", q)
+  if (country) search.set("country", country)
+  if (owned) search.set("owned", owned)
+  const url = userId
+    ? `/api/users/${userId}/codex?${search.toString()}`
+    : `/api/cards?${search.toString()}`
+  return request<CardPage & { ownedTotal?: number }>(url, { signal })
+}
+
+/* ============================ 教程进度 ============================ */
+
+export interface ServerProgress {
+  level: number
+  exp: number
+  tutorialStep: string
+  tutorialDone: boolean
+  updatedAt: number
+}
+
+export function fetchProgress(userId: string, signal?: AbortSignal): Promise<ServerProgress | null> {
+  return request<ServerProgress | null>(`/api/users/${userId}/progress`, { signal }).catch(() => null)
+}
+
+export function saveProgress(
+  userId: string,
+  progress: ServerProgress,
+): Promise<ServerProgress | null> {
+  return request<ServerProgress | null>(`/api/users/${userId}/progress`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      level: progress.level,
+      exp: progress.exp,
+      tutorialStep: progress.tutorialStep,
+      tutorialDone: progress.tutorialDone,
+      updatedAt: progress.updatedAt,
+    }),
+  }).catch(() => null)
 }

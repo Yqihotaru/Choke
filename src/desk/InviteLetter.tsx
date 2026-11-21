@@ -11,6 +11,7 @@ import { createPortal, flushSync } from "react-dom"
 
 import { RARITIES } from "@/card/types"
 
+import { onboard } from "./api"
 import { cellScale, type DeskDrawerHandle } from "./DeskDrawer"
 import { GuestLoginButton } from "./GuestLoginButton"
 import {
@@ -484,29 +485,7 @@ function LetterModal({
     setClaiming(true)
     setError(null)
     try {
-      const response = await fetch("/auth/onboard", {
-        method: "POST",
-        credentials: "include",
-      })
-      const payload: unknown = await response.json().catch(() => null)
-      const ok =
-        !!payload &&
-        typeof payload === "object" &&
-        "ok" in payload &&
-        payload.ok === true
-      if (!ok) {
-        const message =
-          payload &&
-          typeof payload === "object" &&
-          "error" in payload &&
-          payload.error &&
-          typeof payload.error === "object" &&
-          "message" in payload.error &&
-          typeof payload.error.message === "string"
-            ? payload.error.message
-            : "领取失败，请稍后再试"
-        throw new Error(message)
-      }
+      await onboard()
       setGranted(true)
       onClaimed()
     } catch (reason) {

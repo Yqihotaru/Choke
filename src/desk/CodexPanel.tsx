@@ -7,7 +7,13 @@ import { RARITIES, type CardFaceData, type CardSkill, type Job, type Rarity } fr
 
 import { Pages, useBook, usePageCache } from "./BookPages"
 import { CardDetail } from "./CardDetail"
-import type { ApiUserCard } from "./api"
+import {
+  fetchCardCountries,
+  fetchCardStats,
+  fetchCodexPage,
+  fetchUserCodexStats,
+  type ApiUserCard,
+} from "./api"
 import { RARITY_COLOR } from "./rarity"
 import { FitArea } from "./FitArea"
 import "./codex-panel.css"
@@ -48,14 +54,6 @@ interface ApiCardDef {
   skills: CardSkill[]
   version: number
   owned?: boolean
-}
-
-interface CardPage {
-  rows: ApiCardDef[]
-  total: number
-  ownedTotal?: number
-  limit: number
-  offset: number
 }
 
 interface RarityStat {
@@ -142,27 +140,17 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
     const controller = new AbortController()
 
     if (!userId) {
-      Promise.all([
-        fetch("/api/cards/stats", { credentials: "include", signal: controller.signal }).then(
-          (response) => response.json(),
-        ),
-        fetch("/api/cards/countries", { credentials: "include", signal: controller.signal }).then(
-          (response) => response.json(),
-        ),
-      ])
+      Promise.all([fetchCardStats(), fetchCardCountries(controller.signal)])
         .then(([statsData, countryData]) => {
-          if (!statsData.ok || !countryData.ok) return
           const byRarity: Record<string, RarityStat> = {}
-          for (const [key, value] of Object.entries(
-            statsData.data.byRarity as Record<string, number>,
-          )) {
+          for (const [key, value] of Object.entries(statsData.byRarity)) {
             byRarity[key] = { total: Number(value), owned: 0 }
           }
           setStats({
-            total: Number(statsData.data.total),
+            total: Number(statsData.total),
             owned: 0,
             byRarity,
-            countries: (countryData.data as { code: string; total: number }[]).map((item) => ({
+            countries: countryData.map((item) => ({
               code: item.code,
               total: Number(item.total),
               owned: 0,
@@ -174,13 +162,9 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
       return () => controller.abort()
     }
 
-    fetch(`/api/users/${userId}/codex/stats`, {
-      credentials: "include",
-      signal: controller.signal,
-    })
-      .then((response) => response.json())
+    fetchUserCodexStats(userId, controller.signal)
       .then((data) => {
-        if (data.ok) setStats(data.data as CodexStats)
+        if (data) setStats(data as CodexStats)
       })
       .catch(() => {})
 
@@ -198,18 +182,18 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
   const effectiveOwned = userId ? ownedFilter : "all"
   const key = `${userId ?? "guest"}|${rarity}|${deferredQuery}|${country}|${effectiveOwned}|${sort}|${book.revision}`
   const loadPage = useCallback(async (index: number, signal: AbortSignal): Promise<Result> => {
-    const search = new URLSearchParams({ sort, limit: String(PAGE_SIZE), offset: String(index * PAGE_SIZE) })
-    if (rarity) search.set("rarity", rarity)
-    if (deferredQuery) search.set("q", deferredQuery)
-    if (country) search.set("country", country)
-    const url = userId
-      ? `/api/users/${userId}/codex?${new URLSearchParams({ ...Object.fromEntries(search), owned: effectiveOwned }).toString()}`
-      : `/api/cards?${search.toString()}`
     try {
-      const response = await fetch(url, { credentials: "include", signal })
-      const data = await response.json()
-      if (!data.ok) throw new Error(data.error?.message ?? "加载图鉴失败")
-      const pageData = data.data as CardPage
+      const pageData = await fetchCodexPage({
+        userId,
+        rarity,
+        q: deferredQuery,
+        country,
+        sort,
+        owned: effectiveOwned,
+        limit: PAGE_SIZE,
+        offset: index * PAGE_SIZE,
+        signal,
+      })
       return {
         rows: userId ? pageData.rows : pageData.rows.map((row) => ({ ...row, owned: false })),
         total: pageData.total,

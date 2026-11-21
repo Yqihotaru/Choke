@@ -11,7 +11,7 @@ import type { CardFaceData, Rarity } from "@/card/types"
 import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
 
-import { fetchPackInventory, toFace, type ApiUserCard } from "./api"
+import { fetchCardDetail, fetchPackInventory, openPack as apiOpenPack, toFace } from "./api"
 import { Pages } from "./BookPages"
 import {
   DESK_ADD_CARDS_EVENT,
@@ -27,7 +27,6 @@ import { RARITY_COLOR } from "./rarity"
 import { useGameConfig } from "./useGameConfig"
 import "./gacha-panel.css"
 
-const API = "/api"
 /** 「跳过动画」：开出的卡直接摆在面板里，方便连抽 */
 const SKIP_KEY = "choke.gacha.skipAnim"
 
@@ -48,38 +47,9 @@ const POOLS: Pool[] = [
   { id: "prism", name: "棱彩", note: "赛季牌面" },
 ]
 
-type ApiCard = Omit<
-  ApiUserCard,
-  "userCardId" | "level" | "constellation" | "exp" | "foil" | "obtainedAt"
->
-
 interface Pity {
   before: number
   after: number
-}
-
-interface OpenResponse {
-  ok: boolean
-  data?: {
-    results: {
-      cardId: string
-      rarity: Rarity
-      fromPity: boolean
-      userCardId: number
-      foil: boolean
-      serial: number
-      pulled: number
-    }[]
-    pity: Pity
-    packs?: Record<string, number>
-  }
-  error?: { message?: string }
-}
-
-interface CardResponse {
-  ok: boolean
-  data?: ApiCard
-  error?: { message?: string }
 }
 
 export function GachaPanel({
@@ -179,7 +149,7 @@ export function GachaPanel({
     localStorage.setItem(SKIP_KEY, next ? "1" : "0")
   }
 
-  async function openPack() {
+  async function handleOpenPack() {
     const owner = ownerRef.current
     if (!userId || owner?.userId !== userId || requestRef.current) return
 
@@ -194,23 +164,15 @@ export function GachaPanel({
     setCards([])
 
     try {
-      const res = await fetch(`${API}/packs/${pool}/open`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count: packSize }),
-      })
-      const payload = (await res
-        .json()
-        .catch(() => null)) as OpenResponse | null
-
-      if (!res.ok || !payload?.ok || !payload.data) {
-        throw new Error(payload?.error?.message ?? "开包失败")
+      let result
+      try {
+        result = await apiOpenPack(pool, packSize)
+      } catch (reason) {
+        throw new Error(reason instanceof Error ? reason.message : "开包失败")
       }
 
       consumed = true
       if (!isCurrent()) return
-      const result = payload.data
       setPity(result.pity)
       if (result.packs) setPacks({ userId, data: result.packs })
       window.dispatchEvent(new Event(PACKS_CHANGED_EVENT))
@@ -218,29 +180,17 @@ export function GachaPanel({
 
       const faces = await Promise.all(
         result.results.map(async (item) => {
-          const detailRes = await fetch(
-            `${API}/cards/${encodeURIComponent(item.cardId)}`,
-            {
-              credentials: "include",
-            }
-          )
-          const detail = (await detailRes
-            .json()
-            .catch(() => null)) as CardResponse | null
-
-          if (!detailRes.ok || !detail?.ok || !detail.data) {
-            throw new Error(detail?.error?.message ?? "卡详情加载失败")
-          }
+          const detail = await fetchCardDetail(item.cardId)
           return {
             ...toFace({
-              ...detail.data,
+              ...detail,
               userCardId: item.userCardId,
               level: 1,
               constellation: 0,
               exp: 0,
               foil: item.foil,
               serial: item.serial,
-              pulled: detail.data.pulled ?? item.pulled,
+              pulled: detail.pulled ?? item.pulled,
             }),
             userCardId: item.userCardId,
           }
@@ -322,7 +272,7 @@ export function GachaPanel({
       className="bk-btn bk-btn--main bk-btn--block"
       data-tutorial-id="gacha-open-button"
       disabled={loading || !userId || packCount <= 0}
-      onClick={openPack}
+      onClick={handleOpenPack}
     >
       {loading ? "开启中…" : packCount > 0 ? `开 ${packSize} 张` : "没有卡包"}
     </button>
