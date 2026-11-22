@@ -164,6 +164,9 @@
   color: var(--bk-good);
   font-size: 12px;
 }
+.card-detail__message.is-error {
+  color: var(--bk-bad);
+}
 
 /* 熔卡：可选的重复卡 */
 .card-detail__fuel {

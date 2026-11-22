@@ -46,7 +46,7 @@
 }
 
 .book {
-  --bw: clamp(760px, 74vw, 1240px);
+  --bw: min(clamp(760px, 74vw, 1240px), calc(100vw - 16px));
   --bh: min(calc(100% - 56px), 800px);
   position: absolute;
   z-index: 10;
@@ -80,6 +80,9 @@
 .book-carry {
   width: 100%;
   height: 100%;
+}
+.book:focus {
+  outline: none;
 }
 .book.is-dragging {
   cursor: grabbing;

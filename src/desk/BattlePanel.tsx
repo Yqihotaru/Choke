@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type CSSProperties } from "react"
 
+import { playSfx } from "@/audio/sfx"
 import { STAGE_PRESETS, TUTORIAL_ENEMY_HP } from "@/battle/engine"
 import { battlePower } from "@/card/data"
 import { DUNGEONS } from "@choke/shared/dungeons"
@@ -14,7 +15,9 @@ import {
   type StaminaState,
 } from "./api"
 import { Pages } from "./BookPages"
+import { emitDeskData } from "./events"
 import { GuestLoginButton } from "./GuestLoginButton"
+import { useGameConfig } from "./useGameConfig"
 import "./battle-panel.css"
 
 export function BattlePanel({
@@ -30,7 +33,9 @@ export function BattlePanel({
   const [selectedStageId, setSelectedStageId] = useState<string>(STAGE_PRESETS[0]!.id)
   const [stamina, setStamina] = useState<StaminaState | null>(null)
   const [dungeonBusy, setDungeonBusy] = useState<string | null>(null)
-  const [dungeonMessage, setDungeonMessage] = useState<string | null>(null)
+  const [dungeonMessage, setDungeonMessage] = useState<{ text: string; error?: boolean } | null>(null)
+  const [reload, setReload] = useState(0)
+  const config = useGameConfig()
 
   useEffect(() => {
     if (!userId) return
@@ -52,9 +57,15 @@ export function BattlePanel({
       if (result.rewards.essence) parts.push(`精华 +${result.rewards.essence}`)
       if (result.rewards.coins) parts.push(`金币 +${result.rewards.coins}`)
       if (result.rewards.packs) parts.push(`普通卡包 +${result.rewards.packs}`)
-      setDungeonMessage(`通关：${parts.join(" · ")}`)
+      playSfx(result.rewards.packs ? "levelup" : "success")
+      setDungeonMessage({ text: `通关：${parts.join(" · ")}` })
+      emitDeskData("packs")
     } catch (reason) {
-      setDungeonMessage(reason instanceof Error ? reason.message : "副本失败")
+      playSfx("error")
+      setDungeonMessage({
+        text: reason instanceof Error ? reason.message : "副本失败",
+        error: true,
+      })
     } finally {
       setDungeonBusy(null)
     }
@@ -71,7 +82,7 @@ export function BattlePanel({
         setError(reason instanceof Error ? reason.message : "加载卡组失败")
       })
     return () => controller.abort()
-  }, [userId])
+  }, [userId, reload])
 
   if (!userId) {
     return (
@@ -96,8 +107,20 @@ export function BattlePanel({
       <Pages
         left={<p className="bk-note">带上卡组，和练习对手打一场。</p>}
         right={
-          <div className={`bk-empty ${error ? "bk-error" : ""}`}>
-            {error ?? "加载卡组…"}
+          <div className={`bk-empty ${error ? "bk-error" : ""}`} role={error ? "alert" : "status"}>
+            <span>{error ?? "加载卡组…"}</span>
+            {error && (
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                onClick={() => {
+                  setError(null)
+                  setReload((value) => value + 1)
+                }}
+              >
+                重试
+              </button>
+            )}
           </div>
         }
       />
@@ -127,14 +150,18 @@ export function BattlePanel({
         <span>敌人 HP</span>
       </div>
       {!tutorialBattleStep && (
-        <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+        <div className="battle-stages">
           {STAGE_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
-              className={`bk-btn ${preset.id === activePreset.id ? "bk-btn--main" : "bk-btn--ghost"}`}
-              style={{ padding: "3px 8px", fontSize: "12px" }}
-              onClick={() => setSelectedStageId(preset.id)}
+              className={`bk-btn battle-stage ${preset.id === activePreset.id ? "bk-btn--main" : "bk-btn--ghost"}`}
+              aria-pressed={preset.id === activePreset.id}
+              onClick={() => {
+                if (preset.id === activePreset.id) return
+                playSfx("click")
+                setSelectedStageId(preset.id)
+              }}
             >
               {preset.name}
             </button>
@@ -176,7 +203,7 @@ export function BattlePanel({
           <div className="battle-stats">
             <div className="bk-stat">
               <b>
-                {cards.length} <small>/ 7</small>
+                {cards.length} <small>/ {config?.deckSize ?? deck.slots.length}</small>
               </b>
               <span>出战卡牌</span>
             </div>
@@ -256,12 +283,16 @@ export function BattlePanel({
               {stamina ? `${stamina.value} / ${stamina.max}` : "—"}
             </b>
           </div>
-          <div className="bk-bar dungeon-stamina">
-            <i
-              style={{
-                width: `${stamina ? (stamina.value / stamina.max) * 100 : 0}%`,
-              }}
-            />
+          <div
+            className="bk-bar dungeon-stamina"
+            style={{ "--p": stamina ? (stamina.value / Math.max(1, stamina.max)) * 100 : 0 } as CSSProperties}
+            role="progressbar"
+            aria-label="体力"
+            aria-valuemin={0}
+            aria-valuemax={stamina?.max ?? 0}
+            aria-valuenow={stamina?.value ?? 0}
+          >
+            <i />
           </div>
           {stamina && stamina.value < stamina.max && (
             <p className="bk-note">
@@ -292,7 +323,14 @@ export function BattlePanel({
             })}
           </div>
 
-          {dungeonMessage && <div className="bk-box dungeon-message">{dungeonMessage}</div>}
+          {dungeonMessage && (
+            <div
+              className={`bk-box dungeon-message ${dungeonMessage.error ? "bk-error" : ""}`}
+              role={dungeonMessage.error ? "alert" : "status"}
+            >
+              {dungeonMessage.text}
+            </div>
+          )}
         </>
       }
     />

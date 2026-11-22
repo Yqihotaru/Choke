@@ -28,11 +28,12 @@
 }
 
 .desk-topbar__main {
-  height: 56px;
+  min-height: 56px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 6px 16px;
 }
 
 .desk-topbar__brand-group {
@@ -79,7 +80,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #ff66aa, #5fcfb8);
+  background: linear-gradient(90deg, var(--d-osu), #5fcfb8);
   transition: width 0.35s ease;
 }
 .desk-level em {
@@ -89,6 +90,8 @@
 
 .desk-topbar__actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 /* 界面大小：− 百分比 + 三个按钮拼成一组 */
@@ -150,6 +153,9 @@
   background: var(--d-osu);
   color: #1c1216;
 }
+.desk-button.is-confirm {
+  background: #7a2f4a;
+}
 
 /* 桌面：和顶栏同一个平涂底色；垫子画在 ::before 上，布标画在 ::after 上 */
 .desk-stage {
@@ -190,7 +196,7 @@
   height: 18px;
   padding: 0 8px 0 10px;
   border-radius: 2px;
-  background: #ff66aa;
+  background: var(--d-osu);
   color: #1c1216;
   font-size: 9px;
   font-weight: 800;
@@ -320,6 +326,10 @@
   animation: toast-in 0.22s ease both;
   pointer-events: none;
 }
+.desk-toast.is-error {
+  border-color: rgb(255 123 123 / 0.55);
+  color: #ffb3b3;
+}
 @keyframes toast-in {
   from { opacity: 0; translate: 0 8px; }
   to { opacity: 1; translate: 0 0; }
@@ -351,7 +361,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  border: 3px dashed #ff66aa;
+  border: 3px dashed var(--d-osu);
   border-radius: 20px;
   background: rgba(255, 102, 170, 0.08);
   color: #ffb3d4;
@@ -377,7 +387,7 @@
   transform-origin: 50% 60%;
 }
 .desk-item:focus-visible {
-  outline: 2px solid #ff66aa;
+  outline: 2px solid var(--d-osu);
   outline-offset: 6px;
   border-radius: 8px;
 }

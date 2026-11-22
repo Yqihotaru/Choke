@@ -1,17 +1,18 @@
 import { memo, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react"
 
 import { GameCardFace } from "@/card/GameCardFace"
-import { faceFromDef } from "@/card/def"
 import { RARITY_LABEL } from "@/card/data"
-import { RARITIES, type CardFaceData, type CardSkill, type Job, type Rarity } from "@/card/types"
+import { RARITIES, type Rarity } from "@/card/types"
 
 import { Pages, useBook, usePageCache } from "./BookPages"
 import { CardDetail } from "./CardDetail"
 import {
+  defToFace,
   fetchCardCountries,
   fetchCardStats,
   fetchCodexPage,
   fetchUserCodexStats,
+  type ApiCardDef,
   type ApiUserCard,
 } from "./api"
 import { RARITY_COLOR } from "./rarity"
@@ -37,24 +38,6 @@ const OWNED_FILTERS = [
 
 type CodexSort = (typeof SORTS)[number]["id"]
 type OwnedFilter = (typeof OWNED_FILTERS)[number]["id"]
-
-interface ApiCardDef {
-  id: string
-  name: string
-  rarity: Rarity
-  job: Job
-  no: number
-  total: number
-  country: string | null
-  globalRank: number | null
-  pp: string | null
-  profileUrl: string | null
-  art: string | null
-  banner: string | null
-  skills: CardSkill[]
-  version: number
-  owned?: boolean
-}
 
 interface RarityStat {
   total: number
@@ -93,26 +76,6 @@ function percent(owned: number, total: number): number {
   return Math.round((owned / total) * 1000) / 10
 }
 
-function toFace(row: ApiCardDef): CardFaceData {
-  return faceFromDef({
-    id: row.id,
-    osuId: null,
-    name: row.name,
-    rarity: row.rarity,
-    job: row.job,
-    no: row.no,
-    total: row.total,
-    country: row.country ?? undefined,
-    globalRank: row.globalRank,
-    pp: row.pp == null ? null : Number(row.pp),
-    profileUrl: row.profileUrl ?? undefined,
-    art: row.art ?? undefined,
-    banner: row.banner ?? undefined,
-    skills: row.skills,
-    version: row.version ?? 1,
-  })
-}
-
 function toPseudoCard(row: ApiCardDef): ApiUserCard {
   return {
     ...row,
@@ -134,10 +97,17 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
   const [page, setPage] = useState(0)
   const [dimUnseen, setDimUnseen] = useState(false)
   const [stats, setStats] = useState<CodexStats | null>(null)
+  const [statsError, setStatsError] = useState<string | null>(null)
+  const [statsReload, setStatsReload] = useState(0)
   const [detail, setDetail] = useState<ApiCardDef | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
+    const onDone = () => setStatsError(null)
+    const onFail = (reason: unknown) => {
+      if (controller.signal.aborted) return
+      setStatsError(reason instanceof Error ? reason.message : "加载统计失败")
+    }
 
     if (!userId) {
       Promise.all([fetchCardStats(), fetchCardCountries(controller.signal)])
@@ -156,8 +126,9 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
               owned: 0,
             })),
           })
+          onDone()
         })
-        .catch(() => {})
+        .catch(onFail)
 
       return () => controller.abort()
     }
@@ -165,11 +136,12 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
     fetchUserCodexStats(userId, controller.signal)
       .then((data) => {
         if (data) setStats(data as CodexStats)
+        onDone()
       })
-      .catch(() => {})
+      .catch(onFail)
 
     return () => controller.abort()
-  }, [userId, book.revision])
+  }, [userId, book.revision, statsReload])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -270,6 +242,21 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
               >
                 <i />
               </div>
+              {statsError && (
+                <div className="codex-stats-error" role="alert">
+                  <span className="bk-error">统计加载失败：{statsError}</span>
+                  <button
+                    type="button"
+                    className="bk-btn bk-btn--sm"
+                    onClick={() => {
+                      setStatsError(null)
+                      setStatsReload((value) => value + 1)
+                    }}
+                  >
+                    重试
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="bk-chips codex-rarity" role="group" aria-label="品质筛选">
@@ -429,6 +416,7 @@ const CodexSlot = memo(function CodexSlot({
       className="codex-slot"
       role="button"
       tabIndex={0}
+      aria-label={`${row.name}，${RARITY_LABEL[row.rarity]}，查看图鉴详情`}
       onClick={() => onDetail(row)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -437,7 +425,7 @@ const CodexSlot = memo(function CodexSlot({
         }
       }}
     >
-      <GameCardFace card={toFace(row)} eager />
+      <GameCardFace card={defToFace(row)} eager />
     </div>
   )
 })

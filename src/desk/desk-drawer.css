@@ -4,8 +4,7 @@
    ========================================================= */
 
 .desk-drawer {
-  /* 合着时露出来的抽屉面高度，和 DeskDrawer.tsx 的 FRONT 一致 */
-  --dr-front: 30px;
+  /* --dr-front / --dr-cell-w / --dr-cell-h 由 DeskDrawer.tsx 写在根元素上，和缩放计算用同一份数字 */
   --dr-felt: #221b28;
   --pull: 0;
   position: absolute;
@@ -61,8 +60,8 @@
 /* 一格一件：压下去的浅槽，指上去槽口亮起、物件浮起来，看得出能拿 */
 .desk-drawer__cell {
   position: relative;
-  width: 116px;
-  height: 96px;
+  width: var(--dr-cell-w);
+  height: var(--dr-cell-h);
   border-radius: 9px;
   background: rgb(255 255 255 / 0.025);
   box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.5), inset 0 -1px 0 rgb(255 255 255 / 0.05);
@@ -148,7 +147,7 @@
   pointer-events: auto;
 }
 .desk-drawer__front:focus-visible {
-  outline: 2px solid #ff66aa;
+  outline: 2px solid var(--d-osu);
   outline-offset: 2px;
 }
 
@@ -209,12 +208,12 @@
 
 /* 拖着能放进来的东西悬在上面：抽屉面（开着连同格子）亮一圈 osu! 粉 */
 .desk-drawer[data-hot] .desk-drawer__front {
-  outline: 2px dashed #ff66aa;
+  outline: 2px dashed var(--d-osu);
   outline-offset: -4px;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 0 18px rgb(255 102 170 / 0.45);
 }
 .desk-drawer[data-hot].is-open .desk-drawer__well {
-  outline: 2px dashed #ff66aa;
+  outline: 2px dashed var(--d-osu);
   box-shadow: 0 -10px 26px rgb(0 0 0 / 0.42), 0 0 22px rgb(255 102 170 / 0.3);
 }
 

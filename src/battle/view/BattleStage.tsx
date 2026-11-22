@@ -308,7 +308,7 @@ export function BattleStage({
     if (!battle) {
       lastSeq.current = 0
       hpTruth.current = {}
-      setHpView({})
+      later(() => setHpView({}), 0)
       return
     }
     const truth = { enemy: battle.enemy.hp, party: teamHpOf(battle).hp }

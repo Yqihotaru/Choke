@@ -36,6 +36,17 @@
   font-weight: 800;
   line-height: 1.1;
 }
+/* 关卡切换：小号按钮一排，窄了换行 */
+.battle-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.battle-stages .battle-stage {
+  padding: 3px 8px;
+  font-size: 12px;
+}
 .battle-start {
   flex: 0 0 auto;
   height: 44px;
@@ -53,7 +64,7 @@
   height: 8px;
 }
 .dungeon-stamina > i {
-  background: linear-gradient(90deg, #6bf0ff, #2697e8);
+  background: linear-gradient(90deg, var(--bk-osu-text), var(--bk-osu));
 }
 .dungeon-list {
   display: flex;

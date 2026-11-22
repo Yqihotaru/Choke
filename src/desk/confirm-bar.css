@@ -1,0 +1,26 @@
+/* 面板内的二次确认条；控件用 bk-*，这里只管布局 */
+.confirm-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: inset 0 0 0 1px rgb(255 102 170 / 0.45);
+}
+.confirm-bar__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.confirm-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+/* 危险操作的确认键平时就是红底，不等悬停 */
+.confirm-bar__danger {
+  background: #5a2a33;
+  color: #ffd0d0;
+}
+.confirm-bar__danger:hover:not(:disabled) {
+  background: #6e3340;
+}

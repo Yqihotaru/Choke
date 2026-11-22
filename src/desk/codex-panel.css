@@ -83,3 +83,27 @@
 .codex-unknown.is-dimmed {
   opacity: 0.35;
 }
+
+.codex-stats-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+/* 窄屏：胶囊再收一点，计数独占一行，搜索和下拉允许更窄 */
+@media (max-width: 900px) {
+  .codex-rarity .bk-chip {
+    padding: 0 8px;
+  }
+  .codex-toolbar__search,
+  .codex-toolbar__country {
+    flex-basis: 100px;
+  }
+  .codex-count {
+    flex: 1 0 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+}

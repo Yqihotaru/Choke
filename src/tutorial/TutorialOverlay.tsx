@@ -9,7 +9,9 @@ import {
 } from "react"
 import { createPortal } from "react-dom"
 
+import { playSfx } from "@/audio/sfx"
 import { useGameConfig } from "@/desk/useGameConfig"
+import { useModal } from "@/ui/useModal"
 
 import { MARKET_UNLOCK_LEVEL } from "./constants"
 
@@ -89,6 +91,7 @@ const TypedText = forwardRef<TypedTextHandle, { text: string }>(
       timer.current = window.setInterval(() => {
         index += 1
         setCount(index)
+        if (index % 3 === 0) playSfx("tick")
         if (index >= text.length) {
           if (timer.current) window.clearInterval(timer.current)
           timer.current = null
@@ -167,13 +170,18 @@ function TutorialDialogue({
       return
     }
     if (lineIndex < script.lines.length - 1) {
+      playSfx("click")
       setLineIndex((index) => index + 1)
       return
     }
-    if (script.advanceOn === "continue") onComplete()
+    if (script.advanceOn === "continue") {
+      playSfx("click")
+      onComplete()
+    }
   }, [script, lineIndex, onComplete])
 
   const confirmSkip = () => {
+    playSfx("click")
     skipTutorial()
     requestTutorialCloseBook()
     setConfirmingSkip(false)
@@ -185,6 +193,12 @@ function TutorialDialogue({
       className="tut-dialog__box"
       onClick={advanceLine}
       onKeyDown={(event) => {
+        // 确认框打开时 Esc 由 useModal 接管；这里只负责打开它
+        if (event.key === "Escape" && !confirmingSkip) {
+          event.stopPropagation()
+          setConfirmingSkip(true)
+          return
+        }
         if (event.key !== "Enter" && event.key !== " ") return
         if (
           event.target instanceof Element &&
@@ -271,27 +285,43 @@ function TutorialDialogue({
       </footer>
 
       {confirmingSkip && (
-        <div className="tut-skip" onClick={(event) => event.stopPropagation()}>
-          <b>跳过新手教程？</b>
-          <p>会直接完成教程、补到 Lv.3，并发放新手奖励。</p>
-          <div className="tut-skip__actions">
-            <button
-              type="button"
-              className="tut-skip__yes"
-              onClick={confirmSkip}
-            >
-              确定跳过
-            </button>
-            <button
-              type="button"
-              className="tut-skip__no"
-              onClick={() => setConfirmingSkip(false)}
-            >
-              继续教程
-            </button>
-          </div>
-        </div>
+        <SkipConfirm
+          onConfirm={confirmSkip}
+          onCancel={() => setConfirmingSkip(false)}
+        />
       )}
+    </div>
+  )
+}
+
+/** 跳过确认：Esc 取消，焦点留在确认框里，关掉后回到「跳过教程」按钮 */
+function SkipConfirm({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  useModal(ref, { onClose: onCancel })
+  return (
+    <div
+      ref={ref}
+      className="tut-skip"
+      role="alertdialog"
+      aria-label="跳过新手教程"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <b>跳过新手教程？</b>
+      <p>会直接完成教程、补到 Lv.3，并发放新手奖励。</p>
+      <div className="tut-skip__actions">
+        <button type="button" className="tut-skip__yes" onClick={onConfirm}>
+          确定跳过
+        </button>
+        <button type="button" className="tut-skip__no" onClick={onCancel}>
+          继续教程
+        </button>
+      </div>
     </div>
   )
 }
@@ -350,6 +380,7 @@ export function TutorialOverlay({
   // 等级提升时在对话框里闪一下
   useEffect(() => {
     if (progress.level > lastLevel.current) {
+      playSfx("levelup")
       setLevelFlash(progress.level)
       lastLevel.current = progress.level
       const timer = window.setTimeout(() => setLevelFlash(null), 2200)

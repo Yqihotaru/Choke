@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react"
 
@@ -20,7 +21,6 @@ import { DragGhost } from "./DragGhost"
 import {
   ApiError,
   claimTutorialPack,
-  fetchCardDetail,
   fetchUserCards,
   onboard,
   openPack,
@@ -62,6 +62,7 @@ import { publishDeskCardIds } from "./presence"
 import { cardsToItems, ITEM_SIZE, newId, sizeOf, useDesk } from "./store"
 import type { CardData, DeskItem, PackPool } from "./types"
 import { DeskCard, DeskPack, LevelMeter } from "./DeskBits"
+import { getSfxVolume, playSfx, setSfxVolume } from "@/audio/sfx"
 import { useTheme } from "@/components/theme-provider"
 import { UI_SCALE_STEPS, useUiScale } from "./ui-scale"
 import {
@@ -74,8 +75,11 @@ import {
   type FlightSource,
 } from "./desk-page-model"
 import { PackOpener, type OriginRect } from "./opening/PackOpener"
+import { resolvePulledCards } from "./opening/cards"
 import "./desk.css"
 import "./light.css"
+
+type ToastKind = "info" | "success" | "error"
 
 interface PackReturnResult {
   ok: boolean
@@ -139,7 +143,19 @@ export function DeskPage() {
     string,
     { dx: number; dy: number; index: number }
   > | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ text: string; kind: ToastKind } | null>(
+    null
+  )
+  /** 重置桌面要点两下：第一下进入确认，几秒没点第二下就算了 */
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [sfxVolume, setSfxVolumeState] = useState(getSfxVolume)
+  /** 静音前的音量，取消静音时恢复到它 */
+  const unmutedVolume = useRef(getSfxVolume() || 0.8)
+  useEffect(() => {
+    if (!confirmReset) return
+    const timer = window.setTimeout(() => setConfirmReset(false), 4000)
+    return () => window.clearTimeout(timer)
+  }, [confirmReset])
   const {
     user,
     userReady,
@@ -175,6 +191,8 @@ export function DeskPage() {
   const toastTimer = useRef<number | null>(null)
   const settleTimer = useRef<number | null>(null)
   const openingBusy = useRef(false)
+  /** 开包请求进行中的提示文案；请求期间一直显示，结束后清掉 */
+  const [packLoading, setPackLoading] = useState<string | null>(null)
   const userIdRef = useRef(user?.id)
   const starterGrant = useRef<Promise<void> | null>(null)
   useLayoutEffect(() => {
@@ -242,10 +260,12 @@ export function DeskPage() {
     }
   }, [])
 
-  const showToast = useCallback((text: string) => {
-    setToast(text)
+  /** kind 不传：只显示，不出声（开包流程自己管音效）；错误多停一会儿，读得完 */
+  const showToast = useCallback((text: string, kind?: ToastKind) => {
+    setToast({ text, kind: kind ?? "info" })
+    if (kind) playSfx(kind === "error" ? "error" : kind === "success" ? "success" : "tick")
     if (toastTimer.current) window.clearTimeout(toastTimer.current)
-    toastTimer.current = window.setTimeout(() => setToast(null), 1600)
+    toastTimer.current = window.setTimeout(() => setToast(null), kind === "error" ? 4000 : 1600)
   }, [])
 
   /**
@@ -264,7 +284,8 @@ export function DeskPage() {
           await onboard()
         } catch (reason) {
           showToast(
-            reason instanceof Error ? reason.message : "新手礼包领取失败，请刷新重试"
+            reason instanceof Error ? reason.message : "新手礼包领取失败，请刷新重试",
+            "error"
           )
         }
       }
@@ -355,7 +376,7 @@ export function DeskPage() {
         refreshFaces(new Map(pages.flatMap((page) => page.rows.map((row) => [row.userCardId, toFace(row)] as const))))
       })
       .catch(() => {
-        if (!controller.signal.aborted) showToast("桌面卡牌刷新失败，请刷新重试")
+        if (!controller.signal.aborted) showToast("桌面卡牌刷新失败，请刷新重试", "error")
       })
     return () => controller.abort()
   }, [userId, refreshFaces, showToast])
@@ -505,6 +526,7 @@ export function DeskPage() {
       // 上一件还在飞：让它立刻落定，不然会被这一件顶掉、永远留在桌上
       flightDone.current?.()
       setDropTarget(null)
+      playSfx("paper")
       setCollecting({
         id: item.id,
         ...source,
@@ -648,6 +670,7 @@ export function DeskPage() {
     const packs = packSlot ? items.filter((it) => it.kind === "pack") : []
     const flying = [...cards, ...packs]
     if (!flying.length) return
+    playSfx("paper")
     setQuickTargets(
       Object.fromEntries(
         flying.map((it, index) => {
@@ -869,7 +892,7 @@ export function DeskPage() {
     const topZ = Math.max(0, ...itemsRef.current.map((it) => it.z)) + 1
     spawn([{ ...item, z: topZ }])
     refreshPacks()
-    showToast("放回失败，卡包留在桌面")
+    showToast("放回失败，卡包留在桌面", "error")
   }
 
   const startDrag = (e: ReactPointerEvent<HTMLDivElement>, item: DeskItem) => {
@@ -973,6 +996,7 @@ export function DeskPage() {
       if (hot !== drawerHot) {
         drawerHot = hot
         drawerRef.current?.hint(hot)
+        if (hot) playSfx("tick")
       }
       // 拖着物件停在合着的抽屉面上一会儿：抽屉自己拉开
       const onFront =
@@ -990,7 +1014,35 @@ export function DeskPage() {
       if (next !== target) {
         target = next
         setDropTarget(next ?? null)
+        if (next) playSfx("tick")
       }
+    }
+
+    /** 拖动结束的共用收尾：摘监听、放下幽灵、撤掉各处悬停高亮 */
+    const release = () => {
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+      window.removeEventListener("pointercancel", onUp)
+      window.removeEventListener("keydown", onKey, true)
+      window.removeEventListener("blur", abort)
+      setLifted(null)
+      if (deckSlot != null) emitDeskHover("deck", null)
+      if (albumPanelHover) emitDeskHover("album", false)
+      if (backpackPanelHover) emitDeskHover("backpack", false)
+      setDropTarget(null)
+      if (drawerTimer) window.clearTimeout(drawerTimer)
+      if (drawerHot) drawerRef.current?.hint(false)
+    }
+    /** Esc / 窗口失焦：放弃这次拖动，物件回到拿起之前（桌上的不动，抽屉里的还在抽屉里） */
+    const abort = () => {
+      if (hitFrame) cancelAnimationFrame(hitFrame)
+      release()
+    }
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return
+      // 只放弃拖动，不让同一下 Esc 把底下的书 / 抽屉也关了
+      ev.stopPropagation()
+      abort()
     }
 
     const onMove = (ev: PointerEvent) => {
@@ -1000,6 +1052,7 @@ export function DeskPage() {
       if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return
       if (!moved) {
         moved = true
+        playSfx("lift")
         liftPointer.current = { x: rect.left + originX, y: rect.top + originY }
         setLifted({ item, grab })
       }
@@ -1016,9 +1069,6 @@ export function DeskPage() {
       if (ev.type === "pointerup") onMove(ev)
       if (hitFrame) cancelAnimationFrame(hitFrame)
       if (moved && ev.type === "pointerup") updateTarget()
-      window.removeEventListener("pointermove", onMove)
-      window.removeEventListener("pointerup", onUp)
-      window.removeEventListener("pointercancel", onUp)
       const ghost = document.querySelector<HTMLElement>(".desk-ghost__body")
       const pose = ghost ? getComputedStyle(ghost) : null
       const source = {
@@ -1029,13 +1079,7 @@ export function DeskPage() {
         transform: pose?.transform ?? `rotate(${tiltOf(item.id)}deg)`,
         transformOrigin: pose?.transformOrigin ?? "50% 50%",
       }
-      setLifted(null)
-      if (deckSlot != null) emitDeskHover("deck", null)
-      if (albumPanelHover) emitDeskHover("album", false)
-      if (backpackPanelHover) emitDeskHover("backpack", false)
-      setDropTarget(null)
-      if (drawerTimer) window.clearTimeout(drawerTimer)
-      if (drawerHot) drawerRef.current?.hint(false)
+      release()
       if (!moved) {
         if (ev.type === "pointerup") void onTap(item)
         return
@@ -1047,6 +1091,7 @@ export function DeskPage() {
       if (drawerHot) {
         if (item.kind === "object" && item.object) {
           stow(item.id)
+          playSfx("thud")
           drawerRef.current?.bump()
           showToast(`${OBJECT_META[item.object].thing}收进了抽屉`)
         } else if (item.kind === "card") {
@@ -1108,6 +1153,7 @@ export function DeskPage() {
       // 落桌：轻轻弹一下，影子收紧；从抽屉里拖出来的就落在松手的地方
       if (fromDrawer) unstow(item.id, nx / rect.width, ny / rect.height)
       else move(item.id, nx / rect.width, ny / rect.height)
+      playSfx("drop")
       setSettling(item.id)
       if (settleTimer.current) window.clearTimeout(settleTimer.current)
       settleTimer.current = window.setTimeout(() => setSettling(null), 460)
@@ -1115,6 +1161,8 @@ export function DeskPage() {
     window.addEventListener("pointermove", onMove)
     window.addEventListener("pointerup", onUp)
     window.addEventListener("pointercancel", onUp)
+    window.addEventListener("keydown", onKey, true)
+    window.addEventListener("blur", abort)
   }
 
   const openBook = (panel: PanelId, item: DeskItem) => {
@@ -1155,11 +1203,13 @@ export function DeskPage() {
         if (pressingRef.current) return
         pressingRef.current = true
         pressHandled.current = false
+        playSfx("click")
         setPressing(true)
         setPressId((id) => id + 1)
         return
       }
       if (!isModuleUnlocked(item.object, progress)) {
+        playSfx("deny")
         showToast(
           `${OBJECT_META[item.object].label} · ${lockHintOf(item.object, progress)}`
         )
@@ -1191,8 +1241,9 @@ export function DeskPage() {
       const packPool = item.pool ?? "normal"
 
       openingBusy.current = true
-      showToast("开包中…")
+      setPackLoading("开启中…")
       let showingResults = false
+      let consumed = false
       try {
         let opened: OpenPackResult
         try {
@@ -1202,39 +1253,37 @@ export function DeskPage() {
           if (code === "no_packs" || code === "invalid_token") {
             remove(item.id)
             refreshPacks()
-            showToast("这个桌面卡包已经失效，已移除")
+            showToast("这个桌面卡包已经失效，已移除，已开出的卡请到卡册查看", "error")
           } else {
-            showToast(reason instanceof Error ? reason.message : "开包失败")
+            const message = reason instanceof Error ? reason.message : "开包失败"
+            // 超时后服务端可能其实已处理：包先留在桌面，再点时若提示失效，卡已经在卡册里
+            showToast(
+              code === "timeout" || code === "network"
+                ? `${message}，卡包先留在桌面，可以再点一次`
+                : message,
+              "error",
+            )
           }
           return
         }
         // 服务端已核销 token，卡面加载失败也不能留下可重复开的桌面包。
+        consumed = true
         remove(item.id)
         if (opened.packs && user) {
           setPackState({ userId: user.id, data: opened.packs })
           emitDeskData("packs")
         }
 
-        const cards: CardData[] = await Promise.all(
-          opened.results.map(async (result) => {
-            const row = await fetchCardDetail(result.cardId)
-            return toDeskCard(
-              toFace({
-                ...row,
-                userCardId: result.userCardId,
-                level: 1,
-                constellation: 0,
-                exp: 0,
-                foil: result.foil,
-                serial: result.serial,
-                pulled: row.pulled ?? result.pulled,
-              }),
-              result.userCardId
-            )
-          })
+        // 卡包已核销：详情拿不到的卡用结果里的字段兜底，保证每张都展示
+        const faces = await resolvePulledCards(opened.results)
+        const cards: CardData[] = faces.map((face, index) =>
+          toDeskCard(face, opened.results[index].userCardId)
         )
 
-        if (userIdRef.current !== user.id) return
+        if (userIdRef.current !== user.id) {
+          emitTutorialEvent("pack-opened")
+          return
+        }
         showingResults = true
         setOpening({
           key: item.id,
@@ -1245,8 +1294,10 @@ export function DeskPage() {
           rect,
         })
       } catch (err) {
-        showToast(err instanceof Error ? err.message : "开包失败")
+        if (consumed) emitTutorialEvent("pack-opened")
+        showToast(err instanceof Error ? err.message : "开包失败", "error")
       } finally {
+        setPackLoading(null)
         if (!showingResults) openingBusy.current = false
       }
     }
@@ -1289,36 +1340,64 @@ export function DeskPage() {
   const openNextPack = async (pool: PackPool) => {
     if (!user || openingBusy.current) return
     openingBusy.current = true
+    setPackLoading("正在取出下一个卡包…")
+    let showingResults = false
+    let consumed = false
     try {
       const taken = await takePack(user.id, SERVER_POOL[pool])
       setPackState({ userId: user.id, data: taken.packs })
       emitDeskData("packs")
 
-      const opened = await openPack(SERVER_POOL[pool], packSize, taken.token)
+      setPackLoading("开启中…")
+      let opened: OpenPackResult
+      try {
+        opened = await openPack(SERVER_POOL[pool], packSize, taken.token)
+      } catch (reason) {
+        // 包已经从背包取出，开失败不能丢：先退回背包，退不回去就摆到桌面
+        const message = reason instanceof Error ? reason.message : "开包失败"
+        const back = await postPackReturn(user.id, taken.token)
+        if (back?.ok && back.data) {
+          setPackState({ userId: user.id, data: back.data.packs })
+          emitDeskData("packs")
+          showToast(`${message}，卡包已退回背包`, "error")
+        } else if (back?.error?.code === "invalid_token") {
+          // 服务端其实已经开过了（比如超时前已处理）
+          refreshPacks()
+          showToast("这个卡包已经开启，请到卡册查看", "error")
+        } else {
+          const topZ = Math.max(0, ...itemsRef.current.map((it) => it.z)) + 1
+          spawn([
+            {
+              id: newId("pack"),
+              kind: "pack",
+              x: 0.45,
+              y: 0.3,
+              z: topZ,
+              pool,
+              token: taken.token,
+            },
+          ])
+          refreshPacks()
+          showToast(`${message}，卡包已放到桌面，可以再点开`, "error")
+        }
+        return
+      }
+      consumed = true
       if (opened.packs) {
         setPackState({ userId: user.id, data: opened.packs })
         emitDeskData("packs")
       }
 
-      const cards: CardData[] = await Promise.all(
-        opened.results.map(async (result) => {
-          const row = await fetchCardDetail(result.cardId)
-          return toDeskCard(
-            toFace({
-              ...row,
-              userCardId: result.userCardId,
-              level: 1,
-              constellation: 0,
-              exp: 0,
-              foil: result.foil,
-              serial: result.serial,
-              pulled: row.pulled ?? result.pulled,
-            }),
-            result.userCardId,
-          )
-        }),
+      const faces = await resolvePulledCards(opened.results)
+      const cards: CardData[] = faces.map((face, index) =>
+        toDeskCard(face, opened.results[index].userCardId),
       )
 
+      if (userIdRef.current !== user.id) {
+        emitTutorialEvent("pack-opened")
+        return
+      }
+      showingResults = true
       setOpening({
         key: newId("open"),
         x: 0.5,
@@ -1327,9 +1406,11 @@ export function DeskPage() {
         pool,
       })
     } catch (reason) {
-      showToast(reason instanceof Error ? reason.message : "继续开包失败")
-      openingBusy.current = false
-      setOpening(null)
+      if (consumed) emitTutorialEvent("pack-opened")
+      showToast(reason instanceof Error ? reason.message : "继续开包失败", "error")
+    } finally {
+      setPackLoading(null)
+      if (!showingResults) openingBusy.current = false
     }
   }
 
@@ -1392,6 +1473,77 @@ export function DeskPage() {
     return item.card?.name ?? "卡牌"
   }
 
+  const toggleMute = () => {
+    const current = getSfxVolume()
+    if (current > 0) {
+      unmutedVolume.current = current
+      setSfxVolume(0)
+    } else {
+      setSfxVolume(unmutedVolume.current)
+    }
+    setSfxVolumeState(getSfxVolume())
+  }
+
+  const resetDesk = () => {
+    if (!confirmReset) {
+      setConfirmReset(true)
+      showToast("再点一次「确认重置」，桌上的东西会回到初始位置")
+      return
+    }
+    setConfirmReset(false)
+    // 带 token 的卡包是从背包预扣的，store 的 reset 会把它们留在桌上
+    const kept = items.filter((it) => it.kind === "pack" && it.token).length
+    reset()
+    stowInvite(false)
+    showToast(
+      kept ? `桌面已重置 · ${kept} 个卡包还在桌上，可放回背包` : "桌面已重置"
+    )
+  }
+
+  /** 键盘操作桌上的物件：方向键挪动（Shift 大步）；Delete / Backspace 收走，和拖进抽屉 / 卡册 / 背包走同一套 */
+  const onItemKey = (event: ReactKeyboardEvent<HTMLDivElement>, item: DeskItem) => {
+    const rect = stageRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const size = sizeOf(item)
+    const dir = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, -1],
+      ArrowDown: [0, 1],
+    }[event.key as "ArrowLeft"]
+    if (dir) {
+      event.preventDefault()
+      const step = event.shiftKey ? 48 : 12
+      const x = Math.min(Math.max(item.x * rect.width + dir[0] * step, 0), rect.width - size.w)
+      const y = Math.min(Math.max(item.y * rect.height + dir[1] * step, 0), rect.height - size.h)
+      move(item.id, x / rect.width, y / rect.height)
+      return
+    }
+    if (event.key !== "Delete" && event.key !== "Backspace") return
+    event.preventDefault()
+    if (item.kind === "object" && item.object) {
+      stow(item.id)
+      playSfx("thud")
+      drawerRef.current?.bump()
+      showToast(`${OBJECT_META[item.object].thing}收进了抽屉`)
+      return
+    }
+    const source: FlightSource = {
+      left: item.x * rect.width,
+      top: item.y * rect.height,
+      viewportLeft: rect.left + item.x * rect.width,
+      viewportTop: rect.top + item.y * rect.height,
+      transform: `rotate(${tiltOf(item.id)}deg)`,
+      transformOrigin: "50% 50%",
+    }
+    if (item.kind === "card") {
+      collectCard(item, source)
+      return
+    }
+    const slot = backpackSlot()
+    void returnPack(item, slot ? { source, slot, receiver: "backpack" } : undefined)
+  }
+
   return (
     <div className="desk-root">
       <header className="desk-topbar">
@@ -1446,6 +1598,16 @@ export function DeskPage() {
             >
               {resolvedTheme === "light" ? "☾ 暗色" : "☀ 亮色"}
             </button>
+            <button
+              type="button"
+              className="desk-button"
+              onClick={toggleMute}
+              aria-pressed={sfxVolume === 0}
+              aria-label="静音"
+              title={sfxVolume === 0 ? "音效已静音，点一下恢复" : "静音"}
+            >
+              {sfxVolume === 0 ? "🔇" : "🔊"}
+            </button>
             {user && (
             <>
               <button
@@ -1460,13 +1622,11 @@ export function DeskPage() {
               </button>
               <button
                 type="button"
-                className="desk-button"
-                onClick={() => {
-                  reset()
-                  stowInvite(false)
-                }}
+                className={`desk-button ${confirmReset ? "is-confirm" : ""}`}
+                onClick={resetDesk}
+                onBlur={() => setConfirmReset(false)}
               >
-                重置桌面
+                {confirmReset ? "确认重置" : "重置桌面"}
               </button>
             </>
             )}
@@ -1557,23 +1717,28 @@ export function DeskPage() {
                   startDrag(e, item)
                 }}
                 tabIndex={
-                  !item.stowed && !flying && item.kind !== "card"
-                    ? 0
-                    : undefined
+                  !item.stowed && !flying ? 0 : undefined
                 }
                 onKeyDown={(event) => {
                   if (
                     event.target !== event.currentTarget ||
                     item.stowed ||
-                    flying ||
-                    event.repeat
+                    flying
                   )
                     return
-                  if (event.key !== "Enter" && event.key !== " ") return
-                  event.preventDefault()
-                  void onTap(item)
+                  if (event.key === "Enter" || event.key === " ") {
+                    if (event.repeat) return
+                    event.preventDefault()
+                    void onTap(item)
+                    return
+                  }
+                  onItemKey(event, item)
                 }}
-                role={item.kind === "card" ? "group" : "button"}
+                role={
+                  item.kind === "card" || item.object === "button"
+                    ? "group"
+                    : "button"
+                }
                 aria-label={labelOf(item)}
                 aria-hidden={item.stowed || undefined}
               >
@@ -1597,7 +1762,11 @@ export function DeskPage() {
             e.currentTarget.setPointerCapture(e.pointerId)
             startDrag(e, item)
           }}
-          onActivate={(item) => void onTap(item)}
+          onActivate={(item) => {
+            if (!item.object) return
+            unstow(item.id, OBJECT_META[item.object].x, OBJECT_META[item.object].y)
+            playSfx("drop")
+          }}
           extra={inviteStowed ? 1 : 0}
           slotRef={setInviteSlot}
         />
@@ -1657,7 +1826,10 @@ export function DeskPage() {
               )
             }
             onClose={() => setBook(null)}
-            onLogout={logout}
+            onLogout={() => {
+              logout()
+              bookRef.current?.close()
+            }}
             onHeroClaimed={refreshUser}
           />
         )}
@@ -1714,10 +1886,20 @@ export function DeskPage() {
           )
         })()}
 
-      {toast && (
-        <div className="desk-toast" role="status">
-          {toast}
+      {toast ? (
+        <div
+          className={`desk-toast ${toast.kind === "error" ? "is-error" : ""}`}
+          role={toast.kind === "error" ? "alert" : "status"}
+          aria-live={toast.kind === "error" ? "assertive" : "polite"}
+        >
+          {toast.text}
         </div>
+      ) : (
+        packLoading && (
+          <div className="desk-toast" role="status" aria-busy>
+            {packLoading}
+          </div>
+        )
       )}
 
       {user && (

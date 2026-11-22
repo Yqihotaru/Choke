@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react"
 
+import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL, battlePower } from "@/card/data"
 import { RARITIES, type Rarity } from "@/card/types"
@@ -23,6 +24,7 @@ import {
 } from "./drag"
 import { onDeskHover } from "./events"
 import { Pages, useBook, usePageCache } from "./BookPages"
+import { ConfirmBar } from "./ConfirmBar"
 import { FitArea } from "./FitArea"
 import { GuestLoginButton } from "./GuestLoginButton"
 import { useDeskCardIds } from "./presence"
@@ -54,6 +56,10 @@ export const DeckPanel = memo(function DeckPanel({
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [dropSlot, setDropSlot] = useState<number | null>(null)
+  const [reload, setReload] = useState(0)
+  const [busyHint, setBusyHint] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
+  const hoverSlotRef = useRef<number | null>(null)
   const deskIds = useDeskCardIds()
   const config = useGameConfig()
   const deckSize = config?.deckSize ?? 0
@@ -83,7 +89,7 @@ export const DeckPanel = memo(function DeckPanel({
         setError(reason instanceof Error ? reason.message : "加载卡组失败")
       })
     return () => controller.abort()
-  }, [userId, book.revision])
+  }, [userId, book.revision, reload])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -121,6 +127,7 @@ export const DeckPanel = memo(function DeckPanel({
   )
   const cachedPages = usePageCache(pickerKey, pickPage, PICK_SIZE, loadPage)
   const currentResult = cachedPages.find(([index]) => index === pickPage)?.[1]
+  // 渲染期钳制页码：React 会丢弃这次渲染立刻重来，不会提交越界的中间帧；改 effect 反而会闪一帧空页
   if (currentResult && !currentResult.error) {
     const lastPage = Math.max(0, Math.ceil(currentResult.total / PICK_SIZE) - 1)
     if (pickPage > lastPage) setPickPage(lastPage)
@@ -129,6 +136,7 @@ export const DeckPanel = memo(function DeckPanel({
   const commit = async (slots: (number | null)[]) => {
     if (!userId || !deck || saving) return
     setSaving(true)
+    setBusyHint(false)
     setNotice(null)
     try {
       const next = await saveDeck(userId, slots)
@@ -140,14 +148,22 @@ export const DeckPanel = memo(function DeckPanel({
         })
       )
     } catch (reason) {
+      playSfx("error")
       setNotice(reason instanceof Error ? reason.message : "保存失败")
     } finally {
       setSaving(false)
     }
   }
 
+  /** 保存期间的改动不排队，直接提示稍等，避免静默丢操作 */
+  const rejectWhileSaving = () => {
+    setBusyHint(true)
+    playSfx("deny")
+  }
+
   const assign = (userCardId: number, slotIndex: number, fromSlot?: number) => {
-    if (!deck || saving) return
+    if (!deck) return
+    if (saving) return rejectWhileSaving()
     const slots = deck.slots.map((slot) => slot.card?.userCardId ?? null)
     if (fromSlot != null) {
       const target = slots[slotIndex] ?? null
@@ -160,6 +176,8 @@ export const DeckPanel = memo(function DeckPanel({
       slots[slotIndex] = userCardId
     }
     setPickerSlot(null)
+    setConfirmClear(false)
+    playSfx("equip")
     void commit(slots)
   }
   useEffect(() => {
@@ -167,10 +185,13 @@ export const DeckPanel = memo(function DeckPanel({
   })
 
   const remove = (slotIndex: number) => {
-    if (!deck || saving) return
+    if (!deck) return
+    if (saving) return rejectWhileSaving()
     const slots = deck.slots.map((slot) => slot.card?.userCardId ?? null)
     slots[slotIndex] = null
     setPickerSlot(null)
+    setConfirmClear(false)
+    playSfx("unequip")
     void commit(slots)
   }
   useEffect(() => {
@@ -178,15 +199,21 @@ export const DeckPanel = memo(function DeckPanel({
   })
 
   const clear = () => {
-    if (!deck || saving) return
+    if (!deck) return
+    if (saving) return rejectWhileSaving()
+    setConfirmClear(false)
     setPickerSlot(null)
+    playSfx("slide")
     void commit(deck.slots.map(() => null))
   }
 
   useEffect(() => {
-    const offHover = onDeskHover("deck", (value) =>
-      setDropSlot(typeof value === "number" ? value : null),
-    )
+    const offHover = onDeskHover("deck", (value) => {
+      const slot = typeof value === "number" ? value : null
+      if (slot !== null && slot !== hoverSlotRef.current) playSfx("tick")
+      hoverSlotRef.current = slot
+      setDropSlot(slot)
+    })
     const onAssign = (event: Event) => {
       const detail = (
         event as CustomEvent<{ userCardId: number; slot: number }>
@@ -254,8 +281,20 @@ export const DeckPanel = memo(function DeckPanel({
           </p>
         }
         right={
-          <div className={`bk-empty ${error ? "bk-error" : ""}`}>
-            {error ?? "加载中…"}
+          <div className={`bk-empty ${error ? "bk-error" : ""}`} role={error ? "alert" : "status"}>
+            <span>{error ?? "加载中…"}</span>
+            {error && (
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                onClick={() => {
+                  setError(null)
+                  setReload((value) => value + 1)
+                }}
+              >
+                重试
+              </button>
+            )}
           </div>
         }
       />
@@ -290,6 +329,7 @@ export const DeckPanel = memo(function DeckPanel({
     if (!readyDeck && ids.length > 0) {
       const slots = deck.slots.map((_, index) => ids[index] ?? null)
       setSaving(true)
+      setBusyHint(false)
       setNotice(null)
       try {
         const next = await saveDeck(userId, slots)
@@ -302,6 +342,7 @@ export const DeckPanel = memo(function DeckPanel({
         )
         readyDeck = next.slots.some((slot) => slot.card)
       } catch (reason) {
+        playSfx("error")
         setNotice(reason instanceof Error ? reason.message : "保存失败")
         return
       } finally {
@@ -313,6 +354,7 @@ export const DeckPanel = memo(function DeckPanel({
       setNotice("卡组还是空的，请先放入至少 1 张卡。")
       return
     }
+    playSfx("success")
     emitTutorialEvent("deck-confirmed")
   }
 
@@ -352,16 +394,22 @@ export const DeckPanel = memo(function DeckPanel({
                 <b>{totalBp.toLocaleString("en-US")}</b>
                 <span>总战力</span>
               </div>
-              <span className="deck-summary__saved bk-note">
+              <span className="deck-summary__saved bk-note" role="status">
                 {saving
-                  ? "保存中…"
+                  ? busyHint
+                    ? "保存中，请稍后再操作…"
+                    : "保存中…"
                   : savedAt
                     ? `已保存 ${savedAt}`
                     : "改动自动保存"}
               </span>
             </div>
 
-            {notice && <div className="bk-box bk-error">{notice}</div>}
+            {notice && (
+              <div className="bk-box bk-error" role="alert">
+                {notice}
+              </div>
+            )}
 
             <div className="deck-grid">
               {deck.slots.map((slot, index) => {
@@ -372,9 +420,6 @@ export const DeckPanel = memo(function DeckPanel({
                     className={`deck-slot ${slot.card ? "has-card" : "bk-slot"} ${isDropTarget ? "is-drop-target" : ""} ${pickerSlot === index ? "is-picked" : ""} ${onDesk ? "is-on-desk" : ""}`}
                     key={index}
                     data-slot={index}
-                    role="button"
-                    tabIndex={0}
-                    aria-pressed={pickerSlot === index}
                     onPointerDown={(event) => {
                       if (!slot.card) return
                       startCardPointerDrag(event, {
@@ -389,18 +434,18 @@ export const DeckPanel = memo(function DeckPanel({
                     onClick={() =>
                       setPickerSlot(pickerSlot === index ? null : index)
                     }
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault()
-                        setPickerSlot(pickerSlot === index ? null : index)
-                      }
-                    }}
-                    aria-label={
-                      slot.card
-                        ? `第 ${index + 1} 槽 ${slot.card.name}，点击更换`
-                        : `第 ${index + 1} 槽，空`
-                    }
                   >
+                    {/* 键盘入口：铺满槽位的透明按钮，不接指针（指针仍走外层，拖拽不受影响）；Enter / 空格的 click 冒泡到外层 */}
+                    <button
+                      type="button"
+                      className="deck-slot__main"
+                      aria-pressed={pickerSlot === index}
+                      aria-label={
+                        slot.card
+                          ? `第 ${index + 1} 槽 ${slot.card.name}，${RARITY_LABEL[slot.card.rarity]}，点击更换`
+                          : `第 ${index + 1} 槽，空`
+                      }
+                    />
                     {slot.card ? (
                       <DeckFace row={slot.card} />
                     ) : (
@@ -430,11 +475,22 @@ export const DeckPanel = memo(function DeckPanel({
               })}
             </div>
 
+            {confirmClear && filled > 0 && (
+              <ConfirmBar
+                danger
+                busy={saving}
+                confirmLabel="确认清空"
+                message={`清空卡组？会把 ${filled} 张卡全部移出槽位（卡仍留在卡册里）。`}
+                onCancel={() => setConfirmClear(false)}
+                onConfirm={clear}
+              />
+            )}
+
             <div className="deck-actions">
               <button
                 type="button"
                 className="bk-btn bk-btn--ghost bk-btn--danger"
-                onClick={clear}
+                onClick={() => setConfirmClear(true)}
                 disabled={saving || filled === 0}
               >
                 清空
@@ -545,8 +601,15 @@ export const DeckPanel = memo(function DeckPanel({
                           key={row.userCardId}
                           className={`deck-pick ${used ? "is-used" : ""}`}
                           role="button"
-                          tabIndex={blocked ? -1 : 0}
+                          tabIndex={0}
                           aria-disabled={blocked}
+                          aria-label={`${row.name}，${RARITY_LABEL[row.rarity]}，Lv.${row.level}${
+                            used
+                              ? "，已在卡组"
+                              : targetSlot == null
+                                ? "，卡组已满，先选要换的槽"
+                                : `，放进第 ${targetSlot + 1} 槽`
+                          }`}
                           onPointerDown={(event) => {
                             if (!used)
                               startCardPointerDrag(event, {

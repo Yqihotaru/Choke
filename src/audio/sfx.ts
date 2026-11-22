@@ -13,6 +13,34 @@ type SfxName =
   | "cutin"
   | "break"
   | "down"
+  | "tick"
+  | "pick"
+  | "lift"
+  | "drop"
+  | "thud"
+  | "paper"
+  | "flip"
+  | "slide"
+  | "coin"
+  | "levelup"
+  | "melt"
+  | "shatter"
+  | "deny"
+  | "error"
+  | "success"
+  | "equip"
+  | "unequip"
+  | "tear"
+  | "charge"
+  | "shine"
+  | "reveal-c"
+  | "reveal-r"
+  | "reveal-e"
+  | "reveal-l"
+  | "reveal-radiant"
+  | "reveal-prismatic"
+
+export type SfxId = SfxName
 
 interface SfxOptions {
   rate?: number
@@ -234,10 +262,139 @@ const SYNTH: Record<SfxName, (c: AudioContext, o: AudioNode, r: number) => void>
     ;[392, 349, 311, 262].forEach((f, i) => tone(c, o, { type: "sawtooth", f0: f, dur: 0.55, gain: 0.14, at: i * 0.22 }, r))
     tone(c, o, { type: "sine", f0: 65, f1: 40, dur: 1.2, gain: 0.5, at: 0.5 }, r)
   },
+  tick: (c, o, r) => {
+    tone(c, o, { type: "sine", f0: 1500, f1: 1200, dur: 0.03, gain: 0.08 }, r)
+  },
+  pick: (c, o, r) => {
+    tone(c, o, { type: "triangle", f0: 660, dur: 0.07, gain: 0.14 }, r)
+    tone(c, o, { type: "sine", f0: 990, dur: 0.1, gain: 0.1, at: 0.035 }, r)
+  },
+  lift: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 1800, f1: 3200, q: 1.2, dur: 0.06, gain: 0.12 }, r)
+    tone(c, o, { type: "sine", f0: 420, f1: 560, dur: 0.06, gain: 0.08 }, r)
+  },
+  drop: (c, o, r) => {
+    tone(c, o, { type: "sine", f0: 200, f1: 110, dur: 0.09, gain: 0.3 }, r)
+    noise(c, o, { filter: "bandpass", f0: 1200, f1: 500, q: 1, dur: 0.05, gain: 0.18 }, r)
+  },
+  thud: (c, o, r) => {
+    tone(c, o, { type: "sine", f0: 120, f1: 55, dur: 0.18, gain: 0.45 }, r)
+    noise(c, o, { filter: "lowpass", f0: 500, f1: 150, dur: 0.12, gain: 0.25 }, r)
+  },
+  paper: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 3500, f1: 1800, q: 0.7, dur: 0.14, gain: 0.2 }, r)
+    noise(c, o, { filter: "highpass", f0: 5000, dur: 0.05, gain: 0.1, at: 0.05 }, r)
+  },
+  flip: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 900, f1: 4500, q: 1, dur: 0.11, gain: 0.22 }, r)
+    tone(c, o, { type: "triangle", f0: 300, f1: 180, dur: 0.06, gain: 0.1, at: 0.08 }, r)
+  },
+  slide: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 500, f1: 900, q: 0.9, dur: 0.2, gain: 0.2 }, r)
+    tone(c, o, { type: "sine", f0: 95, f1: 70, dur: 0.22, gain: 0.2, at: 0.12 }, r)
+  },
+  coin: (c, o, r) => {
+    tone(c, o, { type: "square", f0: 1568, dur: 0.07, gain: 0.1 }, r)
+    tone(c, o, { type: "square", f0: 2093, dur: 0.28, gain: 0.1, at: 0.07 }, r)
+    tone(c, o, { type: "sine", f0: 4186, dur: 0.2, gain: 0.05, at: 0.07 }, r)
+  },
+  levelup: (c, o, r) => {
+    ;[523, 659, 784, 1047].forEach((f, i) => tone(c, o, { type: "triangle", f0: f, dur: 0.22, gain: 0.2, at: i * 0.07 }, r))
+    tone(c, o, { type: "sine", f0: 2093, dur: 0.5, gain: 0.08, at: 0.28 }, r)
+  },
+  melt: (c, o, r) => {
+    noise(c, o, { filter: "lowpass", f0: 400, f1: 2400, q: 0.8, dur: 0.5, gain: 0.35 }, r)
+    tone(c, o, { type: "sawtooth", f0: 110, f1: 330, dur: 0.5, gain: 0.12 }, r)
+    tone(c, o, { type: "sine", f0: 880, f1: 1760, dur: 0.4, gain: 0.1, at: 0.35 }, r)
+  },
+  shatter: (c, o, r) => {
+    noise(c, o, { filter: "highpass", f0: 3500, dur: 0.3, gain: 0.4 }, r)
+    for (let i = 0; i < 5; i++)
+      tone(c, o, { type: "triangle", f0: 2200 + Math.random() * 2400, f1: 900, dur: 0.1, gain: 0.07, at: 0.03 + i * 0.045 }, r)
+    tone(c, o, { type: "sine", f0: 140, f1: 60, dur: 0.15, gain: 0.3 }, r)
+  },
+  deny: (c, o, r) => {
+    tone(c, o, { type: "square", f0: 260, dur: 0.07, gain: 0.12 }, r)
+    tone(c, o, { type: "square", f0: 200, dur: 0.12, gain: 0.12, at: 0.08 }, r)
+  },
+  error: (c, o, r) => {
+    tone(c, o, { type: "sawtooth", f0: 190, f1: 120, dur: 0.22, gain: 0.2 }, r)
+    tone(c, o, { type: "sine", f0: 80, f1: 55, dur: 0.25, gain: 0.3 }, r)
+  },
+  success: (c, o, r) => {
+    tone(c, o, { type: "triangle", f0: 659, dur: 0.12, gain: 0.18 }, r)
+    tone(c, o, { type: "triangle", f0: 988, dur: 0.3, gain: 0.18, at: 0.09 }, r)
+    tone(c, o, { type: "sine", f0: 1976, dur: 0.3, gain: 0.06, at: 0.09 }, r)
+  },
+  equip: (c, o, r) => {
+    noise(c, o, { filter: "highpass", f0: 3000, dur: 0.04, gain: 0.25 }, r)
+    tone(c, o, { type: "square", f0: 520, f1: 780, dur: 0.07, gain: 0.1 }, r)
+    tone(c, o, { type: "sine", f0: 1560, dur: 0.18, gain: 0.1, at: 0.04 }, r)
+  },
+  unequip: (c, o, r) => {
+    tone(c, o, { type: "square", f0: 780, f1: 480, dur: 0.08, gain: 0.1 }, r)
+    noise(c, o, { filter: "bandpass", f0: 1500, q: 1, dur: 0.05, gain: 0.15 }, r)
+  },
+  tear: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 2800, f1: 6000, q: 0.6, dur: 0.22, gain: 0.4 }, r)
+    noise(c, o, { filter: "highpass", f0: 4500, dur: 0.12, gain: 0.25, at: 0.05 }, r)
+    tone(c, o, { type: "sine", f0: 150, f1: 70, dur: 0.15, gain: 0.3, at: 0.1 }, r)
+  },
+  charge: (c, o, r) => {
+    tone(c, o, { type: "sawtooth", f0: 120, f1: 520, dur: 0.7, gain: 0.1 }, r)
+    tone(c, o, { type: "sine", f0: 60, dur: 0.12, gain: 0.35 }, r)
+    tone(c, o, { type: "sine", f0: 60, dur: 0.12, gain: 0.35, at: 0.28 }, r)
+    tone(c, o, { type: "sine", f0: 60, dur: 0.12, gain: 0.4, at: 0.5 }, r)
+  },
+  shine: (c, o, r) => {
+    ;[3136, 3951, 4699].forEach((f, i) => tone(c, o, { type: "sine", f0: f, dur: 0.25, gain: 0.05, at: i * 0.05 }, r))
+  },
+  "reveal-c": (c, o, r) => {
+    SYNTH.flip(c, o, r)
+  },
+  "reveal-r": (c, o, r) => {
+    SYNTH.flip(c, o, r)
+    tone(c, o, { type: "triangle", f0: 784, dur: 0.3, gain: 0.14, at: 0.1 }, r)
+  },
+  "reveal-e": (c, o, r) => {
+    SYNTH.flip(c, o, r)
+    ;[659, 830, 988].forEach((f, i) => tone(c, o, { type: "triangle", f0: f, dur: 0.45, gain: 0.14, at: 0.1 + i * 0.03 }, r))
+    SYNTH.shine(c, o, r)
+  },
+  "reveal-l": (c, o, r) => {
+    SYNTH.flip(c, o, r)
+    tone(c, o, { type: "sine", f0: 70, f1: 40, dur: 0.6, gain: 0.5, at: 0.05 }, r)
+    ;[523, 659, 784, 1047].forEach((f, i) => tone(c, o, { type: "triangle", f0: f, dur: 0.9, gain: 0.14, at: 0.1 + i * 0.04 }, r))
+    SYNTH.shine(c, o, r)
+  },
+  "reveal-radiant": (c, o, r) => {
+    SYNTH.flip(c, o, r)
+    tone(c, o, { type: "sine", f0: 60, f1: 32, dur: 0.9, gain: 0.6, at: 0.05 }, r)
+    ;[392, 494, 587, 784, 988].forEach((f, i) => tone(c, o, { type: "triangle", f0: f, dur: 1.2, gain: 0.14, at: 0.08 + i * 0.05 }, r))
+    noise(c, o, { filter: "highpass", f0: 5000, dur: 0.5, gain: 0.2, at: 0.1 }, r)
+    SYNTH.shine(c, o, r)
+  },
+  "reveal-prismatic": (c, o, r) => {
+    SYNTH.flip(c, o, r)
+    tone(c, o, { type: "sine", f0: 55, f1: 28, dur: 1.2, gain: 0.7, at: 0.05 }, r)
+    ;[523, 659, 784, 988, 1175, 1568].forEach((f, i) => {
+      tone(c, o, { type: "triangle", f0: f, dur: 0.5, gain: 0.14, at: 0.08 + i * 0.07 }, r)
+      tone(c, o, { type: "sine", f0: f * 2, dur: 0.4, gain: 0.05, at: 0.08 + i * 0.07 }, r)
+    })
+    tone(c, o, { type: "triangle", f0: 1047, dur: 1.6, gain: 0.14, at: 0.6 }, r)
+    tone(c, o, { type: "triangle", f0: 1568, dur: 1.6, gain: 0.12, at: 0.6 }, r)
+    noise(c, o, { filter: "highpass", f0: 6000, dur: 0.7, gain: 0.22, at: 0.1 }, r)
+    SYNTH.shine(c, o, r)
+  },
 }
+
+const lastPlayed = new Map<SfxName, number>()
 
 export function playSfx(name: SfxName, options: SfxOptions = {}) {
   if (volume <= 0) return
+  const now = performance.now()
+  if (now - (lastPlayed.get(name) ?? -1e9) < 30) return
+  lastPlayed.set(name, now)
   try {
     const { ctx: c, master: m } = ensure()
     const out = c.createGain()
@@ -247,6 +404,21 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
   } catch {
     // 无音频设备或被浏览器拦截时静默
   }
+}
+
+const REVEAL_BY_RARITY: Record<string, SfxName> = {
+  C: "reveal-c",
+  UC: "reveal-c",
+  R: "reveal-r",
+  E: "reveal-e",
+  L: "reveal-l",
+  Radiant: "reveal-radiant",
+  Prismatic: "reveal-prismatic",
+}
+
+/** 开包翻牌：稀有度越高，层次越多。 */
+export function playReveal(rarity: string) {
+  playSfx(REVEAL_BY_RARITY[rarity] ?? "reveal-c")
 }
 
 /** Combo 越高音调越高，最高 +8 级；传入属性则叠加对应属性层。 */

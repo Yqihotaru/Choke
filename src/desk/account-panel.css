@@ -13,6 +13,23 @@
   margin-top: auto;
 }
 
+/* 窄屏：身份行和统计卡收紧，长 ID 不撑破页宽 */
+@media (max-width: 900px) {
+  .account-id__avatar {
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
+    font-size: 22px;
+  }
+  .account-id__text span {
+    overflow-wrap: anywhere;
+  }
+  .account-row {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+}
+
 .account-id {
   display: flex;
   align-items: center;

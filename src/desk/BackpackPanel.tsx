@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react"
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { createPortal } from "react-dom"
 
+import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL, battlePower } from "@/card/data"
+import { useModal } from "@/ui/useModal"
 
 import {
   fetchMe,
@@ -74,6 +76,7 @@ export function BackpackPanel({
   const [hero, setHero] = useState<ApiUserCard | null>(null)
   const [onboarded, setOnboarded] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [questionStep, setQuestionStep] = useState<number | null>(null)
   const [answers, setAnswers] = useState<string[]>([])
   const [opening, setOpening] = useState(false)
@@ -82,6 +85,14 @@ export function BackpackPanel({
   const [revision, setRevision] = useState(0)
   /** 没点过就默认选第一个有库存的 */
   const [picked, setPicked] = useState<string | null>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  useModal(modalRef, {
+    active: questionStep !== null,
+    onClose: () => {
+      if (!opening) setQuestionStep(null)
+    },
+  })
 
   useEffect(() => {
     const offHover = onDeskHover("backpack", (value) => setDropHover(Boolean(value)))
@@ -97,10 +108,12 @@ export function BackpackPanel({
     let cancelled = false
     fetchPackInventory(userId)
       .then((data) => {
-        if (!cancelled) setInventory(data)
+        if (cancelled) return
+        setInventory(data)
+        setLoadError(null)
       })
       .catch((reason: unknown) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "加载背包失败")
+        if (!cancelled) setLoadError(reason instanceof Error ? reason.message : "加载背包失败")
       })
     fetchMe()
       .then((data) => {
@@ -159,9 +172,11 @@ export function BackpackPanel({
       setQuestionStep(null)
       // 开完留在神秘卡包这一栏，右页直接看到本体卡
       setPicked(MYSTERY_ID)
+      playSfx("success")
       emitDeskData("packs")
       onHeroClaimed?.()
     } catch (reason) {
+      playSfx("error")
       setError(reason instanceof Error ? reason.message : "开启神秘卡包失败")
     } finally {
       setOpening(false)
@@ -189,12 +204,57 @@ export function BackpackPanel({
 
   const step = questionStep
 
+  if (!inventory) {
+    return (
+      <Pages
+        className="backpack-panel"
+        left={
+          loadError ? (
+            <div className="bk-box bk-error backpack-retry" role="alert">
+              <span>{loadError}</span>
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                onClick={() => {
+                  setLoadError(null)
+                  setRevision((value) => value + 1)
+                }}
+              >
+                重试
+              </button>
+            </div>
+          ) : (
+            <div className="bk-empty" role="status">
+              加载背包…
+            </div>
+          )
+        }
+        right={<div className="bk-empty" aria-hidden />}
+      />
+    )
+  }
+
   return (
     <Pages
       className={`backpack-panel ${dropHover ? "is-drop-target" : ""}`}
       left={
         <>
           <span className="bk-label">库存 · 共 {totalPacks} 包</span>
+          {loadError && (
+            <div className="bk-box bk-error backpack-retry" role="alert">
+              <span>{loadError}</span>
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                onClick={() => {
+                  setLoadError(null)
+                  setRevision((value) => value + 1)
+                }}
+              >
+                重试
+              </button>
+            </div>
+          )}
           <div className="bk-list">
             {packList.map((pack) => {
               const count = counts[pack.id] ?? 0
@@ -205,7 +265,10 @@ export function BackpackPanel({
                   key={pack.id}
                   className={`bk-row backpack-row ${on ? "is-on" : ""} ${count <= 0 ? "is-empty" : ""}`}
                   aria-pressed={on}
-                  onClick={() => setPicked(pack.id)}
+                  onClick={() => {
+                    if (!on) playSfx("tick")
+                    setPicked(pack.id)
+                  }}
                 >
                   {/* 普通卡包用 PackArt，神秘卡包是一个粉色问号包 */}
                   <span className="backpack-row__art" aria-hidden>
@@ -257,7 +320,11 @@ export function BackpackPanel({
             </div>
           </div>
 
-          {error && <p className="bk-note bk-error">{error}</p>}
+          {error && step === null && (
+            <p className="bk-note bk-error" role="alert">
+              {error}
+            </p>
+          )}
 
           {isMystery ? (
             heroClaimed ? (
@@ -275,7 +342,9 @@ export function BackpackPanel({
                 type="button"
                 className="bk-btn bk-btn--main bk-btn--block"
                 onClick={() => {
+                  playSfx("click")
                   setAnswers([])
+                  setError(null)
                   setQuestionStep(0)
                   setResult(null)
                 }}
@@ -296,7 +365,7 @@ export function BackpackPanel({
           )}
 
           {step !== null && createPortal(
-            <div className="backpack-modal" role="dialog" aria-modal="true" aria-label="神秘卡包问卷">
+            <div className="backpack-modal" role="dialog" aria-modal="true" aria-label="神秘卡包问卷" ref={modalRef}>
               <div className="backpack-modal__panel">
                 <div className="backpack-modal__head">
                   <span className="bk-label">
@@ -306,6 +375,7 @@ export function BackpackPanel({
                     type="button"
                     className="bk-btn bk-btn--ghost bk-btn--sm"
                     onClick={() => setQuestionStep(null)}
+                    disabled={opening}
                     aria-label="关闭"
                   >
                     ×
@@ -326,6 +396,7 @@ export function BackpackPanel({
                       key={option}
                       aria-pressed={answers[step] === option}
                       onClick={() => {
+                        playSfx("tick")
                         const next = answers.slice()
                         next[step] = option
                         setAnswers(next)
@@ -335,7 +406,11 @@ export function BackpackPanel({
                     </button>
                   ))}
                 </div>
-                {error && <p className="bk-note bk-error">{error}</p>}
+                {error && (
+                  <p className="bk-note bk-error" role="alert">
+                    {error}
+                  </p>
+                )}
                 <div className="backpack-modal__actions">
                   <button
                     type="button"

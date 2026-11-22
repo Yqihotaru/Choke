@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react"
 
+import { playSfx } from "@/audio/sfx"
+
 import { OBJECT_META, type DeskObjectId } from "./objects"
 import { POOL_META, POOL_ORDER } from "./rarity"
 import type { PackPool } from "./types"
@@ -256,6 +258,7 @@ function PoolPicker({
               aria-checked={it === pool}
               className="obj-pick__item"
               onClick={() => {
+                playSfx("tick")
                 onPool(it)
                 setOpen(false)
               }}
