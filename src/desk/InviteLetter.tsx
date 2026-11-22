@@ -526,7 +526,7 @@ function LetterModal({
     </button>
   )
 
-  const pityThreshold = config?.pity.threshold ?? null
+  const packKinds = config?.packs.length ?? null
   const cardsLabel = stats
     ? stats.total >= 10000
       ? `${Math.floor(stats.total / 10000)} 万+`
@@ -610,8 +610,8 @@ function LetterModal({
             <span>品质档位</span>
           </li>
           <li>
-            <b>{pityThreshold ?? "—"}</b>
-            <span>抽保底</span>
+            <b>{packKinds ?? "—"}</b>
+            <span>卡包种类</span>
           </li>
         </ul>
         <div className="invite-paper__actions">

@@ -49,11 +49,6 @@ const POOLS: Pool[] = [
   { id: "prism", name: "棱彩", note: "赛季牌面" },
 ]
 
-interface Pity {
-  before: number
-  after: number
-}
-
 export function GachaPanel({
   userId,
   initialPool = "normal",
@@ -66,7 +61,6 @@ export function GachaPanel({
   const [cards, setCards] = useState<(CardFaceData & { userCardId: number })[]>(
     []
   )
-  const [pityMap, setPityMap] = useState<Partial<Record<PoolId, Pity>>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [packs, setPacks] = useState<{
@@ -84,11 +78,10 @@ export function GachaPanel({
   const ownerRef = useRef<{ userId: string | null } | null>(null)
   const requestRef = useRef<object | null>(null)
 
-  // 账号切换不能沿用上一位玩家的结果、保底或加载状态。
+  // 账号切换不能沿用上一位玩家的结果或加载状态。
   if (ownerId !== userId) {
     setOwnerId(userId)
     setCards([])
-    setPityMap({})
     setLoading(false)
     setError(null)
     setPacksFailed(false)
@@ -139,12 +132,7 @@ export function GachaPanel({
   }, [userId, loadPacks])
 
   const current = POOLS.find((item) => item.id === pool) ?? POOLS[0]
-  const pityThreshold = config?.pity.threshold ?? 60
-  const pityRarity = config?.pity.rarity ?? "L"
   const packSize = config?.packSize ?? 5
-  // 保底按卡池各记各的，切换卡池只换显示，不清掉
-  const pity = pityMap[pool] ?? null
-  const pityPercent = pity ? Math.min(100, (pity.after / pityThreshold) * 100) : 0
   const currentPacks = packs && packs.userId === userId ? packs.data : null
   const odds = Object.entries(
     config?.packs.find((item) => item.id === pool)?.weights ?? {}
@@ -196,8 +184,6 @@ export function GachaPanel({
 
       consumed = true
       if (!isCurrent()) return
-      const openedPool = pool
-      setPityMap((prev) => ({ ...prev, [openedPool]: result.pity }))
       if (result.packs) setPacks({ userId, data: result.packs })
       emitDeskData("packs")
       if (!isCurrent()) return
@@ -348,25 +334,6 @@ export function GachaPanel({
                 </em>
               </button>
             ))}
-          </div>
-
-          <div className="bk-box gacha-pity">
-            <div className="gacha-pity__top">
-              <span className="bk-label">保底进度</span>
-              <b className="bk-num">{pity ? `${pity.after} / ${pityThreshold}` : `— / ${pityThreshold}`}</b>
-            </div>
-            <div
-              className="bk-bar"
-              style={{ "--p": pityPercent } as CSSProperties}
-              role="progressbar"
-              aria-label="保底进度"
-              aria-valuemin={0}
-              aria-valuemax={pityThreshold}
-              aria-valuenow={pity?.after ?? 0}
-            >
-              <i />
-            </div>
-            <p className="bk-note">{pityThreshold} 抽未出 {pityRarity} 及以上时强制保底。</p>
           </div>
 
           <button

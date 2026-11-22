@@ -234,7 +234,6 @@ export interface PackCatalogEntry {
 
 export interface GameConfig {
   packs: PackCatalogEntry[]
-  pity: { threshold: number; rarity: string }
   packSize: number
   deckSize: number
   starterPacks: { id: string; count: number; name: string }[]
@@ -425,13 +424,11 @@ export interface OpenPackResult {
   results: {
     cardId: string
     rarity?: Rarity
-    fromPity?: boolean
     userCardId: number
     foil: boolean
     serial: number
     pulled: number
   }[]
-  pity: { before: number; after: number }
   packs?: Record<string, number>
 }
 

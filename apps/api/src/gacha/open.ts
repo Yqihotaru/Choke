@@ -2,20 +2,10 @@ import { and, eq, sql } from "drizzle-orm"
 
 import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
-import { cards, packOpenings, pity, userCards } from "../db/schema"
+import { cards, packOpenings, userCards } from "../db/schema"
 import { MIRROR_RATE, pickMirrorCard } from "../mirror"
-import { PITY, PACK_SIZE, PACKS } from "./packs"
+import { PACK_SIZE, PACKS } from "./packs"
 import { mulberry32, rollRarity, type PoolId } from "./pools"
-
-const RANK: Record<string, number> = {
-  C: 0,
-  UC: 1,
-  R: 2,
-  E: 3,
-  L: 4,
-  Radiant: 5,
-  Prismatic: 6,
-}
 
 const idCache = new Map<string, string[]>()
 async function idsFor(rarity: string): Promise<string[]> {
@@ -34,7 +24,6 @@ async function idsFor(rarity: string): Promise<string[]> {
 export interface DrawnCard {
   cardId: string
   rarity: string
-  fromPity: boolean
   /** user_cards 实例 id，用于把这张卡直接拖进卡组 */
   userCardId: number
   /** 闪卡实例属性 */
@@ -88,26 +77,10 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       : null
 
   return db.transaction(async (tx) => {
-    const current = await tx
-      .select()
-      .from(pity)
-      .where(and(eq(pity.userId, userId), eq(pity.pool, pool)))
-    let counter = current[0]?.counter ?? 0
-    const before = counter
-
     const results: DrawnCard[] = []
 
     for (let i = 0; i < count; i += 1) {
-      counter += 1
-      let rarity = rollRarity(pool, random)
-      let fromPity = false
-
-      if (RANK[rarity] < RANK[PITY.rarity] && counter >= PITY.threshold) {
-        rarity = PITY.rarity
-        fromPity = true
-      }
-
-      if (RANK[rarity] >= RANK[PITY.rarity]) counter = 0
+      const rarity = rollRarity(pool, random)
 
       const ids = pools.get(rarity) ?? []
       if (ids.length === 0) {
@@ -117,16 +90,8 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       const foil = random() < PACKS[pool].foilRate
 
       const { userCardId, serial, rollBp } = await grantCard(tx, { userId, cardId, foil })
-      results.push({ cardId, rarity, fromPity, userCardId, foil, serial, pulled: serial, rollBp })
+      results.push({ cardId, rarity, userCardId, foil, serial, pulled: serial, rollBp })
     }
-
-    await tx
-      .insert(pity)
-      .values({ userId, pool, counter })
-      .onConflictDoUpdate({
-        target: [pity.userId, pity.pool],
-        set: { counter },
-      })
 
     // 镜像卡作为 bonus 单独返回，前端演完 5 张后再弹第 6 张。
     let bonus: DrawnCard | null = null
@@ -139,7 +104,6 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       bonus = {
         cardId: mirrorCandidate.id,
         rarity: mirrorCandidate.rarity,
-        fromPity: false,
         userCardId: granted.userCardId,
         foil: false,
         serial: granted.serial,
@@ -154,15 +118,14 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       count,
       seed: String(seed),
       results,
-      pityBefore: before,
-      pityAfter: counter,
+      pityBefore: 0,
+      pityAfter: 0,
     })
 
     return {
       seed,
       results,
       bonus,
-      pity: { before, after: counter },
     }
   })
 }
