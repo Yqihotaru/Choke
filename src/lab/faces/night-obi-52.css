@@ -36,7 +36,6 @@
   --accent: #7f8799;
 
   --ap: #d98218;
-  --mp: #4c96f0;
   --cover-bg: #11161f;
 
   --hair: max(0.28cqw, 0.5px);
@@ -640,8 +639,7 @@
   gap: 1.3cqw;
 }
 
-.cfn2__ap,
-.cfn2__mp {
+.cfn2__ap {
   width: 7.4cqw;
   height: 7.4cqw;
   display: grid;
@@ -655,12 +653,6 @@
   background: var(--ap);
   color: #fff8ea;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
-}
-
-.cfn2__mp {
-  border: var(--rule) solid var(--mp);
-  background: color-mix(in srgb, var(--mp) 16%, transparent);
-  color: color-mix(in srgb, var(--mp) 75%, #fff);
 }
 
 .cfn2__passive {
@@ -952,11 +944,6 @@
 .cfn2[data-theme="light"] .cfn2__el {
   background: color-mix(in srgb, var(--el) 16%, transparent);
   color: color-mix(in srgb, var(--el) 78%, #111);
-}
-
-.cfn2[data-theme="light"] .cfn2__mp {
-  background: color-mix(in srgb, var(--mp) 14%, #fff);
-  color: color-mix(in srgb, var(--mp) 78%, #0d2342);
 }
 
 .cfn2[data-theme="light"] .cfn2__passive {

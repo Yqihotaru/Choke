@@ -539,32 +539,6 @@
     0.85cqw 0 0.25cqw rgb(0 0 0 / 0.45);
 }
 
-.cfv1__skill--mp .cfv1__skill-body {
-  flex: 0 0 54%;
-}
-
-.cfv1__skill--mp .cfv1__cost {
-  gap: 0.7cqw;
-  padding-right: 1.5cqw;
-}
-
-.cfv1__skill--mp .cfv1__ap i,
-.cfv1__skill--mp .cfv1__mp i {
-  width: auto;
-  font-size: 2.7cqw;
-}
-
-.cfv1__skill--mp .cfv1__ap b,
-.cfv1__skill--mp .cfv1__mp b {
-  width: 2.8cqw;
-  font-size: 4.8cqw;
-}
-
-.cfv1__skill--mp .cfv1__ap-gem {
-  width: 2.5cqw;
-  height: 3.7cqw;
-}
-
 .cfv1__skill--empty {
   opacity: 0.35;
 }
@@ -620,8 +594,7 @@
 }
 
 /* 固定列宽：保证不同行的 AP 字母与字母垂直对齐、数字与数字垂直对齐 */
-.cfv1__ap,
-.cfv1__mp {
+.cfv1__ap {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -629,8 +602,7 @@
   white-space: nowrap;
 }
 
-.cfv1__ap i,
-.cfv1__mp i {
+.cfv1__ap i {
   display: inline-block;
   width: 4.8cqw;
   text-align: right;
@@ -641,8 +613,7 @@
   color: #ffffff;
 }
 
-.cfv1__ap b,
-.cfv1__mp b {
+.cfv1__ap b {
   display: inline-block;
   width: 3.5cqw;
   text-align: center;
@@ -658,11 +629,6 @@
   height: 4.5cqw;
   color: var(--accent);
   flex: 0 0 auto;
-}
-
-.cfv1__mp i,
-.cfv1__mp b {
-  color: #8cc4f8;
 }
 
 .cfv1__passive {

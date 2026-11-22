@@ -60,7 +60,6 @@
   --cut-hi: #5c5349;
   --window: #1b1b1b;
   --ap: #c98b21;
-  --mp: #72abe8;
   /* 线宽、压印偏移、边框到卡边的距离 */
   --hair: max(0.3cqw, 0.6px);
   --rule: max(0.42cqw, 0.8px);
@@ -630,8 +629,7 @@
   gap: 1.4cqw;
 }
 
-.cfcur__ap,
-.cfcur__mp {
+.cfcur__ap {
   width: 7.4cqw;
   height: 7.4cqw;
   display: grid;
@@ -648,12 +646,6 @@
   box-shadow:
     inset 0 0 0 var(--hair) rgb(0 0 0 / 0.22),
     var(--emb) var(--emb) 0 var(--hi);
-}
-
-.cfcur__mp {
-  border: var(--rule) solid var(--mp);
-  color: var(--mp);
-  box-shadow: var(--deboss);
 }
 
 .cfcur__passive {

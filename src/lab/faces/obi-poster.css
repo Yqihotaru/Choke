@@ -42,7 +42,6 @@
 
   /* 技能与资源色 */
   --ap: #d97706;
-  --mp: #2563eb;
   --cover-bg: #26313d;
 
   /* 闪卡混合参数 */
@@ -670,8 +669,7 @@
   gap: 1.2cqw;
 }
 
-.cfo__ap,
-.cfo__mp {
+.cfo__ap {
   width: 6.8cqw;
   height: 6.8cqw;
   display: grid;
@@ -684,11 +682,6 @@
 .cfo__ap {
   background: var(--ap);
   color: #fff;
-}
-
-.cfo__mp {
-  border: var(--rule) solid var(--mp);
-  color: var(--mp);
 }
 
 .cfo__passive {

@@ -53,7 +53,6 @@
   --window-bg: #dce2ea;
   --motif-color: rgb(27 29 36 / 0.24);
   --ap: #d97706;
-  --mp: #2563eb;
 
   /* 闪卡在亮底卡纸上的混合控制 */
   --foil-film-blend: overlay;
@@ -619,8 +618,7 @@
   gap: 1.1cqw;
 }
 
-.cfg__ap,
-.cfg__mp {
+.cfg__ap {
   width: 6.4cqw;
   height: 6.4cqw;
   display: grid;
@@ -634,12 +632,6 @@
   background: var(--ap);
   color: #fff;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.16);
-}
-
-.cfg__mp {
-  border: var(--rule) solid var(--mp);
-  background: color-mix(in srgb, var(--mp) 12%, transparent);
-  color: var(--mp);
 }
 
 .cfg__passive {
