@@ -44,9 +44,10 @@
   );
   --at-light: calc(var(--mx) * 100%) calc(var(--my) * 100%);
   --at-far: calc((1 - var(--mx)) * 100%) calc((1 - var(--my)) * 100%);
+  /* 自定义属性的过渡每帧都要重画 6 层混合：用分段限制成约 20 帧/秒，离开卡面时的回位观感基本不变 */
   transition:
-    --mx 0.55s ease-out,
-    --my 0.55s ease-out;
+    --mx 0.4s steps(8),
+    --my 0.4s steps(8);
 }
 
 /* 光标在卡上时逐帧跟手，不再缓动 */

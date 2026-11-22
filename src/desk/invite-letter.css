@@ -17,7 +17,7 @@
   outline: none;
 }
 .invite-env:focus-visible .invite-env__body {
-  outline: 2px solid #ff66aa;
+  outline: 2px solid var(--d-osu, #ff66aa);
   outline-offset: 4px;
 }
 /* 拿在手里时浮到书上面 */
@@ -226,9 +226,9 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 380px;
+  width: min(380px, calc(100vw - 32px));
   height: 240px;
-  margin: -60px 0 0 -190px;
+  margin: -60px 0 0 calc(min(380px, calc(100vw - 32px)) / -2);
   perspective: 900px;
   pointer-events: none;
   animation: invite-env-away 0.32s cubic-bezier(0.4, 0, 0.6, 1) 0.62s forwards;
@@ -499,7 +499,8 @@
 .invite-paper__btn:active {
   translate: 0 1px;
 }
-.invite-paper__btn:disabled {
+.invite-paper__btn:disabled,
+.invite-paper__btn[aria-disabled="true"] {
   opacity: 0.6;
   cursor: progress;
 }

@@ -209,3 +209,35 @@
   gap: 8px;
   margin-top: 4px;
 }
+
+.backpack-retry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* 窄屏：详情图缩小，问卷贴近屏幕边缘并允许内容滚动 */
+@media (max-width: 900px) {
+  .backpack-detail__art {
+    width: 110px;
+    height: 156px;
+  }
+  .backpack-detail__card {
+    width: 140px;
+  }
+  .backpack-detail__name {
+    font-size: 20px;
+  }
+  .backpack-modal {
+    padding: 12px;
+  }
+  .backpack-modal__panel {
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .backpack-modal h3 {
+    font-size: 18px;
+  }
+}

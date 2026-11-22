@@ -224,7 +224,8 @@ export async function packRoutes(app: FastifyInstance) {
   })
 
   app.post("/packs/:pool/open", async (request, reply) => {
-    // 只认 session，body.userId 仅为兼容旧前端而保留
+    // 只认 session，body.userId / body.count 仅为兼容旧前端而保留：
+    // 一次扣一包，张数固定为 PACK_SIZE，不接受客户端指定。
     const userId = requireSession(request, reply)
     if (!userId) return
 
@@ -272,7 +273,7 @@ export async function packRoutes(app: FastifyInstance) {
     }
 
     try {
-      const result = await openPack(userId, params.data.pool, body.data.count ?? PACK_SIZE)
+      const result = await openPack(userId, params.data.pool, PACK_SIZE)
       invalidatePublicCardRows()
       return {
         ok: true,

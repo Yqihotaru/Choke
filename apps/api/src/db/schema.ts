@@ -81,7 +81,11 @@ export const users = pgTable("users", {
   progressUpdatedAt: bigint("progress_updated_at", { mode: "number" }).notNull().default(0),
   /** 回归玩家补发的一次性教程包 */
   tutorialPackClaimed: boolean("tutorial_pack_claimed").notNull().default(false),
-  /** 体力：每 6 分钟 1 点，上限 360；updatedAt 为上次结算时间戳 */
+  /**
+   * 体力：每 6 分钟 1 点，上限 360（STAMINA_MAX）；设计初值 240（= 每日自然恢复量）。
+   * updatedAt 为上次结算时间戳。注意 updatedAt 的列默认值 0 会被 settleStamina 当成
+   * 「离线很久」而回满到 360，所以任何 insert(users) 都必须显式写 staminaUpdatedAt: Date.now()。
+   */
   stamina: integer("stamina").notNull().default(240),
   staminaUpdatedAt: bigint("stamina_updated_at", { mode: "number" }).notNull().default(0),
   /** 最近一次活跃（/auth/me 刷新）；镜像池按它筛活跃账号 */

@@ -15,6 +15,12 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const switchMode = (next: Mode) => {
+    if (next === mode) return
+    setMode(next)
+    setError(null)
+  }
+
   const submit = async () => {
     if (busy) return
     setBusy(true)
@@ -37,24 +43,23 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <img className="login-logo" src="/brand/choke-lockup-horizontal.svg" alt="Choke!" />
+        <img className="login-logo" src="/brand/choke-lockup-horizontal-light.svg" alt="Choke!" />
         <p className="login-sub">把 osu! 玩家数据做成卡牌</p>
 
-        <div className="login-tabs">
-          <button
-            type="button"
-            data-active={mode === "login" ? "true" : undefined}
-            onClick={() => setMode("login")}
-          >
-            登录
-          </button>
-          <button
-            type="button"
-            data-active={mode === "register" ? "true" : undefined}
-            onClick={() => setMode("register")}
-          >
-            注册
-          </button>
+        <div className="login-tabs" role="tablist" aria-label="登录方式">
+          {(["login", "register"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={mode === value}
+              data-active={mode === value ? "true" : undefined}
+              disabled={busy}
+              onClick={() => switchMode(value)}
+            >
+              {value === "login" ? "登录" : "注册"}
+            </button>
+          ))}
         </div>
 
         <form
@@ -99,10 +104,14 @@ export function LoginPage() {
             />
           </label>
 
-          {error && <p className="login-error">{error}</p>}
+          {error && (
+            <p className="login-error" role="alert">
+              {error}
+            </p>
+          )}
 
-          <button type="submit" className="login-submit" disabled={busy}>
-            {busy ? "处理中…" : mode === "register" ? "注册并进入" : "登录"}
+          <button type="submit" className="login-submit" disabled={busy} aria-busy={busy || undefined}>
+            {busy ? (mode === "register" ? "注册中…" : "登录中…") : mode === "register" ? "注册并进入" : "登录"}
           </button>
         </form>
 

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
-import { fetchMe, fetchPackInventory, logout as apiLogout } from "./api"
+import { ApiError, fetchMe, fetchPackInventory, logout as apiLogout } from "./api"
 import { onDeskData } from "./events"
 import type { DeskUser } from "./desk-page-model"
 
@@ -8,6 +8,10 @@ export interface DeskPackState {
   userId: string
   data: Record<string, number>
 }
+
+/** 非「未登录」的失败（断网 / 超时 / 5xx）自动重试：间隔和次数 */
+const RETRY_MS = 4000
+const MAX_RETRIES = 3
 
 /**
  * 桌面会话：账号、钱包、卡包库存。
@@ -18,10 +22,21 @@ export function useDeskSession() {
   /** /auth/me 回来过一次（登没登录都算），邀请函等它再决定要不要弹 */
   const [userReady, setUserReady] = useState(false)
   const [packState, setPackState] = useState<DeskPackState | null>(null)
+  /** 只采纳最新一次请求的结果 */
+  const meSeq = useRef(0)
+  const packSeq = useRef(0)
+  const retryTimer = useRef<number | null>(null)
+  const retries = useRef(0)
+  const refreshRef = useRef<() => void>(() => {})
 
   const refreshUser = useCallback(() => {
+    const seq = ++meSeq.current
+    if (retryTimer.current) window.clearTimeout(retryTimer.current)
+    retryTimer.current = null
     fetchMe()
       .then((d) => {
+        if (seq !== meSeq.current) return
+        retries.current = 0
         setUser({
           id: d.id,
           username: d.username,
@@ -33,18 +48,37 @@ export function useDeskSession() {
           onboarded: !!d.onboarded,
         })
       })
-      .catch(() => setUser(null))
-      .finally(() => setUserReady(true))
+      .catch((reason: unknown) => {
+        if (seq !== meSeq.current) return
+        // 只有服务端明说没登录才清用户；网络抖动保留旧用户，稍后重试
+        if (reason instanceof ApiError && reason.code === "unauthorized") {
+          setUser(null)
+          return
+        }
+        if (retries.current < MAX_RETRIES) {
+          retries.current += 1
+          retryTimer.current = window.setTimeout(() => refreshRef.current(), RETRY_MS)
+        }
+      })
+      .finally(() => {
+        if (seq === meSeq.current) setUserReady(true)
+      })
   }, [])
 
   useEffect(() => {
+    refreshRef.current = refreshUser
     refreshUser()
+    return () => {
+      if (retryTimer.current) window.clearTimeout(retryTimer.current)
+    }
   }, [refreshUser])
 
   const refreshPacks = useCallback(() => {
     if (!user) return
+    const seq = ++packSeq.current
     fetchPackInventory(user.id)
       .then((d) => {
+        if (seq !== packSeq.current) return
         setPackState({ userId: user.id, data: d.packs })
       })
       .catch(() => {})
@@ -58,10 +92,19 @@ export function useDeskSession() {
     return onDeskData("packs", () => refreshPacks())
   }, [refreshPacks])
 
+  /** 取包 / 还包 / 开包的响应比进行中的库存刷新新：直接写入并让旧请求作废 */
+  const applyPackState = useCallback((next: DeskPackState | null) => {
+    packSeq.current += 1
+    setPackState(next)
+  }, [])
+
   const logout = useCallback(() => {
     apiLogout()
       .catch(() => {})
-      .finally(() => setUser(null))
+      .finally(() => {
+        meSeq.current += 1
+        setUser(null)
+      })
   }, [])
 
   return {
@@ -69,7 +112,7 @@ export function useDeskSession() {
     setUser,
     userReady,
     packState,
-    setPackState,
+    setPackState: applyPackState,
     refreshUser,
     refreshPacks,
     logout,

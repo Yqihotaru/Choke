@@ -8,7 +8,7 @@
  */
 import { refsFromCardSkills } from "@choke/shared/skills"
 import type { CardSkill, Job } from "@choke/shared/types"
-import { eq, sql } from "drizzle-orm"
+import { sql } from "drizzle-orm"
 
 import { db } from "../src/db/client"
 import { cards } from "../src/db/schema"

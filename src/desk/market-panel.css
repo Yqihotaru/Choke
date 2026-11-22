@@ -38,10 +38,37 @@
   font-size: 12px;
 }
 
+/* 在售页顶：标题 + 品质筛选 + 排序，窄了换行 */
+.market-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.market-toolbar__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.market-toolbar .bk-select {
+  height: 30px;
+  font-size: 12px;
+}
+.market-retry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.market-more {
+  align-self: center;
+}
+
 /* 在售：页宽够就三列，窄了两列 */
 .market-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr));
   gap: 18px 12px;
   align-content: start;
 }
@@ -86,4 +113,14 @@
 .market-card__price span {
   color: var(--bk-dim);
   font-size: 12px;
+}
+
+/* 窄屏：钱包换行，上架行的按钮不挤掉名字 */
+@media (max-width: 900px) {
+  .market-wallet {
+    flex-wrap: wrap;
+  }
+  .market-grid {
+    gap: 14px 10px;
+  }
 }

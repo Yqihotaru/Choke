@@ -1,11 +1,12 @@
 import { useState } from "react"
 
+import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
-import { faceFromDef } from "@/card/def"
 
-import type { ApiUserCard } from "./api"
+import { toFace, type ApiUserCard } from "./api"
 import { Pages } from "./BookPages"
+import { ConfirmBar } from "./ConfirmBar"
 import { GuestLoginButton } from "./GuestLoginButton"
 import "./account-panel.css"
 
@@ -30,7 +31,10 @@ export function AccountPanel({
   onLogout?: () => void
   onOpenBackpack?: () => void
 }) {
-  const [avatarError, setAvatarError] = useState(false)
+  /** 记下加载失败的那个地址：换了头像地址就自然不算失败 */
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null)
+  const [confirmLogout, setConfirmLogout] = useState(false)
+  const avatarError = failedAvatar === avatarUrl
   const isGuest = !!userId?.startsWith("guest-")
 
   if (!username) {
@@ -72,7 +76,7 @@ export function AccountPanel({
                   alt=""
                   loading="lazy"
                   referrerPolicy="no-referrer"
-                  onError={() => setAvatarError(true)}
+                  onError={() => setFailedAvatar(avatarUrl)}
                 />
               ) : (
                 username.slice(0, 1).toUpperCase()
@@ -120,13 +124,33 @@ export function AccountPanel({
             </div>
           </div>
 
-          <button
-            type="button"
-            className="bk-btn bk-btn--danger account-action account-logout"
-            onClick={onLogout}
-          >
-            退出登录
-          </button>
+          {confirmLogout ? (
+            <div className="account-logout">
+              <ConfirmBar
+                danger
+                confirmLabel="确认退出"
+                message={
+                  isGuest
+                    ? "退出登录？游客账号没有绑定 osu! 或邮箱，退出后可能找回不了这里的卡册和进度。"
+                    : "退出登录？卡册和进度都保存在账号里，下次登录就能回来。"
+                }
+                onCancel={() => setConfirmLogout(false)}
+                onConfirm={() => {
+                  playSfx("click")
+                  setConfirmLogout(false)
+                  onLogout?.()
+                }}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="bk-btn bk-btn--danger account-action account-logout"
+              onClick={() => setConfirmLogout(true)}
+            >
+              退出登录
+            </button>
+          )}
         </>
       }
       right={
@@ -134,28 +158,7 @@ export function AccountPanel({
           <div className="account-hero">
             <span className="bk-label">我的本体卡</span>
             <div className="account-hero__face">
-              <GameCardFace
-                card={faceFromDef(
-                  {
-                    id: hero.id,
-                    osuId: null,
-                    name: hero.name,
-                    rarity: hero.rarity,
-                    job: hero.job,
-                    no: hero.no,
-                    total: hero.total,
-                    country: hero.country ?? undefined,
-                    globalRank: hero.globalRank,
-                    pp: hero.pp == null ? null : Number(hero.pp),
-                    profileUrl: hero.profileUrl ?? undefined,
-                    art: hero.art ?? undefined,
-                    banner: hero.banner ?? undefined,
-                    skills: hero.skills,
-                    version: 1,
-                  },
-                  { level: hero.level, constellation: hero.constellation }
-                )}
-              />
+              <GameCardFace card={toFace(hero)} />
             </div>
             <b className="account-hero__name">{hero.name}</b>
             <span className="account-hero__meta">

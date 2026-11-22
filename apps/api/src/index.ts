@@ -3,6 +3,8 @@ import cookie from "@fastify/cookie"
 import Fastify from "fastify"
 
 import { authRoutes } from "./routes/auth"
+import { CORS_ORIGINS } from "./auth/env"
+import { handleError } from "./error-handler"
 import { cardRoutes } from "./routes/cards"
 import { deckRoutes } from "./routes/decks"
 import { dungeonRoutes } from "./routes/dungeons"
@@ -14,7 +16,10 @@ import { client, sql } from "./db/client"
 
 const app = Fastify({ logger: true })
 
-await app.register(cors, { origin: true, credentials: true })
+app.setErrorHandler(handleError)
+
+// 白名单见 auth/env.ts：CORS_ORIGINS > 开发环境本地端口 > 生产默认同源（不发 CORS 头）
+await app.register(cors, { origin: CORS_ORIGINS, credentials: true })
 await app.register(cookie)
 await app.register(authRoutes)
 await app.register(packRoutes)

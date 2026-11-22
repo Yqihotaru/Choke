@@ -133,7 +133,7 @@ function schedulePush(ownerId: string | null, state: PlayerProgress) {
   if (pushTimer) window.clearTimeout(pushTimer)
   pushTimer = window.setTimeout(() => {
     pushTimer = null
-    void pushServerProgress(ownerId, state)
+    pushServerProgress(ownerId, state).catch(() => {})
   }, 900)
 }
 
@@ -186,7 +186,7 @@ export async function pullProgress(ownerId: string | null) {
     write(ownerId, current)
     emit()
   } else if (current.updatedAt > remoteState.updatedAt) {
-    void pushServerProgress(ownerId, current)
+    pushServerProgress(ownerId, current).catch(() => {})
   }
 }
 

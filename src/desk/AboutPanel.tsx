@@ -1,4 +1,6 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
+
+import { useModal } from "@/ui/useModal"
 
 import { Pages } from "./BookPages"
 import "./about-panel.css"
@@ -58,6 +60,9 @@ type PolicyKey = keyof typeof POLICIES
 
 export function AboutPanel() {
   const [policy, setPolicy] = useState<PolicyKey | null>(null)
+  const policyRef = useRef<HTMLDivElement>(null)
+
+  useModal(policyRef, { active: policy !== null, onClose: () => setPolicy(null) })
 
   return (
     <>
@@ -88,7 +93,7 @@ export function AboutPanel() {
         right={
           <div className="about-center">
             <span className="bk-label">实验室工具</span>
-            <p className="bk-note">卡面与开发用的页面，入口先集中在这里。</p>
+            <p className="bk-note">开发用页面。正式上线后仅对指定账户开放。</p>
             <div className="bk-list">
               {TOOLS.map((tool) => (
                 <a
@@ -99,7 +104,10 @@ export function AboutPanel() {
                   rel={tool.external ? "noreferrer" : undefined}
                 >
                   <span className="about-link__text">
-                    <b>{tool.label}</b>
+                    <b>
+                      {tool.label}
+                      <span className="bk-tag about-dev">开发用</span>
+                    </b>
                     <em>{tool.note}</em>
                   </span>
                   <i aria-hidden>›</i>
@@ -122,8 +130,15 @@ export function AboutPanel() {
       />
 
       {policy && (
-        <div className="about-policy-layer" role="dialog" aria-modal="true">
-          <div className="about-policy-card">
+        <div
+          className="about-policy-layer"
+          role="dialog"
+          aria-modal="true"
+          aria-label={POLICIES[policy].title}
+          ref={policyRef}
+          onClick={() => setPolicy(null)}
+        >
+          <div className="about-policy-card" onClick={(event) => event.stopPropagation()}>
             <b>{POLICIES[policy].title}</b>
             {POLICIES[policy].body.map((line) => (
               <p key={line}>{line}</p>

@@ -1,4 +1,4 @@
-import { faceFromDef } from "@/card/def"
+import { faceFromDef, type CardDef } from "@/card/def"
 import type { CardFaceData, CardSkill, CardSkillRef, Job, Rarity } from "@/card/types"
 
 /** `/users/:id/cards` 和 `/users/:id/deck` 共用的卡行 */
@@ -52,41 +52,63 @@ export interface ApiDeck {
   updatedAt: string | null
 }
 
-export function toFace(row: ApiUserCard): CardFaceData {
-  return faceFromDef(
-    {
-      id: row.id,
-      osuId: null,
-      name: row.name,
-      rarity: row.rarity,
-      job: row.job,
-      no: row.no,
-      total: row.total,
-      country: row.country ?? undefined,
-      globalRank: row.globalRank,
-      pp: row.pp == null ? null : Number(row.pp),
-      profileUrl: row.profileUrl ?? undefined,
-      art: row.art ?? undefined,
-      banner: row.banner ?? undefined,
-      skills: row.skills,
-      skillRefs: row.skillRefs,
-      version: row.version ?? 1,
-    },
-    {
-      level: row.level,
-      constellation: row.constellation,
-      foil: row.foil,
-      rollBp: row.rollBp,
-      serial: row.serial,
-      pulled: row.pulled,
-    },
-  )
+function toCardDef(row: ApiCardDef): CardDef {
+  return {
+    id: row.id,
+    osuId: null,
+    name: row.name,
+    rarity: row.rarity,
+    job: row.job,
+    no: row.no,
+    total: row.total,
+    country: row.country ?? undefined,
+    globalRank: row.globalRank,
+    pp: row.pp == null ? null : Number(row.pp),
+    profileUrl: row.profileUrl ?? undefined,
+    art: row.art ?? undefined,
+    banner: row.banner ?? undefined,
+    skills: row.skills,
+    skillRefs: row.skillRefs,
+    version: row.version ?? 1,
+  }
 }
 
+export function toFace(row: ApiUserCard): CardFaceData {
+  return faceFromDef(toCardDef(row), {
+    level: row.level,
+    constellation: row.constellation,
+    foil: row.foil,
+    rollBp: row.rollBp,
+    serial: row.serial,
+    pulled: row.pulled,
+  })
+}
+
+/** 图鉴里的卡定义（没有实例状态）转卡面：1 级、0 命座 */
+export function defToFace(row: ApiCardDef): CardFaceData {
+  return faceFromDef(toCardDef(row))
+}
+
+const REQUEST_TIMEOUT_MS = 15_000
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { credentials: "include", ...init })
-  const data = await res.json()
-  if (!data.ok) throw new ApiError(data.error?.message ?? "请求失败", data.error?.code)
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout
+  let res: Response
+  try {
+    res = await fetch(url, { credentials: "include", ...init, signal })
+  } catch (err) {
+    if (init?.signal?.aborted) throw err
+    if (timeout.aborted) throw new ApiError("请求超时，请稍后再试", "timeout")
+    throw new ApiError("网络不通，请检查连接", "network")
+  }
+  let data: { ok?: boolean; data?: unknown; error?: { message?: string; code?: string } }
+  try {
+    data = await res.json()
+  } catch {
+    throw new ApiError(res.ok ? "服务器返回了无法识别的内容" : `服务暂时不可用（${res.status}）`, "bad_response")
+  }
+  if (!res.ok || !data.ok) throw new ApiError(data.error?.message ?? "请求失败", data.error?.code)
   return data.data as T
 }
 

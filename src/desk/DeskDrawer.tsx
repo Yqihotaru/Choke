@@ -10,6 +10,8 @@ import {
   type Ref,
 } from "react"
 
+import { playSfx } from "@/audio/sfx"
+
 import { OBJECT_META, OBJECT_ORDER, type DeskObjectId } from "./objects"
 import type { DeskItem } from "./types"
 import "./desk-drawer.css"
@@ -34,22 +36,25 @@ interface Props {
   liftedId: string | null
   render: (item: DeskItem) => ReactNode
   onItemPointerDown: (event: ReactPointerEvent<HTMLDivElement>, item: DeskItem) => void
-  /** 键盘 Enter / 空格：和点一下一样 */
+  /** 键盘 Enter / 空格：把这件物件从抽屉里取出到桌面 */
   onActivate: (item: DeskItem) => void
   /** 物件之外收着的东西（邀请函）有几件；它们自己经 portal 画进 slotRef 这一格 */
   extra: number
   slotRef: Ref<HTMLDivElement>
 }
 
-/** 格子里给物件留的地方，物件按比例缩进去 */
-const CELL = { w: 104, h: 64 }
+/** 一个格子的外框；CSS 经 --dr-cell-w / --dr-cell-h 读这里，布局只有这一处数字 */
+const CELL_BOX = { w: 116, h: 96 }
+
+/** 格子里给物件留的地方：左右各留 6，上面留 16、下面给标签留 16；物件按比例缩进去 */
+const CELL = { w: CELL_BOX.w - 12, h: CELL_BOX.h - 32 }
 
 /** 原尺寸 w × h 的东西放进格子时的缩放 */
 export function cellScale(w: number, h: number) {
   return Math.min(CELL.w / w, CELL.h / h, 0.62)
 }
 
-/** 抽屉合着时露在桌沿外的抽屉面高度，和 desk-drawer.css 的 --dr-front 一致 */
+/** 抽屉合着时露在桌沿外的抽屉面高度；CSS 经 --dr-front 读这里 */
 const FRONT = 30
 
 /**
@@ -65,6 +70,17 @@ export function DeskDrawer({ ref, items, liftedId, render, onItemPointerDown, on
 
   useEffect(() => {
     openRef.current = open
+  }, [open])
+
+  // 开合的声音：拉开 slide；合上 slide，抽屉到底再一声 thud
+  const wasOpen = useRef(open)
+  useEffect(() => {
+    if (wasOpen.current === open) return
+    wasOpen.current = open
+    playSfx("slide")
+    if (open) return
+    const timer = window.setTimeout(() => playSfx("thud"), 300)
+    return () => window.clearTimeout(timer)
   }, [open])
 
   useImperativeHandle(ref, () => ({
@@ -145,7 +161,18 @@ export function DeskDrawer({ ref, items, liftedId, render, onItemPointerDown, on
   })
 
   return (
-    <div ref={rootRef} className={`desk-drawer ${open ? "is-open" : ""}`} data-count={stowed.length + extra}>
+    <div
+      ref={rootRef}
+      className={`desk-drawer ${open ? "is-open" : ""}`}
+      data-count={stowed.length + extra}
+      style={
+        {
+          "--dr-front": `${FRONT}px`,
+          "--dr-cell-w": `${CELL_BOX.w}px`,
+          "--dr-cell-h": `${CELL_BOX.h}px`,
+        } as CSSProperties
+      }
+    >
       <div className="desk-drawer__well" inert={!open} aria-hidden={!open || undefined}>
         {stowed.length + extra === 0 && <p className="desk-drawer__empty">把桌上的物件拖进来收好</p>}
         {stowed.map((item) => {
@@ -159,7 +186,7 @@ export function DeskDrawer({ ref, items, liftedId, render, onItemPointerDown, on
               data-stowed={id}
               role="button"
               tabIndex={0}
-              aria-label={`${meta.thing}（${meta.label}）：点开，拖回桌面`}
+              aria-label={`${meta.thing}（${meta.label}）：点开，拖回桌面；回车取出到桌面`}
               onPointerDown={(event) => onItemPointerDown(event, item)}
               onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
                 if (event.key !== "Enter" && event.key !== " ") return

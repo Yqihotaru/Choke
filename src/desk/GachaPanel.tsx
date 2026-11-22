@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -6,12 +7,13 @@ import {
   type CSSProperties,
 } from "react"
 
+import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import type { CardFaceData, Rarity } from "@/card/types"
 import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
 
-import { fetchCardDetail, fetchPackInventory, openPack as apiOpenPack, toFace } from "./api"
+import { ApiError, fetchPackInventory, openPack as apiOpenPack } from "./api"
 import { emitDeskData, onDeskData } from "./events"
 import { Pages } from "./BookPages"
 import {
@@ -21,6 +23,7 @@ import {
   type GachaOpenDetail,
 } from "./drag"
 import { GuestLoginButton } from "./GuestLoginButton"
+import { resolvePulledCards } from "./opening/cards"
 import { PackArt } from "./opening/PackArt"
 import { RARITY_COLOR } from "./rarity"
 import { useGameConfig } from "./useGameConfig"
@@ -63,13 +66,14 @@ export function GachaPanel({
   const [cards, setCards] = useState<(CardFaceData & { userCardId: number })[]>(
     []
   )
-  const [pity, setPity] = useState<Pity | null>(null)
+  const [pityMap, setPityMap] = useState<Partial<Record<PoolId, Pity>>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [packs, setPacks] = useState<{
     userId: string
     data: Record<string, number>
   } | null>(null)
+  const [packsFailed, setPacksFailed] = useState(false)
   const config = useGameConfig()
   const [skipAnim, setSkipAnim] = useState(
     () => localStorage.getItem(SKIP_KEY) === "1"
@@ -84,9 +88,10 @@ export function GachaPanel({
   if (ownerId !== userId) {
     setOwnerId(userId)
     setCards([])
-    setPity(null)
+    setPityMap({})
     setLoading(false)
     setError(null)
+    setPacksFailed(false)
   }
 
   useLayoutEffect(() => {
@@ -98,45 +103,59 @@ export function GachaPanel({
     }
   }, [userId])
 
+  const loadPacks = useCallback(
+    (isCurrent: () => boolean = () => true) => {
+      if (!userId) return
+      fetchPackInventory(userId)
+        .then((data) => {
+          if (!isCurrent()) return
+          setPacks({ userId, data: data.packs })
+          setPacksFailed(false)
+        })
+        .catch(() => {
+          if (isCurrent()) setPacksFailed(true)
+        })
+    },
+    [userId]
+  )
+
   useEffect(() => {
-    if (!userId) return
     let cancelled = false
-    fetchPackInventory(userId)
-      .then((data) => {
-        if (!cancelled) setPacks({ userId, data: data.packs })
-      })
-      .catch(() => {})
+    loadPacks(() => !cancelled)
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [loadPacks])
 
   // 桌面补发新手卡包后，面板里的库存数字要跟上
   useEffect(() => {
     if (!userId) return
-    return onDeskData("packs", () => {
-      fetchPackInventory(userId)
-        .then((data) => setPacks({ userId, data: data.packs }))
-        .catch(() => {})
-    })
-  }, [userId])
+    let cancelled = false
+    const off = onDeskData("packs", () => loadPacks(() => !cancelled))
+    return () => {
+      cancelled = true
+      off()
+    }
+  }, [userId, loadPacks])
 
   const current = POOLS.find((item) => item.id === pool) ?? POOLS[0]
   const pityThreshold = config?.pity.threshold ?? 60
   const pityRarity = config?.pity.rarity ?? "L"
   const packSize = config?.packSize ?? 5
+  // 保底按卡池各记各的，切换卡池只换显示，不清掉
+  const pity = pityMap[pool] ?? null
   const pityPercent = pity ? Math.min(100, (pity.after / pityThreshold) * 100) : 0
   const currentPacks = packs && packs.userId === userId ? packs.data : null
   const odds = Object.entries(
     config?.packs.find((item) => item.id === pool)?.weights ?? {}
   ).filter(([, weight]) => weight > 0)
   const packCount = currentPacks?.[pool] ?? 0
+  const inventoryUnknown = packsFailed && !currentPacks
 
   function selectPool(id: PoolId) {
     if (id === pool) return
     setPool(id)
     setCards([])
-    setPity(null)
     setError(null)
   }
 
@@ -165,34 +184,30 @@ export function GachaPanel({
       try {
         result = await apiOpenPack(pool, packSize)
       } catch (reason) {
-        throw new Error(reason instanceof Error ? reason.message : "开包失败")
+        // 没库存了或请求没有明确结果：库存数字以服务端为准重新读一次
+        const code = reason instanceof ApiError ? reason.code : undefined
+        if (isCurrent() && (code === "no_packs" || code === "timeout" || code === "network")) {
+          loadPacks(() => ownerRef.current === owner)
+        }
+        throw new Error(reason instanceof Error ? reason.message : "开包失败", {
+          cause: reason,
+        })
       }
 
       consumed = true
       if (!isCurrent()) return
-      setPity(result.pity)
+      const openedPool = pool
+      setPityMap((prev) => ({ ...prev, [openedPool]: result.pity }))
       if (result.packs) setPacks({ userId, data: result.packs })
       emitDeskData("packs")
       if (!isCurrent()) return
 
-      const faces = await Promise.all(
-        result.results.map(async (item) => {
-          const detail = await fetchCardDetail(item.cardId)
-          return {
-            ...toFace({
-              ...detail,
-              userCardId: item.userCardId,
-              level: 1,
-              constellation: 0,
-              exp: 0,
-              foil: item.foil,
-              serial: item.serial,
-              pulled: detail.pulled ?? item.pulled,
-            }),
-            userCardId: item.userCardId,
-          }
-        })
-      )
+      // 卡包已核销：详情拿不到的卡用结果里的字段兜底，保证每张都展示
+      const pulled = await resolvePulledCards(result.results)
+      const faces = pulled.map((face, index) => ({
+        ...face,
+        userCardId: result.results[index].userCardId,
+      }))
 
       if (!isCurrent()) return
       if (skipAnim) {
@@ -225,6 +240,7 @@ export function GachaPanel({
       }
     } catch (reason) {
       if (!isCurrent()) return
+      playSfx("error")
       const message = reason instanceof Error ? reason.message : "开包失败"
       if (consumed) emitTutorialEvent("pack-opened")
       setError(
@@ -242,6 +258,7 @@ export function GachaPanel({
 
   const sendAllToDesk = () => {
     if (!cards.length) return
+    playSfx("click")
     const payload = cards.map((card) => toDeskCard(card, card.userCardId))
     emitDeskData("cards", payload)
     setCards([])
@@ -250,16 +267,32 @@ export function GachaPanel({
   const needsStarter =
     !loading &&
     !!userId &&
+    !inventoryUnknown &&
     packCount <= 0 &&
     tutorial.tutorialStep === "gacha-open"
+  const retryInventory = () => {
+    playSfx("click")
+    loadPacks()
+  }
   const openButton = needsStarter ? (
     <button
       type="button"
       className="bk-btn bk-btn--main bk-btn--block"
       data-tutorial-id="gacha-restock"
-      onClick={() => requestTutorialStarter()}
+      onClick={() => {
+        playSfx("click")
+        requestTutorialStarter()
+      }}
     >
       领取新手卡包
+    </button>
+  ) : inventoryUnknown ? (
+    <button
+      type="button"
+      className="bk-btn bk-btn--main bk-btn--block"
+      onClick={retryInventory}
+    >
+      库存读取失败，点击重试
     </button>
   ) : (
     <button
@@ -267,11 +300,23 @@ export function GachaPanel({
       className="bk-btn bk-btn--main bk-btn--block"
       data-tutorial-id="gacha-open-button"
       disabled={loading || !userId || packCount <= 0}
-      onClick={handleOpenPack}
+      onClick={() => {
+        playSfx("click")
+        void handleOpenPack()
+      }}
     >
       {loading ? "开启中…" : packCount > 0 ? `开 ${packSize} 张` : "没有卡包"}
     </button>
   )
+  const inventoryNote =
+    packsFailed && currentPacks ? (
+      <p className="bk-note bk-error" role="alert">
+        库存刷新失败，数量可能不是最新的{" "}
+        <button type="button" className="bk-chip" onClick={retryInventory}>
+          点击重试
+        </button>
+      </p>
+    ) : null
 
   return (
     <Pages
@@ -298,7 +343,9 @@ export function GachaPanel({
                   <b>{item.name}</b>
                   <small>{item.note}</small>
                 </span>
-                <em className="bk-num">×{currentPacks?.[item.id] ?? 0}</em>
+                <em className="bk-num">
+                  ×{currentPacks?.[item.id] ?? (inventoryUnknown ? "?" : 0)}
+                </em>
               </button>
             ))}
           </div>
@@ -366,6 +413,8 @@ export function GachaPanel({
                     <div
                       className="gacha-results__card"
                       key={`${card.id}-${index}`}
+                      role="group"
+                      aria-label={card.name}
                       onPointerDown={(event) =>
                         startCardPointerDrag(
                           event,
@@ -393,6 +442,7 @@ export function GachaPanel({
                 {error}
               </p>
             )}
+            {inventoryNote}
             {cards.length > 0 && (
               <p className="bk-note gacha-hint">
                 把卡拖到桌面，或一次全部发过去。
@@ -422,7 +472,7 @@ export function GachaPanel({
                 <p className="bk-note">一次开 {packSize} 张 · 库存 ×{packCount}</p>
               </div>
             </div>
-            <div className="gacha-odds" aria-label="概率">
+            <div className="gacha-odds" role="group" aria-label="概率">
               {odds.map(([rarity, weight]) => (
                 <span
                   key={rarity}
@@ -439,6 +489,7 @@ export function GachaPanel({
                 {error}
               </p>
             )}
+            {inventoryNote}
             {openButton}
           </>
         )

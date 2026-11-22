@@ -14,6 +14,7 @@ import {
 import { flushSync } from "react-dom"
 
 import { onIdle } from "@/lib/idle"
+import { playSfx } from "@/audio/sfx"
 
 import { AboutPanel } from "./AboutPanel"
 import { AccountPanel } from "./AccountPanel"
@@ -133,7 +134,16 @@ export function DeskBook({
   onLocked,
 }: Props) {
   const [gachaPool, setGachaPool] = useState<PoolId>("normal")
-  const [leaving, setLeaving] = useState(false)
+  const [leavingFor, setLeavingFor] = useState<{
+    panel: PanelId
+    origin: Props["origin"]
+  } | null>(null)
+  // 合上动画只属于「发起合上时」的那一次打开；期间换了物件 / 重新打开就不再算在合上
+  const leaving = leavingFor?.panel === panel && leavingFor.origin === origin
+  const shown = useRef({ panel, origin })
+  useEffect(() => {
+    shown.current = { panel, origin }
+  }, [panel, origin])
   const bookRef = useRef<HTMLElement>(null)
   const leaveTimer = useRef<number | null>(null)
   const [from, setFrom] = useState("50% 50%")
@@ -198,6 +208,7 @@ export function DeskBook({
    * 新页的挂载和布局发生在动画开始之前，翻的过程只动合成层上的快照。
    */
   const turn = useCallback((dir: 1 | -1, update: () => void) => {
+    playSfx("flip")
     const el = bookRef.current
     if (
       !el ||
@@ -242,9 +253,11 @@ export function DeskBook({
   const selectPanel = (id: PanelId) => {
     if (id === panel) return
     if (!unlocked(id)) {
+      playSfx("deny")
       onLocked?.(id, unlockLevelOf(id))
       return
     }
+    playSfx("tick")
     turn(PANEL_IDS.indexOf(id) > PANEL_IDS.indexOf(panel) ? 1 : -1, () =>
       onSelect(id)
     )
@@ -252,10 +265,16 @@ export function DeskBook({
 
   const close = useCallback(() => {
     if (leaveTimer.current) return
-    setLeaving(true)
+    const snapshot = shown.current
+    setLeavingFor(snapshot)
+    playSfx("flip")
     leaveTimer.current = window.setTimeout(() => {
       leaveTimer.current = null
-      onClose()
+      // 170ms 里又打开了别的物件：新书不能被这次合上带走
+      const now = shown.current
+      if (now.panel === snapshot.panel && now.origin === snapshot.origin)
+        onClose()
+      else setLeavingFor(null)
     }, 170)
   }, [onClose])
 
@@ -280,6 +299,19 @@ export function DeskBook({
     const rect = el.getBoundingClientRect()
     setFrom(`${origin.x - rect.left}px ${origin.y - rect.top}px`)
   }, [origin])
+
+  // 打开：翻书声；焦点移进书，合上后还给触发者（书是非模态可拖的，不做 Tab 陷阱）
+  useEffect(() => {
+    playSfx("flip")
+    const previous =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null
+    bookRef.current?.focus({ preventScroll: true })
+    return () => {
+      if (previous?.isConnected) previous.focus({ preventScroll: true })
+    }
+  }, [])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -401,7 +433,11 @@ export function DeskBook({
     commitPos(d.next)
     event.currentTarget.classList.remove("is-dragging")
     restoreSelects()
-    localStorage.setItem(POS_KEY, JSON.stringify(d.next))
+    try {
+      localStorage.setItem(POS_KEY, JSON.stringify(d.next))
+    } catch {
+      // 隐私模式 / 配额满：这次位置不记，不影响拖动
+    }
   }
 
   const meta = OBJECT_META[panel]
@@ -443,6 +479,8 @@ export function DeskBook({
         } as CSSProperties
       }
       aria-label={meta.label}
+      role="dialog"
+      tabIndex={-1}
       onPointerDown={onGripDown}
       onPointerMove={onGripMove}
       onPointerUp={onGripUp}

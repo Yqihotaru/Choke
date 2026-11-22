@@ -110,7 +110,11 @@ function reducer(state: DeskState, action: Action): DeskState {
       }
     }
     case "reset":
-      return { version: 2, items: defaultItems() }
+      // 带 token 的卡包已从背包预扣，丢掉就等于丢包：留在桌上，由调用方还给服务端后再移除
+      return {
+        version: 2,
+        items: [...defaultItems(), ...state.items.filter((it) => it.kind === "pack" && it.token)],
+      }
     case "faces":
       return {
         ...state,

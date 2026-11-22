@@ -7,6 +7,7 @@ import {
   type CSSProperties,
 } from "react"
 
+import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
 import { expToNext, isHeroCardId, levelCap } from "@/card/progression"
@@ -95,6 +96,7 @@ export const AlbumPanel = memo(function AlbumPanel({
   )
   const cachedPages = usePageCache(key, page, PAGE_SIZE, loadPage)
   const currentResult = cachedPages.find(([index]) => index === page)?.[1]
+  // 渲染期钳制页码：React 会丢弃这次渲染立刻重来，不会提交越界的中间帧；改 effect 反而会闪一帧空页
   if (currentResult && !currentResult.error) {
     const lastPage = Math.max(0, Math.ceil(currentResult.total / PAGE_SIZE) - 1)
     if (page > lastPage) setPage(lastPage)
@@ -229,6 +231,7 @@ export const AlbumPanel = memo(function AlbumPanel({
                 className="bk-chip"
                 aria-pressed={rarity === ""}
                 onClick={() => {
+                  playSfx("tick")
                   setRarity("")
                   setPage(0)
                 }}
@@ -242,6 +245,7 @@ export const AlbumPanel = memo(function AlbumPanel({
                   className="bk-chip"
                   aria-pressed={rarity === item}
                   onClick={() => {
+                    playSfx("tick")
                     setRarity(item)
                     setPage(0)
                   }}
@@ -314,16 +318,21 @@ const AlbumSlot = memo(function AlbumSlot({
       data-user-card={row.userCardId}
       role="button"
       tabIndex={0}
+      aria-label={`${row.name}，${RARITY_LABEL[row.rarity]}，Lv.${row.level}${row.foil ? "，闪卡" : ""}${onDesk ? "，在桌面" : ""}，查看详情`}
       onPointerDown={(event) =>
         startCardPointerDrag(event, {
           card: toDeskCard(face, row.userCardId),
           userCardId: row.userCardId,
         })
       }
-      onClick={() => onDetail(row)}
+      onClick={() => {
+        playSfx("pick")
+        onDetail(row)
+      }}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault()
+          playSfx("pick")
           onDetail(row)
         }
       }}

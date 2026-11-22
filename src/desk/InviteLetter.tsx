@@ -10,6 +10,8 @@ import {
 import { createPortal, flushSync } from "react-dom"
 
 import { RARITIES } from "@/card/types"
+import { playSfx } from "@/audio/sfx"
+import { useModal } from "@/ui/useModal"
 
 import { onboard } from "./api"
 import { cellScale, type DeskDrawerHandle } from "./DeskDrawer"
@@ -117,6 +119,7 @@ export function InviteLetter({
   const envRef = useRef<HTMLDivElement>(null)
 
   const openLetter = useCallback(() => {
+    playSfx("paper")
     setReading({ sealed: !opened })
     if (!opened) {
       markInviteOpened()
@@ -155,12 +158,15 @@ export function InviteLetter({
   const drawerHeight = ENV_H + drawerFlap + 16
 
   const toss = () => {
+    playSfx("paper")
     setPos(DEFAULT_POS)
     saveInvitePos(null)
     setRise(true)
     if (user) {
-      if (unlockAchievement("invite-toss"))
+      if (unlockAchievement("invite-toss")) {
+        playSfx("success")
         onToast(`成就解锁：${ACHIEVEMENTS["invite-toss"]}`)
+      }
       setTossed(true)
     }
     setPops((value) => value + 1)
@@ -250,6 +256,7 @@ export function InviteLetter({
         el.style.transform = ""
         onStow(true)
         drawer.current?.bump()
+        playSfx("thud")
         onToast("邀请函收进了抽屉")
         return
       }
@@ -266,6 +273,7 @@ export function InviteLetter({
       flushSync(() => setPos(next))
       el.style.transform = ""
       saveInvitePos(next)
+      playSfx("paper")
     }
 
     el.addEventListener("pointermove", onMove)
@@ -466,19 +474,22 @@ function LetterModal({
   const [claiming, setClaiming] = useState(false)
   const [granted, setGranted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [jumping, setJumping] = useState(false)
+  const modalRef = useRef<HTMLDivElement>(null)
   const config = useGameConfig()
   const stats = useCardStats()
 
+  // Esc 关闭、焦点移进信里、关闭后还给触发者；useModal 会拦下 Esc，底下翻开的书不会跟着合上
+  useModal(modalRef, { onClose })
+
+  // 从 bfcache 返回时页面状态是旧的：把「前往中」复位
   useEffect(() => {
-    // 捕获阶段先拦下 Esc，不让底下翻开的书也跟着合上
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return
-      event.stopImmediatePropagation()
-      onClose()
+    const reset = (event: PageTransitionEvent) => {
+      if (event.persisted) setJumping(false)
     }
-    window.addEventListener("keydown", onKey, true)
-    return () => window.removeEventListener("keydown", onKey, true)
-  }, [onClose])
+    window.addEventListener("pageshow", reset)
+    return () => window.removeEventListener("pageshow", reset)
+  }, [])
 
   async function claim() {
     if (claiming) return
@@ -486,9 +497,11 @@ function LetterModal({
     setError(null)
     try {
       await onboard()
+      playSfx("success")
       setGranted(true)
       onClaimed()
     } catch (reason) {
+      playSfx("error")
       setError(
         reason instanceof Error ? reason.message : "领取失败，请稍后再试"
       )
@@ -602,8 +615,20 @@ function LetterModal({
           </li>
         </ul>
         <div className="invite-paper__actions">
-          <a className="invite-paper__btn" href="/auth/osu">
-            用 osu! 登录
+          <a
+            className="invite-paper__btn"
+            href="/auth/osu"
+            aria-disabled={jumping || undefined}
+            aria-busy={jumping || undefined}
+            onClick={(event) => {
+              if (jumping) {
+                event.preventDefault()
+                return
+              }
+              setJumping(true)
+            }}
+          >
+            {jumping ? "正在前往 osu!…" : "用 osu! 登录"}
           </a>
           <GuestLoginButton
             className="invite-paper__btn invite-paper__btn--ghost"
@@ -654,6 +679,7 @@ function LetterModal({
 
   return (
     <div
+      ref={modalRef}
       className="invite-modal"
       role="dialog"
       aria-modal="true"
@@ -681,7 +707,11 @@ function LetterModal({
             ×
           </button>
           {body}
-          {error && <p className="invite-paper__error">{error}</p>}
+          {error && (
+            <p className="invite-paper__error" role="alert">
+              {error}
+            </p>
+          )}
           <footer className="invite-paper__sign">
             <span>—— Choke! 发牌员</span>
             <small>Choke! · 非盈利同人项目 · 与 osu! 官方无关</small>

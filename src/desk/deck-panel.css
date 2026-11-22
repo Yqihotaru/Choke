@@ -72,11 +72,22 @@
   cursor: grabbing;
 }
 /* 选中要换的槽、拖卡悬在上面的槽：同一道粉色框 */
-.deck-slot:focus-visible,
+.deck-slot__main:focus-visible,
 .deck-slot.is-picked,
 .deck-slot.is-drop-target {
   outline: 2px solid var(--bk-osu);
   outline-offset: 3px;
+}
+/* 键盘入口：铺满槽位的透明按钮，指针穿透给外层（拖拽、点击都走外层） */
+.deck-slot__main {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  pointer-events: none;
 }
 .deck-slot.is-picked.bk-slot {
   background: var(--bk-osu-soft);
@@ -102,6 +113,7 @@
   font-weight: 700;
   line-height: 18px;
   text-align: center;
+  pointer-events: none;
 }
 .deck-slot__remove {
   position: absolute;
@@ -224,4 +236,26 @@
   font-weight: 700;
   text-align: center;
   white-space: nowrap;
+}
+
+/* 窄屏：左页摘要换行，按钮和筛选不撑破页宽 */
+@media (max-width: 900px) {
+  .deck-summary {
+    flex-wrap: wrap;
+    gap: 10px 20px;
+  }
+  .deck-summary__saved {
+    margin-left: 0;
+  }
+  .deck-grid {
+    gap: 8px 6px;
+  }
+  .deck-actions,
+  .deck-filters,
+  .deck-target {
+    flex-wrap: wrap;
+  }
+  .deck-filters .bk-select {
+    flex: 1 1 100px;
+  }
 }
