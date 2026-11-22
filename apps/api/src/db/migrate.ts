@@ -1,8 +1,6 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import type { PGlite } from "@electric-sql/pglite"
-
 /**
  * 极简迁移器：migrations/*.sql 按文件名顺序执行，已执行过的记录在 schema_migrations。
  *
@@ -13,8 +11,13 @@ import type { PGlite } from "@electric-sql/pglite"
  */
 const MIGRATIONS_DIR = path.resolve(import.meta.dirname, "../../migrations")
 
-export async function runMigrations(client: PGlite): Promise<void> {
-  await client.exec(`
+export interface MigrationTarget {
+  exec(sql: string): Promise<void>
+  query<T = unknown>(text: string, params?: unknown[]): Promise<T[]>
+}
+
+export async function runMigrations(target: MigrationTarget): Promise<void> {
+  await target.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version text PRIMARY KEY,
       applied_at timestamptz NOT NULL DEFAULT now()
@@ -28,23 +31,22 @@ export async function runMigrations(client: PGlite): Promise<void> {
     .filter((name) => name.endsWith(".sql"))
     .sort()
 
-  const applied = new Set(
-    (await client.query<{ version: string }>("SELECT version FROM schema_migrations")).rows.map(
-      (row) => row.version,
-    ),
+  const appliedRows = await target.query<{ version: string }>(
+    "SELECT version FROM schema_migrations",
   )
+  const applied = new Set(appliedRows.map((row) => row.version))
 
   for (const file of files) {
     if (applied.has(file)) continue
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8")
-    await client.exec("BEGIN")
+    await target.exec("BEGIN")
     try {
-      await client.exec(sql)
-      await client.query("INSERT INTO schema_migrations (version) VALUES ($1)", [file])
-      await client.exec("COMMIT")
+      await target.exec(sql)
+      await target.query("INSERT INTO schema_migrations (version) VALUES ($1)", [file])
+      await target.exec("COMMIT")
       console.log(`[migrate] applied ${file}`)
     } catch (error) {
-      await client.exec("ROLLBACK")
+      await target.exec("ROLLBACK")
       throw error
     }
   }
