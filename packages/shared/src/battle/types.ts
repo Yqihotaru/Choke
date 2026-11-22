@@ -1,4 +1,4 @@
-import { CONSTELLATION_BONUS, RARITY_BASE } from "@/card/data"
+import { CONSTELLATION_BONUS, RARITY_BASE } from "../config"
 import {
   ARCHETYPE_COEF,
   MP_MAX_BY_RARITY,
@@ -8,8 +8,8 @@ import {
   subjobFor,
   type SkillDef,
   type SubJob,
-} from "@/card/jobs"
-import type { CardFaceData, Element, Job, Rarity } from "@/card/types"
+} from "../skills"
+import type { CardFaceData, Element, Job, Rarity } from "../types"
 
 export const MAX_SUPPORT_SLOTS = 7
 
@@ -282,8 +282,17 @@ export type BattleEvent =
       type: "won" | "lost"
     }
 
+/** 两条独立随机流：我方行动（命中、暴击、触发、支援…）和敌方行动（选目标、击倒判定…） */
+export type RngStream = "player" | "enemy"
+
 export interface BattleState {
   stageId: string
+  /** 这场战斗的种子；同样的种子 + 同样的操作 = 同样的结果 */
+  seed: string
+  /** 各随机流的当前状态（uint32） */
+  rng: Record<RngStream, number>
+  /** 战斗内动态生成对象（召唤物等）的自增 id */
+  idSeq: number
   turn: number
   phase: BattlePhase
   ap: number
@@ -322,7 +331,11 @@ export interface BattleState {
 
 function heroLevelFactor(level: number): number {
   const lv = Math.min(Math.max(level, 1), 12)
-  return lv <= 6 ? 1 + 0.03 * (lv - 1) : 1.18 * 1.2 ** (lv - 6)
+  if (lv <= 6) return 1 + 0.03 * (lv - 1)
+  // 逐次相乘而不是 **：各家引擎的 pow 末位可能不同，复算必须逐位一致
+  let factor = 1.18
+  for (let i = 6; i < lv; i += 1) factor *= 1.2
+  return factor
 }
 
 function basePower(face: CardFaceData): number {

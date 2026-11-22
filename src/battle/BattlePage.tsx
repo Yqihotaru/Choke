@@ -4,17 +4,11 @@ import { fetchDeck, fetchMe, fetchUserCards, toFace, type ApiDeck, type ApiUserC
 import { GuestLoginButton } from "@/desk/GuestLoginButton"
 import { advanceTutorial, useTutorialProgress } from "@/tutorial/store"
 
-import {
-  STAGE_PRESETS,
-  cloneBattle,
-  createBattle,
-  endTurn,
-  playSkill,
-  raiseDefense,
-  swapBattleCard,
-} from "./engine"
+import { STAGE_PRESETS, createBattle } from "@choke/shared/battle/engine"
+import { withAction, type BattleAction } from "@choke/shared/battle/actions"
+import type { BattleState } from "@choke/shared/battle/types"
+import { randomSeed } from "@choke/shared/rng"
 import { BattleStage } from "./view/BattleStage"
-import type { BattleState } from "./types"
 import "./battle.css"
 
 interface ApiUser {
@@ -40,6 +34,8 @@ export function BattlePage() {
   const tutorialRun = tutorialMode && progress.tutorialStep === "battle-view"
   const tutorialFinished = tutorialMode && progress.tutorialStep === "battle-result"
   const rewarded = useRef(false)
+  /** 本场已执行的合法操作；第 4 步上传给服务端复算 */
+  const actions = useRef<BattleAction[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -130,6 +126,7 @@ export function BattlePage() {
 
   const start = () => {
     setActionError(null)
+    actions.current = []
     setBattle(
       createBattle(
         cards.map((card) => ({
@@ -138,6 +135,8 @@ export function BattlePage() {
           face: toFace(card),
         })),
         {
+          // 第 4 步改为服务端下发种子；现在本地试玩先在前端生成
+          seed: randomSeed(),
           tutorial: tutorialRun,
           stageId,
           benchInputs: benchCards.map((card) => ({
@@ -163,37 +162,20 @@ export function BattlePage() {
     )
   }
 
-  const play = (index: number, skillId: string) => {
+  const act = (action: BattleAction) => {
     if (!battle) return
-    const next = cloneBattle(battle)
-    const message = playSkill(next, index, skillId)
-    setBattle(next)
-    setActionError(message)
+    const { state: next, error } = withAction(battle, action)
+    if (!error) {
+      actions.current.push(action)
+      setBattle(next)
+    }
+    setActionError(error)
   }
 
-  const defend = (tier?: number) => {
-    if (!battle) return
-    const next = cloneBattle(battle)
-    const message = raiseDefense(next, tier)
-    setBattle(next)
-    setActionError(message)
-  }
-
-  const swap = (activeSlotIndex: number, benchUid: number) => {
-    if (!battle) return
-    const next = cloneBattle(battle)
-    const message = swapBattleCard(next, activeSlotIndex, benchUid)
-    setBattle(next)
-    setActionError(message)
-  }
-
-  const finishTurn = () => {
-    if (!battle) return
-    const next = cloneBattle(battle)
-    const message = endTurn(next)
-    setBattle(next)
-    setActionError(message)
-  }
+  const play = (card: number, skill: string) => act({ type: "skill", card, skill })
+  const defend = (tier?: number) => act({ type: "defend", tier })
+  const swap = (slot: number, benchUid: number) => act({ type: "swap", slot, benchUid })
+  const finishTurn = () => act({ type: "endTurn" })
 
   return (
     <BattleStage

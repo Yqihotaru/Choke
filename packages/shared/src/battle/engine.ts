@@ -1,6 +1,6 @@
-import { DEMO_CARDS } from "@/card/data"
-import type { SkillDef } from "@/card/jobs"
-import type { CardFaceData } from "@/card/types"
+import { deriveStream, nextRandom } from "../rng"
+import type { SkillDef } from "../skills"
+import type { CardFaceData } from "../types"
 
 import {
   MAX_SUPPORT_SLOTS,
@@ -16,6 +16,7 @@ import {
   type SideSupportUnit,
   type StatusEffect,
   type StatusId,
+  type RngStream,
 } from "./types"
 
 import {
@@ -44,8 +45,19 @@ export {
   mitigation,
 } from "./rules"
 
-function random(min: number, max: number): number {
-  return min + Math.random() * (max - min)
+/** 从指定随机流取一个 [0, 1) 的数，并推进流的状态 */
+function roll(state: BattleState, stream: RngStream): number {
+  const [next, value] = nextRandom(state.rng[stream])
+  state.rng[stream] = next
+  return value
+}
+
+function random(state: BattleState, stream: RngStream, min: number, max: number): number {
+  return min + roll(state, stream) * (max - min)
+}
+
+function pickOne<T>(state: BattleState, stream: RngStream, list: T[]): T {
+  return list[Math.floor(roll(state, stream) * list.length)]!
 }
 
 function beginAction(state: BattleState) {
@@ -499,7 +511,7 @@ function rollCardTriggers(state: BattleState) {
     card.trigger = null
     if (card.down) continue
     const modBonus = card.face.mods.length * 0.03
-    const r = Math.random()
+    const r = roll(state, "player")
     const critArtChance = 0.04 + modBonus * 0.5 + bardBonus * 0.3
     const doubleChance = critArtChance + 0.05 + modBonus * 0.5 + bardBonus * 0.3
     const boostChance = doubleChance + 0.12 + modBonus + bardBonus
@@ -544,21 +556,10 @@ function syncDefenseSupportSlot(state: BattleState) {
 
 export function createBattle(
   inputs: BattleInputCard[],
-  options: { tutorial?: boolean; stageId?: string; benchInputs?: BattleInputCard[] } = {},
+  options: { seed: string; tutorial?: boolean; stageId?: string; benchInputs?: BattleInputCard[] },
 ): BattleState {
   const cards = inputs.map((input) => createBattleCard(input.face, input.uid, input.cardId))
-  const usedIds = new Set(inputs.map((i) => i.cardId))
-  const rawBench =
-    options.benchInputs && options.benchInputs.length > 0
-      ? options.benchInputs
-      : DEMO_CARDS.filter((d) => !usedIds.has(d.id))
-          .slice(0, 4)
-          .map((face, idx) => ({
-            uid: 9000 + idx,
-            cardId: face.id,
-            face,
-          }))
-  const bench = rawBench.map((input) => createBattleCard(input.face, input.uid, input.cardId))
+  const bench = (options.benchInputs ?? []).map((input) => createBattleCard(input.face, input.uid, input.cardId))
 
   const stageId = options.tutorial ? "tutorial-ghost" : (options.stageId ?? "ghost")
   const { enemy, enemySupports } = makeEnemyAndSupports(stageId, options.tutorial)
@@ -589,6 +590,12 @@ export function createBattle(
 
   const state: BattleState = {
     stageId,
+    seed: options.seed,
+    rng: {
+      player: deriveStream(options.seed, "player"),
+      enemy: deriveStream(options.seed, "enemy"),
+    },
+    idSeq: 0,
     turn: 1,
     phase: "player",
     ap: 2,
@@ -712,7 +719,7 @@ function applyDamageToEnemy(
   for (let i = 0; i < hits; i += 1) {
     const confusePenalty = card.statuses.some((s) => s.id === "confuse") ? 20 : 0
     const hitChance = card.stats.hit - confusePenalty
-    if (Math.random() * 100 > hitChance) {
+    if (roll(state, "player") * 100 > hitChance) {
       state.combo = Math.floor(state.combo / 2)
       emit(state, {
         type: "miss",
@@ -732,7 +739,7 @@ function applyDamageToEnemy(
     const bonusCrit =
       (card.subjob.tags.includes("pierce") && state.enemy.statuses.some((s) => s.id === "vulnerable") ? 15 : 0) +
       (card.subjob.tags.includes("lowhp") && state.teamHp / state.teamHpMax < 0.3 ? 10 : 0)
-    const crit = Math.random() * 100 < card.stats.crit + bonusCrit
+    const crit = roll(state, "player") * 100 < card.stats.crit + bonusCrit
     const elMult = elementMultiplier(element, state.enemy.element, state.enemy.id, state.enemy.weaknesses)
     const isWeak = elMult >= 1.2 || state.enemy.weaknesses.includes(element)
 
@@ -746,7 +753,7 @@ function applyDamageToEnemy(
         elMult *
         (1 - mitigation(effectiveDef)) *
         (1 - enemyArmorRed) *
-        random(0.95, 1.05) *
+        random(state, "player", 0.95, 1.05) *
         (crit ? 1.5 : 1),
     )
 
@@ -892,8 +899,8 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
   }
 
   // 混乱状态 30% 行动失败；冻结状态 25% 行动失败（§11.1）
-  const failByConfuse = card.statuses.some((s) => s.id === "confuse") && Math.random() < 0.3
-  const failByFreeze = state.teamStatuses.some((s) => s.id === "freeze") && Math.random() < 0.25
+  const failByConfuse = card.statuses.some((s) => s.id === "confuse") && roll(state, "player") < 0.3
+  const failByFreeze = state.teamStatuses.some((s) => s.id === "freeze") && roll(state, "player") < 0.25
   if (failByConfuse || failByFreeze) {
     card.trigger = null
     emit(state, {
@@ -949,7 +956,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           log(state, `${card.name} 发动打断，但敌方本回合已无剩余行动`)
           break
         }
-        const picked = candidates[Math.floor(Math.random() * candidates.length)]!
+        const picked = pickOne(state, "player", candidates)
         const baseRate =
           state.enemy.tier === "boss" ? 0.45 : state.enemy.tier === "elite" ? 0.55 : 0.65
         if (picked.intent.uninterruptible) {
@@ -965,7 +972,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
             state,
             `🎲 ${card.name} 抽中了敌方【${picked.intent.label}】，但该招牌技标红【无法打断】！Combo 减半！`,
           )
-        } else if (Math.random() > baseRate) {
+        } else if (roll(state, "player") > baseRate) {
           state.combo = Math.floor(state.combo / 2)
           emit(state, {
             type: "interrupt_roll",
@@ -1010,7 +1017,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
         const rate =
           (state.enemy.tier === "boss" ? 0.5 : state.enemy.tier === "elite" ? 0.65 : 0.8) +
           focusBonus
-        if (Math.random() <= rate) {
+        if (roll(state, "player") <= rate) {
           const ctrlType = skill.statusId === "sleep" ? "sleep" : "stun"
           state.enemy.hardControl = ctrlType
           state.enemy.hardControlCount += 1
@@ -1131,7 +1138,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
         const def = skill.supportDef
         if (def) {
           const unit: SideSupportUnit = {
-            id: `sup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            id: `sup-${(state.idSeq += 1)}`,
             name: def.name,
             kind: def.kind,
             element: def.element,
@@ -1251,7 +1258,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
     if (support.kind !== "attack") continue
 
     const procRate = Math.min(0.95, (support.procRate ?? SUPPORT_PROC_RATE) + summonerBonus)
-    if (Math.random() > procRate) continue
+    if (roll(state, "player") > procRate) continue
 
     support.triggered = true
     const hits = support.hits ?? 1
@@ -1285,7 +1292,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
             comboMultiplier(state.combo) *
             elMult *
             (1 - mitigation(enemyDef)) *
-            random(0.95, 1.05),
+            random(state, "player", 0.95, 1.05),
         ),
       )
       state.enemy.hp = Math.max(0, state.enemy.hp - damage)
@@ -1316,7 +1323,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
       if (card.down || !card.subjob.tags.includes("swift")) continue
       if (card.statuses.some((s) => s.id === "slow" || s.id === "stun")) continue
       // 游侠/刺客/破法者抢攻率（默认 12% 让战中能稳定体验到抢攻垫刀，文档基础 4%+迅捷专精）
-      if (Math.random() > PREEMPTIVE_RATE) continue
+      if (roll(state, "player") > PREEMPTIVE_RATE) continue
 
       checkEnemyWakeUp(state)
       state.combo += 1
@@ -1329,7 +1336,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
             comboMultiplier(state.combo) *
             elementMultiplier("physical", state.enemy.element, state.enemy.id, state.enemy.weaknesses) *
             (1 - mitigation(enemyDefence(state, false))) *
-            random(0.95, 1.05),
+            random(state, "player", 0.95, 1.05),
         ),
       )
       state.enemy.hp = Math.max(0, state.enemy.hp - damage)
@@ -1368,7 +1375,7 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
   }
 
   // 敌方魅惑（50% 概率打错目标自残 §11.1）
-  if (state.enemy.statuses.some((s) => s.id === "charm") && Math.random() < 0.5) {
+  if (state.enemy.statuses.some((s) => s.id === "charm") && roll(state, "enemy") < 0.5) {
     const selfDmg = Math.round(state.enemy.atk * 1.2)
     state.enemy.hp = Math.max(1, state.enemy.hp - selfDmg)
     emit(state, {
@@ -1449,8 +1456,8 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
   const primaryTarget =
     taunter ??
     (intent.causesDown && tanks.length > 0
-      ? tanks[Math.floor(Math.random() * tanks.length)]!
-      : living[Math.floor(Math.random() * living.length)]!)
+      ? pickOne(state, "enemy", tanks)
+      : pickOne(state, "enemy", living))
   const targetSlotIdx = state.cards.indexOf(primaryTarget)
 
   const magic = intent.element !== "physical"
@@ -1495,7 +1502,7 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
           intent.power *
           (1 - mitigation(targetDef)) *
           (1 - tierRed) *
-          random(0.95, 1.05),
+          random(state, "enemy", 0.95, 1.05),
       ),
     )
     total += damage
@@ -1555,7 +1562,7 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
   if (intent.causesDown && state.teamHp > 0 && !primaryTarget.down) {
     const resistChance =
       primaryTarget.subjob.tags.includes("tank") ? 0.45 + defTier * 0.15 : defTier * 0.12
-    if (Math.random() > resistChance) {
+    if (roll(state, "enemy") > resistChance) {
       primaryTarget.down = true
       primaryTarget.downTurns = 3
       primaryTarget.taunt = false
@@ -1601,10 +1608,10 @@ export function endTurn(state: BattleState): string | null {
     // 敌方左侧攻击型侧面支援追击
     for (const esup of state.enemySupports) {
       if (state.teamHp <= 0 || state.enemy.hp <= 0) break
-      if (esup.kind === "attack" && Math.random() <= (esup.procRate ?? 0.5)) {
+      if (esup.kind === "attack" && roll(state, "enemy") <= (esup.procRate ?? 0.5)) {
         const living = aliveCards(state.cards)
         if (living.length === 0) break
-        const target = living[Math.floor(Math.random() * living.length)]!
+        const target = pickOne(state, "enemy", living)
         const defTier = effectivePlayerDefenseTier(state)
         const tierRed = defenseReductionOf(defTier, hasTankAlive(state.cards))
         const dmg = Math.max(

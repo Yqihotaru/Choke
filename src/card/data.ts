@@ -1,6 +1,6 @@
+import { makeCard } from "@choke/shared/card-def"
 import { CONSTELLATION_BONUS, RARITY_BASE } from "@choke/shared/config"
 import { JOB_ORDER, SKILL_SETS, hashOf, skillsFor } from "@choke/shared/skills"
-import { normalizeCardSkill } from "./jobs"
 
 export { CONSTELLATION_BONUS, JOB_ORDER, RARITY_BASE, hashOf, skillsFor }
 import type { CardFaceData, Mod, Rarity, StarState } from "./types"
@@ -153,17 +153,7 @@ export function formatNo(no: number, total: number): string {
   return `${String(no).padStart(width, "0")}/${total}`
 }
 
-type CardInit = Omit<CardFaceData, "no" | "total"> & { no?: number; total?: number }
-
-export function makeCard(init: CardInit): CardFaceData {
-  return {
-    no: 1,
-    total: 100000,
-    ...init,
-    // 卡面技能统一走一遍现行技能规范化：名字保留，费用/属性以现行机制为准
-    skills: init.skills.map((skill) => normalizeCardSkill(skill, init.job)),
-  }
-}
+export { makeCard }
 
 export const DEMO_CARDS: CardFaceData[] = [
   makeCard({

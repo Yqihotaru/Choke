@@ -19,7 +19,14 @@
     "./stamina": "./src/stamina.ts",
     "./dungeons": "./src/dungeons.ts",
     "./content": "./src/content/index.ts",
-    "./content/schema": "./src/content/schema.ts"
+    "./content/schema": "./src/content/schema.ts",
+    "./rng": "./src/rng.ts",
+    "./card-def": "./src/card-def.ts",
+    "./battle/engine": "./src/battle/engine.ts",
+    "./battle/actions": "./src/battle/actions.ts",
+    "./battle/types": "./src/battle/types.ts",
+    "./battle/config": "./src/battle/config.ts",
+    "./battle/rules": "./src/battle/rules.ts"
   },
   "dependencies": {
     "zod": "^4.1.12"

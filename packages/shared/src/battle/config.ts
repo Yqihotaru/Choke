@@ -1,4 +1,4 @@
-import type { Element } from "@/card/types"
+import type { Element } from "../types"
 
 import type { Enemy } from "./types"
 

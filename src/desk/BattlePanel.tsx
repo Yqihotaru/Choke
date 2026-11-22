@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react"
 
 import { playSfx } from "@/audio/sfx"
-import { STAGE_PRESETS, TUTORIAL_ENEMY_HP } from "@/battle/engine"
+import { STAGE_PRESETS, TUTORIAL_ENEMY_HP } from "@choke/shared/battle/engine"
 import { battlePower } from "@/card/data"
 import { DUNGEONS } from "@choke/shared/dungeons"
 import { ITEMS } from "@choke/shared/items"
