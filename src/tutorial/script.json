@@ -83,7 +83,6 @@
     "album-view": {
       "target": "album-grid",
       "advanceOn": "continue",
-      "exp": 100,
       "next": "deck",
       "lines": [
         {
@@ -117,7 +116,6 @@
       "target": { "desktop": "deck-entry", "book": "deck-tutorial-confirm" },
       "advanceOn": "event",
       "event": "deck-confirmed",
-      "exp": 80,
       "next": "battle-tab",
       "lines": [
         {

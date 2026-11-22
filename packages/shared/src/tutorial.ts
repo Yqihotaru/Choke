@@ -67,8 +67,6 @@ export interface TutorialScript {
   advanceOn: TutorialAdvance
   /** advanceOn === "event" 时等待的业务事件 */
   event?: TutorialEventType
-  /** 推进时发放的经验 */
-  exp?: number
   /** 下一步；最后一步指向 done */
   next?: TutorialStep
   lines: TutorialLine[]
@@ -85,6 +83,6 @@ export interface PlayerProgress {
   exp: number
   tutorialStep: TutorialStep
   tutorialDone: boolean
-  /** 本地/远端合并时用，越大越新 */
+  /** 服务端最后写入时间；多标签页之间按它取较新的缓存 */
   updatedAt: number
 }

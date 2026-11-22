@@ -5,7 +5,7 @@ import { STAGE_PRESETS, TUTORIAL_ENEMY_HP } from "@/battle/engine"
 import { battlePower } from "@/card/data"
 import { DUNGEONS } from "@choke/shared/dungeons"
 import { ITEMS } from "@choke/shared/items"
-import { useTutorialProgress } from "@/tutorial/store"
+import { refreshProgress, useTutorialProgress } from "@/tutorial/store"
 
 import {
   fetchDeck,
@@ -61,6 +61,8 @@ export function BattlePanel({
       for (const stack of result.rewards.items ?? []) {
         parts.push(`${ITEMS[stack.itemId].name} ×${stack.count}`)
       }
+      if (result.player?.gained) parts.push(`玩家经验 +${result.player.gained}`)
+      void refreshProgress(userId)
       playSfx(result.rewards.packs ? "levelup" : "success")
       setDungeonMessage({ text: `通关：${parts.join(" · ")}` })
       emitDeskData("packs")

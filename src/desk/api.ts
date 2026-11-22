@@ -546,21 +546,20 @@ export function fetchProgress(userId: string, signal?: AbortSignal): Promise<Ser
   return request<ServerProgress | null>(`/api/users/${userId}/progress`, { signal }).catch(() => null)
 }
 
-export function saveProgress(
+/** 请求把教程从 from 推进一步；下一步和经验由服务端决定。进度已变化时抛 step_mismatch */
+export function advanceTutorialStep(
   userId: string,
-  progress: ServerProgress,
-): Promise<ServerProgress | null> {
-  return request<ServerProgress | null>(`/api/users/${userId}/progress`, {
-    method: "PUT",
+  from: string,
+): Promise<ServerProgress & { gained: number }> {
+  return request(`/api/users/${userId}/tutorial/advance`, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      level: progress.level,
-      exp: progress.exp,
-      tutorialStep: progress.tutorialStep,
-      tutorialDone: progress.tutorialDone,
-      updatedAt: progress.updatedAt,
-    }),
-  }).catch(() => null)
+    body: JSON.stringify({ from }),
+  })
+}
+
+export function skipTutorialRemote(userId: string): Promise<ServerProgress> {
+  return request(`/api/users/${userId}/tutorial/skip`, { method: "POST" })
 }
 
 /* ============================ 体力 / 副本 ============================ */
@@ -580,6 +579,8 @@ export interface DungeonRunResult {
   stamina: StaminaState
   essence: number
   coins: number
+  /** 副本按体力给的玩家经验；旧后端没有这个字段 */
+  player?: { level: number; exp: number; gained: number }
 }
 
 export function runDungeon(userId: string, dungeonId: string): Promise<DungeonRunResult> {

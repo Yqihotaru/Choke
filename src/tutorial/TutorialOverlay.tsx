@@ -160,9 +160,8 @@ function TutorialDialogue({
     marketUnlockLevel: MARKET_UNLOCK_LEVEL,
   })
   const waitingForTarget = script.advanceOn !== "continue" && targetMissing
-  // 事件/经验步骤不能靠“跳过这一步”伪造完成，只能完整跳过教程
-  const canSkipStep =
-    waitingForTarget && script.advanceOn === "click" && !script.exp
+  // 事件步骤不能靠“跳过这一步”伪造完成，只能完整跳过教程（经验由服务端按步骤发，最多到 Lv.3）
+  const canSkipStep = waitingForTarget && script.advanceOn === "click"
 
   const advanceLine = useCallback(() => {
     if (typedRef.current?.isTyping()) {
@@ -396,7 +395,7 @@ export function TutorialOverlay({
     const next = script.next
     if (!next) return
     advancing.current = true
-    advanceTutorial(next, script.exp ?? 0)
+    advanceTutorial(progress.tutorialStep)
     if (script.closeBookOnExit || next === "done") requestTutorialCloseBook()
     if (next === "done") onFinish?.("complete")
   }, [script, progress.tutorialStep, onFinish])

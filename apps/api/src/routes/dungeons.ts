@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
 import { dungeonById } from "@choke/shared/dungeons"
+import { PLAYER_EXP_PER_STAMINA, addPlayerExp } from "@choke/shared/player"
 import { settleStamina, spendStamina, staminaNextIn, STAMINA_MAX } from "@choke/shared/stamina"
 
 import { requireSelf } from "../auth/guard"
@@ -70,6 +71,8 @@ export async function dungeonRoutes(app: FastifyInstance) {
         .select({
           stamina: users.stamina,
           updatedAt: users.staminaUpdatedAt,
+          playerLevel: users.playerLevel,
+          playerExp: users.playerExp,
         })
         .from(users)
         .where(eq(users.id, userId))
@@ -81,6 +84,8 @@ export async function dungeonRoutes(app: FastifyInstance) {
         })
       }
 
+      const playerExpGained = dungeon.cost * PLAYER_EXP_PER_STAMINA
+      const player = addPlayerExp({ level: row.playerLevel, exp: row.playerExp }, playerExpGained)
       const now = Date.now()
       const spent = spendStamina({ value: row.stamina, updatedAt: row.updatedAt }, dungeon.cost, now)
       if (!spent) {
@@ -102,12 +107,17 @@ export async function dungeonRoutes(app: FastifyInstance) {
             staminaUpdatedAt: spent.updatedAt,
             essence: sql`${users.essence} + ${essence}`,
             coins: sql`${users.coins} + ${coins}`,
+            playerLevel: player.level,
+            playerExp: player.exp,
+            progressUpdatedAt: now,
           })
           .where(
             and(
               eq(users.id, userId),
               eq(users.stamina, row.stamina),
               eq(users.staminaUpdatedAt, row.updatedAt),
+              eq(users.playerLevel, row.playerLevel),
+              eq(users.playerExp, row.playerExp),
             ),
           )
           .returning({ essence: users.essence, coins: users.coins })
@@ -145,6 +155,7 @@ export async function dungeonRoutes(app: FastifyInstance) {
           },
           essence: wallet.essence,
           coins: wallet.coins,
+          player: { ...player, gained: playerExpGained },
         },
       }
     }

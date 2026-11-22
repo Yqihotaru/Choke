@@ -1,34 +1,26 @@
 import { useEffect, useSyncExternalStore } from "react"
 
 import {
-  fetchServerProgress,
-  PROGRESS_SYNC_ENABLED,
-  pushServerProgress,
-} from "./persist"
+  ApiError,
+  advanceTutorialStep,
+  fetchProgress,
+  skipTutorialRemote,
+  type ServerProgress,
+} from "@/desk/api"
+import { PLAYER_MAX_LEVEL, nextTutorialStep } from "@choke/shared/player"
+
 import { TUTORIAL_STEPS, type PlayerProgress, type TutorialStep } from "./types"
 
+export { expToNextPlayerLevel as expToNextLevel } from "@choke/shared/player"
+
 /**
- * 等级经验表：index 是“当前等级”，值是升到下一级需要的经验。
- * 教程给的经验：album-view 100（1→2），deck-view 80 + battle-view 70（2→3）。
- * 所以正常走完教程正好 Lv.3；跳过则直接补到 Lv.3。
+ * 玩家等级 / 经验 / 教程进度的客户端缓存。
+ *
+ * 服务端是唯一权威：等级和经验只从服务端回包里来，客户端不自己加。
+ * 教程推进先在本地乐观切到下一步（台词不用等网络），请求排队串行发送，
+ * 回包后用服务端结果覆盖；失败就重新拉取服务端进度。
+ * localStorage 只是首屏缓存。
  */
-const LEVEL_EXP_REQUIRED: Record<number, number> = {
-  1: 100,
-  2: 150,
-  3: 250,
-  4: 400,
-  5: 600,
-  6: 900,
-}
-
-export const MAX_LEVEL = 60
-
-export function expToNextLevel(level: number): number {
-  return (
-    LEVEL_EXP_REQUIRED[level] ??
-    Math.round(900 * Math.pow(1.22, Math.max(0, level - 6)))
-  )
-}
 
 function createDefault(ownerId: string | null): PlayerProgress {
   return {
@@ -43,7 +35,7 @@ function createDefault(ownerId: string | null): PlayerProgress {
 }
 
 const EMPTY = createDefault(null)
-const STORAGE_PREFIX = "choke.progress.v1:"
+const STORAGE_PREFIX = "choke.progress.v2:"
 
 function isStep(value: unknown): value is TutorialStep {
   return (
@@ -53,25 +45,20 @@ function isStep(value: unknown): value is TutorialStep {
 }
 
 function normalize(
-  raw: Partial<PlayerProgress>,
+  raw: Partial<PlayerProgress> | ServerProgress,
   ownerId: string | null
 ): PlayerProgress {
-  let tutorialStep = isStep(raw.tutorialStep) ? raw.tutorialStep : "idle"
-  const tutorialDone = raw.tutorialDone === true || tutorialStep === "done"
-  if (tutorialDone && tutorialStep === "idle") tutorialStep = "done"
-  let level = Math.min(
-    MAX_LEVEL,
-    Math.max(1, Math.round(typeof raw.level === "number" ? raw.level : 1))
-  )
-  if (tutorialDone && level < 3) level = 3
-  const exp = Math.max(0, Math.round(typeof raw.exp === "number" ? raw.exp : 0))
+  const tutorialStep = isStep(raw.tutorialStep) ? raw.tutorialStep : "idle"
   return {
     version: 1,
     ownerId,
-    level,
-    exp,
+    level: Math.min(
+      PLAYER_MAX_LEVEL,
+      Math.max(1, Math.round(typeof raw.level === "number" ? raw.level : 1))
+    ),
+    exp: Math.max(0, Math.round(typeof raw.exp === "number" ? raw.exp : 0)),
     tutorialStep,
-    tutorialDone,
+    tutorialDone: raw.tutorialDone === true || tutorialStep === "done",
     updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : 0,
   }
 }
@@ -118,6 +105,38 @@ function getSnapshot() {
   return current
 }
 
+/** 排队中的推进请求数；还有请求在路上时，回包只同步等级经验，不把步骤拉回去 */
+let inFlight = 0
+let queue: Promise<void> = Promise.resolve()
+
+function enqueue(task: () => Promise<void>) {
+  inFlight += 1
+  queue = queue.then(task).finally(() => {
+    inFlight -= 1
+  })
+}
+
+function applyServer(ownerId: string, remote: ServerProgress) {
+  if (owner !== ownerId) return
+  const next = normalize(remote, ownerId)
+  const settled = inFlight > 1
+    ? { ...next, tutorialStep: current.tutorialStep, tutorialDone: current.tutorialDone }
+    : next
+  current = settled
+  write(ownerId, next)
+  emit()
+}
+
+/** 从服务端拉最新进度；副本结算等会改等级的操作之后调用 */
+export async function refreshProgress(ownerId: string | null = owner) {
+  if (!ownerId) return
+  const remote = await fetchProgress(ownerId)
+  if (!remote || owner !== ownerId) return
+  current = normalize(remote, ownerId)
+  write(ownerId, current)
+  emit()
+}
+
 function hydrate(ownerId: string | null) {
   const nextOwner = ownerId ?? null
   if (loaded && owner === nextOwner) return
@@ -125,113 +144,66 @@ function hydrate(ownerId: string | null) {
   loaded = true
   current = read(nextOwner)
   emit()
+  void refreshProgress(nextOwner)
 }
 
-let pushTimer: number | null = null
-function schedulePush(ownerId: string | null, state: PlayerProgress) {
-  if (!PROGRESS_SYNC_ENABLED || !ownerId) return
-  if (pushTimer) window.clearTimeout(pushTimer)
-  pushTimer = window.setTimeout(() => {
-    pushTimer = null
-    pushServerProgress(ownerId, state).catch(() => {})
-  }, 900)
-}
-
-function update(mutator: (state: PlayerProgress) => PlayerProgress) {
-  const next = normalize(
-    { ...mutator(current), ownerId: owner, updatedAt: Date.now() },
-    owner
-  )
-  current = next
-  write(owner, next)
+function optimisticStep(step: TutorialStep) {
+  current = {
+    ...current,
+    tutorialStep: step,
+    tutorialDone: current.tutorialDone || step === "done",
+  }
   emit()
-  schedulePush(owner, next)
 }
 
-export function addExp(
-  state: Pick<PlayerProgress, "level" | "exp">,
-  amount: number
-): Pick<PlayerProgress, "level" | "exp"> {
-  let level = state.level
-  let exp = state.exp + Math.max(0, Math.round(amount))
-  while (level < MAX_LEVEL && exp >= expToNextLevel(level)) {
-    exp -= expToNextLevel(level)
-    level += 1
-  }
-  return { level, exp }
-}
-
-const pulled = new Set<string>()
-
-/** 登录后拉一次远端进度；远端更新才覆盖本地，否则把本地推上去 */
-export async function pullProgress(ownerId: string | null) {
-  if (!PROGRESS_SYNC_ENABLED || !ownerId || pulled.has(ownerId)) return
-  const remote = await fetchServerProgress(ownerId)
-  if (!remote || owner !== ownerId) return
-  pulled.add(ownerId)
-  const remoteState = normalize(
-    {
-      version: 1,
-      ownerId,
-      level: remote.level,
-      exp: remote.exp,
-      tutorialStep: remote.tutorialStep,
-      tutorialDone: remote.tutorialDone,
-      updatedAt: remote.updatedAt ?? 0,
-    },
-    ownerId
-  )
-  if (remoteState.updatedAt > current.updatedAt) {
-    current = remoteState
-    write(ownerId, current)
-    emit()
-  } else if (current.updatedAt > remoteState.updatedAt) {
-    pushServerProgress(ownerId, current).catch(() => {})
-  }
+/** 把教程从 from 推进一步；经验由服务端发放 */
+export function advanceTutorial(from: TutorialStep) {
+  const ownerId = owner
+  const to = nextTutorialStep(from)
+  if (!ownerId || !to || current.tutorialStep !== from) return
+  optimisticStep(to)
+  enqueue(async () => {
+    try {
+      applyServer(ownerId, await advanceTutorialStep(ownerId, from))
+    } catch (error) {
+      // 409 多半是同时到账的副本经验改了等级：服务端仍停在 from 就重试一次
+      if (error instanceof ApiError && error.code === "step_mismatch") {
+        const remote = await fetchProgress(ownerId)
+        if (remote?.tutorialStep === from) {
+          try {
+            applyServer(ownerId, await advanceTutorialStep(ownerId, from))
+            return
+          } catch {
+            // 落到下面统一回滚
+          }
+        }
+      }
+      await refreshProgress(ownerId)
+    }
+  })
 }
 
 export function startTutorial() {
-  if (current.tutorialStep !== "idle") return
-  update((state) => ({ ...state, tutorialStep: "welcome" }))
+  advanceTutorial("idle")
 }
 
-/** 推进到下一步，同时结算经验；next === "done" 时教程毕业 */
-export function advanceTutorial(next: TutorialStep, exp = 0) {
-  update((state) => ({
-    ...state,
-    ...addExp(state, exp),
-    tutorialStep: next,
-    tutorialDone: state.tutorialDone || next === "done",
-  }))
-}
-
-export function grantExp(exp: number) {
-  update((state) => ({ ...state, ...addExp(state, exp) }))
-}
-
-/** 跳过：直接补到 Lv.3 + 毕业；新手礼包由 DeskPage 的 onFinish 负责补齐 */
+/** 跳过：服务端补到 Lv.3 + 毕业；新手礼包由 DeskPage 的 onFinish 负责补齐 */
 export function skipTutorial() {
-  update((state) => ({
-    ...state,
-    level: Math.max(state.level, 3),
-    exp: state.level >= 3 ? state.exp : 0,
-    tutorialStep: "done",
-    tutorialDone: true,
-  }))
-}
-
-/** 调试 / 重新体验教程用 */
-export function resetTutorial() {
-  update((state) => ({
-    ...createDefault(state.ownerId),
-    updatedAt: Date.now(),
-  }))
+  const ownerId = owner
+  if (!ownerId || current.tutorialDone) return
+  optimisticStep("done")
+  enqueue(async () => {
+    try {
+      applyServer(ownerId, await skipTutorialRemote(ownerId))
+    } catch {
+      await refreshProgress(ownerId)
+    }
+  })
 }
 
 export function useTutorialProgress(ownerId: string | null) {
   useEffect(() => {
     hydrate(ownerId)
-    void pullProgress(ownerId)
 
     const onStorage = (event: StorageEvent) => {
       if (!ownerId || event.key !== storageKey(ownerId) || !event.newValue) return
@@ -240,12 +212,12 @@ export function useTutorialProgress(ownerId: string | null) {
           JSON.parse(event.newValue) as Partial<PlayerProgress>,
           ownerId,
         )
-        if (next.updatedAt > current.updatedAt) {
+        if (inFlight === 0 && next.updatedAt > current.updatedAt) {
           current = next
           emit()
         }
       } catch {
-        // 忽略其他标签页写坏的存档
+        // 忽略其他标签页写坏的缓存
       }
     }
     window.addEventListener("storage", onStorage)

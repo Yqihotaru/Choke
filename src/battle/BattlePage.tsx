@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 
 import { fetchDeck, fetchMe, fetchUserCards, toFace, type ApiDeck, type ApiUserCard } from "@/desk/api"
 import { GuestLoginButton } from "@/desk/GuestLoginButton"
-import { advanceTutorial, grantExp, useTutorialProgress } from "@/tutorial/store"
+import { advanceTutorial, useTutorialProgress } from "@/tutorial/store"
 
 import {
   STAGE_PRESETS,
@@ -39,9 +39,7 @@ export function BattlePage() {
   const progress = useTutorialProgress(user?.id ?? null)
   const tutorialRun = tutorialMode && progress.tutorialStep === "battle-view"
   const tutorialFinished = tutorialMode && progress.tutorialStep === "battle-result"
-  const tutorialBattle = tutorialRun || tutorialFinished
   const rewarded = useRef(false)
-  const normalRewarded = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -91,16 +89,10 @@ export function BattlePage() {
     if (!tutorialRun || !battle || rewarded.current) return
     if (battle.phase !== "won" && battle.phase !== "lost") return
     rewarded.current = true
-    advanceTutorial("battle-result", 70)
+    advanceTutorial("battle-view")
   }, [battle, tutorialRun])
 
-  // 普通 PvE 也给玩家等级经验，保证教程后仍能继续升级
-  useEffect(() => {
-    if (tutorialBattle || !battle || normalRewarded.current) return
-    if (battle.phase !== "won" && battle.phase !== "lost") return
-    normalRewarded.current = true
-    grantExp(battle.phase === "won" ? 25 : 8)
-  }, [battle, tutorialBattle])
+  // 普通 PvE 暂不发玩家经验：战斗还在客户端结算，服务端无法校验（第 3 步战斗引擎进 shared 后由服务端复算发放）
 
   if (loading) return <div className="battle-page battle-page--center">加载中…</div>
   if (!user) {
@@ -138,7 +130,6 @@ export function BattlePage() {
 
   const start = () => {
     setActionError(null)
-    normalRewarded.current = false
     setBattle(
       createBattle(
         cards.map((card) => ({
