@@ -2,10 +2,39 @@ import { and, eq, sql } from "drizzle-orm"
 
 import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
-import { cards, packOpenings, userCards } from "../db/schema"
+import { cards, packOpenings, packTokens, userCards, userPacks } from "../db/schema"
 import { MIRROR_RATE, pickMirrorCard } from "../mirror"
-import { PACK_SIZE, PACKS } from "./packs"
-import { mulberry32, rollRarity, type PoolId } from "./pools"
+import { PACK_SIZE, PACKS, STARTER_GUARANTEE } from "./packs"
+import { RARITY_ORDER, mulberry32, rollRarity, type PoolId } from "./pools"
+
+const rankOf = (rarity: string) => RARITY_ORDER.indexOf(rarity as (typeof RARITY_ORDER)[number])
+
+/**
+ * 新手包兜底是否要在这一包生效：调用时这包已经扣过库存，
+ * 背包和桌面上都没有剩余新手包 = 这是最后一包；且之前的新手包里没出过 L 及以上。
+ */
+async function starterGuaranteeDue(userId: string): Promise<boolean> {
+  const pool = STARTER_GUARANTEE.pool
+  const [left] = await db
+    .select({ count: userPacks.count })
+    .from(userPacks)
+    .where(and(eq(userPacks.userId, userId), eq(userPacks.pool, pool)))
+  if ((left?.count ?? 0) > 0) return false
+  const onDesk = await db
+    .select({ id: packTokens.id })
+    .from(packTokens)
+    .where(and(eq(packTokens.userId, userId), eq(packTokens.pool, pool)))
+    .limit(1)
+  if (onDesk.length > 0) return false
+  const opened = await db
+    .select({ results: packOpenings.results })
+    .from(packOpenings)
+    .where(and(eq(packOpenings.userId, userId), eq(packOpenings.pool, pool)))
+  const floor = rankOf(STARTER_GUARANTEE.rarity)
+  return !opened.some((row) =>
+    (row.results as { rarity: string }[]).some((card) => rankOf(card.rarity) >= floor),
+  )
+}
 
 const idCache = new Map<string, string[]>()
 async function idsFor(rarity: string): Promise<string[]> {
@@ -24,6 +53,8 @@ async function idsFor(rarity: string): Promise<string[]> {
 export interface DrawnCard {
   cardId: string
   rarity: string
+  /** 新手包兜底改出的那一张 */
+  guaranteed?: boolean
   /** user_cards 实例 id，用于把这张卡直接拖进卡组 */
   userCardId: number
   /** 闪卡实例属性 */
@@ -76,11 +107,24 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       ? await pickMirrorCard(pool, mirrorRandom)
       : null
 
+  const guarantee = pool === STARTER_GUARANTEE.pool && (await starterGuaranteeDue(userId))
+  const floor = rankOf(STARTER_GUARANTEE.rarity)
+
   return db.transaction(async (tx) => {
     const results: DrawnCard[] = []
 
     for (let i = 0; i < count; i += 1) {
-      const rarity = rollRarity(pool, random)
+      let rarity = rollRarity(pool, random)
+      let guaranteed = false
+      if (
+        guarantee &&
+        i === count - 1 &&
+        rankOf(rarity) < floor &&
+        !results.some((card) => rankOf(card.rarity) >= floor)
+      ) {
+        rarity = STARTER_GUARANTEE.rarity
+        guaranteed = true
+      }
 
       const ids = pools.get(rarity) ?? []
       if (ids.length === 0) {
@@ -90,7 +134,16 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       const foil = random() < PACKS[pool].foilRate
 
       const { userCardId, serial, rollBp } = await grantCard(tx, { userId, cardId, foil })
-      results.push({ cardId, rarity, userCardId, foil, serial, pulled: serial, rollBp })
+      results.push({
+        cardId,
+        rarity,
+        userCardId,
+        foil,
+        serial,
+        pulled: serial,
+        rollBp,
+        ...(guaranteed ? { guaranteed } : {}),
+      })
     }
 
     // 镜像卡作为 bonus 单独返回，前端演完 5 张后再弹第 6 张。

@@ -5,12 +5,14 @@ import { z } from "zod"
 import { requireSelf } from "../auth/guard"
 import {
   FOIL_COST,
+  SHARD_EXP_RATE,
   constellationCap,
   essenceOf,
   expToNext,
   isHeroCardId,
   levelCap,
   meltExpOf,
+  shardOf,
   type Rarity,
 } from "../shared/cards"
 import { db } from "../db/client"
@@ -413,8 +415,76 @@ export async function progressionRoutes(app: FastifyInstance) {
     }
   })
 
+  /** 碎片换经验：1 碎片 = SHARD_EXP_RATE 经验，可以喂任何卡（含本体卡），满级卡不收。 */
+  app.post("/users/:userId/cards/:userCardId/shards", async (request, reply) => {
+    const params = paramsSchema.parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+    const { userCardId } = params
+    const body = z
+      .object({ amount: z.number().int().positive().max(1_000_000) })
+      .parse(request.body)
+
+    const target = await loadCard(userId, userCardId)
+    if (!target) {
+      return reply.code(404).send({
+        ok: false,
+        error: { code: "not_found", message: "卡不在这个账号的卡册里" },
+      })
+    }
+    if (target.level >= levelCap(isHeroCardId(target.id))) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "max_level", message: "已满级，不需要经验" },
+      })
+    }
+
+    const spent = body.amount
+    const gained = spent * SHARD_EXP_RATE
+
+    const fed = await runTx(reply, async (tx) => {
+      const [wallet] = await tx
+        .update(users)
+        .set({ shards: sql`${users.shards} - ${spent}` })
+        .where(and(eq(users.id, userId), gte(users.shards, spent)))
+        .returning({ shards: users.shards })
+      if (!wallet) {
+        const [user] = await tx
+          .select({ shards: users.shards })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+        const shards = user?.shards ?? 0
+        throw new TxAbort(400, "not_enough_shards", `碎片不足：${shards} / ${spent}`, {
+          need: spent,
+          shards,
+        })
+      }
+      const updated = await tx
+        .update(userCards)
+        .set({ exp: sql`${userCards.exp} + ${gained}` })
+        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+        .returning({ id: userCards.id })
+      if (updated.length === 0) {
+        throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
+      }
+      return wallet
+    })
+    if (!fed) return
+
+    return {
+      ok: true,
+      data: {
+        card: await loadCard(userId, userCardId),
+        spent,
+        gained,
+        shards: fed.shards,
+      },
+    }
+  })
+
   /**
-   * 通用分解：任意卡 → 精华。与「融卡升命座」不同，这里不需要同名卡。
+   * 通用分解：任意卡 → 碎片（闪卡额外给精华）。与「融卡升命座」不同，这里不需要同名卡。
    * 仍然保留最后一张，避免把某张卡彻底分解光。
    */
   app.post("/users/:userId/cards/:userCardId/dismantle", async (request, reply) => {
@@ -448,7 +518,8 @@ export async function progressionRoutes(app: FastifyInstance) {
       })
     }
 
-    const gained = essenceOf(target.rarity as Rarity, target.foil)
+    const shardsGained = shardOf(target.rarity as Rarity)
+    const essenceGained = essenceOf(target.rarity as Rarity, target.foil)
 
     const dismantled = await runTx(reply, async (tx) => {
       await lockUser(tx, userId)
@@ -474,20 +545,24 @@ export async function progressionRoutes(app: FastifyInstance) {
         .where(eq(marketListings.userCardId, userCardId))
       const [wallet] = await tx
         .update(users)
-        .set({ essence: sql`${users.essence} + ${gained}` })
+        .set({
+          shards: sql`${users.shards} + ${shardsGained}`,
+          essence: sql`${users.essence} + ${essenceGained}`,
+        })
         .where(eq(users.id, userId))
-        .returning({ essence: users.essence })
-      return { essence: wallet?.essence ?? 0 }
+        .returning({ essence: users.essence, shards: users.shards })
+      return { essence: wallet?.essence ?? 0, shards: wallet?.shards ?? 0 }
     })
     if (!dismantled) return
-    const wallet = dismantled
 
     return {
       ok: true,
       data: {
         removedUserCardId: userCardId,
-        gained,
-        essence: wallet?.essence ?? 0,
+        shardsGained,
+        essenceGained,
+        shards: dismantled.shards,
+        essence: dismantled.essence,
       },
     }
   })

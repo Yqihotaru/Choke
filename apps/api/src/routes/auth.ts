@@ -231,7 +231,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     if (!user) throw new Error("游客账号写入失败")
 
-    await addPacks(userId, { normal: STARTER_PACKS.normal })
+    await addPacks(userId, { starter: STARTER_PACKS.starter })
     request.log.info({ userId }, "guest account created")
 
     setSessionCookie(reply, userId)
@@ -341,6 +341,7 @@ export async function authRoutes(app: FastifyInstance) {
         profileUrl: user.osuId == null ? null : `https://osu.ppy.sh/users/${user.osuId}`,
         onboarded: user.onboarded,
         essence: user.essence,
+        shards: user.shards,
         coins: user.coins,
         hero,
       },

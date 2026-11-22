@@ -8,7 +8,14 @@ import { db } from "../db/client"
 import { cards, userCards, users } from "../db/schema"
 import { invalidatePublicCardRows } from "./cards"
 import { grantCard, openPack } from "../gacha/open"
-import { PACKS, PACK_SIZE, STARTER_PACKS, MYSTERY_PACK, type PackId } from "../gacha/packs"
+import {
+  EVENT_PACKS,
+  MYSTERY_PACK,
+  PACKS,
+  PACK_SIZE,
+  STARTER_PACKS,
+  type PackId,
+} from "../gacha/packs"
 import { MIRROR_RATE } from "../mirror"
 import {
   addPacks,
@@ -53,6 +60,7 @@ export async function packRoutes(app: FastifyInstance) {
           color: pack.color,
           weights: pack.weights,
           foilRate: pack.foilRate,
+          event: EVENT_PACKS.includes(id as PackId),
         })),
         packSize: PACK_SIZE,
         deckSize: DECK_SIZE,

@@ -18,6 +18,7 @@ export const MIRROR_ACTIVE_DAYS = 45
  */
 export const MIRROR_RARITY_WEIGHTS: Record<PoolId, Record<string, number>> = {
   normal: { UC: 40, R: 35, E: 20, L: 5 },
+  starter: { UC: 40, R: 35, E: 20, L: 5 },
   golden: { UC: 25, R: 35, E: 30, L: 10 },
   radiant: { UC: 20, R: 30, E: 35, L: 15 },
   sky: { UC: 15, R: 30, E: 35, L: 20 },

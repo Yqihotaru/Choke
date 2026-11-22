@@ -1,6 +1,6 @@
 import type { ApiUserCard } from "./api"
 import type { DeskObjectId } from "./objects"
-import { POOL_META } from "./rarity"
+import { EVENT_POOLS, POOL_META } from "./rarity"
 import type { DeskItem, PackPool } from "./types"
 
 export const POOL_KEY = "choke.pool"
@@ -13,13 +13,15 @@ export const SERVER_POOL: Record<PackPool, string> = {
   radiant: "radiant",
   sky: "sky",
   prism: "prism",
+  starter: "starter",
 }
 
 /** 读上次选的卡池；旧存档里的 quest 统一迁移到 golden。 */
 export function readSavedPool(): PackPool {
   const saved = localStorage.getItem(POOL_KEY)
   const normalized = saved === "quest" ? "golden" : saved
-  return normalized && normalized in POOL_META
+  // 活动包可能已经开完，不作为记住的卡池
+  return normalized && normalized in POOL_META && !EVENT_POOLS.includes(normalized as PackPool)
     ? (normalized as PackPool)
     : "normal"
 }

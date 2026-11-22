@@ -9,5 +9,11 @@ export {
   levelCap,
   meltExpOf,
 } from "@choke/shared/progression"
-export { FOIL_COST, MARKET_MAX_PRICE, essenceOf } from "@choke/shared/economy"
+export {
+  FOIL_COST,
+  MARKET_MAX_PRICE,
+  SHARD_EXP_RATE,
+  essenceOf,
+  shardOf,
+} from "@choke/shared/economy"
 export type { Rarity } from "@choke/shared/types"

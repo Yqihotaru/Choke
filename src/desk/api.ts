@@ -230,6 +230,8 @@ export interface PackCatalogEntry {
   color: string
   weights: Record<string, number>
   foilRate: number
+  /** 活动包：库存为 0 时前端隐藏 */
+  event?: boolean
 }
 
 export interface GameConfig {
@@ -300,6 +302,8 @@ export interface AccountMe {
   profileUrl: string | null
   onboarded: boolean
   essence: number
+  /** 旧后端没有这个字段 */
+  shards?: number
   coins: number
   hero: ApiUserCard | null
 }
@@ -582,8 +586,27 @@ export function runDungeon(userId: string, dungeonId: string): Promise<DungeonRu
 export function dismantleCard(
   userId: string,
   userCardId: number,
-): Promise<{ removedUserCardId: number; gained: number; essence: number }> {
+): Promise<{
+  removedUserCardId: number
+  shardsGained: number
+  essenceGained: number
+  shards: number
+  essence: number
+}> {
   return request(`/api/users/${userId}/cards/${userCardId}/dismantle`, {
     method: "POST",
+  })
+}
+
+/** 碎片 1:1 换经验 */
+export function feedShards(
+  userId: string,
+  userCardId: number,
+  amount: number,
+): Promise<{ card: ApiUserCard; spent: number; gained: number; shards: number }> {
+  return request(`/api/users/${userId}/cards/${userCardId}/shards`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount }),
   })
 }

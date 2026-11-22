@@ -43,16 +43,30 @@ export const PACKS = {
     weights: { E: 3, L: 30, Radiant: 55, Prismatic: 12 },
     foilRate: 0.15,
   },
+  /** 一次性活动包：新手 30 包。概率同普通包，最后一包兜底一张 L（见 STARTER_GUARANTEE）。 */
+  starter: {
+    name: "新手卡包",
+    short: "新手",
+    color: "#FF66AA",
+    weights: { C: 57, UC: 26, R: 11, E: 5, L: 0.85, Radiant: 0.13, Prismatic: 0.02 },
+    foilRate: 0.03,
+  },
 } as const
 
 export type PackId = keyof typeof PACKS
 
 export const PACK_SIZE = 5
 
+/** 活动包：只靠发放获得，前端库存为 0 时整行隐藏。以后的活动包加进这里即可。 */
+export const EVENT_PACKS: readonly PackId[] = ["starter"]
+
 export const STARTER_PACKS = {
-  normal: 30,
+  starter: 30,
   mystery: 1,
 } as const
+
+/** 新手包兜底：开最后一包时，如果新手包里还没出过 L 及以上，最后一张改成 L。 */
+export const STARTER_GUARANTEE = { pool: "starter", rarity: "L" } as const
 
 /** 神秘卡包不在公共卡池里，单独一个 id/名字。 */
 export const MYSTERY_PACK = { id: "mystery", name: "神秘卡包" } as const

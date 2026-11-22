@@ -19,6 +19,7 @@ import { emitDeskData, onDeskData, onDeskHover } from "./events"
 import { GuestLoginButton } from "./GuestLoginButton"
 import { INVITE_OPEN_EVENT } from "./invite"
 import { PackArt } from "./opening/PackArt"
+import { EVENT_POOLS } from "./rarity"
 import type { PackPool } from "./types"
 import { useGameConfig } from "./useGameConfig"
 import "./backpack-panel.css"
@@ -45,6 +46,7 @@ const PACK_TAGLINE: Record<PackPool, string> = {
   radiant: "周常奖励",
   sky: "月常奖励",
   prism: "赛季牌面",
+  starter: "一次性 · 30 包内至少 1 张传奇",
 }
 
 const QUESTIONS = [
@@ -136,7 +138,9 @@ export function BackpackPanel({
     const list: PackMeta[] = [
       { id: MYSTERY_ID, label: "神秘卡包", note: "只有 1 张卡：你的本体卡" },
     ]
-    for (const id of PACK_ORDER) {
+    // 活动包只在还有库存时出现
+    const events = EVENT_POOLS.filter((id) => (inventory?.packs[id] ?? 0) > 0)
+    for (const id of [...events, ...PACK_ORDER]) {
       const meta = config?.packs.find((pack) => pack.id === id)
       list.push({
         id,
@@ -147,7 +151,7 @@ export function BackpackPanel({
       })
     }
     return list
-  }, [config, packSize])
+  }, [config, packSize, inventory])
   const selected =
     packList.find((pack) => pack.id === picked) ??
     packList.find((pack) => (counts[pack.id] ?? 0) > 0) ??

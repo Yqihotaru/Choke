@@ -6,7 +6,7 @@ export type { Rarity }
 
 export type ItemKind = "pack" | "card" | "object"
 
-export type PackPool = "normal" | "idle" | "golden" | "radiant" | "sky" | "prism"
+export type PackPool = "normal" | "idle" | "golden" | "radiant" | "sky" | "prism" | "starter"
 
 export interface CardData {
   /** 服务端卡牌 id；桌面本地原型卡没有 */

@@ -69,8 +69,10 @@ export const users = pgTable("users", {
   onboarded: boolean("onboarded").notNull().default(false),
   /** 已废弃：旧版个人加成，恒为 0；列保留只为兼容旧库 */
   heroBonus: integer("hero_bonus").notNull().default(0),
-  /** 分解/闪卡用精华 */
+  /** 闪卡精华：只来自闪卡，只用于镀闪 */
   essence: integer("essence").notNull().default(0),
+  /** 分解碎片：1:1 换经验 */
+  shards: integer("shards").notNull().default(0),
   /** 市场用金币 */
   coins: integer("coins").notNull().default(100),
   /** 玩家等级 / 教程进度（由前端同步，市场等服务端校验） */

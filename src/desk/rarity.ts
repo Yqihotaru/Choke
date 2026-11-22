@@ -25,7 +25,11 @@ export const POOL_META: Record<PackPool, PoolMeta> = {
   radiant: { label: "璀璨卡池", short: "璀璨", color: "#B98CFF" },
   sky: { label: "天穹卡池", short: "天穹", color: "#21E985" },
   prism: { label: "棱彩卡池", short: "棱彩", color: "#F4F4F6" },
+  starter: { label: "新手卡包", short: "新手", color: "#FF66AA" },
 }
+
+/** 活动包：库存为 0 时不显示，也不进常驻卡池选择。和服务端 EVENT_PACKS 对应。 */
+export const EVENT_POOLS: readonly PackPool[] = ["starter"]
 
 export const POOL_ORDER: PackPool[] = [
   "normal",

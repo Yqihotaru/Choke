@@ -32,15 +32,18 @@ import "./gacha-panel.css"
 /** 「跳过动画」：开出的卡直接摆在面板里，方便连抽 */
 const SKIP_KEY = "choke.gacha.skipAnim"
 
-export type PoolId = "normal" | "idle" | "golden" | "radiant" | "sky" | "prism"
+export type PoolId = "normal" | "idle" | "golden" | "radiant" | "sky" | "prism" | "starter"
 
 interface Pool {
   id: PoolId
   name: string
   note: string
+  /** 活动包：库存为 0 时整行隐藏 */
+  event?: boolean
 }
 
 const POOLS: Pool[] = [
+  { id: "starter", name: "新手", note: "一次性 · 必出传奇", event: true },
   { id: "normal", name: "普通", note: "日常主力" },
   { id: "idle", name: "挂机", note: "低成本" },
   { id: "golden", name: "黄金", note: "任务产出" },
@@ -56,7 +59,8 @@ export function GachaPanel({
   userId: string | null
   initialPool?: PoolId
 }) {
-  const [pool, setPool] = useState<PoolId>(initialPool)
+  /** null = 还没手动选过：有活动包时默认停在活动包上 */
+  const [picked, setPool] = useState<PoolId | null>(initialPool === "normal" ? null : initialPool)
   const [ownerId, setOwnerId] = useState(userId)
   const [cards, setCards] = useState<(CardFaceData & { userCardId: number })[]>(
     []
@@ -131,9 +135,16 @@ export function GachaPanel({
     }
   }, [userId, loadPacks])
 
-  const current = POOLS.find((item) => item.id === pool) ?? POOLS[0]
   const packSize = config?.packSize ?? 5
   const currentPacks = packs && packs.userId === userId ? packs.data : null
+  const visiblePools = POOLS.filter(
+    (item) => !item.event || (currentPacks?.[item.id] ?? 0) > 0,
+  )
+  const fallbackPool = visiblePools.find((item) => item.event)?.id ?? initialPool
+  const wanted = picked ?? fallbackPool
+  // 活动包开完就隐藏，选中的行消失时回到普通包
+  const pool: PoolId = visiblePools.some((item) => item.id === wanted) ? wanted : "normal"
+  const current = POOLS.find((item) => item.id === pool) ?? POOLS[0]!
   const odds = Object.entries(
     config?.packs.find((item) => item.id === pool)?.weights ?? {}
   ).filter(([, weight]) => weight > 0)
@@ -309,7 +320,7 @@ export function GachaPanel({
       left={
         <>
           <div className="bk-list" role="group" aria-label="卡池选择">
-            {POOLS.map((item) => (
+            {visiblePools.map((item) => (
               <button
                 key={item.id}
                 type="button"

@@ -35,6 +35,13 @@ const CONTRIBUTORS = [
   { name: "Claude", role: "战斗界面与表现" },
 ]
 
+/** 音效素材：全部 CC0，逐文件出处见 public/sfx/CREDITS.md */
+const SOUND_CREDITS = [
+  { name: "Kenney", note: "Casino / UI / Interface / Impact / RPG / Sci-Fi Audio、85 Short music jingles", href: "https://kenney.nl/assets" },
+  { name: "BigSoundBank", note: "Joseph Sardin：风铃、翻页、撕纸、玻璃碎裂", href: "https://bigsoundbank.com/" },
+  { name: "OpenGameArt", note: "100 CC0 SFX、75 CC0 breaking sfx（rubberduck）、Various Paper Sound Effects（Luckius）", href: "https://opengameart.org/" },
+]
+
 const POLICIES = {
   privacy: {
     title: "隐私政策",
@@ -88,6 +95,33 @@ export function AboutPanel() {
                 </div>
               ))}
             </div>
+
+            <hr className="bk-divider" />
+
+            <span className="bk-label">音效素材 · CC0</span>
+            <div className="about-people">
+              {SOUND_CREDITS.map((source) => (
+                <a
+                  className="about-person"
+                  key={source.name}
+                  href={source.href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <b>{source.name}</b>
+                  <span>{source.note}</span>
+                </a>
+              ))}
+            </div>
+            <p className="bk-note">
+              <a href="/sfx/CREDITS.md" target="_blank" rel="noreferrer">
+                逐文件出处
+              </a>
+              {" · "}
+              <a href="/sfx-audition.html" target="_blank" rel="noreferrer">
+                音效试听（开发用）
+              </a>
+            </p>
           </div>
         }
         right={
