@@ -1,0 +1,60 @@
+{
+  "enemy-sup-tut": {
+    "name": "薄雾护障",
+    "kind": "armor",
+    "element": "dark",
+    "defenseTier": 1,
+    "roleText": "敌方防御 I 档 (−20%)"
+  },
+  "enemy-sup-ghost-1": {
+    "name": "幽冥残响",
+    "kind": "attack",
+    "element": "dark",
+    "atk": 420,
+    "power": 0.5,
+    "hits": 1,
+    "procRate": 0.5,
+    "roleText": "敌方支援 · 回合末追击"
+  },
+  "enemy-sup-vg-armor": {
+    "name": "重装甲 II",
+    "kind": "armor",
+    "element": "metal",
+    "defenseTier": 2,
+    "roleText": "常驻防御 II 档 (−40%) · 可破防拆解"
+  },
+  "enemy-sup-vg-thorns": {
+    "name": "荆棘栅栏",
+    "kind": "thorns",
+    "element": "wood",
+    "atk": 260,
+    "power": 1,
+    "roleText": "反伤支援 · 每受1段反伤 260"
+  },
+  "enemy-sup-conductor-charge": {
+    "name": "终曲蓄力",
+    "kind": "charge",
+    "element": "fire",
+    "stacks": 1,
+    "maxStacks": 3,
+    "locked": true,
+    "roleText": "每回合+1层增伤 · 满层放魔导炮"
+  },
+  "enemy-sup-conductor-armor": {
+    "name": "魔障结界 I",
+    "kind": "armor",
+    "element": "dark",
+    "defenseTier": 1,
+    "roleText": "敌方防御 I 档 (−20%)"
+  },
+  "enemy-sup-conductor-minion": {
+    "name": "走调随从",
+    "kind": "attack",
+    "element": "fire",
+    "atk": 680,
+    "power": 0.5,
+    "hits": 1,
+    "procRate": 0.6,
+    "roleText": "60% 概率协同攻击"
+  }
+}

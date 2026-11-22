@@ -7,16 +7,8 @@ export type Rarity = (typeof RARITIES)[number]
 export type Job = "tank" | "warrior" | "mage" | "support"
 
 /** 九属性，挂在技能上，不挂在卡上 */
-export type Element =
-  | "metal"
-  | "wood"
-  | "earth"
-  | "ice"
-  | "fire"
-  | "thunder"
-  | "light"
-  | "dark"
-  | "physical"
+export const ELEMENTS = ["metal", "wood", "earth", "ice", "fire", "thunder", "light", "dark", "physical"] as const
+export type Element = (typeof ELEMENTS)[number]
 
 export type Mod =
   | "HD"

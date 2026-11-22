@@ -24,6 +24,9 @@
     "./card-def": "./src/card-def.ts",
     "./battle/engine": "./src/battle/engine.ts",
     "./battle/actions": "./src/battle/actions.ts",
+    "./battle/content": "./src/battle/content.ts",
+    "./battle/stars": "./src/battle/stars.ts",
+    "./battle/ai": "./src/battle/ai.ts",
     "./battle/types": "./src/battle/types.ts",
     "./battle/config": "./src/battle/config.ts",
     "./battle/rules": "./src/battle/rules.ts"

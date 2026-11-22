@@ -1,0 +1,36 @@
+{
+  "name": "谱面幽灵（教学）",
+  "title": "新手教学假人",
+  "tier": "normal",
+  "element": "dark",
+  "weaknesses": [
+    "light",
+    "physical"
+  ],
+  "traits": [
+    "spirit"
+  ],
+  "stats": {
+    "hp": 3600,
+    "atk": 160,
+    "int": 180,
+    "def": 400
+  },
+  "ai": {
+    "moves": {
+      "claw": {
+        "kind": "attack",
+        "label": "微弱拂击",
+        "element": "physical",
+        "power": 0.65,
+        "hits": 1,
+        "desc": "基础物理攻击（低伤害）"
+      }
+    },
+    "script": [
+      {
+        "always": "claw"
+      }
+    ]
+  }
+}

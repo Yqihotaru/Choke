@@ -9,7 +9,7 @@ import {
   MITIGATION_CAP,
   MITIGATION_K,
 } from "./config"
-import type { EnemyIntent } from "./types"
+import type { EnemyIntent, EnemyTrait } from "./types"
 
 /**
  * 战斗规则：全部是纯函数，不读 state、不写 state、不碰 DOM。
@@ -40,17 +40,17 @@ export function defenseReductionOf(tier: number, tankPresent: boolean): number {
 /**
  * 九属性相克环（§1.2）：
  * 顺时针 1 位 +25%，顺时针 2 位 +10%，逆时针 1 位 -20%，逆时针 2 位 -10%，同属性 -10%。
- * 物理对灵体 +20%；命中弱点至少 +30%。
+ * 物理对灵体（spirit 特性）+20%；命中弱点至少 +30%。
  */
 export function elementMultiplier(
   attack: Element,
   defend: Element,
-  enemyId?: string,
+  traits: readonly EnemyTrait[] = [],
   weaknesses: Element[] = [],
 ): number {
   let mult = 1
   if (attack === "physical") {
-    if (enemyId === "ghost" || enemyId === "tutorial-ghost") {
+    if (traits.includes("spirit")) {
       mult = 1.2
     }
   } else if (defend !== "physical") {

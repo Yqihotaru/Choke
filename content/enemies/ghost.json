@@ -1,0 +1,76 @@
+{
+  "name": "谱面幽灵",
+  "title": "深渊徘徊灵体",
+  "tier": "normal",
+  "element": "dark",
+  "weaknesses": [
+    "light",
+    "physical"
+  ],
+  "traits": [
+    "spirit"
+  ],
+  "stats": {
+    "hp": 28000,
+    "atk": 620,
+    "int": 680,
+    "def": 1100
+  },
+  "ai": {
+    "moves": {
+      "claw": {
+        "kind": "attack",
+        "label": "幽影爪击",
+        "element": "physical",
+        "power": 0.85,
+        "hits": 1,
+        "desc": "常规物理爪击"
+      },
+      "bolt": {
+        "kind": "magic",
+        "label": "暗影魔弹",
+        "element": "dark",
+        "power": 1,
+        "hits": 1,
+        "desc": "暗属性魔法攻击"
+      },
+      "crush": {
+        "kind": "heavy_phys",
+        "label": "亡灵重压",
+        "element": "physical",
+        "power": 1.5,
+        "hits": 1,
+        "causesDown": true,
+        "desc": "高额物理攻击（附带 DOWN 击倒威胁）",
+        "variants": [
+          {
+            "when": {
+              "turnMod": [
+                4,
+                0
+              ]
+            },
+            "uninterruptible": true
+          }
+        ]
+      }
+    },
+    "script": [
+      {
+        "always": "claw"
+      },
+      {
+        "always": "bolt"
+      },
+      {
+        "when": {
+          "turnMod": [
+            2,
+            0
+          ]
+        },
+        "use": "crush"
+      }
+    ]
+  }
+}

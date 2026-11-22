@@ -10,6 +10,7 @@ import {
   type SubJob,
 } from "../skills"
 import type { CardFaceData, Element, Job, Rarity } from "../types"
+import type { EnemyAi, StarCondition } from "./content"
 
 export const MAX_SUPPORT_SLOTS = 7
 
@@ -28,31 +29,33 @@ export interface BattleStats {
   mpRegen: number
 }
 
-export type StatusId =
-  | "freeze"
-  | "shock"
-  | "burn"
-  | "poison"
-  | "fear"
-  | "charm"
-  | "bleed"
-  | "confuse"
-  | "curse"
-  | "silence"
-  | "armor_break"
-  | "stun"
-  | "sleep"
-  | "heal_block"
-  | "weaken"
-  | "slow"
-  | "support_ban"
-  | "thorns"
-  | "vigilant"
-  | "vulnerable"
-  | "enrage"
-  | "buff_atk"
-  | "buff_def"
-  | "buff_int"
+export const STATUS_IDS = [
+  "freeze",
+  "shock",
+  "burn",
+  "poison",
+  "fear",
+  "charm",
+  "bleed",
+  "confuse",
+  "curse",
+  "silence",
+  "armor_break",
+  "stun",
+  "sleep",
+  "heal_block",
+  "weaken",
+  "slow",
+  "support_ban",
+  "thorns",
+  "vigilant",
+  "vulnerable",
+  "enrage",
+  "buff_atk",
+  "buff_def",
+  "buff_int",
+] as const
+export type StatusId = (typeof STATUS_IDS)[number]
 
 export interface StatusEffect {
   id: StatusId | string
@@ -100,15 +103,17 @@ export interface BattleCard {
 }
 
 /** 敌方行动模板（对应战斗机制 v0.1 §12 的 8 类模板） */
-export type IntentKind =
-  | "attack"
-  | "magic"
-  | "buff"
-  | "debuff"
-  | "heavy_phys"
-  | "heavy_magic"
-  | "add_support"
-  | "break_support"
+export const INTENT_KINDS = [
+  "attack",
+  "magic",
+  "buff",
+  "debuff",
+  "heavy_phys",
+  "heavy_magic",
+  "add_support",
+  "break_support",
+] as const
+export type IntentKind = (typeof INTENT_KINDS)[number]
 
 export interface EnemyIntent {
   id: string
@@ -131,10 +136,12 @@ export interface EnemyIntent {
 }
 
 /** 侧面支援栏单位（敌方在左侧 7 格，我方在右侧 7 格） */
+export const SUPPORT_KINDS = ["attack", "defense", "armor", "aura", "thorns", "charge"] as const
+
 export interface SideSupportUnit {
   id: string
   name: string
-  kind: "attack" | "defense" | "armor" | "aura" | "thorns" | "charge"
+  kind: (typeof SUPPORT_KINDS)[number]
   element: Element
   job?: Job
   atk?: number
@@ -159,7 +166,12 @@ export interface SideSupportUnit {
   roleText: string
 }
 
-export type EnemyTier = "normal" | "elite" | "boss"
+export const ENEMY_TIERS = ["normal", "elite", "boss"] as const
+export type EnemyTier = (typeof ENEMY_TIERS)[number]
+
+/** 敌人特性：引擎据此套用规则（如灵体受物理 +20%），不再按敌人 id 判断 */
+export const ENEMY_TRAITS = ["spirit"] as const
+export type EnemyTrait = (typeof ENEMY_TRAITS)[number]
 
 export interface Enemy {
   id: string
@@ -168,6 +180,7 @@ export interface Enemy {
   tier: EnemyTier
   element: Element
   weaknesses: Element[]
+  traits: EnemyTrait[]
   hp: number
   hpMax: number
   atk: number
@@ -177,6 +190,8 @@ export interface Enemy {
   damageThreshold?: number
   /** 被打断蓄力后是否进入狂暴（而非脆弱） */
   enrageOnInterrupt?: boolean
+  /** 招式表 + 行为脚本；放在状态里，战斗自带全部规则，重放不依赖外部内容 */
+  ai: EnemyAi
   intents: EnemyIntent[]
   statuses: StatusEffect[]
   /** 硬控状态：sleep / stun（受到任何命中立即打醒解除！） */
@@ -184,19 +199,18 @@ export interface Enemy {
   /** 本场已被硬控次数（精英/BOSS 上限 2 次） */
   hardControlCount: number
   buff: number
-  /** 评价基准回合数与基准 AP */
-  parTurns: number
-  parAp: number
 }
 
 export type BattlePhase = "player" | "won" | "lost"
 
+export interface StarResult {
+  condition: StarCondition
+  met: boolean
+}
+
 export interface BattleStarRating {
-  speedStar: boolean
-  noDownStar: boolean
-  efficientStar: boolean
-  parTurns: number
-  parAp: number
+  stars: StarResult[]
+  count: number
 }
 
 /** 结构化战斗事件，前端时间轴序列器用它驱动兰斯10演出与音效 */
@@ -286,7 +300,10 @@ export type BattleEvent =
 export type RngStream = "player" | "enemy"
 
 export interface BattleState {
-  stageId: string
+  /** content/encounters/ 里的遭遇 id */
+  encounterId: string
+  /** 这场遭遇的三星条件 */
+  starConditions: StarCondition[]
   /** 这场战斗的种子；同样的种子 + 同样的操作 = 同样的结果 */
   seed: string
   /** 各随机流的当前状态（uint32） */

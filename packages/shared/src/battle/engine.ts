@@ -8,7 +8,6 @@ import {
   createBattleCard,
   type BattleCard,
   type BattleEvent,
-  type BattleStarRating,
   type BattleState,
   type CardTrigger,
   type Enemy,
@@ -21,9 +20,7 @@ import {
 
 import {
   PREEMPTIVE_RATE,
-  STAGE_PRESETS,
   SUPPORT_PROC_RATE,
-  TUTORIAL_ENEMY_HP,
 } from "./config"
 import {
   comboMultiplier,
@@ -31,12 +28,11 @@ import {
   elementMultiplier,
   mitigation,
 } from "./rules"
+import { intentsFor } from "./ai"
+import type { EncounterSpec } from "./content"
 
-export {
-  ROMAN_TIER,
-  STAGE_PRESETS,
-  TUTORIAL_ENEMY_HP,
-} from "./config"
+export { ROMAN_TIER } from "./config"
+export { evaluateStars } from "./stars"
 export {
   comboMultiplier,
   defenseReductionOf,
@@ -200,299 +196,37 @@ function enemyDefence(state: BattleState, magic: boolean): number {
   return Math.max(1, Math.round(base * Math.max(0.1, 1 + bonus + enragePenalty + defBreakPenalty)))
 }
 
-function enemyIntentsFor(presetId: string, turn: number, chargeStacks = 0): EnemyIntent[] {
-  if (presetId === "tutorial-ghost") {
-    return [
-      {
-        id: `tut-claw-${turn}`,
-        kind: "attack",
-        label: "微弱拂击",
-        element: "physical",
-        power: 0.65,
-        hits: 1,
-        desc: "基础物理攻击（低伤害）",
-      },
-    ]
+/** 由遭遇数据生成敌人与敌方支援；意图在战斗状态建好后由脚本生成 */
+function makeEnemyAndSupports(spec: EncounterSpec): { enemy: Enemy; enemySupports: SideSupportUnit[] } {
+  const def = spec.enemy
+  const enemy: Enemy = {
+    id: def.id,
+    name: def.name,
+    title: def.title,
+    tier: def.tier,
+    element: def.element,
+    weaknesses: [...def.weaknesses],
+    traits: [...def.traits],
+    hp: def.stats.hp,
+    hpMax: def.stats.hp,
+    atk: def.stats.atk,
+    int: def.stats.int,
+    def: def.stats.def,
+    ai: structuredClone(def.ai),
+    intents: [],
+    statuses: [],
+    hardControl: null,
+    hardControlCount: 0,
+    buff: 0,
   }
-
-  if (presetId === "vanguard") {
-    const pool: EnemyIntent[] = [
-      {
-        id: `vg-slash-${turn}-1`,
-        kind: "attack",
-        label: "迅雷连斩",
-        element: "thunder",
-        power: 0.75,
-        hits: 2,
-        desc: "2 段雷属性连斩",
-      },
-      {
-        id: `vg-break-${turn}-2`,
-        kind: "debuff",
-        label: "碎甲冲击",
-        element: "metal",
-        power: 0.6,
-        hits: 1,
-        statusId: "armor_break",
-        desc: "削减我方 1 级防御档位或降低 DEF",
-      },
-      {
-        id: `vg-heavy-${turn}-3`,
-        kind: "heavy_phys",
-        label: "重装处决",
-        element: "physical",
-        power: 1.55,
-        hits: 1,
-        causesDown: turn % 2 === 0,
-        uninterruptible: turn % 3 === 0,
-        desc: turn % 2 === 0 ? "高额物理重击（附带 DOWN 击倒威胁！）" : "高额物理重击",
-      },
-      {
-        id: `vg-fear-${turn}-4`,
-        kind: "debuff",
-        label: "威压咆哮",
-        element: "dark",
-        power: 0,
-        hits: 0,
-        statusId: "fear",
-        desc: "施加【恐惧】（每回合 AP 恢复 −1）",
-      },
-    ]
-    return turn % 2 === 1 ? pool.slice(0, 3) : pool
-  }
-
-  if (presetId === "conductor") {
-    const list: EnemyIntent[] = []
-    if (chargeStacks >= 2) {
-      list.push({
-        id: `conductor-ult-${turn}`,
-        kind: "heavy_magic",
-        label: "真·暗黑魔导炮",
-        element: "dark",
-        power: 2.2,
-        hits: 1,
-        causesDown: true,
-        isChargedUltimate: true,
-        desc: "蓄力满槽释放的毁灭魔导炮！伤害极高且必定附带 DOWN 威胁（可用刺客打断或硬控打断进入脆弱）",
-      })
-    } else {
-      list.push({
-        id: `conductor-beam-${turn}`,
-        kind: "magic",
-        label: "深渊魔光射线",
-        element: "dark",
-        power: 0.95,
-        hits: 1,
-        desc: "暗属性魔法射线攻击",
-      })
-    }
-
-    list.push({
-      id: `conductor-fire-${turn}`,
-      kind: "heavy_magic",
-      label: "狱炎风暴",
-      element: "fire",
-      power: 1.35,
-      hits: 1,
-      statusId: "burn",
-      uninterruptible: true,
-      desc: "【无法打断】高额火属性全体魔法，附加 3 回合【燃烧】",
-    })
-
-    if (turn % 2 === 0) {
-      list.push({
-        id: `conductor-break-sup-${turn}`,
-        kind: "break_support",
-        label: "次元抹消",
-        element: "dark",
-        power: 0.5,
-        hits: 1,
-        desc: "拆毁玩家右侧支援栏最多 2 个非锁定支援！",
-      })
-    } else {
-      list.push({
-        id: `conductor-add-sup-${turn}`,
-        kind: "add_support",
-        label: "随从召唤",
-        element: "dark",
-        power: 0,
-        hits: 0,
-        desc: "在左侧敌方支援栏召唤【走调随从】协同作战",
-      })
-    }
-    return list
-  }
-
-  // 默认：谱面幽灵
-  const baseIntents: EnemyIntent[] = [
-    {
-      id: `gh-claw-${turn}-0`,
-      kind: "attack",
-      label: "幽影爪击",
-      element: "physical",
-      power: 0.85,
-      hits: 1,
-      desc: "常规物理爪击",
-    },
-    {
-      id: `gh-bolt-${turn}-1`,
-      kind: "magic",
-      label: "暗影魔弹",
-      element: "dark",
-      power: 1.0,
-      hits: 1,
-      desc: "暗属性魔法攻击",
-    },
-  ]
-  if (turn % 2 === 0) {
-    baseIntents.push({
-      id: `gh-crush-${turn}-2`,
-      kind: "heavy_phys",
-      label: "亡灵重压",
-      element: "physical",
-      power: 1.5,
-      hits: 1,
-      causesDown: true,
-      uninterruptible: turn % 4 === 0,
-      desc: "高额物理攻击（附带 DOWN 击倒威胁）",
-    })
-  }
-  return baseIntents
+  if (def.damageThreshold !== undefined) enemy.damageThreshold = def.damageThreshold
+  if (def.enrageOnInterrupt !== undefined) enemy.enrageOnInterrupt = def.enrageOnInterrupt
+  const enemySupports = spec.supports.map((unit): SideSupportUnit => ({ ...unit }))
+  return { enemy, enemySupports }
 }
 
-function makeEnemyAndSupports(
-  stageId: string,
-  tutorial = false,
-): { enemy: Enemy; enemySupports: SideSupportUnit[] } {
-  if (tutorial) {
-    return {
-      enemy: {
-        id: "tutorial-ghost",
-        name: "谱面幽灵（教学）",
-        title: "新手教学假人",
-        tier: "normal",
-        element: "dark",
-        weaknesses: ["light", "physical"],
-        hp: TUTORIAL_ENEMY_HP,
-        hpMax: TUTORIAL_ENEMY_HP,
-        atk: 160,
-        int: 180,
-        def: 400,
-        intents: enemyIntentsFor("tutorial-ghost", 1),
-        statuses: [],
-        hardControl: null,
-        hardControlCount: 0,
-        buff: 0,
-        parTurns: 4,
-        parAp: 8,
-      },
-      enemySupports: [
-        {
-          id: "enemy-sup-tut",
-          name: "薄雾护障",
-          kind: "armor",
-          element: "dark",
-          defenseTier: 1,
-          roleText: "敌方防御 I 档 (−20%)",
-        },
-      ],
-    }
-  }
-
-  const preset = STAGE_PRESETS.find((s) => s.id === stageId) ?? STAGE_PRESETS[0]
-  const enemySupports: SideSupportUnit[] = []
-
-  if (preset.id === "ghost") {
-    enemySupports.push({
-      id: "enemy-sup-ghost-1",
-      name: "幽冥残响",
-      kind: "attack",
-      element: "dark",
-      atk: 420,
-      power: 0.5,
-      hits: 1,
-      procRate: 0.5,
-      roleText: "敌方支援 · 回合末追击",
-    })
-  } else if (preset.id === "vanguard") {
-    enemySupports.push(
-      {
-        id: "enemy-sup-vg-armor",
-        name: "重装甲 II",
-        kind: "armor",
-        element: "metal",
-        defenseTier: 2,
-        roleText: "常驻防御 II 档 (−40%) · 可破防拆解",
-      },
-      {
-        id: "enemy-sup-vg-thorns",
-        name: "荆棘栅栏",
-        kind: "thorns",
-        element: "wood",
-        atk: 260,
-        power: 1,
-        roleText: "反伤支援 · 每受1段反伤 260",
-      },
-    )
-  } else if (preset.id === "conductor") {
-    enemySupports.push(
-      {
-        id: "enemy-sup-conductor-charge",
-        name: "终曲蓄力",
-        kind: "charge",
-        element: "fire",
-        stacks: 1,
-        maxStacks: 3,
-        locked: true,
-        roleText: "每回合+1层增伤 · 满层放魔导炮",
-      },
-      {
-        id: "enemy-sup-conductor-armor",
-        name: "魔障结界 I",
-        kind: "armor",
-        element: "dark",
-        defenseTier: 1,
-        roleText: "敌方防御 I 档 (−20%)",
-      },
-      {
-        id: "enemy-sup-conductor-minion",
-        name: "走调随从",
-        kind: "attack",
-        element: "fire",
-        atk: 680,
-        power: 0.5,
-        hits: 1,
-        procRate: 0.6,
-        roleText: "60% 概率协同攻击",
-      },
-    )
-  }
-
-  return {
-    enemy: {
-      id: preset.id,
-      name: preset.name,
-      title: preset.title,
-      tier: preset.tier,
-      element: preset.element,
-      weaknesses: preset.weaknesses,
-      hp: preset.hp,
-      hpMax: preset.hp,
-      atk: preset.atk,
-      int: preset.int,
-      def: preset.def,
-      damageThreshold: preset.damageThreshold,
-      enrageOnInterrupt: preset.enrageOnInterrupt,
-      intents: enemyIntentsFor(preset.id, 1, 1),
-      statuses: [],
-      hardControl: null,
-      hardControlCount: 0,
-      buff: 0,
-      parTurns: preset.parTurns,
-      parAp: preset.parAp,
-    },
-    enemySupports,
-  }
+function refreshEnemyIntents(state: BattleState) {
+  state.enemy.intents = intentsFor(state.enemy.ai, state)
 }
 
 export interface BattleInputCard {
@@ -555,14 +289,14 @@ function syncDefenseSupportSlot(state: BattleState) {
 }
 
 export function createBattle(
+  encounter: EncounterSpec,
   inputs: BattleInputCard[],
-  options: { seed: string; tutorial?: boolean; stageId?: string; benchInputs?: BattleInputCard[] },
+  options: { seed: string; bench?: BattleInputCard[] },
 ): BattleState {
   const cards = inputs.map((input) => createBattleCard(input.face, input.uid, input.cardId))
-  const bench = (options.benchInputs ?? []).map((input) => createBattleCard(input.face, input.uid, input.cardId))
+  const bench = (options.bench ?? []).map((input) => createBattleCard(input.face, input.uid, input.cardId))
 
-  const stageId = options.tutorial ? "tutorial-ghost" : (options.stageId ?? "ghost")
-  const { enemy, enemySupports } = makeEnemyAndSupports(stageId, options.tutorial)
+  const { enemy, enemySupports } = makeEnemyAndSupports(encounter)
 
   // 若队伍里有高阶卡（Radiant / Prismatic / 本体卡），解锁部队加成 AP 上限 7 → 10（§6.2）
   const hasHighTier = cards.some(
@@ -589,7 +323,8 @@ export function createBattle(
   }
 
   const state: BattleState = {
-    stageId,
+    encounterId: encounter.id,
+    starConditions: structuredClone(encounter.stars),
     seed: options.seed,
     rng: {
       player: deriveStream(options.seed, "player"),
@@ -617,7 +352,7 @@ export function createBattle(
     playerSupports,
     enemy,
     log: [
-      options.tutorial ? "教学讨伐战开始！" : `讨伐开始：遭遇【${enemy.name}】！`,
+      encounter.intro ?? `讨伐开始：遭遇【${enemy.name}】！`,
       "提示：开局 2 AP 可继承，0 费技能可无消耗叠高 Combo！",
     ],
     selectedCard: null,
@@ -625,6 +360,7 @@ export function createBattle(
     actionSeq: 0,
   }
 
+  refreshEnemyIntents(state)
   rollCardTriggers(state)
   runPlayerTurnStartSequence(state)
   return state
@@ -740,7 +476,7 @@ function applyDamageToEnemy(
       (card.subjob.tags.includes("pierce") && state.enemy.statuses.some((s) => s.id === "vulnerable") ? 15 : 0) +
       (card.subjob.tags.includes("lowhp") && state.teamHp / state.teamHpMax < 0.3 ? 10 : 0)
     const crit = roll(state, "player") * 100 < card.stats.crit + bonusCrit
-    const elMult = elementMultiplier(element, state.enemy.element, state.enemy.id, state.enemy.weaknesses)
+    const elMult = elementMultiplier(element, state.enemy.element, state.enemy.traits, state.enemy.weaknesses)
     const isWeak = elMult >= 1.2 || state.enemy.weaknesses.includes(element)
 
     let damage = Math.round(
@@ -1281,7 +1017,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
       const elMult = elementMultiplier(
         support.element,
         state.enemy.element,
-        state.enemy.id,
+        state.enemy.traits,
         state.enemy.weaknesses,
       )
       const damage = Math.max(
@@ -1334,7 +1070,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
           statOf(state, card, "atk") *
             0.7 *
             comboMultiplier(state.combo) *
-            elementMultiplier("physical", state.enemy.element, state.enemy.id, state.enemy.weaknesses) *
+            elementMultiplier("physical", state.enemy.element, state.enemy.traits, state.enemy.weaknesses) *
             (1 - mitigation(enemyDefence(state, false))) *
             random(state, "player", 0.95, 1.05),
         ),
@@ -1753,8 +1489,7 @@ export function endTurn(state: BattleState): string | null {
   }
 
   // 生成敌方新一轮意图预告
-  const chargeStacks = state.enemySupports.find((s) => s.kind === "charge")?.stacks ?? 0
-  state.enemy.intents = enemyIntentsFor(state.enemy.id, state.turn, chargeStacks)
+  refreshEnemyIntents(state)
   state.enemy.buff = Math.max(0, state.enemy.buff - 0.05)
 
   // 掷本回合 Boost / 必杀 / 连击
@@ -1775,19 +1510,4 @@ export function cloneBattle(state: BattleState): BattleState {
 
 export function teamHpOf(state: BattleState): { hp: number; max: number } {
   return { hp: state.teamHp, max: state.teamHpMax }
-}
-
-/** 计算 §12.3 三星关卡评价（★1速通 / ★2无伤 / ★3高效） */
-export function evaluateStars(state: BattleState): BattleStarRating {
-  const parTurns = state.enemy.parTurns
-  const parAp = state.enemy.parAp
-  const speedTarget = Math.max(1, Math.ceil(parTurns * 0.6))
-  const apTarget = Math.max(2, Math.ceil(parAp * 0.8))
-  return {
-    speedStar: state.turn <= speedTarget,
-    noDownStar: state.downCount === 0,
-    efficientStar: state.apSpentTotal <= apTarget,
-    parTurns: speedTarget,
-    parAp: apTarget,
-  }
 }

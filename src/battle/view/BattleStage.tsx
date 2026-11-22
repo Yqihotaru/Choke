@@ -36,7 +36,6 @@ import type { SkillDef } from "@/card/jobs"
 import type { CardFaceData, Element } from "@/card/types"
 
 import {
-  STAGE_PRESETS,
   canUseSkillReason,
   comboMultiplier,
   effectiveApCost,
@@ -45,6 +44,8 @@ import {
   hasTankAlive,
   teamHpOf,
 } from "@choke/shared/battle/engine"
+import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
+import { describeStar, starProgress } from "@choke/shared/battle/stars"
 import { BentGauge } from "./BentGauge"
 import { playHit, playLose, playSfx, playTurn, playWin } from "../sfx"
 import type { BattleState, EnemyIntent, SideSupportUnit } from "@choke/shared/battle/types"
@@ -64,7 +65,10 @@ interface Props {
   battle: BattleState | null
   playerName: string
   deck: CardFaceData[]
-  stageId: string
+  /** 当前选中的遭遇（战前画面展示用） */
+  encounter: EncounterSpec
+  /** 可选的讨伐目标 */
+  encounters: EncounterSummary[]
   tutorial: boolean
   actionError: string | null
   onSelectStage: (stageId: string) => void
@@ -135,7 +139,8 @@ export function BattleStage({
   battle,
   playerName,
   deck,
-  stageId,
+  encounter,
+  encounters,
   tutorial,
   actionError,
   onSelectStage,
@@ -510,10 +515,10 @@ export function BattleStage({
 
   // ==================== 1. 战前准备画面 ====================
   if (!battle) {
-    const preset = STAGE_PRESETS.find((s) => s.id === stageId) ?? STAGE_PRESETS[0]!
-    const enemyName = tutorial ? "谱面幽灵（教学）" : preset.name
-    const enemyHp = tutorial ? 3600 : preset.hp
-    const weaknesses = tutorial ? (["light", "physical"] as Element[]) : preset.weaknesses
+    const foe = encounter.enemy
+    const enemyName = foe.name
+    const enemyHp = foe.stats.hp
+    const weaknesses = foe.weaknesses
     const totalBp = deck.reduce((sum, card) => sum + battlePower(card), 0)
 
     return (
@@ -542,7 +547,7 @@ export function BattleStage({
             </div>
 
             <div className="choke-prep-title">
-              <small>{tutorial ? "TUTORIAL STAGE" : preset.title}</small>
+              <small>{tutorial ? "TUTORIAL STAGE" : foe.title}</small>
               <div>{enemyName}</div>
             </div>
             <div className="choke-prep-badge">{tutorial ? "教学战斗" : "准备战斗"}</div>
@@ -553,12 +558,12 @@ export function BattleStage({
                   <GiTargetLaser /> 选择讨伐目标
                 </span>
                 <div className="choke-stage-selector__btns">
-                  {STAGE_PRESETS.map((st) => (
+                  {encounters.map((st) => (
                     <button
                       key={st.id}
                       type="button"
                       className="choke-stage-pill"
-                      data-active={st.id === preset.id ? "true" : undefined}
+                      data-active={st.id === encounter.id ? "true" : undefined}
                       onClick={() => {
                         playSfx("click")
                         onSelectStage(st.id)
@@ -572,24 +577,23 @@ export function BattleStage({
                     </button>
                   ))}
                 </div>
-                <p className="choke-stage-selector__desc">{preset.summary}</p>
+                <p className="choke-stage-selector__desc">{encounter.summary}</p>
               </div>
             )}
 
             <div className="choke-outcome-box">
               <div className="choke-outcome-head">战斗评价与路线条件</div>
-              <div className="choke-outcome-row">
-                <span>★1 速通</span>
-                <b>≤ {Math.max(1, Math.ceil((tutorial ? 4 : preset.parTurns) * 0.6))} 回合</b>
-              </div>
-              <div className="choke-outcome-row">
-                <span>★2 无伤</span>
-                <b>无人被 DOWN</b>
-              </div>
-              <div className="choke-outcome-row">
-                <span>★3 高效</span>
-                <b>累计 AP ≤ {Math.ceil((tutorial ? 8 : preset.parAp) * 0.8)}</b>
-              </div>
+              {encounter.stars.map((cond, i) => {
+                const { title, target } = describeStar(cond)
+                return (
+                  <div className="choke-outcome-row" key={cond.type}>
+                    <span>
+                      ★{i + 1} {title}
+                    </span>
+                    <b>{target}</b>
+                  </div>
+                )
+              })}
             </div>
           </section>
 
@@ -1438,25 +1442,15 @@ export function BattleStage({
 
               {battle.phase === "won" && (
                 <div className="choke-stars-grid">
-                  <div className="choke-star-item" data-achieved={stars.speedStar ? "true" : undefined}>
-                    <GiRoundStar />
-                    <b>★1 速通</b>
-                    <small>
-                      {battle.turn} / {stars.parTurns} 回合内
-                    </small>
-                  </div>
-                  <div className="choke-star-item" data-achieved={stars.noDownStar ? "true" : undefined}>
-                    <GiRoundStar />
-                    <b>★2 无伤</b>
-                    <small>本场 DOWN {battle.downCount} 次</small>
-                  </div>
-                  <div className="choke-star-item" data-achieved={stars.efficientStar ? "true" : undefined}>
-                    <GiRoundStar />
-                    <b>★3 高效</b>
-                    <small>
-                      消耗 {battle.apSpentTotal} / {stars.parAp} AP
-                    </small>
-                  </div>
+                  {stars.stars.map(({ condition, met }, i) => (
+                    <div className="choke-star-item" data-achieved={met ? "true" : undefined} key={condition.type}>
+                      <GiRoundStar />
+                      <b>
+                        ★{i + 1} {describeStar(condition).title}
+                      </b>
+                      <small>{starProgress(condition, battle)}</small>
+                    </div>
+                  ))}
                 </div>
               )}
 

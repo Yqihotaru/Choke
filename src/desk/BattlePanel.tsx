@@ -1,14 +1,15 @@
 import { useEffect, useState, type CSSProperties } from "react"
 
 import { playSfx } from "@/audio/sfx"
-import { STAGE_PRESETS, TUTORIAL_ENEMY_HP } from "@choke/shared/battle/engine"
 import { battlePower } from "@/card/data"
+import { TUTORIAL_ENCOUNTER_ID, type EncounterSummary } from "@choke/shared/battle/content"
 import { DUNGEONS } from "@choke/shared/dungeons"
 import { ITEMS } from "@choke/shared/items"
 import { refreshProgress, useTutorialProgress } from "@/tutorial/store"
 
 import {
   fetchDeck,
+  fetchEncounters,
   fetchStamina,
   runDungeon,
   toFace,
@@ -31,7 +32,8 @@ export function BattlePanel({
   const tutorial = useTutorialProgress(userId)
   const [deck, setDeck] = useState<ApiDeck | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [selectedStageId, setSelectedStageId] = useState<string>(STAGE_PRESETS[0]!.id)
+  const [selectedStageId, setSelectedStageId] = useState<string | null>(null)
+  const [encounters, setEncounters] = useState<EncounterSummary[] | null>(null)
   const [stamina, setStamina] = useState<StaminaState | null>(null)
   const [dungeonBusy, setDungeonBusy] = useState<string | null>(null)
   const [dungeonMessage, setDungeonMessage] = useState<{ text: string; error?: boolean } | null>(null)
@@ -46,6 +48,18 @@ export function BattlePanel({
       .catch(() => {})
     return () => controller.abort()
   }, [userId])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchEncounters()
+      .then((list) => {
+        if (!cancelled) setEncounters(list)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [reload])
 
   const runDungeonById = async (dungeonId: string) => {
     if (!userId || dungeonBusy) return
@@ -139,37 +153,36 @@ export function BattlePanel({
     0
   )
   const tutorialBattleStep = tutorial.tutorialStep === "battle-view"
-  const activePreset =
-    STAGE_PRESETS.find((s) => s.id === selectedStageId) ?? STAGE_PRESETS[0]!
-  const enemyHp = tutorialBattleStep ? TUTORIAL_ENEMY_HP : activePreset.hp
+  const listed = encounters?.filter((e) => e.listed) ?? []
+  const activeEncounter = tutorialBattleStep
+    ? encounters?.find((e) => e.id === TUTORIAL_ENCOUNTER_ID)
+    : (listed.find((e) => e.id === selectedStageId) ?? listed[0])
 
   const enemy = (
     <div className="bk-box battle-enemy">
       <span className="bk-label">
-        {tutorialBattleStep ? "教学对手" : activePreset.title}
+        {tutorialBattleStep ? "教学对手" : (activeEncounter?.title ?? "对手")}
       </span>
-      <b className="battle-enemy__name">
-        {tutorialBattleStep ? "谱面幽灵（教学）" : activePreset.name}
-      </b>
+      <b className="battle-enemy__name">{activeEncounter?.name ?? "加载中…"}</b>
       <div className="bk-stat">
-        <b>{enemyHp.toLocaleString("en-US")}</b>
+        <b>{activeEncounter ? activeEncounter.hp.toLocaleString("en-US") : "—"}</b>
         <span>敌人 HP</span>
       </div>
       {!tutorialBattleStep && (
         <div className="battle-stages">
-          {STAGE_PRESETS.map((preset) => (
+          {listed.map((entry) => (
             <button
-              key={preset.id}
+              key={entry.id}
               type="button"
-              className={`bk-btn battle-stage ${preset.id === activePreset.id ? "bk-btn--main" : "bk-btn--ghost"}`}
-              aria-pressed={preset.id === activePreset.id}
+              className={`bk-btn battle-stage ${entry.id === activeEncounter?.id ? "bk-btn--main" : "bk-btn--ghost"}`}
+              aria-pressed={entry.id === activeEncounter?.id}
               onClick={() => {
-                if (preset.id === activePreset.id) return
+                if (entry.id === activeEncounter?.id) return
                 playSfx("click")
-                setSelectedStageId(preset.id)
+                setSelectedStageId(entry.id)
               }}
             >
-              {preset.name}
+              {entry.name}
             </button>
           ))}
         </div>
@@ -272,13 +285,17 @@ export function BattlePanel({
                 </button>
               </>
             )
-          ) : (
+          ) : activeEncounter ? (
             <a
               className="bk-btn bk-btn--main bk-btn--block battle-start"
-              href={`/battle?stage=${activePreset.id}`}
+              href={`/battle?stage=${encodeURIComponent(activeEncounter.id)}`}
             >
-              进入战斗（{activePreset.name}）
+              进入战斗（{activeEncounter.name}）
             </a>
+          ) : (
+            <span className="bk-btn bk-btn--main bk-btn--block battle-start" aria-disabled="true">
+              加载对手…
+            </span>
           )}
 
           <hr className="bk-divider" />

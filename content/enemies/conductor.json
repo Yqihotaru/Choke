@@ -1,0 +1,94 @@
+{
+  "name": "失拍指挥·终曲",
+  "title": "深渊乐团指挥 · BOSS",
+  "tier": "boss",
+  "element": "dark",
+  "weaknesses": [
+    "light",
+    "ice",
+    "fire"
+  ],
+  "stats": {
+    "hp": 120000,
+    "atk": 1080,
+    "int": 1180,
+    "def": 2800
+  },
+  "ai": {
+    "moves": {
+      "ult": {
+        "kind": "heavy_magic",
+        "label": "真·暗黑魔导炮",
+        "element": "dark",
+        "power": 2.2,
+        "hits": 1,
+        "causesDown": true,
+        "chargedUltimate": true,
+        "desc": "蓄力满槽释放的毁灭魔导炮！伤害极高且必定附带 DOWN 威胁（可用刺客打断或硬控打断进入脆弱）"
+      },
+      "beam": {
+        "kind": "magic",
+        "label": "深渊魔光射线",
+        "element": "dark",
+        "power": 0.95,
+        "hits": 1,
+        "desc": "暗属性魔法射线攻击"
+      },
+      "inferno": {
+        "kind": "heavy_magic",
+        "label": "狱炎风暴",
+        "element": "fire",
+        "power": 1.35,
+        "hits": 1,
+        "status": "burn",
+        "uninterruptible": true,
+        "desc": "【无法打断】高额火属性全体魔法，附加 3 回合【燃烧】"
+      },
+      "erase": {
+        "kind": "break_support",
+        "label": "次元抹消",
+        "element": "dark",
+        "power": 0.5,
+        "hits": 1,
+        "desc": "拆毁玩家右侧支援栏最多 2 个非锁定支援！"
+      },
+      "summon": {
+        "kind": "add_support",
+        "label": "随从召唤",
+        "element": "dark",
+        "power": 0,
+        "hits": 0,
+        "desc": "在左侧敌方支援栏召唤【走调随从】协同作战"
+      }
+    },
+    "script": [
+      {
+        "when": {
+          "supportStacks": {
+            "support": "enemy-sup-conductor-charge",
+            "gte": 2
+          }
+        },
+        "use": "ult"
+      },
+      {
+        "otherwise": "beam"
+      },
+      {
+        "always": "inferno"
+      },
+      {
+        "when": {
+          "turnMod": [
+            2,
+            0
+          ]
+        },
+        "use": "erase"
+      },
+      {
+        "otherwise": "summon"
+      }
+    ]
+  }
+}

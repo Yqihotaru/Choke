@@ -1,0 +1,21 @@
+{
+  "enemy": "vanguard",
+  "supports": [
+    "enemy-sup-vg-armor",
+    "enemy-sup-vg-thorns"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 5
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 12
+    }
+  ],
+  "summary": "高 T 精英：每回合 3–4 动，左侧带【重装甲 II】与【荆棘栅栏】，需破甲拆支援并善用防御档位。"
+}

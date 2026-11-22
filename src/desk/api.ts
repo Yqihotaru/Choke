@@ -1,5 +1,6 @@
 import { faceFromDef, type CardDef } from "@/card/def"
 import type { CardFaceData, CardSkill, CardSkillRef, Job, Rarity } from "@/card/types"
+import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
 import type { DungeonRewards } from "@choke/shared/dungeons"
 import type { ItemId, ItemStack } from "@choke/shared/items"
 
@@ -275,6 +276,34 @@ export function fetchCardStats(): Promise<CardStats> {
     })
   }
   return statsPromise
+}
+
+let encountersPromise: Promise<EncounterSummary[]> | null = null
+
+/** 全部遭遇的摘要（选关、桌面战斗面板用）；内容是静态的，缓存一份 */
+export function fetchEncounters(): Promise<EncounterSummary[]> {
+  if (!encountersPromise) {
+    encountersPromise = request<EncounterSummary[]>("/api/battle/encounters").catch((error) => {
+      encountersPromise = null
+      throw error
+    })
+  }
+  return encountersPromise
+}
+
+const encounterCache = new Map<string, Promise<EncounterSpec>>()
+
+/** 一场遭遇的完整数据（敌人、AI、支援、三星），开战直接交给引擎 */
+export function fetchEncounter(id: string): Promise<EncounterSpec> {
+  let promise = encounterCache.get(id)
+  if (!promise) {
+    promise = request<EncounterSpec>(`/api/battle/encounters/${encodeURIComponent(id)}`).catch((error) => {
+      encounterCache.delete(id)
+      throw error
+    })
+    encounterCache.set(id, promise)
+  }
+  return promise
 }
 
 export function fetchPackInventory(userId: string, signal?: AbortSignal): Promise<PackInventory> {

@@ -1,9 +1,7 @@
 import type { Element } from "../types"
 
-import type { Enemy } from "./types"
-
 /**
- * 战斗数值与关卡配置。
+ * 战斗数值。敌人与关卡在 content/enemies、content/encounters。
  * 只放「调平衡会改的东西」；这里不出现任何状态、DOM 或 React。
  */
 
@@ -42,72 +40,3 @@ export const SUPPORT_MAX_SLOTS = 7
 /** 抢攻基础概率（§10.2，基础 4%，这里给到 14% 便于内测体验） */
 export const PREEMPTIVE_RATE = 0.14
 export const PREEMPTIVE_POWER = 0.7
-
-/** 教程首战用的练习幽灵：血量、攻防都压低，保证新号也能在 1–2 回合内打完 */
-export const TUTORIAL_ENEMY_HP = 3600
-
-export interface StagePreset {
-  id: string
-  name: string
-  title: string
-  tier: Enemy["tier"]
-  element: Element
-  weaknesses: Element[]
-  hp: number
-  atk: number
-  int: number
-  def: number
-  parTurns: number
-  parAp: number
-  damageThreshold?: number
-  enrageOnInterrupt?: boolean
-  summary: string
-}
-
-export const STAGE_PRESETS: StagePreset[] = [
-  {
-    id: "ghost",
-    name: "谱面幽灵",
-    title: "深渊徘徊灵体",
-    tier: "normal",
-    element: "dark",
-    weaknesses: ["light", "physical"],
-    hp: 28_000,
-    atk: 620,
-    int: 680,
-    def: 1_100,
-    parTurns: 5,
-    parAp: 10,
-    summary: "灵体属性（受物理 +20%），每回合 2 动，适合熟悉 Combo 与支援铺垫。",
-  },
-  {
-    id: "vanguard",
-    name: "断音重装卫队",
-    title: "高 T 多动精锐",
-    tier: "elite",
-    element: "thunder",
-    weaknesses: ["fire", "ice"],
-    hp: 52_000,
-    atk: 820,
-    int: 760,
-    def: 2_200,
-    parTurns: 7,
-    parAp: 15,
-    summary: "高 T 精英：每回合 3–4 动，左侧带【重装甲 II】与【荆棘栅栏】，需破甲拆支援并善用防御档位。",
-  },
-  {
-    id: "conductor",
-    name: "失拍指挥·终曲",
-    title: "深渊乐团指挥 · BOSS",
-    tier: "boss",
-    element: "dark",
-    weaknesses: ["light", "ice", "fire"],
-    hp: 120_000,
-    atk: 1_080,
-    int: 1_180,
-    def: 2_800,
-    parTurns: 10,
-    parAp: 22,
-    summary: "终曲 BOSS：每回合 3–4 动，带侧面蓄力大招、高额 Down 威胁与拆支援技能，全面检验打断、硬控与坦克开罐。",
-  },
-]

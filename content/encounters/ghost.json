@@ -1,0 +1,20 @@
+{
+  "enemy": "ghost",
+  "supports": [
+    "enemy-sup-ghost-1"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 3
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 8
+    }
+  ],
+  "summary": "灵体属性（受物理 +20%），每回合 2 动，适合熟悉 Combo 与支援铺垫。"
+}

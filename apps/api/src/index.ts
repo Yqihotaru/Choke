@@ -8,6 +8,7 @@ import Fastify from "fastify"
 import { authRoutes } from "./routes/auth"
 import { CORS_ORIGINS } from "./auth/env"
 import { handleError } from "./error-handler"
+import { battleRoutes } from "./routes/battle"
 import { cardRoutes } from "./routes/cards"
 import { deckRoutes } from "./routes/decks"
 import { dungeonRoutes } from "./routes/dungeons"
@@ -27,6 +28,7 @@ await app.register(cors, { origin: CORS_ORIGINS, credentials: true })
 await app.register(cookie)
 await app.register(authRoutes)
 await app.register(packRoutes)
+await app.register(battleRoutes)
 await app.register(cardRoutes)
 await app.register(deckRoutes)
 await app.register(marketRoutes)

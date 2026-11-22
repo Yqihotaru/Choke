@@ -7,11 +7,12 @@ import {
   swapBattleCard,
   type BattleInputCard,
 } from "./engine"
+import type { EncounterSpec } from "./content"
 import type { BattleState } from "./types"
 
 /**
- * 玩家的一次操作。战斗过程 = 初始条件 + 种子 + 操作列表，
- * 服务端拿同样的三样东西重放，就能得到和客户端逐位相同的结果。
+ * 玩家的一次操作。战斗过程 = 遭遇 + 卡组 + 种子 + 操作列表，
+ * 服务端拿同样的东西重放，就能得到和客户端逐位相同的结果。
  */
 export type BattleAction =
   | { type: "skill"; card: number; skill: string }
@@ -41,11 +42,10 @@ export function withAction(state: BattleState, action: BattleAction): { state: B
 }
 
 export interface ReplayInput {
+  encounter: EncounterSpec
   cards: BattleInputCard[]
   bench: BattleInputCard[]
   seed: string
-  stageId?: string
-  tutorial?: boolean
 }
 
 export interface ReplayResult {
@@ -57,12 +57,7 @@ export interface ReplayResult {
 
 /** 从头重放一场战斗。服务端复算用的就是它 */
 export function replayBattle(input: ReplayInput, actions: BattleAction[]): ReplayResult {
-  const state = createBattle(input.cards, {
-    seed: input.seed,
-    stageId: input.stageId,
-    tutorial: input.tutorial,
-    benchInputs: input.bench,
-  })
+  const state = createBattle(input.encounter, input.cards, { seed: input.seed, bench: input.bench })
   for (let i = 0; i < actions.length; i += 1) {
     const error = applyAction(state, actions[i]!)
     if (error) return { state, invalidAt: i, error }
