@@ -13,23 +13,24 @@ const BATTLE_FILE = "enemy-supports.json"
 const BATTLE_DIRS = ["enemies", "encounters"] as const
 
 function isDirEntry(file: string): boolean {
-  return BATTLE_DIRS.some((dir) => file.startsWith(`${dir}/`) && file.endsWith(".json") && !file.slice(dir.length + 1).includes("/"))
+  return BATTLE_DIRS.some(
+    (dir) => file.startsWith(`${dir}/`) && file.endsWith(".json") && !file.slice(dir.length + 1).includes("/"),
+  )
 }
 
-function readJson(file: string): unknown {
-  const full = path.join(CONTENT_DIR, file)
+function readJson(root: string, file: string): unknown {
   try {
-    return JSON.parse(fs.readFileSync(full, "utf8"))
+    return JSON.parse(fs.readFileSync(path.join(root, file), "utf8"))
   } catch (error) {
     throw new Error(`content/${file} 不是合法的 JSON：${(error as Error).message}`, { cause: error })
   }
 }
 
-function readDir(files: string[], dir: (typeof BATTLE_DIRS)[number]): Record<string, unknown> {
+function readDir(root: string, files: string[], dir: (typeof BATTLE_DIRS)[number]): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const file of files) {
     if (!file.startsWith(`${dir}/`) || !isDirEntry(file)) continue
-    out[path.basename(file, ".json")] = readJson(file)
+    out[path.basename(file, ".json")] = readJson(root, file)
   }
   return out
 }
@@ -45,8 +46,8 @@ function listFiles(dir: string, prefix = ""): string[] {
 }
 
 /** content/ 里所有文件；有没接入的文件就报错，避免新加的内容被悄悄忽略 */
-function checkFiles(): string[] {
-  const files = listFiles(CONTENT_DIR)
+function checkFiles(root: string): string[] {
+  const files = listFiles(root)
   const required = [...CONTENT_FILES, BATTLE_FILE]
   const known = new Set<string>(required)
   const unknown = files.filter((file) => !known.has(file) && !isDirEntry(file))
@@ -71,22 +72,32 @@ function checkFiles(): string[] {
  * 内容版本 = 全部内容文件的哈希（换行统一成 LF，Windows / Linux 检出结果一致）。
  * 出征记录开始时的版本，重放时用同一版内容。
  */
-function hashContent(files: string[]): string {
+function hashContent(root: string, files: string[]): string {
   const hash = crypto.createHash("sha256")
   for (const file of files) {
-    const text = fs.readFileSync(path.join(CONTENT_DIR, file), "utf8").replace(/\r\n/g, "\n")
+    const text = fs.readFileSync(path.join(root, file), "utf8").replace(/\r\n/g, "\n")
     hash.update(`${file}\0${text}\0`)
   }
   return hash.digest("hex").slice(0, 12)
 }
 
-const files = checkFiles()
+/**
+ * 读取并校验一个内容目录：文件清单 → 战斗内容 schema 与交叉引用 → 版本号。任何一步不过都抛错。
+ * 服务端用真实的 content/；测试拿临时目录的副本来改坏。
+ */
+export function loadContentDir(root: string): { version: string; battle: BattleContent } {
+  const files = checkFiles(root)
+  const battle = parseBattleContent({
+    enemies: readDir(root, files, "enemies"),
+    supports: readJson(root, BATTLE_FILE),
+    encounters: readDir(root, files, "encounters"),
+  })
+  return { version: hashContent(root, files), battle }
+}
 
-export const CONTENT_VERSION = hashContent(files)
+const loaded = loadContentDir(CONTENT_DIR)
 
-/** 敌人 / 敌方支援 / 遭遇；校验不过直接抛错 */
-export const BATTLE_CONTENT: BattleContent = parseBattleContent({
-  enemies: readDir(files, "enemies"),
-  supports: readJson(BATTLE_FILE),
-  encounters: readDir(files, "encounters"),
-})
+export const CONTENT_VERSION = loaded.version
+
+/** 敌人 / 敌方支援 / 遭遇 */
+export const BATTLE_CONTENT: BattleContent = loaded.battle
