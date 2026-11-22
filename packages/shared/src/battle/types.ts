@@ -1,8 +1,6 @@
 import { CONSTELLATION_BONUS, RARITY_BASE } from "../config"
 import {
   ARCHETYPE_COEF,
-  MP_MAX_BY_RARITY,
-  MP_REGEN_BY_RARITY,
   skillDefFromCardSkill,
   skillSeed,
   subjobFor,
@@ -24,9 +22,6 @@ export interface BattleStats {
   int: number
   hit: number
   crit: number
-  mpMax: number
-  mp: number
-  mpRegen: number
 }
 
 export const STATUS_IDS = [
@@ -379,9 +374,6 @@ export function statsFor(face: CardFaceData, subjob: SubJob): BattleStats {
   const base = basePower(face)
   const scaled = base * ARCHETYPE_COEF[face.job]
   const hpContribution = Math.round(scaled * subjob.hp)
-  const isMagicUser = subjob.tags.includes("magic_user")
-  const mpMax = isMagicUser ? MP_MAX_BY_RARITY[face.rarity] : 0
-  const mpRegen = isMagicUser ? MP_REGEN_BY_RARITY[face.rarity] : 0
   return {
     hpContribution,
     atk: Math.round(scaled * subjob.atk),
@@ -389,9 +381,6 @@ export function statsFor(face: CardFaceData, subjob: SubJob): BattleStats {
     int: Math.round(scaled * subjob.int),
     hit: 95 + (subjob.tags.includes("swift") ? 5 : 0),
     crit: 5,
-    mpMax,
-    mp: Math.ceil(mpMax * 0.5),
-    mpRegen,
   }
 }
 

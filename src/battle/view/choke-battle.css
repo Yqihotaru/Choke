@@ -1432,24 +1432,6 @@
   text-shadow: 0 0.08cqw 0.2cqw #000;
 }
 
-.choke-card-mp-pill {
-  position: absolute;
-  top: 0.32cqw;
-  left: 0.32cqw;
-  z-index: 7;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.14cqw;
-  padding: 0.06cqw 0.34cqw;
-  border-radius: 0.2cqw;
-  background: rgb(10 28 58 / 0.9);
-  border: 0.07cqw solid #6eb8ff;
-  color: #bfe4ff;
-  font-size: 0.55cqw;
-  font-weight: 800;
-  pointer-events: none;
-}
-
 .choke-guard-chip {
   position: absolute;
   top: -1.4cqw;
@@ -1538,12 +1520,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.choke-skill-mp {
-  font-style: normal;
-  font-size: 0.58cqw;
-  color: #82c8ff;
-  font-weight: 800;
 }
 
 /* ---------- 4. 战中换人抽屉 ---------- */

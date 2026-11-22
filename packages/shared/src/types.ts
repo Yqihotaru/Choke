@@ -41,9 +41,7 @@ export interface CardSkill {
   element: Element
   /** 行动点消耗 */
   ap: number
-  /** 法系才有的 MP 消耗 */
-  mp?: number
-  /** 被动技能：AP 恒 0，且不显示 MP */
+  /** 被动技能：AP 恒 0 */
   passive?: boolean
 }
 

@@ -253,11 +253,6 @@ export const CardFaceNightObi52 = memo(function CardFaceNightObi52({
                 </span>
                 <span className="cfn2__skill-name">{skill.name}</span>
                 <span className="cfn2__cost">
-                  {skill.mp !== undefined && (
-                    <span className="cfn2__mp" title="MP">
-                      {skill.mp}
-                    </span>
-                  )}
                   {skill.passive ? (
                     <span className="cfn2__passive">PAS</span>
                   ) : (

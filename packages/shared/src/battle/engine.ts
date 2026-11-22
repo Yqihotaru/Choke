@@ -124,9 +124,6 @@ export function canUseSkillReason(state: BattleState, cardIndex: number, skillId
 
   const apCost = effectiveApCost(state, card, skill)
   if (state.ap < apCost) return `AP 不足（需要 ${apCost} AP）`
-  if (skill.mp && card.stats.mp < skill.mp) {
-    return `MP 不足（需要 ${skill.mp} MP，当前 ${card.stats.mp}）`
-  }
   if (skill.kind === "interrupt" && state.interruptUsedThisTurn) {
     return "每回合最多尝试 1 次打断"
   }
@@ -647,9 +644,6 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
   if (skill.costTag === "accumulate") {
     card.accumulatedUses[skill.id] = (card.accumulatedUses[skill.id] ?? 0) + 1
   }
-  if (skill.mp) {
-    card.stats.mp = Math.max(0, card.stats.mp - skill.mp)
-  }
 
   // 狂战士等卖血换输出技能（§6.5 扣除队伍 HP，最低保留 1 HP）
   if (skill.selfHpCostPct && state.teamHp > 1) {
@@ -815,11 +809,8 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           state.teamStatuses = state.teamStatuses.filter((s) => !s.isDebuff)
           for (const c of state.cards) {
             c.statuses = c.statuses.filter((s) => !s.isDebuff)
-            if (c.stats.mpMax > 0) {
-              c.stats.mp = Math.min(c.stats.mpMax, c.stats.mp + 3)
-            }
           }
-          log(state, `✨ ${card.name} 净化了全队负面状态，并为法系队友补充 3 MP！`)
+          log(state, `✨ ${card.name} 净化了全队负面状态！`)
         }
         const amount = Math.round(attack * (skill.power ?? 0.8))
         healParty(state, amount, `${card.name}「${skill.name}」`)
@@ -1505,11 +1496,6 @@ export function endTurn(state: BattleState): string | null {
         log(state, `✨ 【${card.name}】从 DOWN 状态中恢复清醒！`)
       }
       continue
-    }
-
-    const silenced = card.statuses.some((s) => s.id === "silence")
-    if (!silenced && card.stats.mpMax > 0) {
-      card.stats.mp = Math.min(card.stats.mpMax, card.stats.mp + card.stats.mpRegen)
     }
 
     for (const st of card.statuses) st.turns -= 1

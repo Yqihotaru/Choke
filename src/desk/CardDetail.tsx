@@ -641,7 +641,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                 <b>{skill.name}</b>
                 <em>{ELEMENT_LABEL[skill.element]}</em>
                 <span className="card-detail__cost">
-                  {skill.passive ? "被动" : `${skill.ap} AP${skill.mp ? ` · ${skill.mp} MP` : ""}`}
+                  {skill.passive ? "被动" : `${skill.ap} AP`}
                 </span>
               </div>
             ))}

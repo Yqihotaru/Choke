@@ -591,8 +591,7 @@
   white-space: nowrap;
 }
 
-.cfb2__ap,
-.cfb2__mp {
+.cfb2__ap {
   flex: 0 0 9cqw;
   height: 9cqw;
   display: grid;
@@ -605,11 +604,6 @@
 .cfb2__ap {
   background: #d98a12;
   color: #fff;
-}
-
-.cfb2__mp {
-  border: 0.5cqw solid #5c9ee8;
-  color: #5c9ee8;
 }
 
 .cfb2__passive {
@@ -775,7 +769,6 @@
 .cfb2[data-version="v1"] .cfb2__el svg { width: 5cqw; height: 5cqw; }
 .cfb2[data-version="v1"] .cfb2__skill-name { font-size: 5.4cqw; }
 .cfb2[data-version="v1"] .cfb2__ap,
-.cfb2[data-version="v1"] .cfb2__mp { flex-basis: 7cqw; height: 7cqw; font-size: 4.4cqw; }
 .cfb2[data-version="v1"] .cfb2__passive { font-size: 3.2cqw; }
 .cfb2[data-version="v1"] .cfb2__job { font-size: 4.2cqw; }
 .cfb2[data-version="v1"] .cfb2__job svg { width: 5.4cqw; height: 5.4cqw; }

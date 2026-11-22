@@ -31,7 +31,7 @@
     "art": "https://a.ppy.sh/4787150",
     "skills": [
       { "name": "回响", "element": "light", "ap": 1 },
-      { "name": "庇护", "element": "wood", "ap": 1, "mp": 2 }
+      { "name": "庇护", "element": "wood", "ap": 1 }
     ]
   },
   {
@@ -65,9 +65,9 @@
     "pp": 20212,
     "art": "https://a.ppy.sh/4504101",
     "skills": [
-      { "name": "霜缚", "element": "ice", "ap": 1, "mp": 3 },
-      { "name": "星火", "element": "fire", "ap": 2, "mp": 5 },
-      { "name": "静默", "element": "light", "ap": 2, "mp": 4 }
+      { "name": "霜缚", "element": "ice", "ap": 1 },
+      { "name": "星火", "element": "fire", "ap": 2 },
+      { "name": "静默", "element": "light", "ap": 2 }
     ]
   },
   {
@@ -104,7 +104,7 @@
     "art": "https://a.ppy.sh/4452992",
     "skills": [
       { "name": "回响", "element": "light", "ap": 1 },
-      { "name": "庇护", "element": "wood", "ap": 1, "mp": 2 },
+      { "name": "庇护", "element": "wood", "ap": 1 },
       { "name": "共鸣", "element": "physical", "ap": 0, "passive": true }
     ]
   },
@@ -121,9 +121,9 @@
     "pp": 9800,
     "art": "https://a.ppy.sh/124493",
     "skills": [
-      { "name": "霜缚", "element": "ice", "ap": 1, "mp": 3 },
-      { "name": "星火", "element": "fire", "ap": 2, "mp": 5 },
-      { "name": "静默", "element": "light", "ap": 2, "mp": 4 }
+      { "name": "霜缚", "element": "ice", "ap": 1 },
+      { "name": "星火", "element": "fire", "ap": 2 },
+      { "name": "静默", "element": "light", "ap": 2 }
     ]
   }
 ]

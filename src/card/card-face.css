@@ -601,8 +601,7 @@
   gap: 1.2cqw;
 }
 
-.cf__ap,
-.cf__mp {
+.cf__ap {
   width: 8cqw;
   height: 8cqw;
   display: grid;
@@ -612,18 +611,13 @@
   font-weight: 700;
 }
 
-/* AP：实心琥珀墨；MP：蓝色空心圈，只有法系技能才有 */
+/* AP：实心琥珀墨 */
 .cf__ap {
   background: var(--ap);
   color: #fff8ea;
   box-shadow:
     inset 0 0 0 var(--hair) rgb(0 0 0 / 0.22),
     var(--emb) var(--emb) 0 var(--hi);
-}
-
-.cf__mp {
-  border: var(--rule) solid var(--mp);
-  color: var(--mp);
 }
 
 .cf__passive {

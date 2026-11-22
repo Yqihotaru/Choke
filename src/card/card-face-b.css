@@ -465,8 +465,7 @@
   white-space: nowrap;
 }
 
-.cfb__ap,
-.cfb__mp {
+.cfb__ap {
   flex: 0 0 9cqw;
   height: 9cqw;
   display: grid;
@@ -479,11 +478,6 @@
 .cfb__ap {
   background: #d98a12;
   color: #fff;
-}
-
-.cfb__mp {
-  border: 0.5cqw solid #5c9ee8;
-  color: #5c9ee8;
 }
 
 .cfb__passive {
@@ -627,7 +621,6 @@
 .cfb[data-version="v1"] .cfb__el svg { width: 5cqw; height: 5cqw; }
 .cfb[data-version="v1"] .cfb__skill-name { font-size: 5.4cqw; }
 .cfb[data-version="v1"] .cfb__ap,
-.cfb[data-version="v1"] .cfb__mp { flex-basis: 7cqw; height: 7cqw; font-size: 4.4cqw; }
 .cfb[data-version="v1"] .cfb__passive { font-size: 3.2cqw; }
 .cfb[data-version="v1"] .cfb__job { font-size: 4.2cqw; }
 .cfb[data-version="v1"] .cfb__job svg { width: 5.4cqw; height: 5.4cqw; }

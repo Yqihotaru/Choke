@@ -57,7 +57,6 @@ export interface SkillDef {
   name: string
   element: Element
   ap: number
-  mp?: number
   kind: SkillKind
   costTag?: SkillCostTag
   power?: number
@@ -126,27 +125,6 @@ export const POISE_COEF: Record<Job, number> = {
   warrior: 1.2,
   mage: 0.8,
   support: 0.9,
-}
-
-/** MP 上限与每回合回复（§2.6 法系专属资源） */
-export const MP_MAX_BY_RARITY: Record<Rarity, number> = {
-  C: 10,
-  UC: 12,
-  R: 15,
-  E: 18,
-  L: 22,
-  Radiant: 26,
-  Prismatic: 30,
-}
-
-export const MP_REGEN_BY_RARITY: Record<Rarity, number> = {
-  C: 2,
-  UC: 2,
-  R: 3,
-  E: 3,
-  L: 4,
-  Radiant: 4,
-  Prismatic: 5,
 }
 
 const S = (skill: SkillDef) => skill
@@ -311,20 +289,18 @@ export const SKILLS: Record<string, SkillDef> = {
     name: "圣光裁决",
     element: "light",
     ap: 2,
-    mp: 3,
     kind: "damage",
     costTag: "normal",
     power: 1.65,
     hits: 1,
     target: "enemy",
-    desc: "1.65× 光属性神圣打击（消耗 3 MP）",
+    desc: "1.65× 光属性神圣打击",
   }),
   paladin_protect: S({
     id: "paladin_protect",
     name: "圣盾援护",
     element: "light",
     ap: 1,
-    mp: 2,
     kind: "summon",
     costTag: "normal",
     target: "team",
@@ -344,13 +320,12 @@ export const SKILLS: Record<string, SkillDef> = {
     name: "毗沙门天剑",
     element: "light",
     ap: 3,
-    mp: 5,
     kind: "damage",
     costTag: "fatigue",
     power: 1.15,
     hits: 2,
     target: "enemy",
-    desc: "2 段 × 1.15× 光属性重击（消耗 5 MP）· 疲惫",
+    desc: "2 段 × 1.15× 光属性重击· 疲惫",
   }),
   paladin_aura: S({
     id: "paladin_aura",
@@ -554,7 +529,6 @@ export const SKILLS: Record<string, SkillDef> = {
     name: "极寒霜缚",
     element: "ice",
     ap: 1,
-    mp: 3,
     kind: "damage",
     costTag: "normal",
     power: 1.35,
@@ -562,14 +536,13 @@ export const SKILLS: Record<string, SkillDef> = {
     statusId: "freeze",
     turns: 2,
     target: "enemy",
-    desc: "1.35× 冰属性法术（3 MP），附加【冻结】（冰伤+20%、25%行动失败）",
+    desc: "1.35× 冰属性法术，附加【冻结】（冰伤+20%、25%行动失败）",
   }),
   warlock_starfire: S({
     id: "warlock_starfire",
     name: "雷火崩星",
     element: "thunder",
     ap: 2,
-    mp: 4,
     kind: "damage",
     costTag: "fatigue",
     power: 0.95,
@@ -577,14 +550,13 @@ export const SKILLS: Record<string, SkillDef> = {
     statusId: "shock",
     turns: 3,
     target: "enemy",
-    desc: "2 段 × 0.95× 雷属性法术（4 MP），附加【触电】（受雷伤 +30%）· 疲惫",
+    desc: "2 段 × 0.95× 雷属性法术，附加【触电】（受雷伤 +30%）· 疲惫",
   }),
   warlock_meteor: S({
     id: "warlock_meteor",
     name: "六色破坏光线",
     element: "fire",
     ap: 4,
-    mp: 8,
     kind: "damage",
     costTag: "accumulate",
     power: 3.4,
@@ -592,7 +564,7 @@ export const SKILLS: Record<string, SkillDef> = {
     statusId: "burn",
     turns: 3,
     target: "enemy",
-    desc: "3.4× 火属性究极奥义（8 MP），附加【燃烧】，最适合在满 Combo 收尾 · 远征累积",
+    desc: "3.4× 火属性究极奥义，附加【燃烧】，最适合在满 Combo 收尾 · 远征累积",
   }),
   warlock_lowhp: S({
     id: "warlock_lowhp",
@@ -610,19 +582,17 @@ export const SKILLS: Record<string, SkillDef> = {
     name: "生机涌动",
     element: "wood",
     ap: 1,
-    mp: 2,
     kind: "heal",
     costTag: "normal",
     power: 1.0,
     target: "team",
-    desc: "消耗 2 MP，为队伍总血条回复 1.0× INT 生命值",
+    desc: "为队伍总血条回复 1.0× INT 生命值",
   }),
   life_mass: S({
     id: "life_mass",
     name: "藤蔓毒蚀",
     element: "wood",
     ap: 1,
-    mp: 3,
     kind: "damage",
     costTag: "normal",
     power: 1.1,
@@ -630,19 +600,18 @@ export const SKILLS: Record<string, SkillDef> = {
     statusId: "poison",
     turns: 4,
     target: "enemy",
-    desc: "1.1× 木属性伤害（3 MP），附加 4 回合【中毒】（每回合扣当前生命 3%）",
+    desc: "1.1× 木属性伤害，附加 4 回合【中毒】（每回合扣当前生命 3%）",
   }),
   life_revive: S({
     id: "life_revive",
     name: "复苏结界",
     element: "light",
     ap: 2,
-    mp: 5,
     kind: "heal",
     costTag: "fatigue",
     power: 1.6,
     target: "team",
-    desc: "消耗 5 MP，大幅回复队伍生命并立即唤醒 1 张被 Down 的队友 · 疲惫",
+    desc: "大幅回复队伍生命并立即唤醒 1 张被 Down 的队友 · 疲惫",
   }),
   life_regen: S({
     id: "life_regen",
@@ -660,33 +629,30 @@ export const SKILLS: Record<string, SkillDef> = {
     name: "深渊眠咒",
     element: "dark",
     ap: 3,
-    mp: 5,
     kind: "control",
     costTag: "fatigue",
     statusId: "sleep",
     turns: 1,
     target: "enemy",
-    desc: "硬控（3 AP + 5 MP）：催眠目标作废其本回合全部行动（受击即打醒；可打断蓄力）",
+    desc: "硬控（3 AP）：催眠目标作废其本回合全部行动（受击即打醒；可打断蓄力）",
   }),
   binder_charm: S({
     id: "binder_charm",
     name: "幻惑之瞳",
     element: "dark",
     ap: 2,
-    mp: 3,
     kind: "debuff",
     costTag: "normal",
     statusId: "charm",
     turns: 2,
     target: "enemy",
-    desc: "软控（2 AP + 3 MP）：施加 2 回合【魅惑】（50% 概率打错目标自残，受击不打醒）",
+    desc: "软控（2 AP）：施加 2 回合【魅惑】（50% 概率打错目标自残，受击不打醒）",
   }),
   binder_bind: S({
     id: "binder_bind",
     name: "诅咒荆棘",
     element: "wood",
     ap: 1,
-    mp: 2,
     kind: "debuff",
     costTag: "normal",
     power: 0.9,
@@ -712,7 +678,6 @@ export const SKILLS: Record<string, SkillDef> = {
     name: "使徒召唤",
     element: "dark",
     ap: 1,
-    mp: 3,
     kind: "summon",
     costTag: "normal",
     target: "self",
@@ -732,7 +697,6 @@ export const SKILLS: Record<string, SkillDef> = {
     name: "哈尼军团",
     element: "earth",
     ap: 2,
-    mp: 4,
     kind: "summon",
     costTag: "fatigue",
     target: "self",
@@ -752,7 +716,6 @@ export const SKILLS: Record<string, SkillDef> = {
     name: "荆棘结界",
     element: "wood",
     ap: 1,
-    mp: 2,
     kind: "summon",
     costTag: "once",
     once: true,
@@ -843,7 +806,7 @@ export const SKILLS: Record<string, SkillDef> = {
     costTag: "normal",
     power: 0.7,
     target: "team",
-    desc: "回复队伍生命，并净化全队与卡片身上的负面异常状态，同时为法系队友补 3 MP",
+    desc: "回复队伍生命，并净化全队与卡片身上的负面异常状态",
   }),
   healer_revive: S({
     id: "healer_revive",
@@ -1236,7 +1199,6 @@ export function cardSkillsFromRefs(refs: CardSkillRef[], _job?: Job): CardSkill[
       name: ref.name ?? def.name,
       element: def.element,
       ap: def.passive ? 0 : def.ap,
-      mp: def.passive ? undefined : def.mp,
       passive: def.passive || undefined,
     })
   }
@@ -1267,7 +1229,6 @@ export function normalizeCardSkill(skill: CardSkill, job: Job): CardSkill {
     name: skill.name,
     element: def.element,
     ap: passive ? 0 : def.ap,
-    mp: passive ? undefined : def.mp,
     passive: passive || undefined,
   }
 }
@@ -1297,7 +1258,6 @@ export function skillDefFromCardSkill(skill: CardSkill, job: Job): SkillDef {
       name: skill.name,
       element: skill.element,
       ap: skill.ap,
-      mp: skill.mp,
       kind: "damage",
       costTag: "normal",
       power: 0.55 + skill.ap * 0.4,
@@ -1313,7 +1273,6 @@ export function skillDefFromCardSkill(skill: CardSkill, job: Job): SkillDef {
       name: skill.name,
       element: skill.element,
       ap: 0,
-      mp: undefined,
       passive: true,
       kind: "passive",
     }
@@ -1332,7 +1291,6 @@ export function cardSkillsFor(seed: string, job: Job, rarity: Rarity, wantThree 
     name: skill.name,
     element: skill.element,
     ap: skill.ap,
-    mp: skill.mp,
     passive: skill.passive,
   }))
 }
@@ -1351,13 +1309,13 @@ export const SKILL_SETS: Record<Job, CardSkill[]> = {
     { name: "血怒", element: "dark", ap: 0, passive: true },
   ],
   mage: [
-    { name: "霜缚", element: "ice", ap: 1, mp: 3 },
-    { name: "星火", element: "fire", ap: 2, mp: 5 },
-    { name: "静默", element: "light", ap: 2, mp: 4 },
+    { name: "霜缚", element: "ice", ap: 1 },
+    { name: "星火", element: "fire", ap: 2 },
+    { name: "静默", element: "light", ap: 2 },
   ],
   support: [
     { name: "回响", element: "light", ap: 1 },
-    { name: "庇护", element: "wood", ap: 1, mp: 2 },
+    { name: "庇护", element: "wood", ap: 1 },
     { name: "共鸣", element: "light", ap: 0, passive: true },
   ],
 }

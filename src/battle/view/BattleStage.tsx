@@ -6,7 +6,6 @@ import {
   GiCrackedShield,
   GiCrossedSwords,
   GiCrown,
-  GiCrystalBars,
   GiCycle,
   GiDrop,
   GiFireball,
@@ -1206,8 +1205,6 @@ export function BattleStage({
                         {tooltipInfo.skill.passive
                           ? `${card.subjob.label} · 被动技能（无需点击，自动生效）`
                           : `${elementLabel(tooltipInfo.skill.element)} · 消耗 ${tooltipInfo.actualAp} AP${
-                              tooltipInfo.skill.mp ? ` + ${tooltipInfo.skill.mp} MP` : ""
-                            }${
                               tooltipInfo.skill.hits && tooltipInfo.skill.hits > 1
                                 ? ` · ${tooltipInfo.skill.hits} 段连击`
                                 : ""
@@ -1224,13 +1221,6 @@ export function BattleStage({
 
                   <div className="choke-card-frame">
                     <GameCardFace card={card.face} eager />
-
-                    {/* 法系专属 MP 小胶囊（仅法系显示在顶部偏左，不遮挡名字） */}
-                    {card.stats.mpMax > 0 && (
-                      <span className="choke-card-mp-pill" title={`法系 MP（每回合 +${card.stats.mpRegen}）`}>
-                        <GiCrystalBars /> {card.stats.mp}/{card.stats.mpMax}
-                      </span>
-                    )}
 
                     {/* 兰斯10 风格：覆盖在未行动卡片中央的炫光艺术大字 BOOST / 必殺 / 連撃（见参考图第2张卡） */}
                     {card.trigger && !card.acted && !card.down && (
@@ -1313,7 +1303,6 @@ export function BattleStage({
                                 {isPassive ? "◎" : actualAp}
                               </i>
                               <span>{skill.name}</span>
-                              {skill.mp ? <em className="choke-skill-mp">{skill.mp}M</em> : null}
                             </button>
                           )
                         })}

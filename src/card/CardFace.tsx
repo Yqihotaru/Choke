@@ -194,11 +194,6 @@ export const CardFace = memo(function CardFace({ card, className, eager = false 
               </span>
               <span className="cf__skill-name">{skill.name}</span>
               <span className="cf__cost">
-                {skill.mp !== undefined && (
-                  <span className="cf__mp" title="MP">
-                    {skill.mp}
-                  </span>
-                )}
                 {skill.passive ? (
                   <span className="cf__passive">被动</span>
                 ) : (

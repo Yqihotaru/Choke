@@ -14,12 +14,11 @@ interface SkillSlot {
   name: string
   element: Element
   ap: number
-  mp: string
   passive: boolean
 }
 
 function emptySlot(): SkillSlot {
-  return { enabled: false, name: "", element: "physical", ap: 1, mp: "", passive: false }
+  return { enabled: false, name: "", element: "physical", ap: 1, passive: false }
 }
 
 function slotsFromCard(card: CardFaceData): SkillSlot[] {
@@ -31,7 +30,6 @@ function slotsFromCard(card: CardFaceData): SkillSlot[] {
       name: skill.name,
       element: skill.element,
       ap: skill.ap,
-      mp: skill.mp === undefined ? "" : String(skill.mp),
       passive: !!skill.passive,
     }
   })
@@ -58,9 +56,6 @@ export function CardEditor() {
           ap: slot.passive ? 0 : slot.ap,
         }
         if (slot.passive) skill.passive = true
-        if (!slot.passive && slot.mp.trim() !== "" && Number.isFinite(Number(slot.mp))) {
-          skill.mp = Number(slot.mp)
-        }
         return skill
       })
     return { ...base, skills }
@@ -279,17 +274,6 @@ export function CardEditor() {
                         disabled={slot.passive}
                         value={slot.ap}
                         onChange={(e) => patchSlot(i, { ap: Number(e.target.value) || 0 })}
-                      />
-                    </Field>
-                    <Field label="MP">
-                      <input
-                        type="number"
-                        min={0}
-                        max={99}
-                        placeholder="无"
-                        disabled={slot.passive}
-                        value={slot.mp}
-                        onChange={(e) => patchSlot(i, { mp: e.target.value })}
                       />
                     </Field>
                   </Row>

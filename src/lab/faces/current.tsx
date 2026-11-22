@@ -225,11 +225,6 @@ export const CardFaceCurrent = memo(function CardFaceCurrent({ card, className, 
               </span>
               <span className="cfcur__skill-name">{skill.name}</span>
               <span className="cfcur__cost">
-                {skill.mp !== undefined && (
-                  <span className="cfcur__mp" title="MP">
-                    {skill.mp}
-                  </span>
-                )}
                 {skill.passive ? (
                   <span className="cfcur__passive">PAS</span>
                 ) : (

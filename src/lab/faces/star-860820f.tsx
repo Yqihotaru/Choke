@@ -264,10 +264,7 @@ export function CardFaceV1({ card, className }: Props) {
           <div className="cfv1__skills">
             {skills.map((skill, i) =>
               skill ? (
-                <div
-                  className={cn("cfv1__skill", skill.mp !== undefined && "cfv1__skill--mp")}
-                  key={i}
-                >
+                <div className="cfv1__skill" key={i}>
                   <div className="cfv1__skill-track">
                     <div className="cfv1__skill-body">
                       <span
@@ -290,12 +287,6 @@ export function CardFaceV1({ card, className }: Props) {
                           <svg className="cfv1__ap-gem" viewBox="0 0 14 20" aria-hidden>
                             <path d="M7 0.8L13.2 10L7 19.2L0.8 10Z" fill="currentColor" />
                           </svg>
-                        </span>
-                      )}
-                      {skill.mp !== undefined && (
-                        <span className="cfv1__mp">
-                          <i>MP</i>
-                          <b>{skill.mp}</b>
                         </span>
                       )}
                     </span>

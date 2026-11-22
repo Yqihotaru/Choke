@@ -202,7 +202,6 @@ export const CardFaceB2 = memo(function CardFaceB2({
                 <ElementGlyph element={skill.element} />
               </span>
               <span className="cfb2__skill-name">{skill.name}</span>
-              {skill.mp !== undefined && <span className="cfb2__mp">{skill.mp}</span>}
               {skill.passive ? <span className="cfb2__passive">被动</span> : <span className="cfb2__ap">{skill.ap}</span>}
             </div>
           ))}

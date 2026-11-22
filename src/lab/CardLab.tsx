@@ -32,7 +32,7 @@ const MOD_OPTIONS: { id: ModPlacement; label: string }[] = [
 const HERO_SKILLS = [
   { name: "起手式", element: "physical", ap: 1 },
   { name: "破空", element: "thunder", ap: 2 },
-  { name: "回响", element: "light", ap: 2, mp: 4 },
+  { name: "回响", element: "light", ap: 2 },
 ] as const
 
 const HEROES: CardFaceData[] = [1, 4, 7, 10, 12].map((level) =>
@@ -307,7 +307,7 @@ export function CardLab() {
         </div>
       </Section>
 
-      <Section label="字段取舍" note="技能少的卡插画窗自动拉高；被动不显示 AP；法系才有 MP；没装 MOD 的槽留空">
+      <Section label="字段取舍" note="技能少的卡插画窗自动拉高；被动不显示 AP；没装 MOD 的槽留空">
         <div className="lab__row">
           <div className="lab__slot" style={{ width: 200 }}>
             <FaceView mods={mods} style={faceStyle} theme={theme} card={SOLO_SKILL} />
@@ -315,7 +315,7 @@ export function CardLab() {
           </div>
           <div className="lab__slot" style={{ width: 200 }}>
             <FaceView mods={mods} style={faceStyle} theme={theme} card={DEMO_CARDS[3]} />
-            <span className="lab__tag">法系 MP</span>
+            <span className="lab__tag">双技能</span>
           </div>
           <div className="lab__slot" style={{ width: 200 }}>
             <FaceView mods={mods} style={faceStyle} theme={theme} card={DEMO_CARDS[2]} />
