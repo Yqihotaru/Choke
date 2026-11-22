@@ -1,4 +1,4 @@
-import { and, desc, eq, getTableColumns, sql } from "drizzle-orm"
+import { and, desc, eq, getTableColumns, gte, sql } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
@@ -7,6 +7,7 @@ import { MARKET_UNLOCK_LEVEL } from "../shared/tutorial"
 import { requireSelf } from "../auth/guard"
 import { db } from "../db/client"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
+import { TxAbort, runTx } from "../tx"
 
 const cardColumns = {
   ...getTableColumns(cards),
@@ -292,88 +293,67 @@ export async function marketRoutes(app: FastifyInstance) {
       })
     }
 
-    const [listing] = await db
-      .select({
-        id: marketListings.id,
-        sellerId: marketListings.sellerId,
-        userCardId: marketListings.userCardId,
-        price: marketListings.price,
-        status: marketListings.status,
-      })
-      .from(marketListings)
-      .where(eq(marketListings.id, params.listingId))
-      .limit(1)
+    // 先在事务里把上架从 active 抢成 sold，再扣款、过户；任何一步失败都整体回滚，
+    // 并发购买只有一个能抢到这条上架，金币也不会被扣成负数。
+    const bought = await runTx(reply, async (tx) => {
+      const [listing] = await tx
+        .update(marketListings)
+        .set({ status: "sold" })
+        .where(and(eq(marketListings.id, params.listingId), eq(marketListings.status, "active")))
+        .returning({
+          sellerId: marketListings.sellerId,
+          userCardId: marketListings.userCardId,
+          price: marketListings.price,
+        })
+      if (!listing) {
+        throw new TxAbort(404, "not_found", "这条上架已经不存在")
+      }
+      if (listing.sellerId === userId) {
+        throw new TxAbort(400, "own_listing", "不能买自己的卡")
+      }
 
-    if (!listing || listing.status !== "active") {
-      return reply.code(404).send({
-        ok: false,
-        error: { code: "not_found", message: "这条上架已经不存在" },
-      })
-    }
-    if (listing.sellerId === userId) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "own_listing", message: "不能买自己的卡" },
-      })
-    }
-
-    const [buyer] = await db
-      .select({ coins: users.coins })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
-    if (!buyer || buyer.coins < listing.price) {
-      return reply.code(400).send({
-        ok: false,
-        error: {
-          code: "not_enough_coins",
-          message: `金币不足：${buyer?.coins ?? 0} / ${listing.price}`,
-          need: listing.price,
-          coins: buyer?.coins ?? 0,
-        },
-      })
-    }
-
-    const [owner] = await db
-      .select({ id: userCards.id })
-      .from(userCards)
-      .where(and(eq(userCards.id, listing.userCardId), eq(userCards.userId, listing.sellerId)))
-      .limit(1)
-    if (!owner) {
-      return reply.code(409).send({
-        ok: false,
-        error: { code: "card_moved", message: "卖家已经不再持有这张卡" },
-      })
-    }
-
-    const [wallet] = await db.transaction(async (tx) => {
-      const buyerWallet = await tx
+      const [buyerWallet] = await tx
         .update(users)
         .set({ coins: sql`${users.coins} - ${listing.price}` })
-        .where(eq(users.id, userId))
+        .where(and(eq(users.id, userId), gte(users.coins, listing.price)))
         .returning({ coins: users.coins })
+      if (!buyerWallet) {
+        const [buyer] = await tx
+          .select({ coins: users.coins })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+        const coins = buyer?.coins ?? 0
+        throw new TxAbort(400, "not_enough_coins", `金币不足：${coins} / ${listing.price}`, {
+          need: listing.price,
+          coins,
+        })
+      }
+
+      const moved = await tx
+        .update(userCards)
+        .set({ userId })
+        .where(and(eq(userCards.id, listing.userCardId), eq(userCards.userId, listing.sellerId)))
+        .returning({ id: userCards.id })
+      if (moved.length === 0) {
+        throw new TxAbort(409, "card_moved", "卖家已经不再持有这张卡")
+      }
+
       await tx
         .update(users)
         .set({ coins: sql`${users.coins} + ${listing.price}` })
         .where(eq(users.id, listing.sellerId))
       await tx.delete(deckSlots).where(eq(deckSlots.userCardId, listing.userCardId))
-      await tx
-        .update(userCards)
-        .set({ userId })
-        .where(eq(userCards.id, listing.userCardId))
-      await tx
-        .update(marketListings)
-        .set({ status: "sold" })
-        .where(eq(marketListings.id, listing.id))
-      return buyerWallet
+      return { coins: buyerWallet.coins, price: listing.price, userCardId: listing.userCardId }
     })
+    if (!bought) return
 
     return {
       ok: true,
       data: {
-        card: await loadCard(userId, listing.userCardId),
-        price: listing.price,
-        coins: wallet?.coins ?? 0,
+        card: await loadCard(userId, bought.userCardId),
+        price: bought.price,
+        coins: bought.coins,
       },
     }
   })

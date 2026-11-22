@@ -46,3 +46,32 @@ function sessionSecret(): string {
 
 export const SESSION_SECRET = sessionSecret()
 export const COOKIE_NAME = "choke_session"
+export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30
+export const SESSION_TTL_MS = SESSION_TTL_SECONDS * 1000
+export const IS_PRODUCTION = process.env.NODE_ENV === "production"
+
+/** 旧版 token 没有过期时间；设 SESSION_ACCEPT_LEGACY=0 可立即拒绝它们（用户需重新登录，游客账号会丢失）。 */
+export const ACCEPT_LEGACY_SESSION = process.env.SESSION_ACCEPT_LEGACY !== "0"
+
+const DEV_WEB_PORTS = [5207, 5173, 5174, 5175, 4173]
+
+/**
+ * CORS 白名单：CORS_ORIGINS（逗号分隔）> 开发环境的本地前端端口 > 生产环境默认只同源（返回 false）。
+ */
+function corsOrigins(): string[] | false {
+  const normalize = (value: string) => value.trim().replace(/\/+$/, "")
+  const configured = (process.env.CORS_ORIGINS ?? "")
+    .split(",")
+    .map(normalize)
+    .filter(Boolean)
+  if (configured.length > 0) return configured
+  if (IS_PRODUCTION) return false
+  return [
+    ...new Set([
+      normalize(WEB_BASE),
+      ...DEV_WEB_PORTS.flatMap((port) => [`http://localhost:${port}`, `http://127.0.0.1:${port}`]),
+    ]),
+  ]
+}
+
+export const CORS_ORIGINS = corsOrigins()

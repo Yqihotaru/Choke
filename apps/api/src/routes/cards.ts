@@ -305,7 +305,7 @@ export async function cardRoutes(app: FastifyInstance) {
     const { id } = z.object({ id: z.string() }).parse(request.params)
     const [row] = await db.select().from(cards).where(eq(cards.id, id)).limit(1)
     if (!row) {
-      return reply.code(404).send({ ok: false, error: { code: "not_found", message: "鍗′笉瀛樺湪" } })
+      return reply.code(404).send({ ok: false, error: { code: "not_found", message: "卡不存在" } })
     }
     return { ok: true, data: row }
   })

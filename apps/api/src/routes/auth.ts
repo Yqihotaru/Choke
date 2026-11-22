@@ -5,9 +5,9 @@ import type { FastifyInstance, FastifyReply } from "fastify"
 import { z } from "zod"
 
 import {
-  emailUserId,
   hashPassword,
   isEmail,
+  newEmailUserId,
   normalizeEmail,
   verifyPassword,
 } from "../auth/email"
@@ -18,10 +18,12 @@ import {
   createState,
   exchangeCode,
   fetchMe,
+  isLegacySession,
   makeSession,
   readSession,
 } from "../auth/osu"
-import { WEB_BASE } from "../auth/env"
+import { IS_PRODUCTION, SESSION_TTL_SECONDS, WEB_BASE } from "../auth/env"
+import { rateLimit } from "../auth/rate-limit"
 import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
 import { cards, userCards, userPacks, users } from "../db/schema"
@@ -96,9 +98,14 @@ export async function authRoutes(app: FastifyInstance) {
       path: "/",
       httpOnly: true,
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30,
+      secure: IS_PRODUCTION,
+      maxAge: SESSION_TTL_SECONDS,
     })
   }
+
+  const loginLimit = rateLimit({ max: 10, windowMs: 60_000 })
+  const registerLimit = rateLimit({ max: 5, windowMs: 10 * 60_000 })
+  const guestLimit = rateLimit({ max: 10, windowMs: 60_000 })
 
   app.get("/auth/osu", async (_request, reply) => {
     const state = createState()
@@ -112,7 +119,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   /** 邮箱注册：建号后与 osu 用户一样走 onboard（领新手包）。 */
-  app.post("/auth/email/register", async (request, reply) => {
+  app.post("/auth/email/register", { preHandler: registerLimit }, async (request, reply) => {
     const body = emailAuthSchema.safeParse(request.body)
     if (!body.success) {
       return reply.code(400).send({
@@ -140,7 +147,7 @@ export async function authRoutes(app: FastifyInstance) {
       })
     }
 
-    const userId = emailUserId(email)
+    const userId = newEmailUserId()
     const username = body.data.username || email.split("@")[0]!.slice(0, 24)
     const [user] = await db
       .insert(users)
@@ -150,6 +157,7 @@ export async function authRoutes(app: FastifyInstance) {
         email,
         passwordHash: hashPassword(body.data.password),
         onboarded: false,
+        staminaUpdatedAt: Date.now(),
       })
       .returning()
 
@@ -163,7 +171,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
   })
 
-  app.post("/auth/email/login", async (request, reply) => {
+  app.post("/auth/email/login", { preHandler: loginLimit }, async (request, reply) => {
     const body = emailAuthSchema.pick({ email: true, password: true }).safeParse(request.body)
     if (!body.success) {
       return reply.code(400).send({
@@ -207,7 +215,7 @@ export async function authRoutes(app: FastifyInstance) {
    * 游客账号：跳过 osu! OAuth，直接创建一个 guest-xxxx 用户并进入桌面。
    * 没有 osuId，所以没有本体卡；只发普通卡包，神秘卡包依赖 osu! 数据，不发放。
    */
-  app.get("/auth/guest", async (request, reply) => {
+  app.get("/auth/guest", { preHandler: guestLimit }, async (request, reply) => {
     const suffix = randomBytes(6).toString("hex")
     const userId = `guest-${suffix}`
 
@@ -217,6 +225,7 @@ export async function authRoutes(app: FastifyInstance) {
         id: userId,
         username: `游客 ${suffix.slice(0, 4).toUpperCase()}`,
         onboarded: true,
+        staminaUpdatedAt: Date.now(),
       })
       .returning()
 
@@ -225,12 +234,7 @@ export async function authRoutes(app: FastifyInstance) {
     await addPacks(userId, { normal: STARTER_PACKS.normal })
     request.log.info({ userId }, "guest account created")
 
-    reply.setCookie(COOKIE_NAME, makeSession(userId), {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30,
-    })
+    setSessionCookie(reply, userId)
 
     return reply.redirect(`${WEB_BASE}/`)
   })
@@ -256,6 +260,7 @@ export async function authRoutes(app: FastifyInstance) {
           username: me.username,
           osuId: me.id,
           onboarded: false,
+          staminaUpdatedAt: Date.now(),
         })
         .onConflictDoUpdate({
           target: users.id,
@@ -272,12 +277,7 @@ export async function authRoutes(app: FastifyInstance) {
         request.log.warn({ err: error }, "claim hero card failed")
       }
 
-      reply.setCookie(COOKIE_NAME, makeSession(userId), {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 30,
-      })
+      setSessionCookie(reply, userId)
 
       return reply.redirect(`${WEB_BASE}/`)
     } catch (error) {
@@ -293,7 +293,8 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   app.get("/auth/me", async (request, reply) => {
-    const userId = readSession(request.cookies[COOKIE_NAME])
+    const rawSession = request.cookies[COOKIE_NAME]
+    const userId = readSession(rawSession)
     if (!userId) {
       return reply.code(401).send({ ok: false, error: { code: "unauthorized", message: "未登录" } })
     }
@@ -301,6 +302,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (!user) {
       return reply.code(401).send({ ok: false, error: { code: "unauthorized", message: "用户不存在" } })
     }
+    if (isLegacySession(rawSession)) setSessionCookie(reply, userId)
 
     // 镜像池按最近活跃筛选；/auth/me 是每次进桌面的必经请求。
     await db.update(users).set({ lastSeenAt: new Date() }).where(eq(users.id, userId))

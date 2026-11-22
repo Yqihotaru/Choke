@@ -1,11 +1,13 @@
 import crypto from "node:crypto"
 
 import {
+  ACCEPT_LEGACY_SESSION,
   CLIENT_ID,
   CLIENT_SECRET,
   COOKIE_NAME,
   REDIRECT_URI,
   SESSION_SECRET,
+  SESSION_TTL_MS,
 } from "./env"
 
 const AUTHORIZE = "https://osu.ppy.sh/oauth/authorize"
@@ -97,17 +99,36 @@ export function sign(value: string): string {
   return crypto.createHmac("sha256", SESSION_SECRET).update(value).digest("hex").slice(0, 32)
 }
 
-export function makeSession(userId: string): string {
-  return `${userId}.${sign(userId)}`
+function safeEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a)
+  const right = Buffer.from(b)
+  return left.length === right.length && crypto.timingSafeEqual(left, right)
 }
 
-export function readSession(raw: string | undefined): string | null {
+/** token 形如 `v1.{userId}.{过期毫秒时间戳}.{签名}`；旧版 `{userId}.{签名}` 没有过期时间。 */
+export function makeSession(userId: string, now = Date.now()): string {
+  const body = `v1.${userId}.${now + SESSION_TTL_MS}`
+  return `${body}.${sign(body)}`
+}
+
+export function readSession(raw: string | undefined, now = Date.now()): string | null {
   if (!raw) return null
   const dot = raw.lastIndexOf(".")
   if (dot <= 0) return null
-  const userId = raw.slice(0, dot)
-  const signature = raw.slice(dot + 1)
-  return sign(userId) === signature ? userId : null
+  const body = raw.slice(0, dot)
+  if (!safeEqual(sign(body), raw.slice(dot + 1))) return null
+
+  if (!body.startsWith("v1.")) return ACCEPT_LEGACY_SESSION ? body : null
+  const sep = body.lastIndexOf(".")
+  const userId = body.slice(3, sep)
+  const expiresAt = Number(body.slice(sep + 1))
+  if (!userId || !Number.isFinite(expiresAt) || expiresAt <= now) return null
+  return userId
+}
+
+/** 旧格式 token（无过期时间）：登录态仍有效，但会在 /auth/me 被换成新格式。 */
+export function isLegacySession(raw: string | undefined): boolean {
+  return !!raw && !raw.startsWith("v1.")
 }
 
 export { COOKIE_NAME }

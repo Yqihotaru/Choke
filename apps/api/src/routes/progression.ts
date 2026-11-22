@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, getTableColumns, inArray, ne, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, getTableColumns, gte, inArray, lt, ne, sql } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
@@ -15,6 +15,7 @@ import {
 } from "../shared/cards"
 import { db } from "../db/client"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
+import { TxAbort, lockUser, runTx } from "../tx"
 
 const cardColumns = {
   ...getTableColumns(cards),
@@ -121,10 +122,24 @@ export async function progressionRoutes(app: FastifyInstance) {
       })
     }
 
-    await db
+    const [leveled] = await db
       .update(userCards)
-      .set({ level: target.level + 1, exp: target.exp - need })
-      .where(eq(userCards.id, userCardId))
+      .set({ level: sql`${userCards.level} + 1`, exp: sql`${userCards.exp} - ${need}` })
+      .where(
+        and(
+          eq(userCards.id, userCardId),
+          eq(userCards.userId, userId),
+          eq(userCards.level, target.level),
+          gte(userCards.exp, need),
+        ),
+      )
+      .returning({ id: userCards.id })
+    if (!leveled) {
+      return reply.code(409).send({
+        ok: false,
+        error: { code: "conflict", message: "卡牌状态刚刚变化了，请刷新后重试" },
+      })
+    }
 
     return {
       ok: true,
@@ -174,18 +189,37 @@ export async function progressionRoutes(app: FastifyInstance) {
       })
     }
 
-    await db.transaction(async (tx) => {
+    const result = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+      const consumed = await tx
+        .delete(userCards)
+        .where(and(eq(userCards.id, duplicate.id), eq(userCards.userId, userId)))
+        .returning({ id: userCards.id })
+      if (consumed.length === 0) {
+        throw new TxAbort(400, "no_duplicate", "没有同名卡可以消耗")
+      }
       await tx.delete(deckSlots).where(eq(deckSlots.userCardId, duplicate.id))
       await tx
         .update(marketListings)
         .set({ status: "cancelled" })
         .where(eq(marketListings.userCardId, duplicate.id))
-      await tx.delete(userCards).where(eq(userCards.id, duplicate.id))
-      await tx
+      const upgraded = await tx
         .update(userCards)
-        .set({ constellation: target.constellation + 1 })
-        .where(eq(userCards.id, userCardId))
+        .set({ constellation: sql`${userCards.constellation} + 1` })
+        .where(
+          and(
+            eq(userCards.id, userCardId),
+            eq(userCards.userId, userId),
+            lt(userCards.constellation, cap),
+          ),
+        )
+        .returning({ id: userCards.id })
+      if (upgraded.length === 0) {
+        throw new TxAbort(400, "max_constellation", "已经满命座")
+      }
+      return true
     })
+    if (!result) return
 
     return {
       ok: true,
@@ -253,23 +287,45 @@ export async function progressionRoutes(app: FastifyInstance) {
     const gained = meltExpOf(source.rarity as Rarity)
     const essenceGained = essenceOf(source.rarity as Rarity, source.foil)
 
-    const [wallet] = await db.transaction(async (tx) => {
+    const melted = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+      const removed = await tx
+        .delete(userCards)
+        .where(and(eq(userCards.id, source.id), eq(userCards.userId, userId)))
+        .returning({ id: userCards.id })
+      if (removed.length === 0) {
+        throw new TxAbort(400, "source_not_found", "材料卡不在这个账号的卡册里")
+      }
+      const [{ value: left }] = await tx
+        .select({ value: count() })
+        .from(userCards)
+        .where(and(eq(userCards.userId, userId), eq(userCards.cardId, source.cardId)))
+      if (Number(left) < 1) {
+        throw new TxAbort(400, "last_copy", "这是最后一张，不能熔")
+      }
+
       await tx.delete(deckSlots).where(eq(deckSlots.userCardId, source.id))
       await tx
         .update(marketListings)
         .set({ status: "cancelled" })
         .where(eq(marketListings.userCardId, source.id))
-      await tx.delete(userCards).where(eq(userCards.id, source.id))
-      await tx
+      const fed = await tx
         .update(userCards)
-        .set({ exp: target.exp + gained })
-        .where(eq(userCards.id, userCardId))
-      return tx
+        .set({ exp: sql`${userCards.exp} + ${gained}` })
+        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+        .returning({ id: userCards.id })
+      if (fed.length === 0) {
+        throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
+      }
+      const [wallet] = await tx
         .update(users)
         .set({ essence: sql`${users.essence} + ${essenceGained}` })
         .where(eq(users.id, userId))
         .returning({ essence: users.essence })
+      return { essence: wallet?.essence ?? 0 }
     })
+    if (!melted) return
+    const wallet = melted
 
     return {
       ok: true,
@@ -308,35 +364,43 @@ export async function progressionRoutes(app: FastifyInstance) {
     }
 
     const cost = FOIL_COST
-    const [user] = await db
-      .select({ essence: users.essence })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
 
-    if (!user || user.essence < cost) {
-      return reply.code(400).send({
-        ok: false,
-        error: {
-          code: "not_enough_essence",
-          message: `精华不足：${user?.essence ?? 0} / ${cost}`,
-          need: cost,
-          essence: user?.essence ?? 0,
-        },
-      })
-    }
-
-    const [wallet] = await db.transaction(async (tx) => {
-      await tx
-        .update(userCards)
-        .set({ foil: true })
-        .where(eq(userCards.id, userCardId))
-      return tx
+    const enhanced = await runTx(reply, async (tx) => {
+      const [wallet] = await tx
         .update(users)
         .set({ essence: sql`${users.essence} - ${cost}` })
-        .where(eq(users.id, userId))
+        .where(and(eq(users.id, userId), gte(users.essence, cost)))
         .returning({ essence: users.essence })
+      if (!wallet) {
+        const [user] = await tx
+          .select({ essence: users.essence })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+        const essence = user?.essence ?? 0
+        throw new TxAbort(400, "not_enough_essence", `精华不足：${essence} / ${cost}`, {
+          need: cost,
+          essence,
+        })
+      }
+      const flipped = await tx
+        .update(userCards)
+        .set({ foil: true })
+        .where(
+          and(
+            eq(userCards.id, userCardId),
+            eq(userCards.userId, userId),
+            eq(userCards.foil, false),
+          ),
+        )
+        .returning({ id: userCards.id })
+      if (flipped.length === 0) {
+        throw new TxAbort(400, "already_foil", "这张卡已经是闪卡")
+      }
+      return wallet
     })
+    if (!enhanced) return
+    const wallet = enhanced
 
     return {
       ok: true,
@@ -386,19 +450,37 @@ export async function progressionRoutes(app: FastifyInstance) {
 
     const gained = essenceOf(target.rarity as Rarity, target.foil)
 
-    const [wallet] = await db.transaction(async (tx) => {
+    const dismantled = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+      const removed = await tx
+        .delete(userCards)
+        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+        .returning({ id: userCards.id })
+      if (removed.length === 0) {
+        throw new TxAbort(404, "not_found", "这不是你账号里的卡")
+      }
+      const [{ value: left }] = await tx
+        .select({ value: count() })
+        .from(userCards)
+        .where(and(eq(userCards.userId, userId), eq(userCards.cardId, target.id)))
+      if (Number(left) < 1) {
+        throw new TxAbort(400, "last_copy", "这是最后一张，不能分解")
+      }
+
       await tx.delete(deckSlots).where(eq(deckSlots.userCardId, userCardId))
       await tx
         .update(marketListings)
         .set({ status: "cancelled" })
         .where(eq(marketListings.userCardId, userCardId))
-      await tx.delete(userCards).where(eq(userCards.id, userCardId))
-      return tx
+      const [wallet] = await tx
         .update(users)
         .set({ essence: sql`${users.essence} + ${gained}` })
         .where(eq(users.id, userId))
         .returning({ essence: users.essence })
+      return { essence: wallet?.essence ?? 0 }
     })
+    if (!dismantled) return
+    const wallet = dismantled
 
     return {
       ok: true,

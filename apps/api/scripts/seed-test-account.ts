@@ -29,6 +29,7 @@ await db
     playerLevel: 30,
     coins: 99999,
     essence: 99999,
+    staminaUpdatedAt: Date.now(),
   })
   .onConflictDoNothing()
 

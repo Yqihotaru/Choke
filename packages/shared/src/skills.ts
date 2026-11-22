@@ -1225,6 +1225,8 @@ export function skillById(id: string): SkillDef | undefined {
  * 把技能引用还原成卡面技能。
  * 优先保留 ref.name（老卡显示名不变），行为与费用一律取注册表。
  */
+// 参数仅为兼容 src/card/def.ts 的调用而保留
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function cardSkillsFromRefs(refs: CardSkillRef[], _job?: Job): CardSkill[] {
   const out: CardSkill[] = []
   for (const ref of refs) {

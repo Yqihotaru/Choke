@@ -12,7 +12,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b && pnpm --filter @choke/api typecheck",
     "preview": "vite preview",
     "sync:osu": "node scripts/sync-osu.mjs",
     "sync:rankings": "node scripts/sync-rankings.mjs"

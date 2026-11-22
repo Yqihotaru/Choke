@@ -19,8 +19,8 @@ export function verifyPassword(password: string, stored: string | null): boolean
   return timingSafeEqual(expected, actual)
 }
 
-/** 邮箱 → 稳定的内部 userId，避免把邮箱暴露在 URL / 事件里。 */
-export function emailUserId(email: string): string {
+/** 新邮箱账号的内部 userId：随机值，与邮箱无关，避免把邮箱暴露在 URL / 事件里。 */
+export function newEmailUserId(): string {
   const digest = randomBytes(8).toString("hex")
   return `email-${digest}`
 }
