@@ -1013,7 +1013,7 @@ export function BattleStage({
               )}
             </div>
 
-            {/* 右外低段上方：魔人讨伐队 + 大号衬线 HP */}
+            {/* 右外低段上方：讨伐队 + 大号衬线 HP */}
             <div className="choke-side-info choke-side-info--party">
               <div className="choke-side-name">{playerName}</div>
               <div className="choke-hp-num">

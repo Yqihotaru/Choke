@@ -96,9 +96,9 @@ export const STAGE_PRESETS: StagePreset[] = [
     summary: "高 T 精英：每回合 3–4 动，左侧带【重装甲 II】与【荆棘栅栏】，需破甲拆支援并善用防御档位。",
   },
   {
-    id: "silky",
-    name: "魔人希尔基·利特尔",
-    title: "深渊魔人 · BOSS",
+    id: "conductor",
+    name: "失拍指挥·终曲",
+    title: "深渊乐团指挥 · BOSS",
     tier: "boss",
     element: "dark",
     weaknesses: ["light", "ice", "fire"],
@@ -108,6 +108,6 @@ export const STAGE_PRESETS: StagePreset[] = [
     def: 2_800,
     parTurns: 10,
     parAp: 22,
-    summary: "魔人 BOSS：每回合 3–4 动，带侧面蓄力大招、高额 Down 威胁与拆支援技能，全面检验打断、硬控与坦克开罐。",
+    summary: "终曲 BOSS：每回合 3–4 动，带侧面蓄力大招、高额 Down 威胁与拆支援技能，全面检验打断、硬控与坦克开罐。",
   },
 ]

@@ -249,11 +249,11 @@ function enemyIntentsFor(presetId: string, turn: number, chargeStacks = 0): Enem
     return turn % 2 === 1 ? pool.slice(0, 3) : pool
   }
 
-  if (presetId === "silky") {
+  if (presetId === "conductor") {
     const list: EnemyIntent[] = []
     if (chargeStacks >= 2) {
       list.push({
-        id: `silky-ult-${turn}`,
+        id: `conductor-ult-${turn}`,
         kind: "heavy_magic",
         label: "真·暗黑魔导炮",
         element: "dark",
@@ -265,7 +265,7 @@ function enemyIntentsFor(presetId: string, turn: number, chargeStacks = 0): Enem
       })
     } else {
       list.push({
-        id: `silky-beam-${turn}`,
+        id: `conductor-beam-${turn}`,
         kind: "magic",
         label: "深渊魔光射线",
         element: "dark",
@@ -276,7 +276,7 @@ function enemyIntentsFor(presetId: string, turn: number, chargeStacks = 0): Enem
     }
 
     list.push({
-      id: `silky-fire-${turn}`,
+      id: `conductor-fire-${turn}`,
       kind: "heavy_magic",
       label: "狱炎风暴",
       element: "fire",
@@ -289,7 +289,7 @@ function enemyIntentsFor(presetId: string, turn: number, chargeStacks = 0): Enem
 
     if (turn % 2 === 0) {
       list.push({
-        id: `silky-break-sup-${turn}`,
+        id: `conductor-break-sup-${turn}`,
         kind: "break_support",
         label: "次元抹消",
         element: "dark",
@@ -299,13 +299,13 @@ function enemyIntentsFor(presetId: string, turn: number, chargeStacks = 0): Enem
       })
     } else {
       list.push({
-        id: `silky-add-sup-${turn}`,
+        id: `conductor-add-sup-${turn}`,
         kind: "add_support",
-        label: "眷属召唤",
+        label: "随从召唤",
         element: "dark",
         power: 0,
         hits: 0,
-        desc: "在左侧敌方支援栏召唤【魔人眷属】协同作战",
+        desc: "在左侧敌方支援栏召唤【走调随从】协同作战",
       })
     }
     return list
@@ -422,11 +422,11 @@ function makeEnemyAndSupports(
         roleText: "反伤支援 · 每受1段反伤 260",
       },
     )
-  } else if (preset.id === "silky") {
+  } else if (preset.id === "conductor") {
     enemySupports.push(
       {
-        id: "enemy-sup-silky-charge",
-        name: "魔人蓄力",
+        id: "enemy-sup-conductor-charge",
+        name: "终曲蓄力",
         kind: "charge",
         element: "fire",
         stacks: 1,
@@ -435,7 +435,7 @@ function makeEnemyAndSupports(
         roleText: "每回合+1层增伤 · 满层放魔导炮",
       },
       {
-        id: "enemy-sup-silky-armor",
+        id: "enemy-sup-conductor-armor",
         name: "魔障结界 I",
         kind: "armor",
         element: "dark",
@@ -443,8 +443,8 @@ function makeEnemyAndSupports(
         roleText: "敌方防御 I 档 (−20%)",
       },
       {
-        id: "enemy-sup-silky-minion",
-        name: "使徒分身",
+        id: "enemy-sup-conductor-minion",
+        name: "走调随从",
         kind: "attack",
         element: "fire",
         atk: 680,
