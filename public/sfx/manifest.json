@@ -1,0 +1,196 @@
+{
+  "click": [
+    "click/click-1.mp3",
+    "click/click-2.mp3",
+    "click/click-3.mp3",
+    "click/click-4.mp3"
+  ],
+  "tick": [
+    "tick/tick-1.mp3",
+    "tick/tick-2.mp3",
+    "tick/tick-3.mp3"
+  ],
+  "pick": [
+    "pick/pick-1.mp3",
+    "pick/pick-2.mp3",
+    "pick/pick-3.mp3"
+  ],
+  "lift": [
+    "lift/lift-1.mp3",
+    "lift/lift-2.mp3",
+    "lift/lift-3.mp3"
+  ],
+  "drop": [
+    "drop/drop-1.mp3",
+    "drop/drop-2.mp3",
+    "drop/drop-3.mp3",
+    "drop/drop-4.mp3"
+  ],
+  "thud": [
+    "thud/thud-1.mp3",
+    "thud/thud-2.mp3",
+    "thud/thud-3.mp3",
+    "thud/thud-4.mp3"
+  ],
+  "paper": [
+    "paper/paper-1.mp3",
+    "paper/paper-2.mp3",
+    "paper/paper-3.mp3",
+    "paper/paper-4.mp3"
+  ],
+  "flip": [
+    "flip/flip-1.mp3",
+    "flip/flip-2.mp3",
+    "flip/flip-3.mp3",
+    "flip/flip-4.mp3"
+  ],
+  "slide": [
+    "slide/slide-1.mp3",
+    "slide/slide-2.mp3",
+    "slide/slide-3.mp3",
+    "slide/slide-4.mp3"
+  ],
+  "coin": [
+    "coin/coin-1.mp3",
+    "coin/coin-2.mp3",
+    "coin/coin-3.mp3",
+    "coin/coin-4.mp3"
+  ],
+  "levelup": [
+    "levelup/levelup-1.mp3",
+    "levelup/levelup-2.mp3",
+    "levelup/levelup-3.mp3"
+  ],
+  "melt": [
+    "melt/melt-1.mp3",
+    "melt/melt-2.mp3",
+    "melt/melt-3.mp3"
+  ],
+  "shatter": [
+    "shatter/shatter-1.mp3",
+    "shatter/shatter-2.mp3",
+    "shatter/shatter-3.mp3",
+    "shatter/shatter-4.mp3"
+  ],
+  "deny": [
+    "deny/deny-1.mp3",
+    "deny/deny-2.mp3",
+    "deny/deny-3.mp3"
+  ],
+  "error": [
+    "error/error-1.mp3",
+    "error/error-2.mp3",
+    "error/error-3.mp3"
+  ],
+  "success": [
+    "success/success-1.mp3",
+    "success/success-2.mp3",
+    "success/success-3.mp3"
+  ],
+  "equip": [
+    "equip/equip-1.mp3",
+    "equip/equip-2.mp3",
+    "equip/equip-3.mp3",
+    "equip/equip-4.mp3"
+  ],
+  "unequip": [
+    "unequip/unequip-1.mp3",
+    "unequip/unequip-2.mp3",
+    "unequip/unequip-3.mp3",
+    "unequip/unequip-4.mp3"
+  ],
+  "tear": [
+    "tear/tear-1.mp3",
+    "tear/tear-2.mp3",
+    "tear/tear-3.mp3",
+    "tear/tear-4.mp3"
+  ],
+  "charge": [
+    "charge/charge-1.mp3",
+    "charge/charge-2.mp3",
+    "charge/charge-3.mp3"
+  ],
+  "shine": [
+    "shine/shine-1.mp3",
+    "shine/shine-2.mp3",
+    "shine/shine-3.mp3"
+  ],
+  "reveal-c": [
+    "reveal-c/reveal-c-1.mp3",
+    "reveal-c/reveal-c-2.mp3",
+    "reveal-c/reveal-c-3.mp3"
+  ],
+  "reveal-r": [
+    "reveal-r/reveal-r-1.mp3",
+    "reveal-r/reveal-r-2.mp3"
+  ],
+  "reveal-e": [
+    "reveal-e/reveal-e-1.mp3",
+    "reveal-e/reveal-e-2.mp3"
+  ],
+  "reveal-l": [
+    "reveal-l/reveal-l-1.mp3",
+    "reveal-l/reveal-l-2.mp3"
+  ],
+  "reveal-radiant": [
+    "reveal-radiant/reveal-radiant-1.mp3",
+    "reveal-radiant/reveal-radiant-2.mp3"
+  ],
+  "reveal-prismatic": [
+    "reveal-prismatic/reveal-prismatic-1.mp3",
+    "reveal-prismatic/reveal-prismatic-2.mp3"
+  ],
+  "hit": [
+    "hit/hit-1.mp3",
+    "hit/hit-2.mp3",
+    "hit/hit-3.mp3"
+  ],
+  "crit": [
+    "crit/crit-1.mp3",
+    "crit/crit-2.mp3",
+    "crit/crit-3.mp3"
+  ],
+  "miss": [
+    "miss/miss-1.mp3",
+    "miss/miss-2.mp3",
+    "miss/miss-3.mp3"
+  ],
+  "heal": [
+    "heal/heal-1.mp3",
+    "heal/heal-2.mp3"
+  ],
+  "guard": [
+    "guard/guard-1.mp3",
+    "guard/guard-2.mp3",
+    "guard/guard-3.mp3"
+  ],
+  "turn": [
+    "turn/turn-1.mp3",
+    "turn/turn-2.mp3",
+    "turn/turn-3.mp3"
+  ],
+  "cutin": [
+    "cutin/cutin-1.mp3",
+    "cutin/cutin-2.mp3"
+  ],
+  "break": [
+    "break/break-1.mp3",
+    "break/break-2.mp3",
+    "break/break-3.mp3"
+  ],
+  "down": [
+    "down/down-1.mp3",
+    "down/down-2.mp3",
+    "down/down-3.mp3"
+  ],
+  "win": [
+    "win/win-1.mp3",
+    "win/win-2.mp3",
+    "win/win-3.mp3"
+  ],
+  "lose": [
+    "lose/lose-1.mp3",
+    "lose/lose-2.mp3",
+    "lose/lose-3.mp3"
+  ]
+}

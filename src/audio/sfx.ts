@@ -96,7 +96,66 @@ function ensure() {
   noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate)
   const data = noiseBuf.getChannelData(0)
   for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
+  void preloadSamples(ctx)
   return { ctx, master }
+}
+
+/** 真实录音样本：public/sfx/manifest.json 里列出的音名走样本，其余回退合成。 */
+const samples = new Map<SfxName, AudioBuffer[]>()
+let samplesLoading: Promise<void> | null = null
+
+function preloadSamples(c: AudioContext) {
+  if (samplesLoading) return samplesLoading
+  const base = `${import.meta.env.BASE_URL}sfx/`
+  samplesLoading = (async () => {
+    let manifest: Record<string, string[]>
+    try {
+      const res = await fetch(`${base}manifest.json`)
+      if (!res.ok) return
+      manifest = await res.json()
+    } catch {
+      return
+    }
+    await Promise.all(
+      Object.entries(manifest).map(async ([name, files]) => {
+        const decoded = await Promise.all(
+          files.map(async (file) => {
+            try {
+              const res = await fetch(`${base}${file}`)
+              if (!res.ok) return null
+              return await c.decodeAudioData(await res.arrayBuffer())
+            } catch {
+              return null
+            }
+          }),
+        )
+        const ok = decoded.filter((b): b is AudioBuffer => b !== null)
+        if (ok.length > 0) samples.set(name as SfxName, ok)
+      }),
+    )
+  })()
+  return samplesLoading
+}
+
+/** 播样本时保留的合成低频体：战斗冲击需要分量，样本本身不带。 */
+const SAMPLE_BODY: Partial<Record<SfxName, (c: AudioContext, o: AudioNode, r: number) => void>> = {
+  hit: (c, o, r) => tone(c, o, { type: "sine", f0: 190, f1: 55, dur: 0.16, gain: 0.5 }, r),
+  crit: (c, o, r) => tone(c, o, { type: "sine", f0: 52, f1: 30, dur: 0.5, gain: 0.7 }, r),
+  break: (c, o, r) => tone(c, o, { type: "sine", f0: 120, f1: 45, dur: 0.3, gain: 0.5 }, r),
+  down: (c, o, r) => tone(c, o, { type: "sine", f0: 70, f1: 30, dur: 0.6, gain: 0.6 }, r),
+}
+
+function playSample(c: AudioContext, o: AudioNode, name: SfxName, rate: number) {
+  const variants = samples.get(name)
+  if (!variants) return false
+  const src = c.createBufferSource()
+  src.buffer = variants[Math.floor(Math.random() * variants.length)]!
+  // 同一个音每次略有不同，连点时不会像机关枪
+  src.playbackRate.value = rate * (0.97 + Math.random() * 0.06)
+  src.connect(o)
+  src.start()
+  SAMPLE_BODY[name]?.(c, o, rate)
+  return true
 }
 
 interface ToneSpec {
@@ -400,7 +459,7 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
     const out = c.createGain()
     out.gain.value = options.volume ?? 1
     out.connect(m)
-    SYNTH[name](c, out, options.rate ?? 1)
+    if (!playSample(c, out, name, options.rate ?? 1)) SYNTH[name](c, out, options.rate ?? 1)
   } catch {
     // 无音频设备或被浏览器拦截时静默
   }
