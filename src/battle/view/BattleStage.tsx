@@ -88,6 +88,55 @@ function elementLabel(element: string) {
   return ELEMENT_LABEL[element as Element] ?? element
 }
 
+/**
+ * 弱点条。公开弱点一直显示；隐藏弱点没打中过只显示「？」，打中后显示属性；
+ * 窗口弱点（破绽）只在对应回合显示。界面只显示这三类里该显示的，数据本身在接口里都查得到。
+ */
+function WeaknessRibbon({
+  open,
+  found,
+  exposed,
+  unknown,
+}: {
+  open: readonly Element[]
+  found: readonly Element[]
+  exposed: readonly Element[]
+  unknown: number
+}) {
+  const chip = (el: Element, title: string, variant?: "found" | "window") => (
+    <span
+      key={`${variant ?? "open"}-${el}`}
+      className="choke-weak-el"
+      data-variant={variant}
+      title={title}
+      style={{ "--el": elementColor(el) } as CSSProperties}
+    >
+      <ElementGlyph element={el} />
+      <em>{variant === "window" ? `${elementLabel(el)} 破绽` : elementLabel(el)}</em>
+    </span>
+  )
+  return (
+    <div className="choke-weakness-ribbon">
+      <span>弱点属性 ▶▶</span>
+      <div className="choke-weakness-icons">
+        {open.map((el) => chip(el, `弱点：${elementLabel(el)} (+30% 伤害)`))}
+        {found.map((el) => chip(el, `已发现的隐藏弱点：${elementLabel(el)}`, "found"))}
+        {exposed.map((el) => chip(el, `本回合露出破绽：${elementLabel(el)}（只在这一回合有效）`, "window"))}
+        {Array.from({ length: unknown }, (_, i) => (
+          <span
+            key={`unknown-${i}`}
+            className="choke-weak-el"
+            data-variant="unknown"
+            title="还有一个隐藏弱点：用对应属性打中一次就能揭开"
+          >
+            <em>？</em>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function costTagLabel(tag: SkillDef["costTag"]): string | null {
   if (tag === "fatigue") return "疲惫"
   if (tag === "accumulate") return "累积"
@@ -476,6 +525,12 @@ export function BattleStage({
           return
         }
 
+        if (event.type === "weakness_found") {
+          popup(bossRef.current, "发现弱点！", "enemy", `${elementLabel(event.element)}属性`, "interrupt", true)
+          playSfx("break")
+          return
+        }
+
         if (event.type === "down") {
           popup(cardRefs.current[event.cardIndex] ?? stageRef.current, "DOWN!", "card", event.cardName, "miss")
           playSfx("down")
@@ -609,22 +664,7 @@ export function BattleStage({
               </div>
 
               <div className="choke-shelf-left">
-                <div className="choke-weakness-ribbon">
-                  <span>弱点属性 ▶▶</span>
-                  <div className="choke-weakness-icons">
-                    {weaknesses.map((w) => (
-                      <span
-                        key={w}
-                        className="choke-weak-el"
-                        title={`弱点：${elementLabel(w)}`}
-                        style={{ "--el": elementColor(w) } as CSSProperties}
-                      >
-                        <ElementGlyph element={w} />
-                        <em>{elementLabel(w)}</em>
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                <WeaknessRibbon open={weaknesses} found={[]} exposed={[]} unknown={foe.hiddenWeaknesses.length} />
               </div>
 
               <div className="choke-shelf-right" />
@@ -973,22 +1013,12 @@ export function BattleStage({
                 )}
               </div>
 
-              <div className="choke-weakness-ribbon">
-                <span>弱点属性 ▶▶</span>
-                <div className="choke-weakness-icons">
-                  {battle.enemy.weaknesses.map((w) => (
-                    <span
-                      key={w}
-                      className="choke-weak-el"
-                      title={`弱点：${elementLabel(w)} (+30% 伤害)`}
-                      style={{ "--el": elementColor(w) } as CSSProperties}
-                    >
-                      <ElementGlyph element={w} />
-                      <em>{elementLabel(w)}</em>
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <WeaknessRibbon
+                open={battle.enemy.weaknesses}
+                found={battle.hiddenFound}
+                exposed={battle.enemy.exposed}
+                unknown={battle.enemy.hiddenWeaknesses.length - battle.hiddenFound.length}
+              />
             </div>
 
             {/* 右内高台上方（紧贴右折线抬高段）：兰斯10 大号斜体 1 COMBO! */}

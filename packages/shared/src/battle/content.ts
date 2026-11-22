@@ -93,12 +93,22 @@ export const enemyAiSchema = z.strictObject({
   script: z.array(scriptEntrySchema).min(1),
 })
 
+/** 窗口弱点：条件成立的回合才露出，回合开始时算一次，整回合固定 */
+export const weaknessWindowSchema = z.strictObject({
+  when: conditionSchema,
+  elements: z.array(element).min(1),
+})
+
 export const enemySchema = z.strictObject({
   name: z.string().min(1),
   title: z.string(),
   tier: z.enum(ENEMY_TIERS),
   element,
+  /** 公开弱点：一直生效，一直显示 */
   weaknesses: z.array(element),
+  /** 隐藏弱点：一直生效，打中一次才显示 */
+  hiddenWeaknesses: z.array(element).default([]),
+  weaknessWindows: z.array(weaknessWindowSchema).default([]),
   traits: z.array(z.enum(ENEMY_TRAITS)).default([]),
   stats: z.strictObject({ hp: int.positive(), atk: int.min(0), int: int.min(0), def: int.min(0) }),
   damageThreshold: int.min(0).optional(),
@@ -144,6 +154,7 @@ export const encounterSchema = z.strictObject({
 export type EnemyAi = z.infer<typeof enemyAiSchema>
 export type EnemyMove = z.infer<typeof moveSchema>
 export type ScriptEntry = z.infer<typeof scriptEntrySchema>
+export type WeaknessWindow = z.infer<typeof weaknessWindowSchema>
 export type EnemyDef = z.infer<typeof enemySchema>
 export type EnemySupportDef = z.infer<typeof enemySupportSchema>
 export type StarCondition = z.infer<typeof starConditionSchema>
@@ -173,6 +184,8 @@ export interface EncounterSummary {
   tier: EnemyDef["tier"]
   element: EnemyDef["element"]
   weaknesses: EnemyDef["weaknesses"]
+  /** 只给数量；具体是什么属性要打中才知道 */
+  hiddenWeaknessCount: number
   hp: number
   summary: string
   stars: StarCondition[]
@@ -198,6 +211,21 @@ const battleContentSchema = z
     }
 
     for (const [enemyId, enemy] of Object.entries(content.enemies)) {
+      const known = new Set(enemy.weaknesses)
+      enemy.hiddenWeaknesses.forEach((el, i) => {
+        const path = ["enemies", enemyId, "hiddenWeaknesses", i]
+        if (known.has(el)) issue(path, `隐藏弱点 ${el} 与公开弱点或其他隐藏弱点重复`)
+        known.add(el)
+      })
+      enemy.weaknessWindows.forEach((window, i) => {
+        const path = ["enemies", enemyId, "weaknessWindows", i]
+        checkCondition(window.when, [...path, "when"])
+        window.elements.forEach((el, j) => {
+          if (known.has(el)) issue([...path, "elements", j], `窗口弱点 ${el} 与公开弱点或隐藏弱点重复`)
+          if (window.elements.indexOf(el) !== j) issue([...path, "elements", j], `窗口弱点 ${el} 在同一个窗口里重复`)
+        })
+      })
+
       const base = ["enemies", enemyId, "ai"]
       const { moves, script } = enemy.ai
       for (const [moveId, move] of Object.entries(moves)) {
@@ -286,6 +314,7 @@ export function listEncounters(content: BattleContent): EncounterSummary[] {
         tier: enemy.tier,
         element: enemy.element,
         weaknesses: enemy.weaknesses,
+        hiddenWeaknessCount: enemy.hiddenWeaknesses.length,
         hp: enemy.stats.hp,
         summary: encounter.summary,
         stars: encounter.stars,

@@ -1,6 +1,7 @@
 import { deriveStream, nextRandom } from "../rng"
 import type { SkillDef } from "../skills"
-import type { CardFaceData } from "../types"
+import type { CardFaceData, Element } from "../types"
+import { ELEMENT_LABEL } from "../types"
 
 import {
   MAX_SUPPORT_SLOTS,
@@ -28,7 +29,7 @@ import {
   elementMultiplier,
   mitigation,
 } from "./rules"
-import { intentsFor } from "./ai"
+import { evalCondition, intentsFor } from "./ai"
 import type { EncounterSpec } from "./content"
 
 export { ROMAN_TIER } from "./config"
@@ -206,6 +207,9 @@ function makeEnemyAndSupports(spec: EncounterSpec): { enemy: Enemy; enemySupport
     tier: def.tier,
     element: def.element,
     weaknesses: [...def.weaknesses],
+    hiddenWeaknesses: [...def.hiddenWeaknesses],
+    weaknessWindows: structuredClone(def.weaknessWindows),
+    exposed: [],
     traits: [...def.traits],
     hp: def.stats.hp,
     hpMax: def.stats.hp,
@@ -225,8 +229,27 @@ function makeEnemyAndSupports(spec: EncounterSpec): { enemy: Enemy; enemySupport
   return { enemy, enemySupports }
 }
 
+/** 回合开始时算一次：本回合的意图和露出的窗口弱点（回合中途不再变） */
 function refreshEnemyIntents(state: BattleState) {
   state.enemy.intents = intentsFor(state.enemy.ai, state)
+  const open = new Set<Element>()
+  for (const window of state.enemy.weaknessWindows) {
+    if (evalCondition(window.when, state)) for (const el of window.elements) open.add(el)
+  }
+  state.enemy.exposed = [...open]
+}
+
+/** 此刻实际生效的弱点：公开 + 隐藏 + 本回合露出的窗口 */
+function activeWeaknesses(enemy: Enemy): Element[] {
+  return [...enemy.weaknesses, ...enemy.hiddenWeaknesses, ...enemy.exposed]
+}
+
+/** 打中隐藏弱点属性：第一次记入 hiddenFound 并通知界面；只看属性是否在隐藏列表里，不看倍率 */
+function noteWeaknessHit(state: BattleState, element: Element) {
+  if (!state.enemy.hiddenWeaknesses.includes(element) || state.hiddenFound.includes(element)) return
+  state.hiddenFound.push(element)
+  emit(state, { type: "weakness_found", element })
+  log(state, `发现隐藏弱点：${ELEMENT_LABEL[element]}属性！`)
 }
 
 export interface BattleInputCard {
@@ -351,6 +374,7 @@ export function createBattle(
     enemySupports,
     playerSupports,
     enemy,
+    hiddenFound: [],
     log: [
       encounter.intro ?? `讨伐开始：遭遇【${enemy.name}】！`,
       "提示：开局 2 AP 可继承，0 费技能可无消耗叠高 Combo！",
@@ -476,8 +500,9 @@ function applyDamageToEnemy(
       (card.subjob.tags.includes("pierce") && state.enemy.statuses.some((s) => s.id === "vulnerable") ? 15 : 0) +
       (card.subjob.tags.includes("lowhp") && state.teamHp / state.teamHpMax < 0.3 ? 10 : 0)
     const crit = roll(state, "player") * 100 < card.stats.crit + bonusCrit
-    const elMult = elementMultiplier(element, state.enemy.element, state.enemy.traits, state.enemy.weaknesses)
-    const isWeak = elMult >= 1.2 || state.enemy.weaknesses.includes(element)
+    const weak = activeWeaknesses(state.enemy)
+    const elMult = elementMultiplier(element, state.enemy.element, state.enemy.traits, weak)
+    const isWeak = elMult >= 1.2 || weak.includes(element)
 
     let damage = Math.round(
       attack *
@@ -515,6 +540,7 @@ function applyDamageToEnemy(
       state,
       `${card.name}「${skill.name}」${crit ? "暴击 " : ""}${damage.toLocaleString("en-US")}（Combo ${state.combo}）`,
     )
+    noteWeaknessHit(state, element)
 
     // 敌方侧面支援【荆棘栅栏】逐段固定反伤（每行动最多反 3 段，按攻击卡 INT 减伤 §11.1）
     if (enemyThorns && thornsReflectedCount < 3 && state.teamHp > 0) {
@@ -1018,7 +1044,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
         support.element,
         state.enemy.element,
         state.enemy.traits,
-        state.enemy.weaknesses,
+        activeWeaknesses(state.enemy),
       )
       const damage = Math.max(
         1,
@@ -1043,6 +1069,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
         enemyHpAfter: state.enemy.hp,
       })
       log(state, `【支援】${support.name} 命中 ${damage.toLocaleString("en-US")}（Combo ${state.combo}）`)
+      noteWeaknessHit(state, support.element)
       if (state.enemy.hp <= 0) {
         state.phase = "won"
         emit(state, { type: "won" })
@@ -1070,7 +1097,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
           statOf(state, card, "atk") *
             0.7 *
             comboMultiplier(state.combo) *
-            elementMultiplier("physical", state.enemy.element, state.enemy.traits, state.enemy.weaknesses) *
+            elementMultiplier("physical", state.enemy.element, state.enemy.traits, activeWeaknesses(state.enemy)) *
             (1 - mitigation(enemyDefence(state, false))) *
             random(state, "player", 0.95, 1.05),
         ),
@@ -1095,6 +1122,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
         enemyHpAfter: state.enemy.hp,
       })
       log(state, `⚡【抢攻】${card.name} 先手突袭 ${damage.toLocaleString("en-US")}（Combo ${state.combo}）`)
+      noteWeaknessHit(state, "physical")
       if (state.enemy.hp <= 0) {
         state.phase = "won"
         emit(state, { type: "won" })

@@ -1,6 +1,7 @@
 import { makeCard } from "@choke/shared/card-def"
 import { CONSTELLATION_BONUS, RARITY_BASE } from "@choke/shared/config"
 import { JOB_ORDER, SKILL_SETS, hashOf, skillsFor } from "@choke/shared/skills"
+import { ELEMENT_LABEL as SHARED_ELEMENT_LABEL } from "@choke/shared/types"
 
 export { CONSTELLATION_BONUS, JOB_ORDER, RARITY_BASE, hashOf, skillsFor }
 import type { CardFaceData, Mod, Rarity, StarState } from "./types"
@@ -68,17 +69,7 @@ export const RARITY_LABEL: Record<Rarity, string> = {
   Prismatic: "PRISMATIC",
 }
 
-export const ELEMENT_LABEL: Record<string, string> = {
-  metal: "金",
-  wood: "木",
-  earth: "土",
-  ice: "冰",
-  fire: "火",
-  thunder: "雷",
-  light: "光",
-  dark: "暗",
-  physical: "物",
-}
+export const ELEMENT_LABEL: Record<string, string> = SHARED_ELEMENT_LABEL
 
 export const ELEMENT_COLOR: Record<string, string> = {
   metal: "#B49744",

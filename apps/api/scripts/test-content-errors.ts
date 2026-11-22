@@ -64,6 +64,34 @@ const CASES: Case[] = [
   { name: "未知的特性", breakIt: editJson("enemies/ghost.json", (d) => (d.traits = ["undead"])), expect: "traits" },
   { name: "招式多写字段", breakIt: editJson("enemies/vanguard.json", (d) => (d.ai.moves.roar.dmg = 1)), expect: "dmg" },
   { name: "HP 为 0", breakIt: editJson("enemies/ghost.json", (d) => (d.stats.hp = 0)), expect: "stats.hp" },
+  // ---- 弱点 ----
+  {
+    name: "隐藏弱点与公开弱点重复",
+    breakIt: editJson("enemies/ghost.json", (d) => (d.hiddenWeaknesses = [d.weaknesses[0]])),
+    expect: "与公开弱点或其他隐藏弱点重复",
+  },
+  {
+    name: "隐藏弱点自己重复",
+    breakIt: editJson("enemies/ghost.json", (d) => (d.hiddenWeaknesses = ["ice", "ice"])),
+    expect: "与公开弱点或其他隐藏弱点重复",
+  },
+  {
+    name: "窗口弱点与公开弱点重复",
+    breakIt: editJson("enemies/ghost.json", (d) => (d.weaknessWindows = [{ when: { turnMod: [2, 0] }, elements: [d.weaknesses[0]] }])),
+    expect: "窗口弱点",
+  },
+  {
+    name: "窗口弱点属性列表为空",
+    breakIt: editJson("enemies/ghost.json", (d) => (d.weaknessWindows = [{ when: { turnMod: [2, 0] }, elements: [] }])),
+    expect: "weaknessWindows[0].elements",
+  },
+  {
+    name: "窗口条件引用不存在的支援",
+    breakIt: editJson("enemies/ghost.json", (d) => {
+      d.weaknessWindows = [{ when: { supportStacks: { support: "zz", gte: 1 } }, elements: ["ice"] }]
+    }),
+    expect: "敌方支援 zz 不存在",
+  },
   { name: "三星类型未知", breakIt: editJson("encounters/ghost.json", (d) => (d.stars[0] = { type: "fast", value: 1 })), expect: "stars" },
   { name: "三星只有 2 条", breakIt: editJson("encounters/ghost.json", (d) => d.stars.pop()), expect: "stars" },
   { name: "三星类型重复", breakIt: editJson("encounters/ghost.json", (d) => (d.stars[2] = { type: "noDown" })), expect: "三星条件类型不能重复" },

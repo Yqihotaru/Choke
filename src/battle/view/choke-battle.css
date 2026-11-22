@@ -825,6 +825,30 @@
   font-size: 0.62cqw;
   font-weight: 900;
 }
+/* 已发现的隐藏弱点：加一圈亮边，和公开弱点区分开 */
+.choke-weak-el[data-variant="found"] {
+  box-shadow: 0 0 0.4cqw color-mix(in srgb, var(--el) 80%, #fff);
+}
+/* 窗口弱点（破绽）：只在对应回合出现，闪动提醒 */
+.choke-weak-el[data-variant="window"] {
+  box-shadow: 0 0 0.5cqw var(--el);
+  animation: choke-weak-window 0.9s ease-in-out infinite alternate;
+}
+/* 还没发现的隐藏弱点 */
+.choke-weak-el[data-variant="unknown"] {
+  padding: 0.05cqw 0.4cqw;
+  background: rgb(14 19 29 / 0.8);
+  border: 0.07cqw dashed #8a9099;
+  color: #b8c4d6;
+}
+@keyframes choke-weak-window {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.5);
+  }
+}
 
 /* 右内高台（紧贴右折线抬高段）：兰斯10 大号斜体 1 COMBO! */
 .choke-shelf-right {

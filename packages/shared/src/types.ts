@@ -10,6 +10,18 @@ export type Job = "tank" | "warrior" | "mage" | "support"
 export const ELEMENTS = ["metal", "wood", "earth", "ice", "fire", "thunder", "light", "dark", "physical"] as const
 export type Element = (typeof ELEMENTS)[number]
 
+export const ELEMENT_LABEL: Record<Element, string> = {
+  metal: "金",
+  wood: "木",
+  earth: "土",
+  ice: "冰",
+  fire: "火",
+  thunder: "雷",
+  light: "光",
+  dark: "暗",
+  physical: "物",
+}
+
 export type Mod =
   | "HD"
   | "HR"

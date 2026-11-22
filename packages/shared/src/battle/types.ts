@@ -10,7 +10,7 @@ import {
   type SubJob,
 } from "../skills"
 import type { CardFaceData, Element, Job, Rarity } from "../types"
-import type { EnemyAi, StarCondition } from "./content"
+import type { EnemyAi, StarCondition, WeaknessWindow } from "./content"
 
 export const MAX_SUPPORT_SLOTS = 7
 
@@ -180,6 +180,12 @@ export interface Enemy {
   tier: EnemyTier
   element: Element
   weaknesses: Element[]
+  /** 隐藏弱点：一直生效；打中后进入 BattleState.hiddenFound，界面才显示 */
+  hiddenWeaknesses: Element[]
+  /** 窗口弱点规则；放在状态里，重放不依赖外部内容 */
+  weaknessWindows: WeaknessWindow[]
+  /** 本回合露出的窗口弱点；回合开始时算一次，整回合固定 */
+  exposed: Element[]
   traits: EnemyTrait[]
   hp: number
   hpMax: number
@@ -293,6 +299,10 @@ export type BattleEvent =
       round: number
     }
   | {
+      type: "weakness_found"
+      element: Element
+    }
+  | {
       type: "won" | "lost"
     }
 
@@ -340,6 +350,8 @@ export interface BattleState {
   /** 右侧：我方侧面支援栏（上限 7 格，含防御占 1 格） */
   playerSupports: SideSupportUnit[]
   enemy: Enemy
+  /** 本场已被打中而揭开的隐藏弱点；服务端复算后据此写入图鉴 */
+  hiddenFound: Element[]
   log: string[]
   selectedCard: number | null
   events: BattleEvent[]
