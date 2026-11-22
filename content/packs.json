@@ -1,0 +1,66 @@
+{
+  "packSize": 5,
+  "packs": {
+    "normal": {
+      "name": "普通卡包",
+      "short": "普通",
+      "color": "#E5484D",
+      "weights": { "C": 57, "UC": 26, "R": 11, "E": 5, "L": 0.85, "Radiant": 0.13, "Prismatic": 0.02 },
+      "foilRate": 0.03,
+      "mirrorWeights": { "UC": 40, "R": 35, "E": 20, "L": 5 }
+    },
+    "idle": {
+      "name": "挂机卡包",
+      "short": "挂机",
+      "color": "#3CBADB",
+      "weights": { "C": 62, "UC": 26, "R": 9, "E": 2.8, "L": 0.2 },
+      "foilRate": 0.012,
+      "mirrorWeights": {}
+    },
+    "golden": {
+      "name": "黄金卡包",
+      "short": "黄金",
+      "color": "#FFC24B",
+      "weights": { "C": 8, "UC": 30, "R": 30, "E": 28.45, "L": 3, "Radiant": 0.5, "Prismatic": 0.05 },
+      "foilRate": 0.05,
+      "mirrorWeights": { "UC": 25, "R": 35, "E": 30, "L": 10 }
+    },
+    "radiant": {
+      "name": "璀璨卡包",
+      "short": "璀璨",
+      "color": "#B98CFF",
+      "weights": { "UC": 10.5, "R": 22, "E": 30, "L": 25, "Radiant": 12, "Prismatic": 0.5 },
+      "foilRate": 0.08,
+      "mirrorWeights": { "UC": 20, "R": 30, "E": 35, "L": 15 }
+    },
+    "sky": {
+      "name": "天穹卡包",
+      "short": "天穹",
+      "color": "#21E985",
+      "weights": { "R": 12, "E": 22, "L": 40, "Radiant": 25, "Prismatic": 1 },
+      "foilRate": 0.1,
+      "mirrorWeights": { "UC": 15, "R": 30, "E": 35, "L": 20 }
+    },
+    "prism": {
+      "name": "棱彩卡包",
+      "short": "棱彩",
+      "color": "#F4F4F6",
+      "weights": { "E": 3, "L": 30, "Radiant": 55, "Prismatic": 12 },
+      "foilRate": 0.15,
+      "mirrorWeights": { "UC": 15, "R": 25, "E": 35, "L": 25 }
+    },
+    "starter": {
+      "name": "新手卡包",
+      "short": "新手",
+      "color": "#FF66AA",
+      "weights": { "C": 57, "UC": 26, "R": 11, "E": 5, "L": 0.85, "Radiant": 0.13, "Prismatic": 0.02 },
+      "foilRate": 0.03,
+      "mirrorWeights": { "UC": 40, "R": 35, "E": 20, "L": 5 },
+      "event": true
+    }
+  },
+  "starterGrant": { "starter": 30, "mystery": 1 },
+  "starterGuarantee": { "pool": "starter", "rarity": "L" },
+  "mystery": { "name": "神秘卡包" },
+  "mirror": { "rate": 0.015, "activeDays": 45 }
+}

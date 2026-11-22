@@ -1,3 +1,6 @@
+// 必须最先加载：内容校验失败时在连数据库之前就退出
+import { CONTENT_VERSION } from "./content"
+
 import cors from "@fastify/cors"
 import cookie from "@fastify/cookie"
 import Fastify from "fastify"
@@ -15,6 +18,7 @@ import { progressRoutes } from "./routes/progress"
 import { client, sql } from "./db/client"
 
 const app = Fastify({ logger: true })
+app.log.info({ contentVersion: CONTENT_VERSION }, "content loaded")
 
 app.setErrorHandler(handleError)
 
@@ -30,7 +34,7 @@ await app.register(progressionRoutes)
 await app.register(dungeonRoutes)
 await app.register(progressRoutes)
 
-app.get("/health", async () => ({ ok: true, data: { status: "up" } }))
+app.get("/health", async () => ({ ok: true, data: { status: "up", contentVersion: CONTENT_VERSION } }))
 
 const port = Number(process.env.PORT ?? 3100)
 await app.listen({ port, host: "0.0.0.0" })

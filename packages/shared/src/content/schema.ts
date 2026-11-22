@@ -1,0 +1,203 @@
+import { z } from "zod"
+
+import { TUTORIAL_STEPS } from "../tutorial"
+import { RARITIES } from "../types"
+
+/**
+ * content/ 的 zod schema。这里只描述「数据长什么样」和「互相引用是否成立」，
+ * 不含任何具体数值。新增内容文件时：加 schema → 加进 contentSchema → 在 index.ts import。
+ */
+
+/** 神秘卡包有专门的开包流程，id 是代码概念，不是内容 */
+export const MYSTERY_PACK_ID = "mystery"
+
+const rarity = z.enum(RARITIES)
+const int = z.number().int()
+const positiveInt = int.positive()
+const nonNegative = z.number().nonnegative()
+const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]*$/, "id 只能用字母、数字和连字符")
+const perRarity = <T extends z.ZodType>(value: T) => z.record(rarity, value)
+
+/** 升级曲线：[等级, 占满级总经验的比例]，分段线性 */
+const levelCurve = z
+  .array(z.tuple([positiveInt, z.number().min(0).max(1)]))
+  .min(2)
+  .superRefine((points, ctx) => {
+    const [first] = points
+    const last = points[points.length - 1]!
+    if (first![0] !== 1 || first![1] !== 0) ctx.addIssue({ code: "custom", message: "曲线必须从 [1, 0] 开始" })
+    if (last[1] !== 1) ctx.addIssue({ code: "custom", message: "曲线必须以比例 1 结束" })
+    for (let i = 1; i < points.length; i += 1) {
+      if (points[i]![0] <= points[i - 1]![0]) ctx.addIssue({ code: "custom", message: "曲线等级必须严格递增", path: [i] })
+      if (points[i]![1] < points[i - 1]![1]) ctx.addIssue({ code: "custom", message: "曲线比例不能下降", path: [i] })
+    }
+  })
+
+export const progressionSchema = z.strictObject({
+  card: z.strictObject({
+    levelCap: z.strictObject({ normal: positiveInt, hero: positiveInt }),
+    constellationCap: z.strictObject({ normal: positiveInt, hero: positiveInt }),
+    /** lv1 → 满级累计经验 */
+    levelExpTotal: perRarity(positiveInt),
+    levelCurve: z.strictObject({ normal: levelCurve, hero: levelCurve }),
+    /** 直接喂一张卡的基础经验 */
+    feedExp: perRarity(positiveInt),
+    /** 升过级的卡被喂掉 / 分解时，投入经验的返还比例 */
+    refundRate: z.number().min(0).max(1),
+    /** 分解一张卡得到的同品质碎片个数 */
+    shardsPerDismantle: positiveInt,
+  }),
+  player: z.strictObject({
+    maxLevel: positiveInt,
+    /** 第 i 项 = 从 Lv.(i+1) 升到下一级的经验；表之后按最后一项 × rate^n 增长 */
+    expTable: z.array(positiveInt).min(1),
+    expGrowthRate: z.number().min(1),
+    /** 跳过 / 走完教程后的等级 */
+    tutorialGraduateLevel: positiveInt,
+    /** 离开某一步时发的玩家经验 */
+    tutorialStepExp: z.partialRecord(z.enum(TUTORIAL_STEPS), positiveInt),
+    /** 副本每消耗 1 点体力给的玩家经验 */
+    expPerStamina: nonNegative,
+    marketUnlockLevel: positiveInt,
+  }),
+})
+
+const itemSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ name: z.string().min(1), kind: z.literal("shard"), rarity, exp: positiveInt }),
+  z.strictObject({ name: z.string().min(1), kind: z.literal("exp"), exp: positiveInt }),
+])
+
+export const itemsSchema = z.record(id, itemSchema)
+
+const itemStack = z.strictObject({ itemId: z.string(), count: positiveInt })
+
+export const dungeonRewardsSchema = z.strictObject({
+  essence: positiveInt.optional(),
+  coins: positiveInt.optional(),
+  /** 普通卡包数量 */
+  packs: positiveInt.optional(),
+  items: z.array(itemStack).min(1).optional(),
+})
+
+export const dungeonsSchema = z.record(
+  id,
+  z.strictObject({
+    name: z.string().min(1),
+    summary: z.string(),
+    /** 体力消耗 */
+    cost: positiveInt,
+    rewards: dungeonRewardsSchema,
+  }),
+)
+
+export const economySchema = z.strictObject({
+  /** 闪卡分解 / 被喂掉时的精华基数（再乘 foilEssenceMultiplier）；非闪卡不产精华 */
+  foilEssence: perRarity(nonNegative),
+  foilEssenceMultiplier: nonNegative,
+  /** 精华镀闪的花费 */
+  foilCost: positiveInt,
+  /** 市场单卡价格上限（金币） */
+  marketMaxPrice: positiveInt,
+})
+
+const weights = z.partialRecord(rarity, z.number().positive())
+
+export const packsSchema = z.strictObject({
+  /** 每包张数 */
+  packSize: positiveInt,
+  packs: z.record(
+    id,
+    z.strictObject({
+      name: z.string().min(1),
+      short: z.string().min(1),
+      color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+      weights: weights.refine((w) => Object.keys(w).length > 0, "至少一档权重"),
+      foilRate: z.number().min(0).max(1),
+      /** 额外第 6 张镜像卡的品质权重；空对象 = 这个包不出镜像卡 */
+      mirrorWeights: weights,
+      /** 活动包：只靠发放获得，库存为 0 时前端隐藏 */
+      event: z.boolean().optional(),
+    }),
+  ),
+  /** 新手礼包：卡包 id（或神秘卡包 id）→ 数量 */
+  starterGrant: z.record(id, positiveInt),
+  /** 新手包兜底：开最后一包时还没出过这一档及以上，最后一张改成这一档 */
+  starterGuarantee: z.strictObject({ pool: id, rarity }),
+  mystery: z.strictObject({ name: z.string().min(1) }),
+  mirror: z.strictObject({ rate: z.number().min(0).max(1), activeDays: positiveInt }),
+})
+
+/** 整个 content/：先各自校验，再检查跨文件引用和经济上的硬约束 */
+export const contentSchema = z
+  .strictObject({
+    progression: progressionSchema,
+    items: itemsSchema,
+    dungeons: dungeonsSchema,
+    economy: economySchema,
+    packs: packsSchema,
+  })
+  .superRefine((content, ctx) => {
+    const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message })
+    const { card, player } = content.progression
+
+    for (const kind of ["normal", "hero"] as const) {
+      const curve = card.levelCurve[kind]
+      if (curve[curve.length - 1]![0] !== card.levelCap[kind]) {
+        issue(["progression", "card", "levelCurve", kind], `曲线最后一个点必须是满级 ${card.levelCap[kind]}`)
+      }
+    }
+    if (player.tutorialGraduateLevel > player.maxLevel) {
+      issue(["progression", "player", "tutorialGraduateLevel"], "不能超过玩家等级上限")
+    }
+    if (player.marketUnlockLevel > player.maxLevel) {
+      issue(["progression", "player", "marketUnlockLevel"], "不能超过玩家等级上限")
+    }
+
+    // 每个品质恰好一种碎片，id 固定为 shard-<品质>；分解再喂必须比直接喂亏
+    for (const r of RARITIES) {
+      const shard = content.items[`shard-${r}`]
+      if (!shard || shard.kind !== "shard" || shard.rarity !== r) {
+        issue(["items", `shard-${r}`], `缺少 ${r} 品质的碎片（kind: shard, rarity: ${r}）`)
+        continue
+      }
+      if (shard.exp * card.shardsPerDismantle >= card.feedExp[r]) {
+        issue(["items", `shard-${r}`, "exp"], `${card.shardsPerDismantle} 个碎片的经验不能达到直接喂卡（${card.feedExp[r]}）`)
+      }
+    }
+    for (const [itemId, item] of Object.entries(content.items)) {
+      if (item.kind === "shard" && itemId !== `shard-${item.rarity}`) {
+        issue(["items", itemId], `碎片 id 必须是 shard-${item.rarity}`)
+      }
+    }
+    if (!Object.values(content.items).some((item) => item.kind === "exp")) {
+      issue(["items"], "至少需要一种经验道具（分解返还要用）")
+    }
+
+    for (const [dungeonId, dungeon] of Object.entries(content.dungeons)) {
+      const { rewards } = dungeon
+      if (!rewards.essence && !rewards.coins && !rewards.packs && !rewards.items) {
+        issue(["dungeons", dungeonId, "rewards"], "副本没有任何奖励")
+      }
+      rewards.items?.forEach((stack, i) => {
+        if (!Object.hasOwn(content.items, stack.itemId)) {
+          issue(["dungeons", dungeonId, "rewards", "items", i, "itemId"], `物品 ${stack.itemId} 不存在`)
+        }
+      })
+    }
+
+    const packIds = Object.keys(content.packs.packs)
+    const { starterGuarantee, starterGrant } = content.packs
+    if (!packIds.includes(starterGuarantee.pool)) {
+      issue(["packs", "starterGuarantee", "pool"], `卡包 ${starterGuarantee.pool} 不存在`)
+    }
+    if (packIds.includes(MYSTERY_PACK_ID)) {
+      issue(["packs", "packs", MYSTERY_PACK_ID], `${MYSTERY_PACK_ID} 留给神秘卡包，公共卡包不能用`)
+    }
+    for (const grantId of Object.keys(starterGrant)) {
+      if (grantId !== MYSTERY_PACK_ID && !packIds.includes(grantId)) {
+        issue(["packs", "starterGrant", grantId], `卡包 ${grantId} 不存在`)
+      }
+    }
+  })
+
+export type ContentData = z.infer<typeof contentSchema>

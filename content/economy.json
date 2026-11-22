@@ -1,0 +1,14 @@
+{
+  "foilEssence": {
+    "C": 1,
+    "UC": 2,
+    "R": 4,
+    "E": 8,
+    "L": 16,
+    "Radiant": 32,
+    "Prismatic": 64
+  },
+  "foilEssenceMultiplier": 3,
+  "foilCost": 50,
+  "marketMaxPrice": 100000
+}

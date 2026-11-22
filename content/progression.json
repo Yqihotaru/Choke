@@ -1,0 +1,43 @@
+{
+  "card": {
+    "levelCap": { "normal": 80, "hero": 12 },
+    "constellationCap": { "normal": 6, "hero": 12 },
+    "levelExpTotal": {
+      "C": 20000,
+      "UC": 30000,
+      "R": 40000,
+      "E": 220000,
+      "L": 340000,
+      "Radiant": 420000,
+      "Prismatic": 550000
+    },
+    "levelCurve": {
+      "normal": [[1, 0], [40, 0.25], [60, 0.6], [80, 1]],
+      "hero": [[1, 0], [12, 1]]
+    },
+    "feedExp": {
+      "C": 50,
+      "UC": 100,
+      "R": 240,
+      "E": 600,
+      "L": 1440,
+      "Radiant": 3600,
+      "Prismatic": 9600
+    },
+    "refundRate": 0.75,
+    "shardsPerDismantle": 4
+  },
+  "player": {
+    "maxLevel": 60,
+    "expTable": [100, 150, 250, 400, 600, 900],
+    "expGrowthRate": 1.22,
+    "tutorialGraduateLevel": 3,
+    "tutorialStepExp": {
+      "album-view": 100,
+      "deck-view": 80,
+      "battle-view": 70
+    },
+    "expPerStamina": 1,
+    "marketUnlockLevel": 3
+  }
+}

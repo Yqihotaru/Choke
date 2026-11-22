@@ -1,30 +1,26 @@
 import { and, eq, gte, sql } from "drizzle-orm"
 
+import { CONTENT } from "@choke/shared/content"
+
 import { CARD_TYPES, MIRROR_PREFIX } from "./card-types"
 import { db } from "./db/client"
 import { cards, userCards, users } from "./db/schema"
 import type { PoolId } from "./gacha/pools"
 import type { heroCardDef } from "./hero"
 
-/** 非挂机卡包触发镜像卡“额外第 6 张”的概率。 */
-export const MIRROR_RATE = 0.015
+/** 卡包触发镜像卡“额外第 6 张”的概率（content/packs.json mirror.rate）。 */
+export const MIRROR_RATE = CONTENT.packs.mirror.rate
 
 /** 进入镜像池的活跃窗口（天）。 */
-export const MIRROR_ACTIVE_DAYS = 45
+export const MIRROR_ACTIVE_DAYS = CONTENT.packs.mirror.activeDays
 
 /**
- * 镜像卡稀有度：用卡包档位控制，只取 UC–L。
+ * 镜像卡稀有度：用卡包档位控制（content/packs.json 各包的 mirrorWeights，只取 UC–L）。
  * 不直接按全池均匀随机，避免高稀有度本体卡被低价池偷渡。
  */
-export const MIRROR_RARITY_WEIGHTS: Record<PoolId, Record<string, number>> = {
-  normal: { UC: 40, R: 35, E: 20, L: 5 },
-  starter: { UC: 40, R: 35, E: 20, L: 5 },
-  golden: { UC: 25, R: 35, E: 30, L: 10 },
-  radiant: { UC: 20, R: 30, E: 35, L: 15 },
-  sky: { UC: 15, R: 30, E: 35, L: 20 },
-  prism: { UC: 15, R: 25, E: 35, L: 25 },
-  idle: {},
-}
+export const MIRROR_RARITY_WEIGHTS: Record<PoolId, Record<string, number>> = Object.fromEntries(
+  Object.entries(CONTENT.packs.packs).map(([id, pack]) => [id, pack.mirrorWeights]),
+) as Record<PoolId, Record<string, number>>
 
 /** 往下兼容的档位顺序：抽中档位池子为空时，逐档降。 */
 const MIRROR_FALLBACK_ORDER = ["L", "E", "R", "UC"] as const

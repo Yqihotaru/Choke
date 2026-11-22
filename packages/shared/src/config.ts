@@ -1,3 +1,4 @@
+import { CONTENT } from "./content"
 import type { Rarity } from "./types"
 
 /**
@@ -8,16 +9,10 @@ import type { Rarity } from "./types"
 /** 主队槽位 */
 export const DECK_SIZE = 7
 
-/** 每个卡包开出的张数 */
-export const PACK_SIZE = 5
+/** 每个卡包开出的张数（content/packs.json） */
+export const PACK_SIZE = CONTENT.packs.packSize
 
-/** 市场解锁所需的玩家等级 */
-export const MARKET_UNLOCK_LEVEL = 3
-
-/** 卡池 id（与 apps/api/src/gacha/packs.ts 的 key 必须一致） */
-export const POOL_IDS = ["normal", "idle", "golden", "radiant", "sky", "prism"] as const
-
-export type PoolId = (typeof POOL_IDS)[number]
+export { MARKET_UNLOCK_LEVEL } from "./player"
 
 /** 侧面上限：敌我各 7 格 */
 export const MAX_SUPPORT_SLOTS = 7

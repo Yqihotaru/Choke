@@ -1,23 +1,20 @@
+import { CONTENT } from "./content"
 import { TUTORIAL_STEPS, type TutorialStep } from "./tutorial"
 
-/** 玩家（账号）等级：只由服务端结算，客户端只读 */
-export const PLAYER_MAX_LEVEL = 60
+/** 玩家（账号）等级：只由服务端结算，客户端只读。数值在 content/progression.json 的 player 段 */
+const PLAYER = CONTENT.progression.player
+
+export const PLAYER_MAX_LEVEL = PLAYER.maxLevel
 
 /** 跳过教程直接补到的等级（= 正常走完教程的等级） */
-export const TUTORIAL_GRADUATE_LEVEL = 3
+export const TUTORIAL_GRADUATE_LEVEL = PLAYER.tutorialGraduateLevel
 
-/** 升到下一级需要的经验；index 是当前等级 */
-const PLAYER_EXP_REQUIRED: Record<number, number> = {
-  1: 100,
-  2: 150,
-  3: 250,
-  4: 400,
-  5: 600,
-  6: 900,
-}
-
+/** 升到下一级需要的经验：先查表，表之后按最后一项指数增长 */
 export function expToNextPlayerLevel(level: number): number {
-  return PLAYER_EXP_REQUIRED[level] ?? Math.round(900 * Math.pow(1.22, Math.max(0, level - 6)))
+  const table = PLAYER.expTable
+  const fromTable = table[level - 1]
+  if (fromTable !== undefined) return fromTable
+  return Math.round(table[table.length - 1]! * Math.pow(PLAYER.expGrowthRate, Math.max(0, level - table.length)))
 }
 
 export function addPlayerExp(
@@ -34,15 +31,8 @@ export function addPlayerExp(
   return { level, exp }
 }
 
-/**
- * 离开某一步时发的经验。album-view 100（1→2），deck-view 80 + battle-view 70（2→3），
- * 所以正常走完教程正好 Lv.3。
- */
-export const TUTORIAL_STEP_EXP: Partial<Record<TutorialStep, number>> = {
-  "album-view": 100,
-  "deck-view": 80,
-  "battle-view": 70,
-}
+/** 离开某一步时发的经验 */
+export const TUTORIAL_STEP_EXP: Partial<Record<TutorialStep, number>> = PLAYER.tutorialStepExp
 
 /** 教程是单向流水线：下一步固定；done 没有下一步 */
 export function nextTutorialStep(step: TutorialStep): TutorialStep | null {
@@ -51,4 +41,7 @@ export function nextTutorialStep(step: TutorialStep): TutorialStep | null {
 }
 
 /** 副本每消耗 1 点体力给的玩家经验 */
-export const PLAYER_EXP_PER_STAMINA = 1
+export const PLAYER_EXP_PER_STAMINA = PLAYER.expPerStamina
+
+/** 市场解锁所需的玩家等级 */
+export const MARKET_UNLOCK_LEVEL = PLAYER.marketUnlockLevel

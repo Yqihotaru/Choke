@@ -10,6 +10,7 @@ import {
 import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import type { CardFaceData, Rarity } from "@/card/types"
+import type { PackId } from "@choke/shared/content"
 import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
 
@@ -32,7 +33,7 @@ import "./gacha-panel.css"
 /** 「跳过动画」：开出的卡直接摆在面板里，方便连抽 */
 const SKIP_KEY = "choke.gacha.skipAnim"
 
-export type PoolId = "normal" | "idle" | "golden" | "radiant" | "sky" | "prism" | "starter"
+export type PoolId = PackId
 
 interface Pool {
   id: PoolId
