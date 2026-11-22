@@ -70,6 +70,18 @@ pnpm import:cards    # 全量卡池
 
 ## 数据库
 
+默认使用便携版 PostgreSQL 16（端口 **55432**，数据目录 E:\pgdata）。
+
+`powershell
+./scripts/postgres.ps1 start    # 启动
+./scripts/postgres.ps1 status   # 查看
+./scripts/postgres.ps1 stop     # 停止
+`
+
+连接串写在 .env 的 DATABASE_URL。不设置它时会回落到 PGlite（单进程嵌入式，进程被强杀可能写坏，不推荐日常使用）。
+
+
+
 数据在 `apps/api/.data/pg`。PGlite 是单进程单连接，不要同时开两个 API 或一边跑 API 一边导入。
 
 卡牌实例新增永久序号 `serial`，卡定义的 `pulled` 记录累计发行数；熔卡不回收序号，交易保留原号。发号和实例创建在同一事务中完成。

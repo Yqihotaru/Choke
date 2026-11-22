@@ -35,3 +35,5 @@ dist-ssr
 data/
 apps/api/.data/
 .tmp_holo/
+# 本地参考截图
+Rance10 Screenshots/

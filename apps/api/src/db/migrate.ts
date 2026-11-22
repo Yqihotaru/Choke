@@ -39,15 +39,10 @@ export async function runMigrations(target: MigrationTarget): Promise<void> {
   for (const file of files) {
     if (applied.has(file)) continue
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8")
-    await target.exec("BEGIN")
-    try {
-      await target.exec(sql)
-      await target.query("INSERT INTO schema_migrations (version) VALUES ($1)", [file])
-      await target.exec("COMMIT")
-      console.log(`[migrate] applied ${file}`)
-    } catch (error) {
-      await target.exec("ROLLBACK")
-      throw error
-    }
+    // 迁移文件本身幂等，按顺序执行；不手写 BEGIN/COMMIT（postgres-js 会拒绝）。
+    await target.exec(sql)
+    await target.query("INSERT INTO schema_migrations (version) VALUES ($1)", [file])
+    await target.exec("COMMIT")
+    console.log(`[migrate] applied ${file}`)
   }
 }

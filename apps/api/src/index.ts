@@ -10,7 +10,7 @@ import { marketRoutes } from "./routes/market"
 import { packRoutes } from "./routes/packs"
 import { progressionRoutes } from "./routes/progression"
 import { progressRoutes } from "./routes/progress"
-import { client } from "./db/client"
+import { client, sql } from "./db/client"
 
 const app = Fastify({ logger: true })
 
@@ -40,7 +40,11 @@ async function shutdown(signal: string) {
   try {
     await app.close()
   } finally {
-    await client.close().catch((error) => app.log.warn({ err: error }, "close database failed"))
+    if (client) {
+      await client.close().catch((error) => app.log.warn({ err: error }, "close database failed"))
+    } else if (sql) {
+      await sql.end({ timeout: 5 }).catch((error) => app.log.warn({ err: error }, "close database failed"))
+    }
   }
   process.exit(0)
 }

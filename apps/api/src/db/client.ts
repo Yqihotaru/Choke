@@ -4,7 +4,7 @@ import path from "node:path"
 import { PGlite } from "@electric-sql/pglite"
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm"
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite"
-import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js"
+import { drizzle as drizzlePostgres, type PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
 
 import { runMigrations, type MigrationTarget } from "./migrate"
@@ -20,7 +20,7 @@ import * as schema from "./schema"
  * PGlite 是单进程写库，进程被强杀可能写坏；需要稳定就配 DATABASE_URL。
  */
 function loadDotEnv() {
-  const file = path.resolve(import.meta.dirname, "../../../.env")
+  const file = path.resolve(import.meta.dirname, "../../../../.env")
   if (!fs.existsSync(file)) return
   for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
     const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/)
@@ -71,7 +71,8 @@ async function createDb() {
 
 const created = await createDb()
 
-export const db = created.db
+// 两种后端的方法签名一致，统一成 Postgres 的类型，避免联合类型破坏 db.transaction 的重载。
+export const db = created.db as PostgresJsDatabase<typeof schema>
 export const dbKind = created.kind
 /** 仅 PGlite 模式存在；Postgres 模式为 undefined。 */
 export const client = created.kind === "pglite" ? created.client : undefined
