@@ -1,5 +1,5 @@
 import { deriveStream, nextRandom } from "../rng"
-import type { SkillDef } from "../skills"
+import type { NumericEffectKey, SkillDef } from "../skills"
 import type { CardFaceData, Element } from "../types"
 import { ELEMENT_LABEL } from "../types"
 
@@ -76,7 +76,25 @@ export function aliveCards(cards: BattleCard[]): BattleCard[] {
 }
 
 export function hasTankAlive(cards: BattleCard[]): boolean {
-  return aliveCards(cards).some((card) => card.subjob.tags.includes("tank"))
+  return aliveCards(cards).some((card) => card.job === "tank")
+}
+
+/** 一张卡带着的被动技能（被 Down 则全部失效） */
+function passivesOf(card: BattleCard): SkillDef[] {
+  return card.down ? [] : card.skills.filter((skill) => skill.passive)
+}
+
+function cardEffectSum(card: BattleCard, key: NumericEffectKey): number {
+  return passivesOf(card).reduce((sum, skill) => sum + (skill[key] ?? 0), 0)
+}
+
+/** 全队存活卡的某个数值效果之和 */
+function teamEffectSum(cards: BattleCard[], key: NumericEffectKey): number {
+  return cards.reduce((sum, card) => sum + cardEffectSum(card, key), 0)
+}
+
+function hasSwift(card: BattleCard): boolean {
+  return passivesOf(card).some((skill) => skill.swift)
 }
 
 /**
@@ -109,11 +127,8 @@ export function canUseSkillReason(state: BattleState, cardIndex: number, skillId
   if ((skill.once || skill.costTag === "once") && card.usedOnce.includes(skill.id)) {
     return "单次技能本场已使用"
   }
-  if (
-    skill.id === "dancer_step" &&
-    state.turn < 4
-  ) {
-    return `【无偿】前 3 回合锁定（第 4 回合解锁，当前 Round ${state.turn}）`
+  if (skill.unlockTurn && state.turn < skill.unlockTurn) {
+    return `【${skill.name}】前 ${skill.unlockTurn - 1} 回合锁定（第 ${skill.unlockTurn} 回合解锁，当前 Round ${state.turn}）`
   }
   if (
     card.statuses.some((s) => s.id === "silence") &&
@@ -145,11 +160,11 @@ function statusBonus(statuses: StatusEffect[], stat: "atk" | "int" | "def"): num
 export function statOf(state: BattleState, card: BattleCard, stat: "atk" | "int" | "def"): number {
   let value = card.stats[stat]
   const lowHp = state.teamHp / Math.max(1, state.teamHpMax) < 0.3
-  if (stat !== "def" && card.subjob.tags.includes("lowhp") && lowHp) {
-    value *= 1.25
+  if (stat !== "def" && lowHp) {
+    for (const skill of passivesOf(card)) if (skill.lowHpMul) value *= skill.lowHpMul
   }
-  if (stat === "def" && card.subjob.tags.includes("tank")) {
-    value *= 1.1
+  if (stat === "def") {
+    for (const skill of passivesOf(card)) if (skill.defMul) value *= skill.defMul
   }
   const cardMod = statusBonus(card.statuses, stat)
   const teamMod = statusBonus(state.teamStatuses, stat)
@@ -260,7 +275,7 @@ export interface BattleInputCard {
  * 同一张卡最多获得 1 种，不叠加，回合末未消耗则作废
  */
 function rollCardTriggers(state: BattleState) {
-  const bardBonus = aliveCards(state.cards).some((c) => c.subjob.tags.includes("boost_giver")) ? 0.1 : 0
+  const bardBonus = teamEffectSum(state.cards, "triggerBonus")
   for (const card of state.cards) {
     card.trigger = null
     if (card.down) continue
@@ -327,20 +342,6 @@ export function createBattle(
 
   // 开局被动侧面支援（如圣骑士在场自动带 1 格初阶圣印）
   const playerSupports: SideSupportUnit[] = []
-  const paladin = cards.find((c) => c.subjob.id === "paladin")
-  if (paladin) {
-    playerSupports.push({
-      id: "init-paladin-ward",
-      name: `${paladin.name}·圣御`,
-      kind: "aura",
-      element: "light",
-      job: "warrior",
-      stat: "def",
-      amount: 0.15,
-      locked: true,
-      roleText: "锁定支援 · 全队 DEF+15%",
-    })
-  }
 
   const state: BattleState = {
     encounterId: encounter.id,
@@ -494,8 +495,12 @@ function applyDamageToEnemy(
     state.maxCombo = Math.max(state.maxCombo, state.combo)
 
     const bonusCrit =
-      (card.subjob.tags.includes("pierce") && state.enemy.statuses.some((s) => s.id === "vulnerable") ? 15 : 0) +
-      (card.subjob.tags.includes("lowhp") && state.teamHp / state.teamHpMax < 0.3 ? 10 : 0)
+      (state.enemy.statuses.some((s) => s.id === "vulnerable")
+        ? passivesOf(card).reduce((sum, s) => sum + (s.critVsVulnerable ?? 0), 0)
+        : 0) +
+      (element !== "physical" && state.teamHp / state.teamHpMax < 0.3
+        ? passivesOf(card).reduce((sum, s) => sum + (s.spellCrit ?? 0), 0)
+        : 0)
     const crit = roll(state, "player") * 100 < card.stats.crit + bonusCrit
     const weak = activeWeaknesses(state.enemy)
     const elMult = elementMultiplier(element, state.enemy.element, state.enemy.traits, weak)
@@ -569,9 +574,9 @@ function applyDamageToEnemy(
     if (state.enemy.hp <= 0) break
   }
 
-  if (total > 0 && card.subjob.tags.includes("lifesteal")) {
-    const heal = Math.round(total * 0.2)
-    healParty(state, heal, `${card.name} 吸血`)
+  const lifesteal = passivesOf(card).reduce((sum, s) => sum + (s.lifesteal ?? 0), 0)
+  if (total > 0 && lifesteal > 0) {
+    healParty(state, Math.round(total * lifesteal), `${card.name} 吸血`)
   }
 
   if (state.enemy.hp <= 0) {
@@ -583,9 +588,9 @@ function applyDamageToEnemy(
 
 function healParty(state: BattleState, rawAmount: number, label = "治疗") {
   if (state.teamHp <= 0) return
-  const hasHealerPlus = aliveCards(state.cards).some((c) => c.subjob.id === "healer")
+  const healBonus = teamEffectSum(state.cards, "healBonus")
   const healBlock = state.teamStatuses.some((s) => s.id === "heal_block") ? 0.5 : 1.0
-  const amount = Math.round(rawAmount * (hasHealerPlus ? 1.2 : 1.0) * healBlock)
+  const amount = Math.round(rawAmount * (1 + healBonus) * healBlock)
   const before = state.teamHp
   state.teamHp = Math.min(state.teamHpMax, state.teamHp + amount)
   const actual = state.teamHp - before
@@ -769,7 +774,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           log(state, `精英/BOSS 本场已被硬控满 2 次，无法再次硬控！`)
           break
         }
-        const focusBonus = card.subjob.id === "binder" ? 0.15 : 0
+        const focusBonus = cardEffectSum(card, "controlBonus")
         const rate =
           (state.enemy.tier === "boss" ? 0.5 : state.enemy.tier === "elite" ? 0.65 : 0.8) +
           focusBonus
@@ -792,9 +797,10 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
       }
 
       case "heal": {
-        if (skill.id.includes("revive")) {
+        if (skill.revive) {
           const downedCards = state.cards.filter((item) => item.down)
-          for (const d of downedCards) {
+          const reviveCount = skill.revive === "all" ? downedCards.length : skill.revive
+          for (const d of downedCards.slice(0, reviveCount)) {
             d.down = false
             d.downTurns = 0
             emit(state, {
@@ -805,7 +811,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
             log(state, `✨ ${card.name} 救醒了倒下的【${d.name}】！`)
           }
         }
-        if (skill.id === "healer_cleanse") {
+        if (skill.cleanse) {
           state.teamStatuses = state.teamStatuses.filter((s) => !s.isDebuff)
           for (const c of state.cards) {
             c.statuses = c.statuses.filter((s) => !s.isDebuff)
@@ -832,14 +838,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
       case "taunt": {
         for (const c of state.cards) c.taunt = false
         card.taunt = true
-        if (skill.statusId === "thorns") {
-          addOrStackStatus(card.statuses, {
-            id: "thorns",
-            name: "荆棘",
-            amount: 0.4,
-            turns: 2,
-          })
-        }
+        if (skill.selfStatus) addOrStackStatus(card.statuses, { ...skill.selfStatus })
         log(state, `🛡️ ${card.name} 开启嘲讽（吸引敌方单体攻击与 Down 判定，并附带荆棘反伤）`)
         break
       }
@@ -853,9 +852,9 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           turns: skill.turns ?? 2,
         })
         // 吟游诗人专拐技能：直接为未行动队友点亮 BOOST
-        if (skill.id === "bard_ward") {
+        if (skill.boostAllies) {
           const candidates = state.cards.filter((c, idx) => idx !== cardIndex && !c.down && !c.acted && !c.trigger)
-          for (const target of candidates.slice(0, 2)) {
+          for (const target of candidates.slice(0, skill.boostAllies)) {
             target.trigger = "boost"
           }
           log(state, `🎵 ${card.name} 奏响专拐战歌，全队攻击提升并为队友点亮【BOOST 1.5×】！`)
@@ -991,7 +990,7 @@ export function swapBattleCard(
 
   log(
     state,
-    `🔄 部队换人：【${outCard.name}】退入替补席 → 【${inCard.name}（${inCard.subjob.label}）】登场！`,
+    `🔄 部队换人：【${outCard.name}】退入替补席 → 【${inCard.name}】登场！`,
   )
   return null
 }
@@ -1003,7 +1002,7 @@ export function swapBattleCard(
  * 3. 主队开始消费 AP
  */
 function runPlayerTurnStartSequence(state: BattleState) {
-  const summonerBonus = aliveCards(state.cards).some((c) => c.subjob.id === "summoner") ? 0.15 : 0
+  const summonerBonus = teamEffectSum(state.cards, "supportProcBonus")
 
   for (const support of state.playerSupports) {
     support.triggered = false
@@ -1074,7 +1073,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
   if (!teamFrozen) {
     for (let idx = 0; idx < state.cards.length; idx += 1) {
       const card = state.cards[idx]!
-      if (card.down || !card.subjob.tags.includes("swift")) continue
+      if (card.down || !hasSwift(card)) continue
       if (card.statuses.some((s) => s.id === "slow" || s.id === "stun")) continue
       // 游侠/刺客/破法者抢攻率（默认 12% 让战中能稳定体验到抢攻垫刀，文档基础 4%+迅捷专精）
       if (roll(state, "player") > PREEMPTIVE_RATE) continue
@@ -1172,18 +1171,27 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
   if (intent.kind === "break_support") {
     // 削减/无力化玩家支援（§12 第 8 条：一次性拆毁 ≥2 个非锁定支援）
     let removed = 0
-    for (let i = state.playerSupports.length - 1; i >= 0 && removed < 2; i -= 1) {
+    let shielded = 0
+    let targeted = 0
+    const shield = Math.min(0.9, teamEffectSum(state.cards, "supportShield"))
+    for (let i = state.playerSupports.length - 1; i >= 0 && targeted < 2; i -= 1) {
       const sup = state.playerSupports[i]!
-      if (!sup.locked && sup.kind !== "defense") {
-        state.playerSupports.splice(i, 1)
-        removed += 1
+      if (sup.locked || sup.kind === "defense") continue
+      targeted += 1
+      if (shield > 0 && roll(state, "enemy") < shield) {
+        shielded += 1
+        continue
       }
+      state.playerSupports.splice(i, 1)
+      removed += 1
     }
     log(
       state,
       removed > 0
-        ? `💥 敌方发动【${intent.label}】，摧毁了我方右侧 ${removed} 个非锁定侧面支援！`
-        : `🛡️ 敌方发动【${intent.label}】，但我方侧面支援受圣印锁定保护未被拆毁！`,
+        ? `💥 敌方发动【${intent.label}】，摧毁了我方右侧 ${removed} 个非锁定侧面支援！${shielded > 0 ? `（${shielded} 个被守护光环挡下）` : ""}`
+        : shielded > 0
+          ? `🛡️ 敌方发动【${intent.label}】，但守护光环挡下了所有拆毁！`
+          : `🛡️ 敌方发动【${intent.label}】，但我方没有可被拆毁的侧面支援！`,
     )
     return
   }
@@ -1207,7 +1215,7 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
 
   // 选定受击目标：嘲讽者优先；带 Down 威胁的技能按 §6.8 优先落在坦克身上
   const taunter = living.find((c) => c.taunt)
-  const tanks = living.filter((c) => c.subjob.tags.includes("tank"))
+  const tanks = living.filter((c) => c.job === "tank")
   const primaryTarget =
     taunter ??
     (intent.causesDown && tanks.length > 0
@@ -1316,7 +1324,7 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
   // 高额攻击附带 Down 判定（§7.3 & §6.8：坦克开高档防御时可抵御 Down）
   if (intent.causesDown && state.teamHp > 0 && !primaryTarget.down) {
     const resistChance =
-      primaryTarget.subjob.tags.includes("tank") ? 0.45 + defTier * 0.15 : defTier * 0.12
+      primaryTarget.job === "tank" ? 0.45 + defTier * 0.15 : defTier * 0.12
     if (roll(state, "enemy") > resistChance) {
       primaryTarget.down = true
       primaryTarget.downTurns = 3
@@ -1459,9 +1467,9 @@ export function endTurn(state: BattleState): string | null {
     return null
   }
 
-  const regenCount = aliveCards(state.cards).filter((c) => c.subjob.tags.includes("regen")).length
-  if (regenCount > 0) {
-    healParty(state, Math.round(state.teamHpMax * 0.04 * regenCount), "生生不息")
+  const regenPct = teamEffectSum(state.cards, "regenPct")
+  if (regenPct > 0) {
+    healParty(state, Math.round(state.teamHpMax * regenPct), "生生不息")
   }
 
   // 5. 推进到下一回合（Round + 1）
@@ -1471,7 +1479,7 @@ export function endTurn(state: BattleState): string | null {
   state.swapCooldown = Math.max(0, state.swapCooldown - 1)
 
   // AP 恢复（§6.2：基础 +2，舞者在场 +1，恐惧 -1，空转 AP=0 额外 +1）
-  const dancerBonus = aliveCards(state.cards).some((card) => card.subjob.tags.includes("ap")) ? 1 : 0
+  const dancerBonus = Math.min(1, teamEffectSum(state.cards, "apRegenBonus"))
   const fearPenalty = state.teamStatuses.some((s) => s.id === "fear") ? -1 : 0
   const idleBonus = state.ap === 0 ? 1 : 0
   const apGain = Math.max(1, 2 + dancerBonus + fearPenalty + idleBonus)

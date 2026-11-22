@@ -1,21 +1,5 @@
 import type { CardSkill, CardSkillRef, Element, Job, Rarity } from "./types"
 
-export type SubJobId =
-  | "bulwark"
-  | "warden"
-  | "berserker"
-  | "paladin"
-  | "spellbreaker"
-  | "ranger"
-  | "assassin"
-  | "warlock"
-  | "lifebringer"
-  | "binder"
-  | "summoner"
-  | "dancer"
-  | "healer"
-  | "bard"
-
 export type SkillKind =
   | "damage"
   | "heal"
@@ -52,9 +36,28 @@ export interface SupportSpawnDef {
   roleText: string
 }
 
+export interface SelfStatusDef {
+  id: string
+  name: string
+  amount: number
+  turns: number
+}
+
+/** 被动效果：只有卡上带着这个技能才生效，卡被 Down 则失效 */
+export type NumericEffectKey =
+  | "regenPct"
+  | "controlBonus"
+  | "supportProcBonus"
+  | "apRegenBonus"
+  | "healBonus"
+  | "triggerBonus"
+  | "supportShield"
+
 export interface SkillDef {
   id: string
   name: string
+  /** 技能所属大职业（技能池按它划分） */
+  job: Job
   element: Element
   ap: number
   kind: SkillKind
@@ -98,18 +101,56 @@ export interface SkillDef {
   /** 召唤/布置侧面支援定义 */
   supportDef?: SupportSpawnDef
   desc: string
+
+  /* ---- 被动效果声明 ---- */
+  /** 开局给自己上的状态 */
+  openingStatus?: SelfStatusDef
+  /** 自身 DEF 倍率 */
+  defMul?: number
+  /** 队伍血量低于 30% 时自身 ATK/INT 倍率 */
+  lowHpMul?: number
+  /** 造成伤害的吸血比例 */
+  lifesteal?: number
+  /** 队伍低血时法术暴击率加成（百分点） */
+  spellCrit?: number
+  /** 迅捷：命中 +5，可抢攻 */
+  swift?: boolean
+  /** 对脆弱目标暴击率加成（百分点） */
+  critVsVulnerable?: number
+  /** 每回合队伍回复最大生命比例 */
+  regenPct?: number
+  /** 硬控成功率加成 */
+  controlBonus?: number
+  /** 攻击型支援发动率加成 */
+  supportProcBonus?: number
+  /** 每回合 AP 恢复加成 */
+  apRegenBonus?: number
+  /** 治疗量加成 */
+  healBonus?: number
+  /** Boost / 必杀 / 连击概率加成 */
+  triggerBonus?: number
+  /** 敌方拆我方支援时，每个目标免拆概率 */
+  supportShield?: number
+
+  /* ---- 主动技能效果字段 ---- */
+  /** 第 N 回合起才能用 */
+  unlockTurn?: number
+  /** 净化全队负面状态 */
+  cleanse?: boolean
+  /** 为 N 张未行动队友点亮 BOOST */
+  boostAllies?: number
+  /** 救醒倒下的队友："all" 或指定张数 */
+  revive?: "all" | number
+  /** 对自己施加的状态 */
+  selfStatus?: SelfStatusDef
 }
 
-export interface SubJob {
-  id: SubJobId
-  label: string
-  archetype: Job
-  hp: number
-  atk: number
-  def: number
-  int: number
-  tags: string[]
-  skills: string[]
+/** 大职业四维权重（四维合计 4.00） */
+export const JOB_STAT_WEIGHTS: Record<Job, { hp: number; atk: number; def: number; int: number }> = {
+  tank: { hp: 1.35, atk: 0.75, def: 1.3, int: 0.6 },
+  warrior: { hp: 0.95, atk: 1.3, def: 0.85, int: 0.9 },
+  mage: { hp: 0.85, atk: 0.65, def: 0.8, int: 1.7 },
+  support: { hp: 1.0, atk: 0.55, def: 0.9, int: 1.55 },
 }
 
 export const ARCHETYPE_COEF: Record<Job, number> = {
@@ -133,6 +174,8 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 坦克：肉坦 (bulwark) ==================== */
   bulwark_taunt: S({
     id: "bulwark_taunt",
+    job: "tank",
+    selfStatus: { id: "thorns", name: "荆棘", amount: 0.4, turns: 2 },
     name: "嘲讽咆哮",
     element: "physical",
     ap: 1,
@@ -141,10 +184,10 @@ export const SKILLS: Record<string, SkillDef> = {
     target: "self",
     turns: 1,
     desc: "本回合敌方单体攻击与 Down 判定强制指向自己，并挂上 2 回合【荆棘】反伤",
-    statusId: "thorns",
   }),
   bulwark_guard: S({
     id: "bulwark_guard",
+    job: "tank",
     name: "铁壁架势",
     element: "earth",
     ap: 1,
@@ -156,6 +199,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   bulwark_quake: S({
     id: "bulwark_quake",
+    job: "tank",
     name: "震地重锤",
     element: "earth",
     ap: 2,
@@ -170,6 +214,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   bulwark_thorns: S({
     id: "bulwark_thorns",
+    job: "tank",
+    openingStatus: { id: "thorns", name: "荆棘", amount: 0.35, turns: 2 },
     name: "荆棘重甲",
     element: "metal",
     ap: 0,
@@ -181,6 +227,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 坦克：战坦 (warden) ==================== */
   warden_bash: S({
     id: "warden_bash",
+    job: "tank",
     name: "盾击平推",
     element: "physical",
     ap: 0,
@@ -193,6 +240,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   warden_armor: S({
     id: "warden_armor",
+    job: "tank",
     name: "重装甲展开",
     element: "metal",
     ap: 2,
@@ -212,6 +260,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   warden_stun: S({
     id: "warden_stun",
+    job: "tank",
     name: "粉碎击晕",
     element: "physical",
     ap: 3,
@@ -224,17 +273,20 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   warden_hold: S({
     id: "warden_hold",
+    job: "tank",
+    defMul: 1.1,
     name: "不动如山",
     element: "earth",
     ap: 0,
     kind: "passive",
     passive: true,
-    desc: "被动：常驻 DEF +10%，可在场解锁全队 IV 档（90%）极限防御",
+    desc: "被动：常驻 DEF +10%",
   }),
 
   /* ==================== 战士：狂战士 (berserker) ==================== */
   berserker_zero: S({
     id: "berserker_zero",
+    job: "warrior",
     name: "狂乱平砍",
     element: "physical",
     ap: 1,
@@ -247,6 +299,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   berserker_cleave: S({
     id: "berserker_cleave",
+    job: "warrior",
     name: "血祭乱舞",
     element: "fire",
     ap: 3,
@@ -262,6 +315,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   berserker_wind: S({
     id: "berserker_wind",
+    job: "warrior",
     name: "裂空断头台",
     element: "thunder",
     ap: 2,
@@ -275,6 +329,9 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   berserker_blood: S({
     id: "berserker_blood",
+    job: "warrior",
+    lowHpMul: 1.25,
+    lifesteal: 0.2,
     name: "血怒狂躯",
     element: "dark",
     ap: 0,
@@ -286,6 +343,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 战士：圣骑士 (paladin) ==================== */
   paladin_smite: S({
     id: "paladin_smite",
+    job: "warrior",
     name: "圣光裁决",
     element: "light",
     ap: 2,
@@ -298,6 +356,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   paladin_protect: S({
     id: "paladin_protect",
+    job: "warrior",
     name: "圣盾援护",
     element: "light",
     ap: 1,
@@ -317,6 +376,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   paladin_judgment: S({
     id: "paladin_judgment",
+    job: "warrior",
     name: "毗沙门天剑",
     element: "light",
     ap: 3,
@@ -329,17 +389,20 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   paladin_aura: S({
     id: "paladin_aura",
+    job: "warrior",
+    supportShield: 0.3,
     name: "守护光环",
     element: "light",
     ap: 0,
     kind: "passive",
     passive: true,
-    desc: "被动：高魔抗半坦，视同坦克解锁 IV 档防御并保护侧面支援",
+    desc: "被动：敌方拆毁我方侧面支援时，每个目标有 30% 概率免于被拆",
   }),
 
   /* ==================== 战士：破法者 (spellbreaker) ==================== */
   breaker_break: S({
     id: "breaker_break",
+    job: "warrior",
     name: "破甲碎盾",
     element: "metal",
     ap: 1,
@@ -355,6 +418,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   breaker_rift: S({
     id: "breaker_rift",
+    job: "warrior",
     name: "裂法三连",
     element: "dark",
     ap: 2,
@@ -369,6 +433,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   breaker_counter: S({
     id: "breaker_counter",
+    job: "warrior",
     name: "增援号令",
     element: "thunder",
     ap: 1,
@@ -389,6 +454,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   breaker_swift: S({
     id: "breaker_swift",
+    job: "warrior",
+    swift: true,
     name: "迅捷破魔",
     element: "thunder",
     ap: 0,
@@ -400,6 +467,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 战士：游侠 (ranger) ==================== */
   ranger_zero: S({
     id: "ranger_zero",
+    job: "warrior",
     name: "牵制速射",
     element: "physical",
     ap: 0,
@@ -412,6 +480,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   ranger_volley: S({
     id: "ranger_volley",
+    job: "warrior",
     name: "疾风连射",
     element: "physical",
     ap: 1,
@@ -424,6 +493,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   ranger_pierce: S({
     id: "ranger_pierce",
+    job: "warrior",
     name: "穿甲狙击",
     element: "ice",
     ap: 2,
@@ -439,6 +509,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   ranger_harvest: S({
     id: "ranger_harvest",
+    job: "warrior",
     name: "虚弱收割",
     element: "physical",
     ap: 3,
@@ -452,6 +523,9 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   ranger_swift: S({
     id: "ranger_swift",
+    job: "warrior",
+    swift: true,
+    critVsVulnerable: 15,
     name: "鹰眼迅捷",
     element: "thunder",
     ap: 0,
@@ -463,6 +537,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 战士：刺客 (assassin) ==================== */
   assassin_zero: S({
     id: "assassin_zero",
+    job: "warrior",
     name: "瞬影刺",
     element: "physical",
     ap: 0,
@@ -475,6 +550,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   assassin_interrupt: S({
     id: "assassin_interrupt",
+    job: "warrior",
     name: "盲抽打断",
     element: "dark",
     ap: 1,
@@ -487,6 +563,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   assassin_backstab: S({
     id: "assassin_backstab",
+    job: "warrior",
     name: "影袭三连",
     element: "dark",
     ap: 2,
@@ -501,6 +578,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   assassin_execute: S({
     id: "assassin_execute",
+    job: "warrior",
     name: "暗杀奥义",
     element: "dark",
     ap: 3,
@@ -515,6 +593,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   assassin_swift: S({
     id: "assassin_swift",
+    job: "warrior",
+    swift: true,
     name: "暗影迅捷",
     element: "thunder",
     ap: 0,
@@ -526,6 +606,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 法师：咒术师 (warlock) ==================== */
   warlock_frost: S({
     id: "warlock_frost",
+    job: "mage",
     name: "极寒霜缚",
     element: "ice",
     ap: 1,
@@ -540,6 +621,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   warlock_starfire: S({
     id: "warlock_starfire",
+    job: "mage",
     name: "雷火崩星",
     element: "thunder",
     ap: 2,
@@ -554,6 +636,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   warlock_meteor: S({
     id: "warlock_meteor",
+    job: "mage",
     name: "六色破坏光线",
     element: "fire",
     ap: 4,
@@ -568,6 +651,9 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   warlock_lowhp: S({
     id: "warlock_lowhp",
+    job: "mage",
+    lowHpMul: 1.25,
+    spellCrit: 10,
     name: "魔力暴走",
     element: "fire",
     ap: 0,
@@ -579,6 +665,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 法师：生术师 (lifebringer) ==================== */
   life_renew: S({
     id: "life_renew",
+    job: "mage",
     name: "生机涌动",
     element: "wood",
     ap: 1,
@@ -590,6 +677,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   life_mass: S({
     id: "life_mass",
+    job: "mage",
     name: "藤蔓毒蚀",
     element: "wood",
     ap: 1,
@@ -604,6 +692,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   life_revive: S({
     id: "life_revive",
+    job: "mage",
+    revive: "all",
     name: "复苏结界",
     element: "light",
     ap: 2,
@@ -611,10 +701,12 @@ export const SKILLS: Record<string, SkillDef> = {
     costTag: "fatigue",
     power: 1.6,
     target: "team",
-    desc: "大幅回复队伍生命并立即唤醒 1 张被 Down 的队友 · 疲惫",
+    desc: "大幅回复队伍生命并立即唤醒所有被 Down 的队友 · 疲惫",
   }),
   life_regen: S({
     id: "life_regen",
+    job: "mage",
+    regenPct: 0.04,
     name: "生生不息",
     element: "wood",
     ap: 0,
@@ -626,6 +718,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 法师：缚术师 (binder) ==================== */
   binder_sleep: S({
     id: "binder_sleep",
+    job: "mage",
     name: "深渊眠咒",
     element: "dark",
     ap: 3,
@@ -638,6 +731,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   binder_charm: S({
     id: "binder_charm",
+    job: "mage",
     name: "幻惑之瞳",
     element: "dark",
     ap: 2,
@@ -650,6 +744,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   binder_bind: S({
     id: "binder_bind",
+    job: "mage",
     name: "诅咒荆棘",
     element: "wood",
     ap: 1,
@@ -664,6 +759,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   binder_focus: S({
     id: "binder_focus",
+    job: "mage",
+    controlBonus: 0.15,
     name: "精神专注",
     element: "light",
     ap: 0,
@@ -675,6 +772,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 法师：召唤师 (summoner) ==================== */
   summoner_call: S({
     id: "summoner_call",
+    job: "mage",
     name: "使徒召唤",
     element: "dark",
     ap: 1,
@@ -694,6 +792,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   summoner_poison: S({
     id: "summoner_poison",
+    job: "mage",
     name: "哈尼军团",
     element: "earth",
     ap: 2,
@@ -713,6 +812,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   summoner_ward: S({
     id: "summoner_ward",
+    job: "mage",
     name: "荆棘结界",
     element: "wood",
     ap: 1,
@@ -731,17 +831,21 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   summoner_aura: S({
     id: "summoner_aura",
+    job: "mage",
+    supportProcBonus: 0.15,
     name: "召唤共鸣",
     element: "dark",
     ap: 0,
     kind: "passive",
     passive: true,
-    desc: "被动：我方所有攻击型侧面支援发动率 +15%，伤害提升",
+    desc: "被动：我方所有攻击型侧面支援发动率 +15%",
   }),
 
   /* ==================== 辅助：舞者 (dancer) ==================== */
   dancer_step: S({
     id: "dancer_step",
+    job: "support",
+    unlockTurn: 4,
     name: "无偿之舞",
     element: "light",
     ap: 0,
@@ -753,6 +857,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   dancer_frenzy: S({
     id: "dancer_frenzy",
+    job: "support",
     name: "狂热之舞",
     element: "fire",
     ap: 2,
@@ -765,6 +870,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   dancer_veil: S({
     id: "dancer_veil",
+    job: "support",
     name: "扇舞连击",
     element: "light",
     ap: 1,
@@ -777,6 +883,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   dancer_grace: S({
     id: "dancer_grace",
+    job: "support",
+    apRegenBonus: 1,
     name: "舞者增幅",
     element: "light",
     ap: 0,
@@ -788,6 +896,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 辅助：治疗师 (healer) ==================== */
   healer_heal: S({
     id: "healer_heal",
+    job: "support",
     name: "圣光治愈",
     element: "light",
     ap: 1,
@@ -799,6 +908,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   healer_cleanse: S({
     id: "healer_cleanse",
+    job: "support",
+    cleanse: true,
     name: "净化之泉",
     element: "light",
     ap: 1,
@@ -810,6 +921,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   healer_revive: S({
     id: "healer_revive",
+    job: "support",
+    revive: "all",
     name: "奇迹抬人",
     element: "light",
     ap: 2,
@@ -821,6 +934,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   healer_plus: S({
     id: "healer_plus",
+    job: "support",
+    healBonus: 0.2,
     name: "医者仁心",
     element: "wood",
     ap: 0,
@@ -832,6 +947,7 @@ export const SKILLS: Record<string, SkillDef> = {
   /* ==================== 辅助：吟游诗人 (bard) ==================== */
   bard_inspire: S({
     id: "bard_inspire",
+    job: "support",
     name: "全军军师阵",
     element: "light",
     ap: 1,
@@ -851,6 +967,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   bard_ward: S({
     id: "bard_ward",
+    job: "support",
+    boostAllies: 2,
     name: "专拐激昂曲",
     element: "thunder",
     ap: 1,
@@ -864,6 +982,7 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   bard_anthem: S({
     id: "bard_anthem",
+    job: "support",
     name: "破魔回响",
     element: "metal",
     ap: 1,
@@ -877,6 +996,8 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
   bard_aura: S({
     id: "bard_aura",
+    job: "support",
+    triggerBonus: 0.1,
     name: "余音绕梁",
     element: "light",
     ap: 0,
@@ -886,179 +1007,10 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
 }
 
-export const SUBJOBS: Record<SubJobId, SubJob> = {
-  bulwark: {
-    id: "bulwark",
-    label: "肉坦",
-    archetype: "tank",
-    hp: 1.5,
-    atk: 0.55,
-    def: 1.4,
-    int: 0.55,
-    tags: ["tank", "taunt", "thorns"],
-    skills: ["bulwark_taunt", "bulwark_guard", "bulwark_quake", "bulwark_thorns"],
-  },
-  warden: {
-    id: "warden",
-    label: "战坦",
-    archetype: "tank",
-    hp: 1.2,
-    atk: 0.95,
-    def: 1.25,
-    int: 0.6,
-    tags: ["tank", "taunt", "control"],
-    skills: ["warden_bash", "warden_armor", "warden_stun", "warden_hold"],
-  },
-  berserker: {
-    id: "berserker",
-    label: "狂战士",
-    archetype: "warrior",
-    hp: 1.05,
-    atk: 1.55,
-    def: 0.75,
-    int: 0.65,
-    tags: ["lowhp", "lifesteal"],
-    skills: ["berserker_zero", "berserker_cleave", "berserker_wind", "berserker_blood"],
-  },
-  paladin: {
-    id: "paladin",
-    label: "圣骑士",
-    archetype: "warrior",
-    hp: 1.25,
-    atk: 1.0,
-    def: 1.15,
-    int: 0.6,
-    tags: ["tank", "protect", "magic_user"],
-    skills: ["paladin_smite", "paladin_protect", "paladin_judgment", "paladin_aura"],
-  },
-  spellbreaker: {
-    id: "spellbreaker",
-    label: "破法者",
-    archetype: "warrior",
-    hp: 0.95,
-    atk: 1.15,
-    def: 0.85,
-    int: 1.05,
-    tags: ["swift", "break"],
-    skills: ["breaker_break", "breaker_rift", "breaker_counter", "breaker_swift"],
-  },
-  ranger: {
-    id: "ranger",
-    label: "游侠",
-    archetype: "warrior",
-    hp: 0.7,
-    atk: 1.5,
-    def: 0.7,
-    int: 1.1,
-    tags: ["swift", "pierce", "execute"],
-    skills: ["ranger_zero", "ranger_volley", "ranger_pierce", "ranger_harvest", "ranger_swift"],
-  },
-  assassin: {
-    id: "assassin",
-    label: "刺客",
-    archetype: "warrior",
-    hp: 0.75,
-    atk: 1.2,
-    def: 0.7,
-    int: 1.35,
-    tags: ["swift", "interrupt", "execute"],
-    skills: ["assassin_zero", "assassin_interrupt", "assassin_backstab", "assassin_execute", "assassin_swift"],
-  },
-  warlock: {
-    id: "warlock",
-    label: "咒术师",
-    archetype: "mage",
-    hp: 0.75,
-    atk: 0.7,
-    def: 0.7,
-    int: 1.85,
-    tags: ["lowhp", "magic_user"],
-    skills: ["warlock_frost", "warlock_starfire", "warlock_meteor", "warlock_lowhp"],
-  },
-  lifebringer: {
-    id: "lifebringer",
-    label: "生术师",
-    archetype: "mage",
-    hp: 0.95,
-    atk: 0.55,
-    def: 0.8,
-    int: 1.7,
-    tags: ["heal", "regen", "magic_user"],
-    skills: ["life_renew", "life_mass", "life_revive", "life_regen"],
-  },
-  binder: {
-    id: "binder",
-    label: "缚术师",
-    archetype: "mage",
-    hp: 0.85,
-    atk: 0.65,
-    def: 0.8,
-    int: 1.7,
-    tags: ["control", "magic_user"],
-    skills: ["binder_sleep", "binder_charm", "binder_bind", "binder_focus"],
-  },
-  summoner: {
-    id: "summoner",
-    label: "召唤师",
-    archetype: "mage",
-    hp: 0.9,
-    atk: 0.6,
-    def: 0.85,
-    int: 1.65,
-    tags: ["summon", "magic_user"],
-    skills: ["summoner_call", "summoner_poison", "summoner_ward", "summoner_aura"],
-  },
-  dancer: {
-    id: "dancer",
-    label: "舞者",
-    archetype: "support",
-    hp: 1.0,
-    atk: 0.55,
-    def: 0.9,
-    int: 1.55,
-    tags: ["ap"],
-    skills: ["dancer_step", "dancer_frenzy", "dancer_veil", "dancer_grace"],
-  },
-  healer: {
-    id: "healer",
-    label: "治疗师",
-    archetype: "support",
-    hp: 1.05,
-    atk: 0.5,
-    def: 0.9,
-    int: 1.55,
-    tags: ["heal", "cleanse"],
-    skills: ["healer_heal", "healer_cleanse", "healer_revive", "healer_plus"],
-  },
-  bard: {
-    id: "bard",
-    label: "吟游诗人",
-    archetype: "support",
-    hp: 0.95,
-    atk: 0.6,
-    def: 0.95,
-    int: 1.5,
-    tags: ["buff", "boost_giver"],
-    skills: ["bard_inspire", "bard_ward", "bard_anthem", "bard_aura"],
-  },
-}
-
-export const SUBJOBS_BY_ARCHETYPE: Record<Job, SubJobId[]> = {
-  tank: ["bulwark", "warden"],
-  warrior: ["berserker", "paladin", "spellbreaker", "ranger", "assassin"],
-  mage: ["warlock", "lifebringer", "binder", "summoner"],
-  support: ["dancer", "healer", "bard"],
-}
-
 export function hashOf(seed: string): number {
   let h = 0
   for (let i = 0; i < seed.length; i += 1) h = (h * 31 + seed.charCodeAt(i)) >>> 0
   return h
-}
-
-export function subjobFor(seed: string, job: Job): SubJob {
-  const pool = SUBJOBS_BY_ARCHETYPE[job]
-  return SUBJOBS[pool[hashOf(`${seed}|subjob`) % pool.length]]
 }
 
 /** 池卡/本体卡/镜像卡的技能种子 */
@@ -1073,19 +1025,18 @@ export function skillSeed(cardId: string): string {
  * 绝不额外硬塞第 4、第 5 个技能。
  */
 export function skillDefsFor(seed: string, job: Job, rarity: Rarity, wantThree = false): SkillDef[] {
-  const subjob = subjobFor(seed, job)
-  const pool = subjob.skills.map((id) => SKILLS[id]).filter(Boolean)
+  const pool = Object.values(SKILLS).filter((skill) => skill.job === job)
   const actives = pool.filter((skill) => !skill.passive)
   const passives = pool.filter((skill) => skill.passive)
   const count = wantThree || rarity === "Radiant" || rarity === "Prismatic" ? 3 : 2
   const activeCount = Math.min(actives.length, Math.max(1, count - 1))
   const h = hashOf(`${seed}|skillpick`)
   const pickedActives: SkillDef[] = []
-  for (let i = 0; i < activeCount && i < actives.length; i += 1) {
+  for (let i = 0; i < activeCount; i += 1) {
     pickedActives.push(actives[(h + i) % actives.length]!)
   }
-  const pickedPassives = passives.slice(0, Math.max(1, count - pickedActives.length))
-  return [...pickedActives, ...pickedPassives].slice(0, count)
+  const pickedPassive = passives[hashOf(`${seed}|passivepick`) % passives.length]!
+  return [...pickedActives, pickedPassive]
 }
 
 /**
@@ -1245,6 +1196,7 @@ export function skillDefFromCardSkill(skill: CardSkill, job: Job): SkillDef {
     if (skill.passive) {
       return {
         id: `card-passive-${skill.name}`,
+        job,
         name: skill.name,
         element: skill.element,
         ap: 0,
@@ -1255,6 +1207,7 @@ export function skillDefFromCardSkill(skill: CardSkill, job: Job): SkillDef {
     }
     return {
       id: `card-skill-${skill.name}`,
+      job,
       name: skill.name,
       element: skill.element,
       ap: skill.ap,

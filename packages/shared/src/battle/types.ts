@@ -1,12 +1,5 @@
 import { CONSTELLATION_BONUS, RARITY_BASE } from "../config"
-import {
-  ARCHETYPE_COEF,
-  skillDefFromCardSkill,
-  skillSeed,
-  subjobFor,
-  type SkillDef,
-  type SubJob,
-} from "../skills"
+import { ARCHETYPE_COEF, JOB_STAT_WEIGHTS, skillDefFromCardSkill, type SkillDef } from "../skills"
 import type { CardFaceData, Element, Job, Rarity } from "../types"
 import type { EnemyAi, StarCondition, WeaknessWindow } from "./content"
 
@@ -67,7 +60,6 @@ export interface BattleCard {
   cardId: string
   name: string
   job: Job
-  subjob: SubJob
   rarity: Rarity
   level: number
   constellation: number
@@ -370,47 +362,39 @@ function basePower(face: CardFaceData): number {
   return RARITY_BASE[face.rarity] * levelFactor * starFactor * roll
 }
 
-export function statsFor(face: CardFaceData, subjob: SubJob): BattleStats {
+export function statsFor(face: CardFaceData, skills: SkillDef[]): BattleStats {
   const base = basePower(face)
   const scaled = base * ARCHETYPE_COEF[face.job]
-  const hpContribution = Math.round(scaled * subjob.hp)
+  const w = JOB_STAT_WEIGHTS[face.job]
   return {
-    hpContribution,
-    atk: Math.round(scaled * subjob.atk),
-    def: Math.round(scaled * subjob.def),
-    int: Math.round(scaled * subjob.int),
-    hit: 95 + (subjob.tags.includes("swift") ? 5 : 0),
+    hpContribution: Math.round(scaled * w.hp),
+    atk: Math.round(scaled * w.atk),
+    def: Math.round(scaled * w.def),
+    int: Math.round(scaled * w.int),
+    hit: 95 + (skills.some((skill) => skill.passive && skill.swift) ? 5 : 0),
     crit: 5,
   }
 }
 
 export function createBattleCard(face: CardFaceData, uid: number, cardId: string): BattleCard {
-  const seed = skillSeed(face.id)
-  const subjob = subjobFor(seed, face.job)
   // 战斗技能直接来自卡面自己的 skills 字段（名字、属性、AP、被动与否完全一致）。
   // 不做任何兜底补技能：卡面上没印的技能，战斗里就不存在。
   const skills: SkillDef[] = face.skills.map((skill) => skillDefFromCardSkill(skill, face.job))
   const initialStatuses: StatusEffect[] = []
-  if (subjob.tags.includes("thorns")) {
-    initialStatuses.push({
-      id: "thorns",
-      name: "荆棘",
-      amount: 0.35,
-      turns: 2,
-    })
+  for (const skill of skills) {
+    if (skill.passive && skill.openingStatus) initialStatuses.push({ ...skill.openingStatus })
   }
   return {
     uid,
     cardId,
     name: face.name,
     job: face.job,
-    subjob,
     rarity: face.rarity,
     level: face.level,
     constellation: face.constellation,
     art: face.art,
     face,
-    stats: statsFor(face, subjob),
+    stats: statsFor(face, skills),
     skills,
     acted: false,
     down: false,

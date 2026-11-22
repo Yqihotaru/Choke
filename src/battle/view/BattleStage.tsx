@@ -1203,7 +1203,7 @@ export function BattleStage({
                       </div>
                       <div className="choke-tooltip-sub">
                         {tooltipInfo.skill.passive
-                          ? `${card.subjob.label} · 被动技能（无需点击，自动生效）`
+                          ? `${JOB_LABEL[card.job]} · 被动技能（无需点击，自动生效）`
                           : `${elementLabel(tooltipInfo.skill.element)} · 消耗 ${tooltipInfo.actualAp} AP${
                               tooltipInfo.skill.hits && tooltipInfo.skill.hits > 1
                                 ? ` · ${tooltipInfo.skill.hits} 段连击`
@@ -1388,7 +1388,7 @@ export function BattleStage({
                 >
                   <span>#{idx + 1}</span>
                   <b>{c.name}</b>
-                  <small>{c.down ? "DOWN" : c.subjob.label}</small>
+                  <small>{c.down ? "DOWN" : JOB_LABEL[c.job]}</small>
                 </button>
               ))}
             </div>
@@ -1413,7 +1413,7 @@ export function BattleStage({
                     <GameCardFace card={b.face} />
                   </div>
                   <span className="choke-bench-meta">
-                    {b.subjob.label} · {JOB_LABEL[b.job]} · LV{b.level}
+                    {JOB_LABEL[b.job]} · LV{b.level}
                   </span>
                 </button>
               ))}

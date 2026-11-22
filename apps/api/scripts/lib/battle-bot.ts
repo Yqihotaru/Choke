@@ -4,41 +4,57 @@ import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import type { EncounterSpec } from "@choke/shared/battle/content"
 import { createBattle, type BattleInputCard } from "@choke/shared/battle/engine"
 import { makeCard } from "@choke/shared/card-def"
-import { skillsFor } from "@choke/shared/skills"
+import { cardSkillsFromRefs } from "@choke/shared/skills"
 import type { Job, Mod, Rarity } from "@choke/shared/types"
 
 export const MAX_TURNS = 40
 
 // 一套中等（打得过幽灵、打不过精英），一套满配（能打进终曲的蓄力阶段）
+// 技能直接写 id，不走发牌算法：基准只跟引擎和技能数值有关
 
-function face(id: string, job: Job, rarity: Rarity, level: number, constellation: number, mods: Mod[] = []) {
-  return makeCard({ id, name: id, rarity, job, level, constellation, mods, skills: skillsFor(job, rarity, true, id) })
+export function face(
+  id: string,
+  job: Job,
+  rarity: Rarity,
+  level: number,
+  constellation: number,
+  skillIds: string[],
+  mods: Mod[] = [],
+) {
+  const skills = cardSkillsFromRefs(skillIds.map((skillId) => ({ skillId })))
+  return makeCard({ id, name: id, rarity, job, level, constellation, mods, skills })
 }
-function inputs(faces: ReturnType<typeof face>[], uidBase: number): BattleInputCard[] {
+export function inputs(faces: ReturnType<typeof face>[], uidBase: number): BattleInputCard[] {
   return faces.map((f, i) => ({ uid: uidBase + i, cardId: f.id, face: f }))
 }
 
 export const DECKS: Record<string, BattleInputCard[]> = {
   normal: inputs(
     [
-      face("t-tank", "tank", "R", 20, 1),
-      face("t-war", "warrior", "E", 25, 0, ["HR"]),
-      face("t-mage", "mage", "L", 18, 2, ["DT", "HD"]),
-      face("t-sup", "support", "UC", 30, 3),
+      face("t-tank", "tank", "R", 20, 1, ["bulwark_quake", "bulwark_taunt", "bulwark_thorns"]),
+      face("t-war", "warrior", "E", 25, 0, ["paladin_judgment", "paladin_smite", "paladin_aura"], ["HR"]),
+      face("t-mage", "mage", "L", 18, 2, ["binder_charm", "binder_bind", "binder_focus"], ["DT", "HD"]),
+      face("t-sup", "support", "UC", 30, 3, ["healer_heal", "healer_cleanse", "healer_plus"]),
     ],
     100,
   ),
   strong: inputs(
     [
-      face("s-tank", "tank", "Radiant", 80, 6, ["HR"]),
-      face("s-war", "warrior", "L", 80, 6, ["DT"]),
-      face("s-mage", "mage", "Prismatic", 80, 6, ["HD", "DT"]),
-      face("s-sup", "support", "L", 80, 6),
+      face("s-tank", "tank", "Radiant", 80, 6, ["warden_stun", "warden_bash", "warden_hold"], ["HR"]),
+      face("s-war", "warrior", "L", 80, 6, ["breaker_rift", "breaker_counter", "breaker_swift"], ["DT"]),
+      face("s-mage", "mage", "Prismatic", 80, 6, ["life_mass", "life_revive", "life_regen"], ["HD", "DT"]),
+      face("s-sup", "support", "L", 80, 6, ["bard_anthem", "bard_inspire", "bard_aura"]),
     ],
     300,
   ),
 }
-export const BENCH = inputs([face("b-war", "warrior", "R", 15, 0), face("b-mage", "mage", "UC", 22, 1)], 200)
+export const BENCH = inputs(
+  [
+    face("b-war", "warrior", "R", 15, 0, ["berserker_zero", "berserker_cleave", "berserker_blood"]),
+    face("b-mage", "mage", "UC", 22, 1, ["warlock_meteor", "warlock_frost", "warlock_lowhp"]),
+  ],
+  200,
+)
 
 // 倒下的卡换替补；3 的倍数回合升 1 档防御；每张卡放第一个能放的技能；结束回合
 

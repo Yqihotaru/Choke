@@ -6,11 +6,11 @@ import { GameCardFace } from "@/card/GameCardFace"
 import {
   ELEMENT_COLOR,
   ELEMENT_LABEL,
+  JOB_LABEL,
   RARITY_LABEL,
   battlePower,
   formatNo,
 } from "@/card/data"
-import { skillSeed, subjobFor } from "@/card/jobs"
 import { FOIL_COST, MARKET_MAX_PRICE, essenceOf } from "@/card/economy"
 import {
   constellationCap,
@@ -373,7 +373,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
 
         <div className="card-detail__info">
           <div className="card-detail__eyebrow">
-            {RARITY_LABEL[current.rarity]} · {subjobFor(skillSeed(current.id), current.job).label}
+            {RARITY_LABEL[current.rarity]} · {JOB_LABEL[current.job]}
             {current.foil ? " · ✦ FLASH" : ""}
           </div>
           <h2 className="card-detail__name">{current.name}</h2>
