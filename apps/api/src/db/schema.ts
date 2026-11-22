@@ -71,8 +71,6 @@ export const users = pgTable("users", {
   heroBonus: integer("hero_bonus").notNull().default(0),
   /** 闪卡精华：只来自闪卡，只用于镀闪 */
   essence: integer("essence").notNull().default(0),
-  /** 分解碎片：1:1 换经验 */
-  shards: integer("shards").notNull().default(0),
   /** 市场用金币 */
   coins: integer("coins").notNull().default(100),
   /** 玩家等级 / 教程进度（由前端同步，市场等服务端校验） */
@@ -147,6 +145,17 @@ export const userPacks = pgTable(
     count: integer("count").notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.userId, table.pool] })],
+)
+
+/** 碎片、经验道具等可堆叠物品；item_id 见 @choke/shared/items */
+export const userItems = pgTable(
+  "user_items",
+  {
+    userId: text("user_id").notNull(),
+    itemId: text("item_id").notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.itemId] })],
 )
 
 export const packTokens = pgTable(

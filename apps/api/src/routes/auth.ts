@@ -28,6 +28,7 @@ import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
 import { cards, userCards, userPacks, users } from "../db/schema"
 import { grantCard } from "../gacha/open"
+import { loadItems } from "../items"
 import { invalidatePublicCardCache } from "./cards"
 import { heroCardDef } from "../hero"
 import { upsertMirrorCard } from "../mirror"
@@ -341,7 +342,7 @@ export async function authRoutes(app: FastifyInstance) {
         profileUrl: user.osuId == null ? null : `https://osu.ppy.sh/users/${user.osuId}`,
         onboarded: user.onboarded,
         essence: user.essence,
-        shards: user.shards,
+        items: await loadItems(user.id),
         coins: user.coins,
         hero,
       },

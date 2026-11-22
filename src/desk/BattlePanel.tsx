@@ -4,6 +4,7 @@ import { playSfx } from "@/audio/sfx"
 import { STAGE_PRESETS, TUTORIAL_ENEMY_HP } from "@/battle/engine"
 import { battlePower } from "@/card/data"
 import { DUNGEONS } from "@choke/shared/dungeons"
+import { ITEMS } from "@choke/shared/items"
 import { useTutorialProgress } from "@/tutorial/store"
 
 import {
@@ -57,6 +58,9 @@ export function BattlePanel({
       if (result.rewards.essence) parts.push(`精华 +${result.rewards.essence}`)
       if (result.rewards.coins) parts.push(`金币 +${result.rewards.coins}`)
       if (result.rewards.packs) parts.push(`普通卡包 +${result.rewards.packs}`)
+      for (const stack of result.rewards.items ?? []) {
+        parts.push(`${ITEMS[stack.itemId].name} ×${stack.count}`)
+      }
       playSfx(result.rewards.packs ? "levelup" : "success")
       setDungeonMessage({ text: `通关：${parts.join(" · ")}` })
       emitDeskData("packs")

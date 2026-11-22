@@ -9,6 +9,7 @@
     "./config": "./src/config.ts",
     "./progression": "./src/progression.ts",
     "./economy": "./src/economy.ts",
+    "./items": "./src/items.ts",
     "./tutorial": "./src/tutorial.ts",
     "./pool/types": "./src/pool/types.ts",
     "./pool/score": "./src/pool/score.ts",

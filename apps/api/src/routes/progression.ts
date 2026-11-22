@@ -2,22 +2,63 @@ import { and, asc, count, desc, eq, getTableColumns, gte, inArray, lt, ne, sql }
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
+import {
+  ITEMS,
+  SHARDS_PER_DISMANTLE,
+  expToItems,
+  isItemId,
+  shardItemId,
+  type ItemStack,
+} from "@choke/shared/items"
+
 import { requireSelf } from "../auth/guard"
 import {
   FOIL_COST,
-  SHARD_EXP_RATE,
+  applyExp,
   constellationCap,
   essenceOf,
   expToNext,
+  feedExpOf,
   isHeroCardId,
   levelCap,
-  meltExpOf,
-  shardOf,
+  refundExpOf,
   type Rarity,
 } from "../shared/cards"
 import { db } from "../db/client"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
-import { TxAbort, lockUser, runTx } from "../tx"
+import { grantItems, loadItems, mergeStacks, spendItems } from "../items"
+import { TxAbort, lockUser, runTx, type Tx } from "../tx"
+
+const feedBodySchema = z
+  .object({
+    cards: z.array(z.number().int().positive()).max(60).default([]),
+    items: z
+      .array(
+        z.object({
+          itemId: z.string().refine(isItemId, "未知物品"),
+          count: z.number().int().positive().max(100_000),
+        }),
+      )
+      .max(20)
+      .default([]),
+  })
+  .refine((body) => body.cards.length > 0 || body.items.length > 0, "至少选一张卡或一种物品")
+  .refine((body) => new Set(body.cards).size === body.cards.length, "卡不能重复")
+
+/** 从卡册里移走一张卡：同时清掉布阵和在架的市场单 */
+async function removeUserCard(tx: Tx, userId: string, userCardId: number) {
+  const removed = await tx
+    .delete(userCards)
+    .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+    .returning({ id: userCards.id })
+  if (removed.length === 0) return false
+  await tx.delete(deckSlots).where(eq(deckSlots.userCardId, userCardId))
+  await tx
+    .update(marketListings)
+    .set({ status: "cancelled" })
+    .where(eq(marketListings.userCardId, userCardId))
+  return true
+}
 
 const cardColumns = {
   ...getTableColumns(cards),
@@ -73,7 +114,7 @@ async function loadFuel(userId: string, excludeUserCardId: number) {
 }
 
 export async function progressionRoutes(app: FastifyInstance) {
-  /** 可作为熔卡/升命座材料的重复卡 */
+  /** 可作为喂养/融合材料的重复卡 */
   app.get("/users/:userId/cards/:userCardId/fuel", async (request, reply) => {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
@@ -232,111 +273,123 @@ export async function progressionRoutes(app: FastifyInstance) {
     }
   })
 
-  app.post("/users/:userId/cards/:userCardId/melt", async (request, reply) => {
+  /**
+   * 喂养：一次喂多张卡 + 多种物品（碎片、经验道具），喂完自动升级。
+   * 卡：基础喂养值 + 已投入经验 × 75%；同名卡至少留一张。闪卡另给精华。
+   * 满级后溢出的经验作废，返回 wasted 让前端提示；已满级的卡直接拒收。
+   */
+  app.post("/users/:userId/cards/:userCardId/feed", async (request, reply) => {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
     const { userCardId } = params
-    const body = z
-      .object({ sourceUserCardId: z.number().int().positive() })
-      .parse(request.body)
+    const body = feedBodySchema.parse(request.body)
+    const stacks = mergeStacks(body.items as ItemStack[])
 
-    const target = await loadCard(userId, userCardId)
-    if (!target) {
-      return reply.code(404).send({
-        ok: false,
-        error: { code: "not_found", message: "卡不在这个账号的卡册里" },
-      })
-    }
-    if (body.sourceUserCardId === userCardId) {
+    if (body.cards.includes(userCardId)) {
       return reply.code(400).send({
         ok: false,
-        error: { code: "melt_self", message: "不能把卡熔给它自己" },
+        error: { code: "feed_self", message: "不能把卡喂给它自己" },
       })
     }
 
-    const [source] = await db
-      .select({
-        id: userCards.id,
-        cardId: userCards.cardId,
-        rarity: cards.rarity,
-        foil: userCards.foil,
-      })
-      .from(userCards)
-      .innerJoin(cards, eq(cards.id, userCards.cardId))
-      .where(and(eq(userCards.userId, userId), eq(userCards.id, body.sourceUserCardId)))
-      .limit(1)
-
-    if (!source) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "source_not_found", message: "材料卡不在这个账号的卡册里" },
-      })
-    }
-
-    const [{ value: copies }] = await db
-      .select({ value: count() })
-      .from(userCards)
-      .where(and(eq(userCards.userId, userId), eq(userCards.cardId, source.cardId)))
-
-    if (Number(copies) < 2) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "last_copy", message: "这是最后一张，不能熔" },
-      })
-    }
-
-    const gained = meltExpOf(source.rarity as Rarity)
-    const essenceGained = essenceOf(source.rarity as Rarity, source.foil)
-
-    const melted = await runTx(reply, async (tx) => {
+    const result = await runTx(reply, async (tx) => {
       await lockUser(tx, userId)
-      const removed = await tx
-        .delete(userCards)
-        .where(and(eq(userCards.id, source.id), eq(userCards.userId, userId)))
-        .returning({ id: userCards.id })
-      if (removed.length === 0) {
-        throw new TxAbort(400, "source_not_found", "材料卡不在这个账号的卡册里")
-      }
-      const [{ value: left }] = await tx
-        .select({ value: count() })
+
+      const [target] = await tx
+        .select({ id: cards.id, rarity: cards.rarity, level: userCards.level, exp: userCards.exp })
         .from(userCards)
-        .where(and(eq(userCards.userId, userId), eq(userCards.cardId, source.cardId)))
-      if (Number(left) < 1) {
-        throw new TxAbort(400, "last_copy", "这是最后一张，不能熔")
+        .innerJoin(cards, eq(cards.id, userCards.cardId))
+        .where(and(eq(userCards.userId, userId), eq(userCards.id, userCardId)))
+        .limit(1)
+      if (!target) throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
+      const targetHero = isHeroCardId(target.id)
+      if (target.level >= levelCap(targetHero)) {
+        throw new TxAbort(400, "max_level", "已经满级，不需要经验")
       }
 
-      await tx.delete(deckSlots).where(eq(deckSlots.userCardId, source.id))
-      await tx
-        .update(marketListings)
-        .set({ status: "cancelled" })
-        .where(eq(marketListings.userCardId, source.id))
-      const fed = await tx
-        .update(userCards)
-        .set({ exp: sql`${userCards.exp} + ${gained}` })
-        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
-        .returning({ id: userCards.id })
-      if (fed.length === 0) {
-        throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
+      let gained = 0
+      let essenceGained = 0
+
+      if (body.cards.length > 0) {
+        const sources = await tx
+          .select({
+            id: userCards.id,
+            cardId: userCards.cardId,
+            rarity: cards.rarity,
+            level: userCards.level,
+            exp: userCards.exp,
+            foil: userCards.foil,
+          })
+          .from(userCards)
+          .innerJoin(cards, eq(cards.id, userCards.cardId))
+          .where(and(eq(userCards.userId, userId), inArray(userCards.id, body.cards)))
+        if (sources.length !== body.cards.length) {
+          throw new TxAbort(400, "source_not_found", "有材料卡不在这个账号的卡册里")
+        }
+        if (sources.some((source) => isHeroCardId(source.cardId))) {
+          throw new TxAbort(400, "hero_protected", "本体卡不能当材料")
+        }
+
+        const using = new Map<string, number>()
+        for (const source of sources) using.set(source.cardId, (using.get(source.cardId) ?? 0) + 1)
+        const owned = await tx
+          .select({ cardId: userCards.cardId, value: count() })
+          .from(userCards)
+          .where(and(eq(userCards.userId, userId), inArray(userCards.cardId, [...using.keys()])))
+          .groupBy(userCards.cardId)
+        for (const row of owned) {
+          if (Number(row.value) - (using.get(row.cardId) ?? 0) < 1) {
+            throw new TxAbort(400, "last_copy", "每张卡至少要留一张，不能全喂掉")
+          }
+        }
+
+        for (const source of sources) {
+          const rarity = source.rarity as Rarity
+          gained += feedExpOf({ rarity, level: source.level, exp: source.exp })
+          essenceGained += essenceOf(rarity, source.foil)
+          await removeUserCard(tx, userId, source.id)
+        }
       }
-      const [wallet] = await tx
-        .update(users)
-        .set({ essence: sql`${users.essence} + ${essenceGained}` })
-        .where(eq(users.id, userId))
-        .returning({ essence: users.essence })
-      return { essence: wallet?.essence ?? 0 }
+
+      if (stacks.length > 0) {
+        await spendItems(tx, userId, stacks)
+        for (const { itemId, count: amount } of stacks) gained += ITEMS[itemId].exp * amount
+      }
+
+      const next = applyExp(target.level, target.exp, gained, target.rarity as Rarity, targetHero)
+      await tx
+        .update(userCards)
+        .set({ level: next.level, exp: next.exp })
+        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+
+      let essence: number | undefined
+      if (essenceGained > 0) {
+        const [wallet] = await tx
+          .update(users)
+          .set({ essence: sql`${users.essence} + ${essenceGained}` })
+          .where(eq(users.id, userId))
+          .returning({ essence: users.essence })
+        essence = wallet?.essence
+      }
+
+      return {
+        gained,
+        wasted: next.wasted,
+        levelsGained: next.level - target.level,
+        essenceGained,
+        essence,
+        items: await loadItems(userId, tx),
+      }
     })
-    if (!melted) return
-    const wallet = melted
+    if (!result) return
 
     return {
       ok: true,
       data: {
         card: await loadCard(userId, userCardId),
-        gained,
-        essenceGained,
-        essence: wallet?.essence ?? 0,
-        consumedUserCardId: source.id,
+        ...result,
+        consumedUserCardIds: body.cards,
       },
     }
   })
@@ -415,76 +468,9 @@ export async function progressionRoutes(app: FastifyInstance) {
     }
   })
 
-  /** 碎片换经验：1 碎片 = SHARD_EXP_RATE 经验，可以喂任何卡（含本体卡），满级卡不收。 */
-  app.post("/users/:userId/cards/:userCardId/shards", async (request, reply) => {
-    const params = paramsSchema.parse(request.params)
-    const userId = requireSelf(request, reply, params.userId)
-    if (!userId) return
-    const { userCardId } = params
-    const body = z
-      .object({ amount: z.number().int().positive().max(1_000_000) })
-      .parse(request.body)
-
-    const target = await loadCard(userId, userCardId)
-    if (!target) {
-      return reply.code(404).send({
-        ok: false,
-        error: { code: "not_found", message: "卡不在这个账号的卡册里" },
-      })
-    }
-    if (target.level >= levelCap(isHeroCardId(target.id))) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "max_level", message: "已满级，不需要经验" },
-      })
-    }
-
-    const spent = body.amount
-    const gained = spent * SHARD_EXP_RATE
-
-    const fed = await runTx(reply, async (tx) => {
-      const [wallet] = await tx
-        .update(users)
-        .set({ shards: sql`${users.shards} - ${spent}` })
-        .where(and(eq(users.id, userId), gte(users.shards, spent)))
-        .returning({ shards: users.shards })
-      if (!wallet) {
-        const [user] = await tx
-          .select({ shards: users.shards })
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1)
-        const shards = user?.shards ?? 0
-        throw new TxAbort(400, "not_enough_shards", `碎片不足：${shards} / ${spent}`, {
-          need: spent,
-          shards,
-        })
-      }
-      const updated = await tx
-        .update(userCards)
-        .set({ exp: sql`${userCards.exp} + ${gained}` })
-        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
-        .returning({ id: userCards.id })
-      if (updated.length === 0) {
-        throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
-      }
-      return wallet
-    })
-    if (!fed) return
-
-    return {
-      ok: true,
-      data: {
-        card: await loadCard(userId, userCardId),
-        spent,
-        gained,
-        shards: fed.shards,
-      },
-    }
-  })
-
   /**
-   * 通用分解：任意卡 → 碎片（闪卡额外给精华）。与「融卡升命座」不同，这里不需要同名卡。
+   * 通用分解：任意卡 → 4 个同品质碎片（闪卡另给精华）。与「融合升命座」不同，这里不需要同名卡。
+   * 升过级的卡另按已投入经验 × 75% 返还经验道具（大/中/小拆分，尾数舍去）。
    * 仍然保留最后一张，避免把某张卡彻底分解光。
    */
   app.post("/users/:userId/cards/:userCardId/dismantle", async (request, reply) => {
@@ -507,51 +493,41 @@ export async function progressionRoutes(app: FastifyInstance) {
       })
     }
 
-    const [{ value: copies }] = await db
-      .select({ value: count() })
-      .from(userCards)
-      .where(and(eq(userCards.userId, userId), eq(userCards.cardId, target.id)))
-    if (Number(copies) < 2) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "last_copy", message: "这是最后一张，不能分解" },
-      })
-    }
-
-    const shardsGained = shardOf(target.rarity as Rarity)
-    const essenceGained = essenceOf(target.rarity as Rarity, target.foil)
+    const rarity = target.rarity as Rarity
+    const essenceGained = essenceOf(rarity, target.foil)
 
     const dismantled = await runTx(reply, async (tx) => {
       await lockUser(tx, userId)
-      const removed = await tx
-        .delete(userCards)
-        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
-        .returning({ id: userCards.id })
-      if (removed.length === 0) {
-        throw new TxAbort(404, "not_found", "这不是你账号里的卡")
-      }
-      const [{ value: left }] = await tx
+      const [{ value: copies }] = await tx
         .select({ value: count() })
         .from(userCards)
         .where(and(eq(userCards.userId, userId), eq(userCards.cardId, target.id)))
-      if (Number(left) < 1) {
+      if (Number(copies) < 2) {
         throw new TxAbort(400, "last_copy", "这是最后一张，不能分解")
       }
 
-      await tx.delete(deckSlots).where(eq(deckSlots.userCardId, userCardId))
-      await tx
-        .update(marketListings)
-        .set({ status: "cancelled" })
-        .where(eq(marketListings.userCardId, userCardId))
+      // 等级和经验在锁内重读，避免和并发的喂养交错
+      const [fresh] = await tx
+        .select({ level: userCards.level, exp: userCards.exp })
+        .from(userCards)
+        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+        .limit(1)
+      if (!fresh || !(await removeUserCard(tx, userId, userCardId))) {
+        throw new TxAbort(404, "not_found", "这不是你账号里的卡")
+      }
+
+      const itemsGained: ItemStack[] = [
+        { itemId: shardItemId(rarity), count: SHARDS_PER_DISMANTLE },
+        ...expToItems(refundExpOf(fresh.level, fresh.exp, rarity, false)),
+      ]
+      await grantItems(tx, userId, itemsGained)
+
       const [wallet] = await tx
         .update(users)
-        .set({
-          shards: sql`${users.shards} + ${shardsGained}`,
-          essence: sql`${users.essence} + ${essenceGained}`,
-        })
+        .set({ essence: sql`${users.essence} + ${essenceGained}` })
         .where(eq(users.id, userId))
-        .returning({ essence: users.essence, shards: users.shards })
-      return { essence: wallet?.essence ?? 0, shards: wallet?.shards ?? 0 }
+        .returning({ essence: users.essence })
+      return { essence: wallet?.essence ?? 0, itemsGained, items: await loadItems(userId, tx) }
     })
     if (!dismantled) return
 
@@ -559,9 +535,9 @@ export async function progressionRoutes(app: FastifyInstance) {
       ok: true,
       data: {
         removedUserCardId: userCardId,
-        shardsGained,
+        itemsGained: dismantled.itemsGained,
         essenceGained,
-        shards: dismantled.shards,
+        items: dismantled.items,
         essence: dismantled.essence,
       },
     }

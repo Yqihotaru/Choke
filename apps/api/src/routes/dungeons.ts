@@ -8,6 +8,7 @@ import { settleStamina, spendStamina, staminaNextIn, STAMINA_MAX } from "@choke/
 import { requireSelf } from "../auth/guard"
 import { db } from "../db/client"
 import { dungeonRuns, userPacks, users } from "../db/schema"
+import { grantItems } from "../items"
 
 const paramsSchema = z.object({ userId: z.string() })
 const runParamsSchema = z.object({ userId: z.string(), dungeonId: z.string() })
@@ -60,7 +61,7 @@ export async function dungeonRoutes(app: FastifyInstance) {
       })
     }
 
-    const { essence = 0, coins = 0, packs = 0 } = dungeon.rewards
+    const { essence = 0, coins = 0, packs = 0, items = [] } = dungeon.rewards
 
     // 体力是「读出 → 按时间结算 → 写回」，所以用 (stamina, updatedAt) 做乐观锁：
     // 并发请求只有一个能写成功，其余重读后重算，不会重复使用同一份体力。
@@ -121,6 +122,7 @@ export async function dungeonRoutes(app: FastifyInstance) {
               set: { count: sql`${userPacks.count} + ${packs}` },
             })
         }
+        if (items.length > 0) await grantItems(tx, userId, items)
 
         await tx.insert(dungeonRuns).values({
           userId,

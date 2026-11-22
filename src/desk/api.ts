@@ -1,6 +1,9 @@
 import { faceFromDef, type CardDef } from "@/card/def"
 import type { CardFaceData, CardSkill, CardSkillRef, Job, Rarity } from "@/card/types"
+import type { DungeonRewards } from "@choke/shared/dungeons"
+import type { ItemId, ItemStack } from "@choke/shared/items"
 
+export type ItemWallet = Partial<Record<ItemId, number>>
 /** `/users/:id/cards` 和 `/users/:id/deck` 共用的卡行 */
 export interface ApiUserCard {
   id: string
@@ -194,27 +197,29 @@ export function ascendCard(
   )
 }
 
-export function meltCard(
-  userId: string,
-  userCardId: number,
-  sourceUserCardId: number,
-): Promise<{
+export interface FeedResult {
   card: ApiUserCard
   gained: number
+  /** 满级后溢出作废的经验 */
+  wasted: number
+  levelsGained: number
   essenceGained: number
-  essence: number
-  consumedUserCardId: number
-}> {
-  return request<{
-    card: ApiUserCard
-    gained: number
-    essenceGained: number
-    essence: number
-    consumedUserCardId: number
-  }>(`/api/users/${userId}/cards/${userCardId}/melt`, {
+  /** 只有喂了闪卡才返回 */
+  essence?: number
+  items: ItemWallet
+  consumedUserCardIds: number[]
+}
+
+/** 喂养：多张卡 + 多种物品一次喂给目标卡，服务端自动升级 */
+export function feedCard(
+  userId: string,
+  userCardId: number,
+  input: { cards?: number[]; items?: ItemStack[] },
+): Promise<FeedResult> {
+  return request<FeedResult>(`/api/users/${userId}/cards/${userCardId}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sourceUserCardId }),
+    body: JSON.stringify({ cards: input.cards ?? [], items: input.items ?? [] }),
   })
 }
 
@@ -302,8 +307,8 @@ export interface AccountMe {
   profileUrl: string | null
   onboarded: boolean
   essence: number
-  /** 旧后端没有这个字段 */
-  shards?: number
+  /** 碎片、经验道具等；旧后端没有这个字段 */
+  items?: ItemWallet
   coins: number
   hero: ApiUserCard | null
 }
@@ -571,7 +576,7 @@ export function fetchStamina(userId: string, signal?: AbortSignal): Promise<Stam
 }
 
 export interface DungeonRunResult {
-  rewards: { essence?: number; coins?: number; packs?: number }
+  rewards: DungeonRewards
   stamina: StaminaState
   essence: number
   coins: number
@@ -588,25 +593,12 @@ export function dismantleCard(
   userCardId: number,
 ): Promise<{
   removedUserCardId: number
-  shardsGained: number
+  itemsGained: ItemStack[]
   essenceGained: number
-  shards: number
+  items: ItemWallet
   essence: number
 }> {
   return request(`/api/users/${userId}/cards/${userCardId}/dismantle`, {
     method: "POST",
-  })
-}
-
-/** 碎片 1:1 换经验 */
-export function feedShards(
-  userId: string,
-  userCardId: number,
-  amount: number,
-): Promise<{ card: ApiUserCard; spent: number; gained: number; shards: number }> {
-  return request(`/api/users/${userId}/cards/${userCardId}/shards`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
   })
 }

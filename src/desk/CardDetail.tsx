@@ -11,20 +11,23 @@ import {
   formatNo,
 } from "@/card/data"
 import { skillSeed, subjobFor } from "@/card/jobs"
-import {
-  FOIL_COST,
-  MARKET_MAX_PRICE,
-  SHARD_EXP_RATE,
-  essenceOf,
-  shardOf,
-} from "@/card/economy"
+import { FOIL_COST, MARKET_MAX_PRICE, essenceOf } from "@/card/economy"
 import {
   constellationCap,
   expToNext,
+  feedExpOf,
   isHeroCardId,
   levelCap,
-  meltExpOf,
+  refundExpOf,
 } from "@/card/progression"
+import {
+  EXP_ITEMS,
+  ITEMS,
+  SHARDS_PER_DISMANTLE,
+  SHARD_ITEMS,
+  expToItems,
+  type ItemStack,
+} from "@choke/shared/items"
 import { useModal } from "@/ui/useModal"
 
 import { useTutorialProgress } from "@/tutorial/store"
@@ -34,14 +37,14 @@ import {
   ascendCard,
   dismantleCard,
   enhanceCard,
-  feedShards,
+  feedCard,
   fetchFuel,
   fetchMe,
   levelUpCard,
   listMarketCard,
-  meltCard,
   toFace,
   type ApiUserCard,
+  type ItemWallet,
 } from "./api"
 import "./book.css"
 import { ConfirmBar } from "./ConfirmBar"
@@ -70,6 +73,27 @@ interface Message {
 /** 分解成功后留这么久给玩家看反馈，再关弹窗 */
 const DISMANTLE_CLOSE_MS = 1100
 
+/** 先用经验道具、再用碎片，按单价从小到大凑够 need；尽量少溢出，也少动作为材料的碎片 */
+function pickTopUp(wallet: ItemWallet, need: number): ItemStack[] {
+  const picks: ItemStack[] = []
+  let left = need
+  const order = [...[...EXP_ITEMS].sort((a, b) => a.exp - b.exp), ...SHARD_ITEMS]
+  for (const item of order) {
+    if (left <= 0) break
+    const owned = wallet[item.id] ?? 0
+    const count = Math.min(owned, Math.ceil(left / item.exp))
+    if (count > 0) {
+      picks.push({ itemId: item.id, count })
+      left -= count * item.exp
+    }
+  }
+  return picks
+}
+
+function describeStacks(stacks: readonly ItemStack[]): string {
+  return stacks.map((stack) => `${ITEMS[stack.itemId].name} ×${stack.count}`).join("、")
+}
+
 export function CardDetail({ card, userId, readOnly = false, onClose, onChanged }: Props) {
   const [current, setCurrent] = useState(card)
   const [fuel, setFuel] = useState<ApiUserCard[]>([])
@@ -79,7 +103,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [pending, setPending] = useState<Pending | null>(null)
   const [listed, setListed] = useState(false)
   const [essence, setEssence] = useState<number | null>(null)
-  const [shards, setShards] = useState<number | null>(null)
+  const [items, setItems] = useState<ItemWallet | null>(null)
   const [coins, setCoins] = useState<number | null>(null)
   const [isGuest, setIsGuest] = useState(false)
   const [price, setPrice] = useState("30")
@@ -105,7 +129,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       .then((data) => {
         if (!cancelled) {
           setEssence(data.essence)
-          setShards(data.shards ?? 0)
+          setItems(data.items ?? {})
           setCoins(data.coins)
           setIsGuest(!!data.isGuest)
         }
@@ -152,11 +176,13 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const sameCardFuel = fuel.filter((row) => row.id === current.id).length
   const canAscend = current.constellation < conCap && sameCardFuel > 0
   const expPct = maxed ? 100 : Math.min(100, (current.exp / Math.max(1, need)) * 100)
-  /** 碎片只补到够升下一级为止，不多扣 */
-  const shardTopUp = maxed
-    ? 0
-    : Math.min(shards ?? 0, Math.ceil(Math.max(0, need - current.exp) / SHARD_EXP_RATE))
-  const dismantleShards = shardOf(current.rarity)
+  /** 物品只补到够升下一级为止，不多扣 */
+  const topUpPicks = maxed || canLevel ? [] : pickTopUp(items ?? {}, need - current.exp)
+  const itemExpTotal = Object.entries(items ?? {}).reduce(
+    (sum, [id, count]) => sum + ITEMS[id as keyof typeof ITEMS].exp * (count ?? 0),
+    0,
+  )
+  const dismantleRefund = expToItems(refundExpOf(current.level, current.exp, current.rarity, hero))
   const dismantleEssence = essenceOf(current.rarity, current.foil)
   const bp = battlePower(face)
 
@@ -173,9 +199,9 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       const result = await action()
       sound()
       setCurrent(result.card)
-      const maybeWallet = result as { essence?: number; shards?: number }
+      const maybeWallet = result as { essence?: number; items?: ItemWallet }
       if (typeof maybeWallet.essence === "number") setEssence(maybeWallet.essence)
-      if (typeof maybeWallet.shards === "number") setShards(maybeWallet.shards)
+      if (maybeWallet.items) setItems(maybeWallet.items)
       setMessage({ text: done(result) })
       onChanged?.()
       loadFuel(result.card.userCardId)
@@ -207,25 +233,32 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
     )
   }
 
+  const feedDone = (result: { gained: number; levelsGained: number; wasted: number; essenceGained: number }) =>
+    [
+      `+${result.gained} EXP`,
+      result.levelsGained > 0 ? `升了 ${result.levelsGained} 级` : "",
+      result.wasted > 0 ? `满级溢出 ${result.wasted}` : "",
+      result.essenceGained > 0 ? `+${result.essenceGained} 精华` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ")
+
   const melt = (source: ApiUserCard) => {
     if (!userId) return
     return run(
       `melt-${source.userCardId}`,
-      () => meltCard(userId, current.userCardId, source.userCardId),
-      (result) =>
-        result.essenceGained > 0
-          ? `熔入 ${result.gained} EXP · +${result.essenceGained} 精华`
-          : `熔入 ${result.gained} EXP`,
+      () => feedCard(userId, current.userCardId, { cards: [source.userCardId] }),
+      feedDone,
       () => playSfx("melt"),
     )
   }
 
   const topUp = () => {
-    if (!userId || shardTopUp <= 0) return
+    if (!userId || topUpPicks.length === 0) return
     return run(
-      "shards",
-      () => feedShards(userId, current.userCardId, shardTopUp),
-      (result) => `消耗 ${result.spent} 碎片 · +${result.gained} EXP`,
+      "items",
+      () => feedCard(userId, current.userCardId, { items: topUpPicks }),
+      feedDone,
       () => playSfx("melt"),
     )
   }
@@ -251,12 +284,12 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       ok = true
       playSfx("shatter")
       setEssence(result.essence)
-      setShards(result.shards)
+      setItems(result.items)
       setMessage({
         text:
           result.essenceGained > 0
-            ? `已分解 · +${result.shardsGained} 碎片 · +${result.essenceGained} 精华`
-            : `已分解 · +${result.shardsGained} 碎片`,
+            ? `已分解 · ${describeStacks(result.itemsGained)} · +${result.essenceGained} 精华`
+            : `已分解 · ${describeStacks(result.itemsGained)}`,
       })
       onChanged?.()
       emitDeskData("packs")
@@ -417,29 +450,31 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   disabled={maxed || busy !== null}
                   aria-expanded={fuelOpen && !maxed}
                 >
-                  熔卡换经验
+                  喂卡换经验
                 </button>
               </div>
               <div className="card-detail__wallet">
-                <span>分解碎片</span>
-                <b className="bk-num">{shards ?? "—"}</b>
-                <em>1 碎片 = {SHARD_EXP_RATE} EXP</em>
+                <span>碎片 / 经验乐谱</span>
+                <b className="bk-num">{items ? itemExpTotal.toLocaleString("en-US") : "—"}</b>
+                <em>可折算 EXP</em>
               </div>
               <div className="card-detail__actions">
                 <button
                   type="button"
                   className="bk-btn"
                   onClick={() => void topUp()}
-                  disabled={shardTopUp <= 0 || busy !== null}
-                  title={canLevel ? "经验已够升级" : undefined}
+                  disabled={topUpPicks.length === 0 || busy !== null}
+                  title={topUpPicks.length > 0 ? describeStacks(topUpPicks) : undefined}
                 >
-                  {busy === "shards"
+                  {busy === "items"
                     ? "补经验中…"
                     : maxed
                       ? "已满级"
                       : canLevel
                         ? "经验已够升级"
-                        : `碎片补经验 · ${shardTopUp}`}
+                        : topUpPicks.length > 0
+                          ? "补到下一级"
+                          : "没有可用物品"}
                 </button>
                 {!hero && (
                   <button
@@ -448,7 +483,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                     onClick={() => setPending({ kind: "dismantle" })}
                     disabled={busy !== null}
                   >
-                    {busy === "dismantle" ? "分解中…" : "分解（换碎片）"}
+                    {busy === "dismantle" ? "分解中…" : `分解 · ${SHARDS_PER_DISMANTLE} 碎片`}
                   </button>
                 )}
               </div>
@@ -479,7 +514,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                 <ConfirmBar
                   danger
                   confirmLabel="确认分解"
-                  message={`分解这张 ${current.name}？获得 ${dismantleShards} 碎片${dismantleEssence > 0 ? ` + ${dismantleEssence} 精华` : ""}，卡会消失（最后一张不能分解）。`}
+                  message={`分解这张 ${current.name}？获得 ${SHARDS_PER_DISMANTLE} 个 ${current.rarity} 碎片${dismantleRefund.length > 0 ? `，返还 ${describeStacks(dismantleRefund)}` : ""}${dismantleEssence > 0 ? ` + ${dismantleEssence} 精华` : ""}，卡会消失（最后一张不能分解）。`}
                   onCancel={() => setPending(null)}
                   onConfirm={confirmPending}
                 />
@@ -497,18 +532,18 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
 
           {!readOnly && fuelOpen && !maxed && (
             <div className="card-detail__fuel">
-              <div className="bk-label">可熔重复卡 · 同名卡 {sameCardFuel} 张</div>
+              <div className="bk-label">可喂重复卡 · 同名卡 {sameCardFuel} 张</div>
               {pending?.kind === "melt" && (
                 <ConfirmBar
                   danger
-                  confirmLabel="确认熔掉"
-                  message={`熔掉这张 ${pending.source.name}（${RARITY_LABEL[pending.source.rarity]}${pending.source.foil ? " · 闪" : ""} · Lv.${pending.source.level}）？获得 ${meltExpOf(pending.source.rarity)} EXP${pending.source.foil ? ` + ${essenceOf(pending.source.rarity, true)} 精华` : ""}，这张卡会消失。`}
+                  confirmLabel="确认喂掉"
+                  message={`喂掉这张 ${pending.source.name}（${RARITY_LABEL[pending.source.rarity]}${pending.source.foil ? " · 闪" : ""} · Lv.${pending.source.level}）？获得 ${feedExpOf(pending.source)} EXP${pending.source.foil ? ` + ${essenceOf(pending.source.rarity, true)} 精华` : ""}，这张卡会消失。`}
                   onCancel={() => setPending(null)}
                   onConfirm={confirmPending}
                 />
               )}
               {fuel.length === 0 ? (
-                <p className="bk-note">没有重复卡。再抽到同一张卡后才能熔。</p>
+                <p className="bk-note">没有重复卡。再抽到同一张卡后才能喂。</p>
               ) : (
                 <div className="card-detail__fuel-grid">
                   {fuel.map((row) => (
@@ -518,7 +553,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                       role="button"
                       tabIndex={0}
                       aria-disabled={busy !== null}
-                      aria-label={`熔掉 ${row.name}，${RARITY_LABEL[row.rarity]}${row.foil ? "，闪卡" : ""}，Lv.${row.level}，获得 ${meltExpOf(row.rarity)} EXP`}
+                      aria-label={`喂掉 ${row.name}，${RARITY_LABEL[row.rarity]}${row.foil ? "，闪卡" : ""}，Lv.${row.level}，获得 ${feedExpOf(row)} EXP`}
                       onClick={() => askMelt(row)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
@@ -528,7 +563,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                       }}
                     >
                       <GameCardFace card={toFace(row)} />
-                      <span>+{meltExpOf(row.rarity)} EXP</span>
+                      <span>+{feedExpOf(row)} EXP</span>
                     </div>
                   ))}
                 </div>
@@ -615,7 +650,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
           <p className="bk-note">
             {readOnly
               ? "图鉴数据 · 基础数值（Lv.1 / 0 命座），实际养成的卡面以卡册为准。"
-              : "升级只消耗经验，经验来自熔入重复卡或分解碎片。熔卡比分解再换多 20%。"}
+              : "经验来自喂卡、碎片和经验乐谱。直接喂卡比分解成碎片再喂多 25%；升过级的卡按投入经验的 75% 返还。"}
           </p>
 
           {current.profileUrl && (
