@@ -1,8 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import { refsFromCardSkills } from "@choke/shared/skills"
-import type { CardSkill, Job } from "@choke/shared/types"
+import { requireSkill } from "@choke/shared/skills"
 
 import { db } from "../src/db/client"
 import { cards } from "../src/db/schema"
@@ -23,7 +22,7 @@ interface CardDefRow {
   profileUrl?: string
   art?: string
   banner?: string
-  skills: unknown[]
+  skillRefs: { skillId: string }[]
 }
 
 const file = path.resolve(process.argv[2] ?? "data/choke-cards.json")
@@ -42,6 +41,22 @@ if (!Array.isArray(raw)) {
 
 const rows = (raw as CardDefRow[]).filter((row) => row && row.id && row.rarity && row.name)
 console.log(`读取 ${rows.length} 条卡定义`)
+
+// 认不出的技能 id 直接报错，整批不导入
+for (const row of rows) {
+  if (!Array.isArray(row.skillRefs)) {
+    console.error(`卡 ${row.id} 缺少 skillRefs（旧格式的 skills 不再支持）`)
+    process.exit(1)
+  }
+  for (const ref of row.skillRefs) {
+    try {
+      requireSkill(ref.skillId)
+    } catch (error) {
+      console.error(`卡 ${row.id}：${(error as Error).message}`)
+      process.exit(1)
+    }
+  }
+}
 
 const BATCH = 500
 let done = 0
@@ -66,8 +81,7 @@ for (let i = 0; i < rows.length; i += BATCH) {
     profileUrl: row.profileUrl ?? null,
     art: row.art ?? null,
     banner: row.banner ?? null,
-    skills: row.skills,
-    skillRefs: refsFromCardSkills(row.skills as CardSkill[], row.job as Job),
+    skillRefs: row.skillRefs.map((ref) => ({ skillId: ref.skillId })),
     version: 1,
   }))
 

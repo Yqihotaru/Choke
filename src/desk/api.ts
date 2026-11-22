@@ -1,5 +1,5 @@
 import { faceFromDef, type CardDef } from "@/card/def"
-import type { CardFaceData, CardSkill, CardSkillRef, Job, Rarity } from "@/card/types"
+import type { CardFaceData, CardSkillRef, Job, Rarity } from "@/card/types"
 import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
 import type { DungeonRewards } from "@choke/shared/dungeons"
 import type { ItemId, ItemStack } from "@choke/shared/items"
@@ -19,9 +19,7 @@ export interface ApiUserCard {
   profileUrl: string | null
   art: string | null
   banner: string | null
-  skills: CardSkill[]
-  /** 技能引用（新）：存在时优先于 skills */
-  skillRefs?: CardSkillRef[]
+  skillRefs: CardSkillRef[]
   version: number
   userCardId: number
   level: number
@@ -71,7 +69,6 @@ function toCardDef(row: ApiCardDef): CardDef {
     profileUrl: row.profileUrl ?? undefined,
     art: row.art ?? undefined,
     banner: row.banner ?? undefined,
-    skills: row.skills,
     skillRefs: row.skillRefs,
     version: row.version ?? 1,
   }
@@ -515,8 +512,7 @@ export interface ApiCardDef {
   profileUrl: string | null
   art: string | null
   banner: string | null
-  skills: CardSkill[]
-  skillRefs?: CardSkillRef[]
+  skillRefs: CardSkillRef[]
   version: number
   pulled?: number
   owned?: boolean

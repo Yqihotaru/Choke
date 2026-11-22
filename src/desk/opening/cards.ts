@@ -36,7 +36,7 @@ async function faceOfPulled(item: PulledCard): Promise<CardFaceData> {
       profileUrl: null,
       art: null,
       banner: null,
-      skills: [],
+      skillRefs: [],
       version: 1,
       pulled: item.pulled,
     })

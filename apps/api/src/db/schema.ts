@@ -30,8 +30,7 @@ export const cards = pgTable(
     profileUrl: text("profile_url"),
     art: text("art"),
     banner: text("banner"),
-    skills: jsonb("skills").notNull(),
-    /** 技能引用：[{ skillId, name?, level? }]，存在时优先于 skills */
+    /** 技能引用：[{ skillId }]，卡上只存技能 id */
     skillRefs: jsonb("skill_refs").notNull().default(sql`'[]'::jsonb`),
     /** pool / hero / mirror；公共卡池只抽 pool */
     cardType: text("card_type").notNull().default("pool"),

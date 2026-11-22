@@ -1,5 +1,5 @@
-import { cardSkillsFromRefs, normalizeCardSkill } from "./skills"
-import type { CardFaceData, CardSkill, CardSkillRef, Job, Rarity } from "./types"
+import { cardSkillsFromRefs } from "./skills"
+import type { CardFaceData, CardSkillRef, Job, Rarity } from "./types"
 
 type CardInit = Omit<CardFaceData, "no" | "total"> & { no?: number; total?: number }
 
@@ -8,8 +8,6 @@ export function makeCard(init: CardInit): CardFaceData {
     no: 1,
     total: 100000,
     ...init,
-    // 卡面技能统一走一遍现行技能规范化：名字保留，费用/属性以现行机制为准
-    skills: init.skills.map((skill) => normalizeCardSkill(skill, init.job)),
   }
 }
 
@@ -32,9 +30,8 @@ export interface CardDef {
   profileUrl?: string
   art?: string
   banner?: string
-  skills: CardSkill[]
-  /** 技能引用：存在时优先于 skills */
-  skillRefs?: CardSkillRef[]
+  /** 技能引用：卡上只存技能 id */
+  skillRefs: CardSkillRef[]
   /** 定义版本，用于热更和回滚 */
   version: number
 }
@@ -74,12 +71,8 @@ export function faceFromDef(
     profileUrl: def.profileUrl,
     art: def.art,
     banner: def.banner,
-    skillRefs: def.skillRefs,
-    // 卡面技能与战斗技能共用同一份规范化结果，避免出现「卡上 1 AP、实战 2 AP」
-    skills:
-      def.skillRefs && def.skillRefs.length > 0
-        ? cardSkillsFromRefs(def.skillRefs, def.job)
-        : def.skills.map((skill) => normalizeCardSkill(skill, def.job)),
+    // 卡面技能与战斗技能共用同一份注册表结果，避免出现「卡上 1 AP、实战 2 AP」
+    skills: cardSkillsFromRefs(def.skillRefs),
   })
 }
 
@@ -99,8 +92,7 @@ export function defFromFace(face: CardFaceData, version = 1): CardDef {
     profileUrl: face.profileUrl,
     art: face.art,
     banner: face.banner,
-    skills: face.skills,
-    skillRefs: face.skillRefs,
+    skillRefs: face.skills.map((skill) => ({ skillId: skill.id })),
     version,
   }
 }
@@ -120,8 +112,7 @@ export interface CardDefRow {
   profileUrl?: string
   art?: string
   banner?: string
-  skills: CardSkill[]
-  skillRefs?: CardSkillRef[]
+  skillRefs: CardSkillRef[]
 }
 
 export function defRow(def: CardDef): CardDefRow {
@@ -139,7 +130,6 @@ export function defRow(def: CardDef): CardDefRow {
     profileUrl: def.profileUrl,
     art: def.art,
     banner: def.banner,
-    skills: def.skills,
     skillRefs: def.skillRefs,
   }
 }

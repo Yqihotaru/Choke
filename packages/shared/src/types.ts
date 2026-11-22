@@ -37,6 +37,8 @@ export type Mod =
   | "CL"
 
 export interface CardSkill {
+  /** 技能 id：行为与数值一律取技能注册表 */
+  id: string
   name: string
   element: Element
   /** 行动点消耗 */
@@ -46,12 +48,10 @@ export interface CardSkill {
 }
 
 /**
- * 卡面上的技能引用：只存技能 id，行为与数值由技能注册表提供。
- * `name` 可选，用于保留老卡的显示名（新卡直接显示注册表里的名字）。
+ * 卡的技能引用：只存技能 id，名字、行为与数值由技能注册表提供。
  */
 export interface CardSkillRef {
   skillId: string
-  name?: string
   /** 技能等级，预留给技能升级 */
   level?: number
 }
@@ -72,8 +72,6 @@ export interface CardFaceData {
   /** 这张卡累计发行多少张 */
   pulled?: number
   skills: CardSkill[]
-  /** 技能引用：存在时优先于 skills，用于把技能与卡面解耦 */
-  skillRefs?: CardSkillRef[]
   /** 立绘；缺省时使用占位图。玩家卡用头像地址，由浏览器随看随载。 */
   art?: string
   /** 个人主页 banner。没有地址就不要请求。 */

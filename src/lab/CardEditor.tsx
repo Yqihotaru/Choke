@@ -51,6 +51,7 @@ export function CardEditor() {
       .filter((slot) => slot.enabled && slot.name.trim().length > 0)
       .map((slot) => {
         const skill: CardSkill = {
+          id: `lab-${slot.name.trim()}`,
           name: slot.name.trim(),
           element: slot.element,
           ap: slot.passive ? 0 : slot.ap,

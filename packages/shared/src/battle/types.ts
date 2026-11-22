@@ -379,7 +379,7 @@ export function statsFor(face: CardFaceData, skills: SkillDef[]): BattleStats {
 export function createBattleCard(face: CardFaceData, uid: number, cardId: string): BattleCard {
   // 战斗技能直接来自卡面自己的 skills 字段（名字、属性、AP、被动与否完全一致）。
   // 不做任何兜底补技能：卡面上没印的技能，战斗里就不存在。
-  const skills: SkillDef[] = face.skills.map((skill) => skillDefFromCardSkill(skill, face.job))
+  const skills: SkillDef[] = face.skills.map((skill) => skillDefFromCardSkill(skill))
   const initialStatuses: StatusEffect[] = []
   for (const skill of skills) {
     if (skill.passive && skill.openingStatus) initialStatuses.push({ ...skill.openingStatus })

@@ -160,14 +160,6 @@ export const ARCHETYPE_COEF: Record<Job, number> = {
   support: 0.95,
 }
 
-/** 保留导出以兼容旧引用；v0.1 已将单卡韧性合并入队伍总血条模型 */
-export const POISE_COEF: Record<Job, number> = {
-  tank: 1.4,
-  warrior: 1.2,
-  mage: 0.8,
-  support: 0.9,
-}
-
 const S = (skill: SkillDef) => skill
 
 export const SKILLS: Record<string, SkillDef> = {
@@ -1039,245 +1031,45 @@ export function skillDefsFor(seed: string, job: Job, rarity: Rarity, wantThree =
   return [...pickedActives, pickedPassive]
 }
 
-/**
- * 旧版技能名（数据库里存量卡面 / 早期池卡）→ 现行技能定义 ID。
- * 战斗读取的是卡面自己 `skills` 字段，靠这张表把老名字映射到现行机制，
- * 从而保证「卡面印的技能」和「战斗中能点的技能」永远一一对应。
- */
-const SKILL_NAME_ALIAS: Record<string, string> = {
-  铁壁: "bulwark_guard",
-  反震: "bulwark_thorns",
-  震地: "bulwark_quake",
-  嘲讽: "bulwark_taunt",
-  盾击: "warden_bash",
-  重装甲: "warden_armor",
-  击晕: "warden_stun",
-  坚守: "warden_hold",
-  裂空斩: "berserker_cleave",
-  追风: "berserker_wind",
-  血怒: "berserker_blood",
-  吸血: "berserker_blood",
-  圣光斩: "paladin_smite",
-  庇护: "paladin_protect",
-  审判: "paladin_judgment",
-  守护光环: "paladin_aura",
-  破盾: "breaker_break",
-  法术反制: "breaker_rift",
-  裂法: "breaker_rift",
-  穿甲箭: "ranger_pierce",
-  连射: "ranger_volley",
-  收割: "ranger_harvest",
-  背刺: "assassin_backstab",
-  打断: "assassin_interrupt",
-  暗杀: "assassin_execute",
-  星火: "warlock_starfire",
-  霜缚: "warlock_frost",
-  陨石: "warlock_meteor",
-  残血增幅: "warlock_lowhp",
-  回春: "life_renew",
-  群体治疗: "life_mass",
-  复苏: "life_revive",
-  生生不息: "life_regen",
-  眠咒: "binder_sleep",
-  魅惑: "binder_charm",
-  束缚: "binder_bind",
-  专注: "binder_focus",
-  召唤: "summoner_call",
-  毒藤: "summoner_poison",
-  守护召唤: "summoner_ward",
-  召唤共鸣: "summoner_aura",
-  舞步: "dancer_step",
-  狂热之舞: "dancer_frenzy",
-  舞者增幅: "dancer_grace",
-  回旋: "dancer_veil",
-  治疗: "healer_heal",
-  净化: "healer_cleanse",
-  抬人: "healer_revive",
-  医者仁心: "healer_plus",
-  鼓舞: "bard_inspire",
-  战歌: "bard_ward",
-  英勇颂: "bard_anthem",
-  余音: "bard_aura",
-  回响: "bard_ward",
-  共鸣: "summoner_aura",
-  静默: "binder_charm",
-}
-
-const SWIFT_BY_JOB: Record<Job, string> = {
-  tank: "warden_hold",
-  warrior: "ranger_swift",
-  mage: "binder_focus",
-  support: "bard_aura",
-}
-
-const SKILL_BY_NAME: Record<string, SkillDef> = Object.fromEntries(
-  Object.values(SKILLS).map((def) => [def.name, def]),
-)
-
-/** 解析卡面技能名 → 现行技能定义（先按名字，再按别名，最后按职业补迅捷） */
-function resolveSkillDef(skill: CardSkill, job: Job): SkillDef | undefined {
-  const direct = SKILL_BY_NAME[skill.name]
-  if (direct) return direct
-  if (skill.name === "迅捷") return SKILLS[SWIFT_BY_JOB[job]]
-  const aliasId = SKILL_NAME_ALIAS[skill.name]
-  return aliasId ? SKILLS[aliasId] : undefined
-}
-
-/** 技能名 → 技能 id（用于把老卡数据迁移到 skillRefs） */
-export function skillIdForName(name: string, job: Job): string | null {
-  const direct = SKILL_BY_NAME[name]
-  if (direct) return direct.id
-  if (name === "迅捷") return SWIFT_BY_JOB[job]
-  return SKILL_NAME_ALIAS[name] ?? null
-}
-
 export function skillById(id: string): SkillDef | undefined {
   return SKILLS[id]
 }
 
-/**
- * 把技能引用还原成卡面技能。
- * 优先保留 ref.name（老卡显示名不变），行为与费用一律取注册表。
- */
-// 参数仅为兼容 src/card/def.ts 的调用而保留
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function cardSkillsFromRefs(refs: CardSkillRef[], _job?: Job): CardSkill[] {
-  const out: CardSkill[] = []
-  for (const ref of refs) {
-    const def = SKILLS[ref.skillId]
-    if (!def) continue
-    out.push({
-      name: ref.name ?? def.name,
-      element: def.element,
-      ap: def.passive ? 0 : def.ap,
-      passive: def.passive || undefined,
-    })
-  }
-  if (out.length === 0) return []
-  return out
+/** 认不出的技能 id 直接报错，不做任何兜底 */
+export function requireSkill(id: string): SkillDef {
+  const def = SKILLS[id]
+  if (!def) throw new Error(`未知技能 id：${id}`)
+  return def
 }
 
-/** 把卡面技能转换成技能引用（新卡导入时使用） */
-export function refsFromCardSkills(skills: CardSkill[], job: Job): CardSkillRef[] {
-  const refs: CardSkillRef[] = []
-  for (const skill of skills) {
-    const id = skillIdForName(skill.name, job)
-    if (!id) continue
-    refs.push({ skillId: id, name: skill.name })
-  }
-  return refs
-}
-
-/**
- * 把卡面技能规范化成现行技能的费用/属性。
- * 卡面展示与战斗共用同一份结果，避免「卡上写 1 AP、实战扣 2 AP」这类不一致。
- */
-export function normalizeCardSkill(skill: CardSkill, job: Job): CardSkill {
-  const def = resolveSkillDef(skill, job)
-  if (!def) return skill
-  const passive = Boolean(skill.passive || def.passive)
+/** 技能定义 → 卡面上显示的技能（带 id，费用和属性一律取注册表） */
+export function cardSkillOf(def: SkillDef): CardSkill {
   return {
-    name: skill.name,
+    id: def.id,
+    name: def.name,
     element: def.element,
-    ap: passive ? 0 : def.ap,
-    passive: passive || undefined,
+    ap: def.passive ? 0 : def.ap,
+    passive: def.passive || undefined,
   }
 }
 
-/**
- * 把卡面上的一条 `CardSkill` 解析成战斗内可执行的 `SkillDef`。
- * - 费用 / 属性 / 被动与否与卡面完全一致（卡面已由 `normalizeCardSkill` 规范化）；
- * - 技能行为（倍率 / 段数 / 附加状态）从现行技能表按名字或别名取。
- */
-export function skillDefFromCardSkill(skill: CardSkill, job: Job): SkillDef {
-  const base = resolveSkillDef(skill, job)
-
-  if (!base) {
-    if (skill.passive) {
-      return {
-        id: `card-passive-${skill.name}`,
-        job,
-        name: skill.name,
-        element: skill.element,
-        ap: 0,
-        kind: "passive",
-        passive: true,
-        desc: "被动技能：常驻自动生效。",
-      }
-    }
-    return {
-      id: `card-skill-${skill.name}`,
-      job,
-      name: skill.name,
-      element: skill.element,
-      ap: skill.ap,
-      kind: "damage",
-      costTag: "normal",
-      power: 0.55 + skill.ap * 0.4,
-      hits: 1,
-      target: "enemy",
-      desc: `${skill.ap} AP 单体攻击技能。`,
-    }
-  }
-
-  if (skill.passive) {
-    return {
-      ...base,
-      name: skill.name,
-      element: skill.element,
-      ap: 0,
-      passive: true,
-      kind: "passive",
-    }
-  }
-
-  // 费用与属性一律以现行技能定义为准：卡面已由 normalizeCardSkill 同步成同一份数值
-  return {
-    ...base,
-    name: skill.name,
-    passive: false,
-  }
+/** 把技能引用还原成卡面技能；有认不出的 id 就报错 */
+export function cardSkillsFromRefs(refs: CardSkillRef[]): CardSkill[] {
+  return refs.map((ref) => cardSkillOf(requireSkill(ref.skillId)))
 }
 
-export function cardSkillsFor(seed: string, job: Job, rarity: Rarity, wantThree = false): CardSkill[] {
-  return skillDefsFor(seed, job, rarity, wantThree).map((skill) => ({
-    name: skill.name,
-    element: skill.element,
-    ap: skill.ap,
-    passive: skill.passive,
-  }))
+/** 卡面技能 → 战斗内可执行的技能定义（只认 id） */
+export function skillDefFromCardSkill(skill: CardSkill): SkillDef {
+  return requireSkill(skill.id)
 }
 
 export const JOB_ORDER: Job[] = ["tank", "warrior", "mage", "support"]
 
-export const SKILL_SETS: Record<Job, CardSkill[]> = {
-  tank: [
-    { name: "铁壁", element: "earth", ap: 1 },
-    { name: "反震", element: "metal", ap: 0, passive: true },
-    { name: "震地", element: "earth", ap: 2 },
-  ],
-  warrior: [
-    { name: "裂空斩", element: "physical", ap: 2 },
-    { name: "追风", element: "thunder", ap: 1 },
-    { name: "血怒", element: "dark", ap: 0, passive: true },
-  ],
-  mage: [
-    { name: "霜缚", element: "ice", ap: 1 },
-    { name: "星火", element: "fire", ap: 2 },
-    { name: "静默", element: "light", ap: 2 },
-  ],
-  support: [
-    { name: "回响", element: "light", ap: 1 },
-    { name: "庇护", element: "wood", ap: 1 },
-    { name: "共鸣", element: "light", ap: 0, passive: true },
-  ],
+/** 按大职业 + 稀有度 + 种子发技能引用；种子相同则结果恒定 */
+export function skillRefsFor(job: Job, rarity: Rarity, wantThree: boolean, seed: string): CardSkillRef[] {
+  return skillDefsFor(seed, job, rarity, wantThree).map((def) => ({ skillId: def.id }))
 }
 
-/** 按职业/子职业 + 稀有度取技能；seed 相同则结果恒定 */
-export function skillsFor(job: Job, rarity: Rarity, wantThree = false, seed?: string): CardSkill[] {
-  if (seed) return cardSkillsFor(seed, job, rarity, wantThree)
-
-  const pool = SKILL_SETS[job]
-  const count = rarity === "Radiant" || rarity === "Prismatic" || wantThree ? 3 : 2
-  return pool.slice(0, count)
+export function skillsFor(job: Job, rarity: Rarity, wantThree: boolean, seed: string): CardSkill[] {
+  return skillDefsFor(seed, job, rarity, wantThree).map(cardSkillOf)
 }

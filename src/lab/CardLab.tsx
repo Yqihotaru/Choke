@@ -30,9 +30,9 @@ const MOD_OPTIONS: { id: ModPlacement; label: string }[] = [
 ]
 
 const HERO_SKILLS = [
-  { name: "起手式", element: "physical", ap: 1 },
-  { name: "破空", element: "thunder", ap: 2 },
-  { name: "回响", element: "light", ap: 2 },
+  { id: "lab-opener", name: "起手式", element: "physical", ap: 1 },
+  { id: "lab-rift", name: "破空", element: "thunder", ap: 2 },
+  { id: "lab-echo", name: "回响", element: "light", ap: 2 },
 ] as const
 
 const HEROES: CardFaceData[] = [1, 4, 7, 10, 12].map((level) =>
@@ -59,7 +59,7 @@ const SOLO_SKILL: CardFaceData = makeCard({
   constellation: 0,
   mods: [],
   no: 1533,
-  skills: [{ name: "铁壁", element: "earth", ap: 1 }],
+  skills: [{ id: "lab-guard", name: "铁壁", element: "earth", ap: 1 }],
 })
 
 export function CardLab() {

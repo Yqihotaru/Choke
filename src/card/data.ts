@@ -1,6 +1,6 @@
 import { makeCard } from "@choke/shared/card-def"
 import { CONSTELLATION_BONUS, RARITY_BASE } from "@choke/shared/config"
-import { JOB_ORDER, SKILL_SETS, hashOf, skillsFor } from "@choke/shared/skills"
+import { JOB_ORDER, cardSkillsFromRefs, hashOf, skillsFor } from "@choke/shared/skills"
 import { ELEMENT_LABEL as SHARED_ELEMENT_LABEL } from "@choke/shared/types"
 
 export { CONSTELLATION_BONUS, JOB_ORDER, RARITY_BASE, hashOf, skillsFor }
@@ -146,6 +146,11 @@ export function formatNo(no: number, total: number): string {
 
 export { makeCard }
 
+/** 样卡用：直接按技能 id 取卡面技能 */
+function demoSkills(...ids: string[]) {
+  return cardSkillsFromRefs(ids.map((skillId) => ({ skillId })))
+}
+
 export const DEMO_CARDS: CardFaceData[] = [
   makeCard({
     id: "demo-common",
@@ -165,7 +170,7 @@ export const DEMO_CARDS: CardFaceData[] = [
     no: 12,
     serial: 3,
     pulled: 41,
-    skills: [...SKILL_SETS.tank.slice(0, 2)],
+    skills: demoSkills("bulwark_guard", "bulwark_thorns"),
   }),
   makeCard({
     id: "demo-uncommon",
@@ -185,7 +190,7 @@ export const DEMO_CARDS: CardFaceData[] = [
     no: 208,
     serial: 17,
     pulled: 17,
-    skills: [...SKILL_SETS.support.slice(0, 2)],
+    skills: demoSkills("healer_heal", "healer_plus"),
   }),
   makeCard({
     id: "demo-rare",
@@ -205,7 +210,7 @@ export const DEMO_CARDS: CardFaceData[] = [
     no: 1471,
     serial: 128,
     pulled: 302,
-    skills: [...SKILL_SETS.warrior],
+    skills: demoSkills("berserker_cleave", "berserker_wind", "berserker_blood"),
   }),
   makeCard({
     id: "demo-epic",
@@ -225,7 +230,7 @@ export const DEMO_CARDS: CardFaceData[] = [
     no: 8320,
     serial: 1,
     pulled: 9,
-    skills: [...SKILL_SETS.mage],
+    skills: demoSkills("warlock_frost", "warlock_starfire", "binder_charm"),
   }),
   makeCard({
     id: "demo-legendary",
@@ -245,7 +250,7 @@ export const DEMO_CARDS: CardFaceData[] = [
     no: 20155,
     serial: 2,
     pulled: 5,
-    skills: [...SKILL_SETS.warrior],
+    skills: demoSkills("berserker_cleave", "berserker_wind", "berserker_blood"),
   }),
   makeCard({
     id: "demo-radiant",
@@ -265,7 +270,7 @@ export const DEMO_CARDS: CardFaceData[] = [
     no: 48207,
     serial: 1,
     pulled: 1,
-    skills: [...SKILL_SETS.support],
+    skills: demoSkills("healer_heal", "bard_ward", "bard_aura"),
   }),
   makeCard({
     id: "demo-prismatic",
@@ -283,6 +288,6 @@ export const DEMO_CARDS: CardFaceData[] = [
     mods: ["HD", "DT"],
     constellation: 6,
     no: 99999,
-    skills: [...SKILL_SETS.mage],
+    skills: demoSkills("warlock_frost", "warlock_starfire", "binder_charm"),
   }),
 ]
