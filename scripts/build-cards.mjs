@@ -44,7 +44,7 @@ const cards = pool.cards.map((card) => {
     profileUrl: def.profileUrl,
     art: def.art,
     banner: def.banner,
-    skills: def.skills,
+    skillRefs: def.skillRefs,
   }
 })
 
