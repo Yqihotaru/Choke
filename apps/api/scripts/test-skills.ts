@@ -4,6 +4,7 @@ import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import { resolveEncounter } from "@choke/shared/battle/content"
 import { createBattle, statOf } from "@choke/shared/battle/engine"
 import type { BattleState } from "@choke/shared/battle/types"
+import { autoDescribeSkill, checkSkill, checkSkillTable, describeSkill } from "@choke/shared/skill-check"
 import { SKILLS } from "@choke/shared/skills"
 import type { Job } from "@choke/shared/types"
 
@@ -20,9 +21,9 @@ function check(name: string, ok: boolean, detail = "") {
 }
 
 /** 一张被测卡 + 一张不带技能的陪衬卡（保证队里始终有人） */
-function start(job: Job, skillIds: string[], seed = "skills-1"): BattleState {
+function start(job: Job, skillIds: string[], seed = "skills-1", encounter = spec): BattleState {
   const cards = inputs([face("under-test", job, "L", 40, 0, skillIds), face("filler", "tank", "L", 40, 0, ["bulwark_quake"])], 10)
-  return createBattle(spec, cards, { seed })
+  return createBattle(encounter, cards, { seed })
 }
 const apply = (state: BattleState, action: BattleAction) => {
   const result = withAction(state, action)
@@ -49,6 +50,20 @@ const down = (state: BattleState) => {
   ] as const
   const bare = all.filter((s) => s.passive && !effectKeys.some((k) => s[k] !== undefined))
   check("每个被动都声明了效果字段", bare.length === 0, bare.map((s) => s.id).join(","))
+  const problems = checkSkillTable()
+  check("技能表校验：字段组合、id、名字都合法", problems.length === 0, problems.slice(0, 5).join(" / "))
+  const bad = checkSkill({ ...SKILLS.warden_hold!, kind: "damage" })
+  check("技能校验：能抓出 kind 与字段不符", bad.length > 0)
+  check("技能校验：能抓出多余字段", checkSkill({ ...SKILLS.warden_hold!, mystery: 1 }).length > 0)
+  check("技能校验：缺少必填字段会报错", checkSkill({ ...SKILLS.berserker_cleave!, hits: undefined }).length > 0)
+  check("自动描述：每个技能都能生成非空文案", all.every((s) => autoDescribeSkill(s).length > 0))
+  check("describeSkill：没有手写文案时用自动生成", describeSkill({ ...SKILLS.berserker_cleave!, desc: undefined }) === autoDescribeSkill(SKILLS.berserker_cleave!))
+  check("技能名没有旧 demo 名字", !all.some((s) => /六色破坏光线|毗沙门天剑|哈尼军团|专拐激昂曲|全军军师阵/.test(s.name)))
+  if (process.argv.includes("--descs")) {
+    for (const s of all) console.log(`  ${s.id}\n    手写：${s.desc ?? "（无）"}\n    自动：${autoDescribeSkill(s)}`)
+  }
+  const handwritten = all.filter((s) => s.desc).map((s) => s.id)
+  console.log(`  ℹ 带手写文案的技能 ${handwritten.length}/${all.length} 个（加 --descs 可逐个对照复查）`)
 }
 
 // ---------- 1. 开局荆棘 ----------
@@ -212,12 +227,128 @@ for (const [id, job] of [
   for (const c of s.cards) c.trigger = null
   const after = apply(s, { type: "skill", card: 0, skill: "bard_ward" })
   const boosted = after.cards.filter((c, i) => i > 0 && c.trigger === "boost").length
-  check("专拐激昂曲：点亮 2 张队友的 BOOST", boosted === 2, `${boosted}`)
+  check("激昂乐章：点亮 2 张队友的 BOOST", boosted === 2, `${boosted}`)
 }
 {
   const s = start("tank", ["bulwark_taunt"])
   const after = apply(s, { type: "skill", card: 0, skill: "bulwark_taunt" })
   check("嘲讽咆哮：自己获得荆棘", after.cards[0]!.statuses.some((st) => st.id === "thorns" && st.amount === 0.4))
+}
+
+// ---------- 9b. 概率与吸血类被动（按种子统计；自身攻击类被动被 Down 后卡不能行动，不用测） ----------
+const SEEDS = 600
+const seedsOf = (tag: string) => Array.from({ length: SEEDS }, (_, i) => `${tag}-${i}`)
+const logHas = (state: BattleState, text: string) => state.log.some((line) => line.includes(text))
+{
+  // 血怒狂躯：吸血 20%
+  const healed = (ids: string[]) => {
+    const s = start("warrior", ids, "steal-1")
+    s.teamHp = Math.round(s.teamHpMax * 0.5)
+    s.ap = 6
+    const before = s.teamHp
+    return apply(s, { type: "skill", card: 0, skill: "berserker_cleave" }).teamHp - before
+  }
+  const withIt = healed(["berserker_cleave", "berserker_blood"])
+  const without = healed(["berserker_cleave"])
+  check("血怒狂躯：带了造成伤害后回血", withIt > without, `${withIt} vs ${without}`)
+  check("血怒狂躯：没带不回血", without <= 0, `${without}`)
+}
+{
+  // 魔力暴走：队伍低血时法术暴击 +10
+  const crits = (ids: string[], low: boolean) => {
+    let n = 0
+    for (const seed of seedsOf("spell")) {
+      const s = start("mage", ids, seed)
+      if (low) s.teamHp = Math.round(s.teamHpMax * 0.2)
+      s.enemy.hp = s.enemy.hpMax = 1e9
+      n += logHas(apply(s, { type: "skill", card: 0, skill: "warlock_frost" }), "暴击") ? 1 : 0
+    }
+    return n
+  }
+  const lowWith = crits(["warlock_frost", "warlock_lowhp"], true)
+  const lowWithout = crits(["warlock_frost"], true)
+  check("魔力暴走：低血时法术暴击更多", lowWith > lowWithout + 20, `${lowWith} vs ${lowWithout}`)
+  check("魔力暴走：血量正常时不加暴击", crits(["warlock_frost", "warlock_lowhp"], false) === crits(["warlock_frost"], false))
+}
+{
+  // 鹰眼迅捷：对脆弱目标暴击 +15（对照卡带的是不含暴击的另一个迅捷，命中一致）
+  const crits = (swiftId: string, vulnerable: boolean) => {
+    let n = 0
+    for (const seed of seedsOf("eagle")) {
+      // 迅捷会在开局抢攻，tutorial-ghost 血太少会被抢攻直接打死，所以换 ghost
+      const s = start("warrior", ["berserker_cleave", swiftId], seed, resolveEncounter(BATTLE_CONTENT, "ghost")!)
+      s.ap = 6
+      s.enemy.hp = s.enemy.hpMax = 1e9
+      if (vulnerable) s.enemy.statuses.push({ id: "vulnerable", name: "脆弱", amount: 0.2, turns: 3, isDebuff: true })
+      n += logHas(apply(s, { type: "skill", card: 0, skill: "berserker_cleave" }), "暴击") ? 1 : 0
+    }
+    return n
+  }
+  const withIt = crits("ranger_swift", true)
+  const without = crits("breaker_swift", true)
+  check("鹰眼迅捷：目标脆弱时暴击更多", withIt > without + 30, `${withIt} vs ${without}`)
+  check("鹰眼迅捷：目标不脆弱时不加暴击", crits("ranger_swift", false) === crits("breaker_swift", false))
+}
+{
+  // 精神专注：硬控成功率 +15%
+  const successes = (ids: string[]) => {
+    let n = 0
+    for (const seed of seedsOf("focus")) {
+      const s = start("mage", ids, seed)
+      s.ap = 6
+      n += apply(s, { type: "skill", card: 0, skill: "binder_sleep" }).enemy.hardControl ? 1 : 0
+    }
+    return n
+  }
+  const withIt = successes(["binder_sleep", "binder_focus"])
+  const without = successes(["binder_sleep"])
+  check("精神专注：带了硬控成功更多", withIt > without + 30, `${withIt}/${SEEDS} vs ${without}/${SEEDS}`)
+}
+{
+  // 召唤共鸣：攻击型支援发动率 +15%（全队被动，携带者被 Down 失效）
+  const procs = (ids: string[], downIt: boolean) => {
+    let n = 0
+    for (const seed of seedsOf("proc")) {
+      const s = start("mage", ids, seed)
+      if (downIt) {
+        s.cards[0]!.down = true
+        s.cards[0]!.downTurns = 3
+      }
+      s.playerSupports.push({ id: "sup-t", name: "测试使魔", kind: "attack", element: "physical", power: 0.5, hits: 1, atk: 100, roleText: "测试" })
+      const next = apply(s, { type: "endTurn" })
+      n += next.playerSupports.find((x) => x.id === "sup-t")?.triggered ? 1 : 0
+    }
+    return n
+  }
+  const withIt = procs(["summoner_aura"], false)
+  const without = procs(["warlock_frost"], false)
+  check("召唤共鸣：带了支援更常发动", withIt > without + 30, `${withIt} vs ${without}`)
+  const downed = procs(["summoner_aura"], true)
+  check("召唤共鸣：被 Down 失效", Math.abs(downed - without) < 40, `${downed} vs ${without}`)
+}
+{
+  // 守护光环：敌方拆支援时每个目标 30% 概率免拆
+  const left = (ids: string[], downIt: boolean) => {
+    let n = 0
+    for (const seed of seedsOf("shield")) {
+      const s = start("warrior", ids, seed)
+      if (downIt) {
+        s.cards[0]!.down = true
+        s.cards[0]!.downTurns = 3
+      }
+      for (const id of ["sup-a", "sup-b"]) {
+        s.playerSupports.push({ id, name: id, kind: "aura", element: "light", stat: "def", amount: 0.1, roleText: "测试" })
+      }
+      s.enemy.intents = [{ id: "brk", kind: "break_support", label: "拆除", element: "physical", power: 0, hits: 1, desc: "" }]
+      n += apply(s, { type: "endTurn" }).playerSupports.filter((x) => x.id.startsWith("sup-")).length
+    }
+    return n / SEEDS
+  }
+  const withIt = left(["paladin_aura"], false)
+  const without = left(["paladin_smite"], false)
+  check("守护光环：没带时 2 个支援全被拆", without === 0, `${without}`)
+  check("守护光环：带了平均每次保住约 0.6 个", Math.abs(withIt - 0.6) < 0.12, `${withIt}`)
+  check("守护光环：被 Down 失效", left(["paladin_aura"], true) === 0)
 }
 
 // ---------- 10. 坦克只看大职业 ----------

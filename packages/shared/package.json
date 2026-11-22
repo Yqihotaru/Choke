@@ -6,6 +6,7 @@
   "exports": {
     "./types": "./src/types.ts",
     "./skills": "./src/skills.ts",
+    "./skill-check": "./src/skill-check.ts",
     "./config": "./src/config.ts",
     "./progression": "./src/progression.ts",
     "./economy": "./src/economy.ts",

@@ -100,7 +100,10 @@ export interface SkillDef {
   clearEnemySupports?: number
   /** 召唤/布置侧面支援定义 */
   supportDef?: SupportSpawnDef
-  desc: string
+  /** 手写文案（覆盖）；留空则由 describeSkill 按字段自动生成 */
+  desc?: string
+  /** 最低发放稀有度，默认 C；队伍核心与特殊机制技能只进最高档（发牌规则暂未按它过滤） */
+  minRarity?: Rarity
 
   /* ---- 被动效果声明 ---- */
   /** 开局给自己上的状态 */
@@ -369,7 +372,7 @@ export const SKILLS: Record<string, SkillDef> = {
   paladin_judgment: S({
     id: "paladin_judgment",
     job: "warrior",
-    name: "毗沙门天剑",
+    name: "神威重斩",
     element: "light",
     ap: 3,
     kind: "damage",
@@ -629,7 +632,7 @@ export const SKILLS: Record<string, SkillDef> = {
   warlock_meteor: S({
     id: "warlock_meteor",
     job: "mage",
-    name: "六色破坏光线",
+    name: "虹彩齐射",
     element: "fire",
     ap: 4,
     kind: "damage",
@@ -785,7 +788,7 @@ export const SKILLS: Record<string, SkillDef> = {
   summoner_poison: S({
     id: "summoner_poison",
     job: "mage",
-    name: "哈尼军团",
+    name: "召唤小队",
     element: "earth",
     ap: 2,
     kind: "summon",
@@ -940,7 +943,7 @@ export const SKILLS: Record<string, SkillDef> = {
   bard_inspire: S({
     id: "bard_inspire",
     job: "support",
-    name: "全军军师阵",
+    name: "全军阵法",
     element: "light",
     ap: 1,
     kind: "summon",
@@ -961,7 +964,7 @@ export const SKILLS: Record<string, SkillDef> = {
     id: "bard_ward",
     job: "support",
     boostAllies: 2,
-    name: "专拐激昂曲",
+    name: "激昂乐章",
     element: "thunder",
     ap: 1,
     kind: "buff",

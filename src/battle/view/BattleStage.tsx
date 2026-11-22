@@ -45,6 +45,7 @@ import {
 } from "@choke/shared/battle/engine"
 import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
 import { describeStar, starProgress } from "@choke/shared/battle/stars"
+import { describeSkill } from "@choke/shared/skill-check"
 import { BentGauge } from "./BentGauge"
 import { playHit, playLose, playSfx, playTurn, playWin } from "../sfx"
 import type { BattleState, EnemyIntent, SideSupportUnit } from "@choke/shared/battle/types"
@@ -1210,7 +1211,7 @@ export function BattleStage({
                                 : ""
                             }`}
                       </div>
-                      <div className="choke-tooltip-desc">{tooltipInfo.skill.desc}</div>
+                      <div className="choke-tooltip-desc">{describeSkill(tooltipInfo.skill)}</div>
                       {!tooltipInfo.skill.passive && tooltipInfo.reason && (
                         <div className="choke-tooltip-warn">⚠️ {tooltipInfo.reason}</div>
                       )}
