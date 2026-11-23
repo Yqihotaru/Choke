@@ -3,6 +3,7 @@
 import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import { resolveEncounter } from "@choke/shared/battle/content"
 import { createBattle, effectiveApCost, statOf } from "@choke/shared/battle/engine"
+import { comboMultiplier } from "@choke/shared/battle/rules"
 import type { BattleState } from "@choke/shared/battle/types"
 import { autoDescribeSkill, checkSkill, checkSkillTable, describeSkill } from "@choke/shared/skill-check"
 import { SKILLS } from "@choke/shared/skills"
@@ -376,6 +377,15 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   }
   check("疲惫：0 费攻击（盾击平推、牵制速射、瞬影刺）都在上面的循环里变成 0、1 交替", ["warden_bash", "ranger_zero", "assassin_zero"].every((id) => SKILLS[id]!.ap === 0))
   check("疲惫：覆盖到所有主动技能", tagless.length > 30, `${tagless.length}`)
+}
+
+// ---------- 9d. Combo 曲线 ----------
+{
+  const expected = [1, 1, 1, 1.03, 1.08, 1.14, 1.22, 1.3, 1.4, 1.5]
+  check("Combo 曲线：每一层的倍率与设计一致", expected.every((v, i) => comboMultiplier(i) === v), expected.map((_, i) => comboMultiplier(i)).join(","))
+  check("Combo 曲线：9 层及以上封顶 1.50", comboMultiplier(9) === 1.5 && comboMultiplier(30) === 1.5)
+  check("Combo 曲线：负数按 0 层算", comboMultiplier(-3) === 1)
+  check("Combo 曲线：单调不降且凸", expected.every((v, i) => i < 4 || expected[i]! - expected[i - 1]! >= expected[i - 1]! - expected[i - 2]! - 1e-9))
 }
 
 // ---------- 10. 坦克只看大职业 ----------

@@ -17,10 +17,14 @@ export const ELEMENT_CYCLE: Element[] = [
   "dark",
 ]
 
-/** Combo 曲线（§9.2）：1-2 为 0%，3 为 12%，线性爬升至 10 Combo = +180%（2.80×）封顶 */
-export const COMBO_BONUS = [1, 1, 1, 1.12, 1.26, 1.51, 1.77, 2.03, 2.29, 2.54, 2.8]
+/**
+ * Combo 曲线（§9.2）：凸曲线，封顶 +50%。
+ * 下标是 Combo 层数；1–2 层无加成，9 层及以上封顶 1.50。
+ * 这是配置项：以后技能可以抬高上限，别把数值写死在引擎里。
+ */
+export const COMBO_BONUS = [1, 1, 1, 1.03, 1.08, 1.14, 1.22, 1.3, 1.4, 1.5]
 
-export const COMBO_CAP = 10
+export const COMBO_CAP = COMBO_BONUS.length - 1
 
 export const ROMAN_TIER = ["0", "I", "II", "III", "IV"] as const
 
