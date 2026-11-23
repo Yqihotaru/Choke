@@ -1042,25 +1042,66 @@ export function skillSeed(cardId: string): string {
   return cardId.replace(/^(pool|hero|mirror)-/, "")
 }
 
+/** 两个槽的卡里，主动 / 被动配比的权重（百分数，合计 100）；被动偏少 */
+export const TWO_SLOT_PLANS: Record<"common" | "legendary", { actives: number; weight: number }[]> = {
+  // C / UC / R / E：2 主动 60%，1 主动 + 1 被动 40%
+  common: [
+    { actives: 2, weight: 60 },
+    { actives: 1, weight: 40 },
+  ],
+  // L：2/0 55%，1/1 35%，0/2 10%
+  legendary: [
+    { actives: 2, weight: 55 },
+    { actives: 1, weight: 35 },
+    { actives: 0, weight: 10 },
+  ],
+}
+
+/** 把种子哈希打散后落到 0–99；直接 mod 100 会让相近种子的结果扎堆 */
+function rollPercent(seed: string): number {
+  let h = hashOf(seed)
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0
+  return ((h ^ (h >>> 16)) >>> 0) % 100
+}
+
+/** 两个槽的卡抽几个主动：同一张卡（同种子）结果恒定 */
+export function twoSlotActiveCount(seed: string, rarity: Rarity): number {
+  const plans = rarity === "L" ? TWO_SLOT_PLANS.legendary : TWO_SLOT_PLANS.common
+  let roll = rollPercent(`${seed}|slotplan`)
+  for (const plan of plans) {
+    if (roll < plan.weight) return plan.actives
+    roll -= plan.weight
+  }
+  return plans[plans.length - 1]!.actives
+}
+
 /**
- * 卡面与战斗共用的技能池（严格遵循 §4.1 槽位规则）：
- * - C / UC / R / E / L：固定 2 个技能槽（1 主动 + 1 被动，或 L 的 2 槽）
- * - Mythic / Prismatic / 本体卡：3 个技能槽（2 主动 + 1 被动）
+ * 卡面与战斗共用的技能池（遵循 §4.1 槽位规则）：
+ * - C / UC / R / E：2 个槽，60% 为 2 主动，40% 为 1 主动 + 1 被动
+ * - L：2 个槽，2/0 占 55%、1/1 占 35%、0/2 占 10%
+ * - Mythic / Prismatic / 本体卡：3 个槽（暂定 2 主动 + 1 被动，其余配比等技能池扩充时放开）
  * 绝不额外硬塞第 4、第 5 个技能。
  */
 export function skillDefsFor(seed: string, job: Job, rarity: Rarity, wantThree = false): SkillDef[] {
   const pool = Object.values(SKILLS).filter((skill) => skill.job === job)
   const actives = pool.filter((skill) => !skill.passive)
   const passives = pool.filter((skill) => skill.passive)
-  const count = wantThree || rarity === "Mythic" || rarity === "Prismatic" ? 3 : 2
-  const activeCount = Math.min(actives.length, Math.max(1, count - 1))
+  const threeSlots = wantThree || rarity === "Mythic" || rarity === "Prismatic"
+  const slotCount = threeSlots ? 3 : 2
+  const wantActives = threeSlots ? 2 : twoSlotActiveCount(seed, rarity)
+  const activeCount = Math.min(actives.length, wantActives)
+  const passiveCount = Math.min(passives.length, slotCount - activeCount)
   const h = hashOf(`${seed}|skillpick`)
-  const pickedActives: SkillDef[] = []
+  const picked: SkillDef[] = []
   for (let i = 0; i < activeCount; i += 1) {
-    pickedActives.push(actives[(h + i) % actives.length]!)
+    picked.push(actives[(h + i) % actives.length]!)
   }
-  const pickedPassive = passives[hashOf(`${seed}|passivepick`) % passives.length]!
-  return [...pickedActives, pickedPassive]
+  const ph = hashOf(`${seed}|passivepick`)
+  for (let i = 0; i < passiveCount; i += 1) {
+    picked.push(passives[(ph + i) % passives.length]!)
+  }
+  return picked
 }
 
 export function skillById(id: string): SkillDef | undefined {

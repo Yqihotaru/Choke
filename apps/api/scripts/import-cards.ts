@@ -1,6 +1,8 @@
 import fs from "node:fs"
 import path from "node:path"
 
+import { eq } from "drizzle-orm"
+
 import { requireSkill } from "@choke/shared/skills"
 
 import { db } from "../src/db/client"
@@ -60,6 +62,7 @@ for (const row of rows) {
 
 const BATCH = 500
 let done = 0
+const skillsOnly = process.argv.includes("--skills-only")
 
 if (process.argv.includes("--replace")) {
   console.log("清空 cards 表")
@@ -85,7 +88,16 @@ for (let i = 0; i < rows.length; i += BATCH) {
     version: 1,
   }))
 
-  await db.insert(cards).values(batch).onConflictDoNothing()
+  if (skillsOnly) {
+    // 只刷新技能：不动 pulled 等发行计数，已有的玩家卡不受影响
+    await db.transaction(async (tx) => {
+      for (const row of batch) {
+        await tx.update(cards).set({ skillRefs: row.skillRefs }).where(eq(cards.id, row.id))
+      }
+    })
+  } else {
+    await db.insert(cards).values(batch).onConflictDoNothing()
+  }
 
   done += batch.length
   console.log(`已导入 ${done}/${rows.length}`)

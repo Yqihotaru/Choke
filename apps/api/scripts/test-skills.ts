@@ -7,7 +7,7 @@ import { createBattle, effectiveApCost, statOf } from "@choke/shared/battle/engi
 import { comboMultiplier } from "@choke/shared/battle/rules"
 import type { BattleState } from "@choke/shared/battle/types"
 import { autoDescribeSkill, checkSkill, checkSkillTable, describeSkill } from "@choke/shared/skill-check"
-import { SKILLS } from "@choke/shared/skills"
+import { SKILLS, skillDefsFor } from "@choke/shared/skills"
 import type { Job } from "@choke/shared/types"
 
 import { BATTLE_CONTENT } from "../src/content"
@@ -66,6 +66,35 @@ const down = (state: BattleState) => {
   }
   const handwritten = all.filter((s) => s.desc).map((s) => s.id)
   console.log(`  ℹ 带手写文案的技能 ${handwritten.length}/${all.length} 个（加 --descs 可逐个对照复查）`)
+}
+
+// ---------- 0b. 发牌：主动 / 被动配比 ----------
+{
+  const N = 20000
+  const jobs: Job[] = ["tank", "warrior", "mage", "support"]
+  const tally = (rarity: "C" | "E" | "L") => {
+    const t = { two: 0, one: 0, zero: 0, badSlots: 0, dup: 0 }
+    for (let i = 0; i < N; i += 1) {
+      const defs = skillDefsFor(`deal-${rarity}-${i}`, jobs[i % 4]!, rarity)
+      const actives = defs.filter((d) => !d.passive).length
+      if (defs.length !== 2) t.badSlots += 1
+      if (new Set(defs.map((d) => d.id)).size !== defs.length) t.dup += 1
+      if (actives === 2) t.two += 1
+      else if (actives === 1) t.one += 1
+      else t.zero += 1
+    }
+    return t
+  }
+  const near = (n: number, pct: number) => Math.abs(n / N - pct) < 0.02
+  const common = tally("C")
+  check("发牌：C 到 E 两个槽，没有重复技能", common.badSlots === 0 && common.dup === 0)
+  check("发牌：C 到 E 约 60% 为 2 主动，40% 为 1+1，没有 0 主动", near(common.two, 0.6) && near(common.one, 0.4) && common.zero === 0, JSON.stringify(common))
+  const legend = tally("L")
+  check("发牌：L 两个槽，没有重复技能", legend.badSlots === 0 && legend.dup === 0)
+  check("发牌：L 约 55% 为 2/0，35% 为 1/1，10% 为 0/2", near(legend.two, 0.55) && near(legend.one, 0.35) && near(legend.zero, 0.1), JSON.stringify(legend))
+  check("发牌：同一张卡每次发的技能都一样", skillDefsFor("same-card", "mage", "R").map((d) => d.id).join() === skillDefsFor("same-card", "mage", "R").map((d) => d.id).join())
+  const three = skillDefsFor("mythic-card", "warrior", "Mythic")
+  check("发牌：Mythic 三个槽，2 主动 + 1 被动（暂定）", three.length === 3 && three.filter((d) => d.passive).length === 1)
 }
 
 // ---------- 1. 开局荆棘 ----------
