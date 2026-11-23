@@ -1,5 +1,5 @@
 import { hashSeed, nextRandom } from "./rng"
-import type { CardSkill, CardSkillRef, Element, Job, Rarity } from "./types"
+import { RARITIES, type CardSkill, type CardSkillRef, type Element, type Job, type Rarity } from "./types"
 
 export type SkillKind =
   | "damage"
@@ -112,8 +112,10 @@ export interface SkillDef {
   supportDef?: SupportSpawnDef
   /** 手写文案（覆盖）；留空则由 describeSkill 按字段自动生成 */
   desc?: string
-  /** 最低发放稀有度，默认 C；队伍核心与特殊机制技能只进最高档（发牌规则暂未按它过滤） */
+  /** 最低发放稀有度，默认 C；发牌只在 [minRarity, maxRarity] 范围内的稀有度里抽到它 */
   minRarity?: Rarity
+  /** 最高发放稀有度，默认 Prismatic（不设上限） */
+  maxRarity?: Rarity
 
   /* ---- 被动效果声明 ---- */
   /** 开局给自己上的状态 */
@@ -914,7 +916,8 @@ export const SKILLS: Record<string, SkillDef> = {
     ap: 0,
     kind: "passive",
     passive: true,
-    desc: "被动形态：该卡存活在场时，我方每回合基础 AP 恢复由 +2 提升至 +3",
+    desc: "被动形态：该卡存活在场时，我方每回合基础 AP 恢复由 +2 提升至 +3（同一张卡只取一个 AP 类被动）",
+    minRarity: "Mythic",
   }),
 
   /* ==================== 辅助：healer_* ==================== */
@@ -1064,9 +1067,9 @@ export function seededRandom(seed: string): () => number {
   }
 }
 
-/** 两个槽的卡按配比抽 2/0、1/1、0/2 */
+/** 前两个槽按配比抽 2/0、1/1、0/2（L 及以上用 L 的配比） */
 export function rollActiveCount(rarity: Rarity, random: () => number): number {
-  const plans = rarity === "L" ? TWO_SLOT_PLANS.legendary : TWO_SLOT_PLANS.common
+  const plans = RARITIES.indexOf(rarity) >= RARITIES.indexOf("L") ? TWO_SLOT_PLANS.legendary : TWO_SLOT_PLANS.common
   let roll = random() * 100
   for (const plan of plans) {
     if (roll < plan.weight) return plan.actives
@@ -1075,21 +1078,29 @@ export function rollActiveCount(rarity: Rarity, random: () => number): number {
   return plans[plans.length - 1]!.actives
 }
 
+/** 这个技能能不能发给这个稀有度的卡 */
+export function skillDealtTo(skill: SkillDef, rarity: Rarity): boolean {
+  const at = RARITIES.indexOf(rarity)
+  return at >= RARITIES.indexOf(skill.minRarity ?? "C") && at <= RARITIES.indexOf(skill.maxRarity ?? "Prismatic")
+}
+
 /**
  * 给一张新卡发技能：每张卡各掷各的，同名卡的技能互不相同，发出去就固定。
- * 先按配比定槽型，再在本大职业的池子里一个一个抽，抽到什么是什么（同一张卡内不重复）：
- * - C / UC / R / E：2/0 占 60%，1/1 占 30%，0/2 占 10%
- * - L：2/0 占 55%，1/1 占 35%，0/2 占 10%
- * - Mythic / Prismatic / 本体卡：3 个槽（暂定 2 主动 + 1 被动，其余配比等技能池扩充时放开）
+ * 只在"本大职业 + 技能的稀有度范围包含这张卡"的池子里抽，同一张卡内不重复：
+ * - C / UC / R / E：2 个槽，2/0 占 60%，1/1 占 30%，0/2 占 10%
+ * - L：2 个槽，2/0 占 55%，1/1 占 35%，0/2 占 10%
+ * - Mythic / Prismatic / 本体卡：3 个槽，前两槽按 L 的配比，第 3 槽主动 / 被动各 50%
  * 绝不额外硬塞第 4、第 5 个技能。
  */
 export function rollSkillRefs(job: Job, rarity: Rarity, random: () => number, wantThree = false): CardSkillRef[] {
-  const pool = Object.values(SKILLS).filter((skill) => skill.job === job)
+  const threeSlots = wantThree || rarity === "Mythic" || rarity === "Prismatic"
+  const pool = Object.values(SKILLS).filter((skill) => skill.job === job && skillDealtTo(skill, rarity))
   const actives = pool.filter((skill) => !skill.passive)
   const passives = pool.filter((skill) => skill.passive)
-  const threeSlots = wantThree || rarity === "Mythic" || rarity === "Prismatic"
+  const firstTwoActives = rollActiveCount(rarity, random)
+  const activeWanted = threeSlots ? firstTwoActives + (random() < 0.5 ? 1 : 0) : firstTwoActives
   const slotCount = threeSlots ? 3 : 2
-  const activeCount = Math.min(actives.length, threeSlots ? 2 : rollActiveCount(rarity, random))
+  const activeCount = Math.min(actives.length, Math.max(activeWanted, slotCount - passives.length))
   const passiveCount = Math.min(passives.length, slotCount - activeCount)
   const drawFrom = (source: SkillDef[], count: number): SkillDef[] => {
     const left = [...source]

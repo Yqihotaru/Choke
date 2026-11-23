@@ -16,7 +16,7 @@ import {
 import { comboMultiplier, mitigation } from "@choke/shared/battle/rules"
 import type { BattleState } from "@choke/shared/battle/types"
 import { autoDescribeSkill, checkSkill, checkSkillTable, describeSkill } from "@choke/shared/skill-check"
-import { SKILLS, requireSkill, rollSkillRefs, seededRandom } from "@choke/shared/skills"
+import { JOB_ORDER, SKILLS, requireSkill, rollSkillRefs, seededRandom, skillDealtTo } from "@choke/shared/skills"
 import type { Job } from "@choke/shared/types"
 
 import { BATTLE_CONTENT } from "../src/content"
@@ -108,7 +108,60 @@ const down = (state: BattleState) => {
   const seeded = (seed: string) => rollSkillRefs("warrior", "E", seededRandom(seed)).map((r) => r.skillId).join()
   check("发牌：同一个种子重放得到同一套（测试 / 预览可复现）", seeded("x") === seeded("x"))
   const three = rollSkillRefs("warrior", "Mythic", random).map((ref) => requireSkill(ref.skillId))
-  check("发牌：Mythic 三个槽，2 主动 + 1 被动（暂定）", three.length === 3 && three.filter((d) => d.passive).length === 1)
+  check("发牌：Mythic 三个槽，不重复", three.length === 3 && new Set(three.map((d) => d.id)).size === 3)
+
+  // Mythic / Prismatic / 本体卡：前两槽 55/35/10，第 3 槽主动被动各 50% → 3/0、2/1、1/2、0/3
+  // 坦克目前只有 2 个被动，凑不出 0/3；等技能池扩充补够 3 个被动后，把 TANK_PASSIVE_GAP 去掉
+  const rollJobs: Job[] = ["warrior", "mage", "support"]
+  for (const rarity of ["Mythic", "Prismatic"] as const) {
+    const byActives = [0, 0, 0, 0]
+    let bad = 0
+    for (let i = 0; i < N; i += 1) {
+      const job = rollJobs[i % 3]!
+      const defs = rollSkillRefs(job, rarity, random).map((ref) => requireSkill(ref.skillId))
+      if (defs.length !== 3 || new Set(defs.map((d) => d.id)).size !== 3 || defs.some((d) => d.job !== job)) bad += 1
+      byActives[defs.filter((d) => !d.passive).length]! += 1
+    }
+    // 前两槽 2/0 .55、1/1 .35、0/2 .10；第 3 槽 50% 主动 → 3 主动 .275、2 主动 .5×(.55+.35)=.45、1 主动 .5×(.35+.10)=.225…
+    const expected = [0.05, 0.225, 0.45, 0.275]
+    check(`发牌：${rarity} 三个槽，不重复，都属于本大职业`, bad === 0, `bad=${bad}`)
+    check(
+      `发牌：${rarity} 主动数 0/1/2/3 约占 5% / 22.5% / 45% / 27.5%`,
+      byActives.every((n, k) => Math.abs(n / N - expected[k]!) < 0.02),
+      JSON.stringify(byActives),
+    )
+  }
+  const heroLike = rollSkillRefs("mage", "R", random, true)
+  check("发牌：本体卡（wantThree）三个槽", heroLike.length === 3)
+}
+
+// ---------- 0c. 发牌按稀有度范围过滤 ----------
+{
+  const random = seededRandom("range-test")
+  const fake = (extra: Partial<(typeof SKILLS)[string]>) => ({ ...SKILLS.warden_hold!, ...extra })
+  check("范围：不写范围的技能，所有稀有度都能抽", ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"].every((r) => skillDealtTo(fake({}), r as never)))
+  check("范围：minRarity=Mythic 的，C 到 L 抽不到", !skillDealtTo(fake({ minRarity: "Mythic" }), "L") && skillDealtTo(fake({ minRarity: "Mythic" }), "Mythic"))
+  check("范围：maxRarity=E 的，L 起抽不到", skillDealtTo(fake({ maxRarity: "E" }), "E") && !skillDealtTo(fake({ maxRarity: "E" }), "L"))
+  check("校验：min 高于 max 被拒", checkSkillTable({ x: fake({ id: "x", minRarity: "L", maxRarity: "R" }) }).some((p) => p.includes("minRarity")))
+  const gated = Object.values(SKILLS).filter((s) => s.minRarity && s.minRarity !== "C")
+  let leaked = 0
+  for (const rarity of ["C", "UC", "R", "E", "L"] as const) {
+    for (let i = 0; i < 3000; i += 1) {
+      for (const ref of rollSkillRefs(JOB_ORDER[i % 4]!, rarity, random)) {
+        if (!skillDealtTo(requireSkill(ref.skillId), rarity)) leaked += 1
+      }
+    }
+  }
+  check(`范围：有 ${gated.length} 个高级专属技能，C 到 L 的卡一个都抽不到`, leaked === 0, `漏出 ${leaked} 次`)
+  check("范围：舞者增幅只有 Mythic 起", requireSkill("dancer_grace").minRarity === "Mythic")
+  for (const job of JOB_ORDER) {
+    for (const rarity of ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"] as const) {
+      const pool = Object.values(SKILLS).filter((s) => s.job === job && skillDealtTo(s, rarity))
+      const passives = pool.filter((s) => s.passive).length
+      const need = job !== "tank" && (rarity === "Mythic" || rarity === "Prismatic") ? 3 : 2
+      check(`池子：${job} ${rarity} 主动 ≥ 3、被动 ≥ ${need}`, pool.length - passives >= 3 && passives >= need, `主动 ${pool.length - passives} 被动 ${passives}`)
+    }
+  }
 }
 // ---------- 1. 开局荆棘 ----------
 {

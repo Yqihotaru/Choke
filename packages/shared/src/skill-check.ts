@@ -69,6 +69,7 @@ const skillSchema = z
     /** 手写文案；留空则由 describeSkill 自动生成 */
     desc: z.string().min(1).optional(),
     minRarity: z.enum(RARITIES).optional(),
+    maxRarity: z.enum(RARITIES).optional(),
 
     openingStatus: selfStatus.optional(),
     defMul: z.number().min(1).max(2).optional(),
@@ -173,6 +174,9 @@ export function checkSkillTable(table: Record<string, SkillDef> = SKILLS): strin
   for (const [key, def] of Object.entries(table)) {
     for (const line of checkSkill(def)) problems.push(`${key}：${line}`)
     if (def.id !== key) problems.push(`${key}：表里的键与 id（${def.id}）不一致`)
+    if (RARITIES.indexOf(def.minRarity ?? "C") > RARITIES.indexOf(def.maxRarity ?? "Prismatic")) {
+      problems.push(`${key}：minRarity 高于 maxRarity，没有任何稀有度能抽到它`)
+    }
     const other = names.get(def.name)
     if (other) problems.push(`${key}：名字「${def.name}」与 ${other} 重复`)
     names.set(def.name, key)
