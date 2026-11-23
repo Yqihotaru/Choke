@@ -24,6 +24,7 @@
     "./lineup": "./src/lineup.ts",
     "./reset": "./src/reset.ts",
     "./expedition/content": "./src/expedition/content.ts",
+    "./expedition/generator": "./src/expedition/generator.ts",
     "./expedition/loot": "./src/expedition/loot.ts",
     "./expedition/view": "./src/expedition/view.ts",
     "./dungeons": "./src/dungeons.ts",

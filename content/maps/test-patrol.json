@@ -1,12 +1,20 @@
 {
   "kind": "weekly",
   "name": "测试 · 巡逻",
-  "summary": "测试用的两节点周常图：用来验证体力冻结、退回和换图到期。",
+  "summary": "测试用的三节点周常图：骨架 + 随机槽位，用来验证体力冻结、退回、槽位展开和换图到期。",
   "staminaCost": 10,
   "deckSize": 7,
   "start": "p1",
+  "pools": {
+    "patrol-mid": [
+      { "weight": 2, "node": { "type": "battle", "encounter": "wind-chime", "rewards": "test-battle" } },
+      { "weight": 2, "node": { "type": "battle", "encounter": "rock-drummer", "rewards": "test-battle" } },
+      { "weight": 1, "node": { "type": "rest", "title": "路边营火" } }
+    ]
+  },
   "nodes": {
     "p1": { "type": "battle", "encounter": "ghost", "rewards": "test-battle", "pos": [0, 0], "next": ["p2"] },
-    "p2": { "type": "treasure", "rewards": "test-chest", "pos": [1, 0], "next": [] }
+    "p2": { "type": "slot", "pool": "patrol-mid", "pos": [1, 0], "next": ["p3"] },
+    "p3": { "type": "treasure", "rewards": "test-chest", "pos": [2, 0], "next": [] }
   }
 }

@@ -1,0 +1,26 @@
+{
+  "kind": "daily",
+  "name": "测试 · 日常巡演",
+  "summary": "测试用的日常随机生成地图：按玩家 + 当天固定种子，4 层含分叉，终点 Boss。",
+  "staminaCost": 15,
+  "deckSize": 7,
+  "rewards": "test-clear",
+  "generate": {
+    "layers": 4,
+    "branchRate": 0.7,
+    "weights": { "battle": 6, "rest": 2, "treasure": 2 },
+    "battleRewards": "test-battle",
+    "bossRewards": "test-boss",
+    "battles": [
+      { "encounter": "ghost", "weight": 3 },
+      { "encounter": "wind-chime", "weight": 2 },
+      { "encounter": "rock-drummer", "weight": 2 }
+    ],
+    "bosses": [
+      { "encounter": "colossus-metronome", "weight": 1 }
+    ],
+    "chests": [
+      { "rewards": "test-chest", "weight": 1 }
+    ]
+  }
+}

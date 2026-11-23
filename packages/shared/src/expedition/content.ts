@@ -89,6 +89,61 @@ export const mapNodeSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("slot"), pool: id, ...nodeBase }),
 ])
 
+/** 槽位池里的候选节点：只决定「这个格子是什么」，位置、下一跳、前置条件都沿用槽位本身 */
+export const slotNodeSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("battle"), encounter: id, rewards: id.optional(), title: z.string().optional() }),
+  z.strictObject({ type: z.literal("boss"), encounter: id, rewards: id.optional(), title: z.string().optional() }),
+  z.strictObject({ type: z.literal("treasure"), rewards: id, title: z.string().optional() }),
+  z.strictObject({ type: z.literal("rest"), title: z.string().optional() }),
+])
+export type SlotNode = z.infer<typeof slotNodeSchema>
+
+export const slotEntrySchema = z.strictObject({
+  weight: int.min(1).max(1_000_000).default(1),
+  node: slotNodeSchema,
+})
+export type SlotEntry = z.infer<typeof slotEntrySchema>
+
+const weightedEncounterSchema = z.strictObject({
+  encounter: id,
+  weight: int.min(1).max(1_000_000).default(1),
+  rewards: id.optional(),
+})
+export type WeightedEncounter = z.infer<typeof weightedEncounterSchema>
+
+const weightedRewardSchema = z.strictObject({
+  rewards: id,
+  weight: int.min(1).max(1_000_000).default(1),
+})
+export type WeightedReward = z.infer<typeof weightedRewardSchema>
+
+/**
+ * 日常随机地图模板：不手写 nodes，按层现场生成一张单向无环图。
+ * 第 1 层固定单起点（普通战），最后 1 层固定单终点（Boss），中间层按 branchRate 决定 1 个或 2 个节点。
+ */
+export const mapGeneratorSchema = z.strictObject({
+  /** 总层数（含起点和终点 Boss），至少 3 层 */
+  layers: int.min(3).max(15),
+  /** 中间层出现 2 个并排节点的概率（0 = 一条直线，1 = 每层都分叉） */
+  branchRate: z.number().min(0).max(1).default(0.5),
+  /** 中间层各节点类型的权重；treasure > 0 时必须配 chests */
+  weights: z
+    .strictObject({
+      battle: int.min(1).max(1000).default(6),
+      rest: int.min(0).max(1000).default(2),
+      treasure: int.min(0).max(1000).default(2),
+    })
+    .default({ battle: 6, rest: 2, treasure: 2 }),
+  /** 普通战的默认掉落表（单个遭遇没写 rewards 时用它） */
+  battleRewards: id.optional(),
+  /** Boss 战的默认掉落表 */
+  bossRewards: id.optional(),
+  battles: z.array(weightedEncounterSchema).min(1).max(50),
+  bosses: z.array(weightedEncounterSchema).min(1).max(30),
+  chests: z.array(weightedRewardSchema).max(30).default([]),
+})
+export type MapGeneratorTemplate = z.infer<typeof mapGeneratorSchema>
+
 export const mapSchema = z.strictObject({
   kind: z.enum(MAP_KINDS),
   name: z.string().min(1),
@@ -97,8 +152,13 @@ export const mapSchema = z.strictObject({
   staminaCost: int.min(0).max(360).default(0),
   /** 出征前要选满几张卡（卡池） */
   deckSize: int.min(1).max(60),
-  start: id,
-  nodes: z.record(id, mapNodeSchema),
+  /** 手作图和周常骨架图的起点；日常生成图在生成后自动设为第 1 层节点 */
+  start: id.default("n1"),
+  nodes: z.record(id, mapNodeSchema).default({}),
+  /** 周常骨架图的随机槽位池：poolId → 候选节点列表 */
+  pools: z.record(id, z.array(slotEntrySchema).min(1).max(40)).optional(),
+  /** 日常随机地图的生成模板；写了它就不能再手写 nodes */
+  generate: mapGeneratorSchema.optional(),
   /** 通关奖励：整张图走到终点时发，掉落表 id */
   rewards: id.optional(),
 })
@@ -212,8 +272,51 @@ export function parseWorldContent(
     if ((map.kind === "main" || map.kind === "season") && map.staminaCost !== 0) {
       issue([...base, "staminaCost"], "主线和赛季地图不消耗体力，staminaCost 必须是 0")
     }
-    if (!map.nodes[map.start]) issue([...base, "start"], `起点 ${map.start} 不存在`)
     if (map.rewards && !world.rewards[map.rewards]) issue([...base, "rewards"], `掉落表 ${map.rewards} 不存在`)
+
+    for (const [poolId, entries] of Object.entries(map.pools ?? {})) {
+      entries.forEach((entry, i) => {
+        const path = [...base, "pools", poolId, i, "node"]
+        if ((entry.node.type === "battle" || entry.node.type === "boss") && !battle.encounters[entry.node.encounter]) {
+          issue([...path, "encounter"], `遭遇 ${entry.node.encounter} 不存在`)
+        }
+        if ("rewards" in entry.node && entry.node.rewards && !world.rewards[entry.node.rewards]) {
+          issue([...path, "rewards"], `掉落表 ${entry.node.rewards} 不存在`)
+        }
+      })
+    }
+
+    if (map.generate) {
+      const gen = map.generate
+      const genBase = [...base, "generate"]
+      if (Object.keys(map.nodes).length > 0) {
+        issue([...base, "nodes"], "写了 generate 生成模板的地图不能同时手写 nodes")
+      }
+      if (map.pools) issue([...base, "pools"], "写了 generate 生成模板的地图不需要 pools")
+      if (gen.battleRewards && !world.rewards[gen.battleRewards]) {
+        issue([...genBase, "battleRewards"], `掉落表 ${gen.battleRewards} 不存在`)
+      }
+      if (gen.bossRewards && !world.rewards[gen.bossRewards]) {
+        issue([...genBase, "bossRewards"], `掉落表 ${gen.bossRewards} 不存在`)
+      }
+      gen.battles.forEach((entry, i) => {
+        if (!battle.encounters[entry.encounter]) issue([...genBase, "battles", i, "encounter"], `遭遇 ${entry.encounter} 不存在`)
+        if (entry.rewards && !world.rewards[entry.rewards]) issue([...genBase, "battles", i, "rewards"], `掉落表 ${entry.rewards} 不存在`)
+      })
+      gen.bosses.forEach((entry, i) => {
+        if (!battle.encounters[entry.encounter]) issue([...genBase, "bosses", i, "encounter"], `遭遇 ${entry.encounter} 不存在`)
+        if (entry.rewards && !world.rewards[entry.rewards]) issue([...genBase, "bosses", i, "rewards"], `掉落表 ${entry.rewards} 不存在`)
+      })
+      if (gen.weights.treasure > 0 && gen.chests.length === 0) {
+        issue([...genBase, "chests"], "treasure 权重 > 0 时必须配置 chests 宝箱掉落池")
+      }
+      gen.chests.forEach((entry, i) => {
+        if (!world.rewards[entry.rewards]) issue([...genBase, "chests", i, "rewards"], `掉落表 ${entry.rewards} 不存在`)
+      })
+      continue
+    }
+
+    if (!map.nodes[map.start]) issue([...base, "start"], `起点 ${map.start} 不存在`)
 
     for (const [nodeId, node] of Object.entries(map.nodes)) {
       const path = [...base, "nodes", nodeId]
@@ -232,6 +335,9 @@ export function parseWorldContent(
         issue([...path, "rewards"], `掉落表 ${node.rewards} 不存在`)
       }
       if (node.type === "story" && !world.stories[node.story]) issue([...path, "story"], `剧情 ${node.story} 不存在`)
+      if (node.type === "slot" && !map.pools?.[node.pool]) {
+        issue([...path, "pool"], `槽位池 ${node.pool} 不存在`)
+      }
     }
 
     if (problems.length > 0 || !map.nodes[map.start]) continue
@@ -276,16 +382,38 @@ export function isFightNode(node: MapNode | undefined): node is Extract<MapNode,
   return node?.type === "battle" || node?.type === "boss"
 }
 
-/** 这张图所有战斗节点拿满星是多少 */
-export function maxMapStars(map: MapDef): number {
-  return Object.values(map.nodes).filter(isFightNode).length * 3
+/**
+ * 这张图有几场战斗（已展开的成品图直接数 battle/boss；
+ * 还没展开的日常模板按层数给代表值，周常槽位池若含战斗也算 1 场，给列表页展示用）。
+ */
+export function countMapFights(map: MapDef): number {
+  if (map.generate) return map.generate.layers
+  let count = 0
+  for (const node of Object.values(map.nodes)) {
+    if (isFightNode(node)) count += 1
+    else if (node.type === "slot") {
+      const pool = map.pools?.[node.pool] ?? []
+      if (pool.some((entry) => entry.node.type === "battle" || entry.node.type === "boss")) count += 1
+    }
+  }
+  return count
 }
 
-/** 地图里有没有运行时还不支持的节点（槽位要先展开，事件还没做） */
+/** 这张图所有战斗节点拿满星是多少 */
+export function maxMapStars(map: MapDef): number {
+  return countMapFights(map) * 3
+}
+
+/** 地图里有没有运行时还不支持的节点（槽位在开始出征时由生成器展开；只有 event 暂不支持） */
 export function unsupportedNode(map: MapDef): string | null {
   for (const [nodeId, node] of Object.entries(map.nodes)) {
     if (node.type === "slot") return `节点 ${nodeId} 是槽位，要先由生成器展开`
     if (node.type === "event") return `节点 ${nodeId} 是事件，事件节点还没有运行时支持`
   }
   return null
+}
+
+/** 这张地图配置现在能不能开始出征（slot 和 generate 都会在开始时由生成器展开，只有含 event 的不能开） */
+export function isMapStartable(map: MapDef): boolean {
+  return !Object.values(map.nodes).some((node) => node.type === "event")
 }

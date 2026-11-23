@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm"
+import { and, asc, eq, gte, inArray } from "drizzle-orm"
 
 import {
   MAX_ACTIONS_PER_BATTLE,
@@ -18,13 +18,16 @@ import {
 } from "@choke/shared/expedition-points"
 import {
   availableNext,
+  countMapFights,
   isFightNode,
+  isMapStartable,
   isTerminal,
   maxMapStars,
   unsupportedNode,
   type MapDef,
   type Reward,
 } from "@choke/shared/expedition/content"
+import { dailyMapSeed, materializeMap } from "@choke/shared/expedition/generator"
 import { isRewardEmpty, mapStarTier, mergeRewards, rollRewardTable } from "@choke/shared/expedition/loot"
 import type {
   ExpeditionBattleView,
@@ -210,10 +213,11 @@ function cardDefOf(row: typeof cards.$inferSelect): CardDef {
 export async function startExpedition(userId: string, input: StartInput, now = Date.now()): Promise<ExpeditionView> {
   await expireDue(userId, now)
 
-  const map = WORLD_CONTENT.maps[input.mapId]
-  if (!map) throw new TxAbort(404, "unknown_map", "没有这张地图")
-  const unsupported = unsupportedNode(map)
-  if (unsupported) throw new TxAbort(400, "map_unavailable", `这张地图暂时不能出征：${unsupported}`)
+  const rawMap = WORLD_CONTENT.maps[input.mapId]
+  if (!rawMap) throw new TxAbort(404, "unknown_map", "没有这张地图")
+  if (!isMapStartable(rawMap)) {
+    throw new TxAbort(400, "map_unavailable", `这张地图暂时不能出征：${unsupportedNode(rawMap) ?? "存在未支持的节点"}`)
+  }
 
   return db.transaction(async (tx) => {
     await lockUser(tx, userId)
@@ -237,12 +241,12 @@ export async function startExpedition(userId: string, input: StartInput, now = D
     const { allocation } = input
 
     const ids = input.cardIds
-    if (ids.length !== map.deckSize) {
-      throw new TxAbort(400, "bad_pool", `这张地图要带满 ${map.deckSize} 张卡，你选了 ${ids.length} 张`)
+    if (ids.length !== rawMap.deckSize) {
+      throw new TxAbort(400, "bad_pool", `这张地图要带满 ${rawMap.deckSize} 张卡，你选了 ${ids.length} 张`)
     }
     if (new Set(ids).size !== ids.length) throw new TxAbort(400, "bad_pool", "同一张卡不能选两次")
-    if (allocation.slots > map.deckSize) {
-      throw new TxAbort(400, "bad_allocation", `这张地图一共只带 ${map.deckSize} 张卡，卡槽数不能超过它`)
+    if (allocation.slots > rawMap.deckSize) {
+      throw new TxAbort(400, "bad_allocation", `这张地图一共只带 ${rawMap.deckSize} 张卡，卡槽数不能超过它`)
     }
 
     const rows = await tx
@@ -277,19 +281,42 @@ export async function startExpedition(userId: string, input: StartInput, now = D
     const listed = await listedUserCardIds(tx, ids)
     if (listed.size > 0) throw new TxAbort(400, "card_listed", "有卡正在市场里挂着，先下架再出征")
 
-    const cost = map.staminaCost
+    const cost = rawMap.staminaCost
     if (cost > 0) {
       const spent = spendStamina({ value: user.stamina, updatedAt: user.staminaUpdatedAt }, cost, now)
       if (!spent) throw new TxAbort(400, "not_enough_stamina", `体力不足（需要 ${cost}）`)
       await tx.update(users).set({ stamina: spent.value, staminaUpdatedAt: spent.updatedAt }).where(eq(users.id, userId))
     }
 
+    // 日常地图的种子按「玩家 + 地图 + 当天（北京时间 4:00 周期）」固定，放弃重进不换图；当天已通关后再打则推进序号
+    let seed: string
+    if (rawMap.kind === "daily") {
+      const cycleStart = nextReset("daily", now) - EXPEDITION_TTL_MS
+      const clearedToday = await tx
+        .select({ id: expeditions.id })
+        .from(expeditions)
+        .where(
+          and(
+            eq(expeditions.userId, userId),
+            eq(expeditions.mapId, input.mapId),
+            eq(expeditions.endReason, "cleared"),
+            gte(expeditions.startedAt, new Date(cycleStart)),
+          ),
+        )
+      seed = dailyMapSeed(userId, input.mapId, now, clearedToday.length)
+    } else {
+      seed = randomSeed()
+    }
+    const map = materializeMap(rawMap, seed)
+    const unsupported = unsupportedNode(map)
+    if (unsupported) throw new TxAbort(400, "map_unavailable", `这张地图暂时不能出征：${unsupported}`)
+
     const [created] = await tx
       .insert(expeditions)
       .values({
         userId,
         mapId: input.mapId,
-        seed: randomSeed(),
+        seed,
         contentVersion: CONTENT_VERSION,
         map,
         pool,
@@ -773,10 +800,10 @@ export async function listMaps(userId: string, now = Date.now()): Promise<MapLis
     summary: map.summary,
     staminaCost: map.staminaCost,
     deckSize: map.deckSize,
-    fights: Object.values(map.nodes).filter(isFightNode).length,
+    fights: countMapFights(map),
     maxStars: maxMapStars(map),
     endsAt: new Date(expiryOf(map, now)).toISOString(),
-    startable: unsupportedNode(map) === null,
+    startable: isMapStartable(map),
     clears: byMap.get(id)?.clears ?? 0,
     bestStars: byMap.get(id)?.bestStars ?? 0,
   }))

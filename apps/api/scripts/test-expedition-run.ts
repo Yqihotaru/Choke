@@ -27,8 +27,13 @@ const { marketRoutes } = await import("../src/routes/market")
 const { expireDue, expiryOf } = await import("../src/expedition/service")
 const { lockedUserCardIds } = await import("../src/expedition/locks")
 const { WORLD_CONTENT } = await import("../src/content")
+const { pickMirrorCard, upsertMirrorCard } = await import("../src/mirror")
+const { heroCardDef } = await import("../src/hero")
+const { mulberry32 } = await import("../src/gacha/pools")
 const { withAction, replayBattle } = await import("@choke/shared/battle/actions")
 const { createBattle } = await import("@choke/shared/battle/engine")
+const { isFightNode, unsupportedNode } = await import("@choke/shared/expedition/content")
+const { dailyMapSeed, materializeMap } = await import("@choke/shared/expedition/generator")
 const { nextReset } = await import("@choke/shared/reset")
 const { playBot } = await import("./lib/battle-bot")
 
@@ -689,6 +694,109 @@ await test("别人的出征看不到也动不了", async () => {
   const res = await call(other.id, "POST", `${base(other.id)}/current/node`, { to: "n2" })
   assert.equal(res.status, 404)
   assert.equal((await call(other.id, "GET", `${base(me.id)}/current`)).status, 403)
+})
+
+// ---------- 4B：周常随机槽位 + 日常随机地图生成 ----------
+
+await test("周常随机槽位：开始出征时 slot 已展开成具体节点并写进快照，不同种子能抽到不同候选", async () => {
+  const me = await newPlayer()
+  const ids = me.ids.slice(0, 7)
+  const view = await must(start(me.id, "test-patrol", ids))
+  assert.equal(unsupportedNode(view.map), null, "快照里不再有 slot 节点")
+  const p2 = view.map.nodes["p2"]!
+  assert.ok(p2.type === "battle" || p2.type === "rest", `p2 已展开为 ${p2.type}`)
+  assert.deepEqual(p2.next, ["p3"], "原槽位的 next 连线保留")
+  assert.deepEqual(p2.pos, [1, 0], "原槽位的坐标保留")
+
+  // 把这趟周常一路走完（p1 战斗 → p2 槽位展开后的战斗或休息 → p3 宝箱）
+  await fight(me.id, strongIds(me.ids))
+  const atP2 = await must(move(me.id, "p2"))
+  if (isFightNode(atP2.map.nodes["p2"])) {
+    await fight(me.id, strongIds(me.ids))
+  } else {
+    assert.equal(atP2.nodeDone, true, "抽到休息节点时自动完成")
+  }
+  const atP3 = await must(move(me.id, "p3"))
+  assert.equal(atP3.atEnd, true)
+  assert.equal((await settle(me.id)).body.data.end, "cleared")
+
+  // 纯函数验证：多换几个种子，池里 3 个候选都能抽到，且同种子结果完全一致
+  const raw = WORLD_CONTENT.maps["test-patrol"]!
+  const seen = new Set<string>()
+  for (let i = 0; i < 40; i += 1) {
+    const m1 = materializeMap(raw, `slot-seed-${i}`)
+    const m2 = materializeMap(raw, `slot-seed-${i}`)
+    assert.deepEqual(m1, m2, "同种子展开结果完全一致")
+    const node = m1.nodes["p2"]!
+    seen.add(node.type === "battle" ? `battle:${node.encounter}` : node.type)
+  }
+  assert.deepEqual([...seen].sort(), ["battle:rock-drummer", "battle:wind-chime", "rest"])
+})
+
+await test("日常随机地图：按玩家+地图+当天固定种子，放弃重进还是同一张图；通关后再进推进种子；换日或换人不同图", async () => {
+  const me = await newPlayer({ stamina: 300 })
+  const other = await newPlayer({ stamina: 300 })
+  const ids = me.ids.slice(0, 7)
+
+  const v1 = await must(start(me.id, "test-daily", ids))
+  assert.equal(unsupportedNode(v1.map), null)
+  assert.equal(v1.map.generate, undefined, "快照里已去掉 generate 模板")
+  const firstSeed = v1.seed
+  const firstNodes = v1.map.nodes
+  await abandon(me.id)
+
+  const v2 = await must(start(me.id, "test-daily", ids))
+  assert.equal(v2.seed, firstSeed, "放弃后当天重进，种子不变，防重开刷图")
+  assert.deepEqual(v2.map.nodes, firstNodes, "生成的整张地图一模一样")
+
+  // 另一个玩家同一天进同一张日常图，种子不同
+  const vOther = await must(start(other.id, "test-daily", other.ids.slice(0, 7)))
+  assert.notEqual(vOther.seed, firstSeed)
+  await abandon(other.id)
+
+  // 一路打通这张日常随机图
+  let cur = v2
+  for (let step = 0; step < 10 && !cur.atEnd; step += 1) {
+    if (!cur.nodeDone && isFightNode(cur.map.nodes[cur.position])) {
+      cur = await fight(me.id, strongIds(me.ids))
+    }
+    assert.equal(cur.nodeDone, true)
+    if (cur.atEnd) break
+    assert.ok(cur.availableNext.length >= 1)
+    cur = await must(move(me.id, cur.availableNext[0]!))
+  }
+  if (!cur.nodeDone && isFightNode(cur.map.nodes[cur.position])) {
+    cur = await fight(me.id, strongIds(me.ids))
+  }
+  assert.equal(cur.atEnd, true)
+  const settled = await settle(me.id)
+  assert.equal(settled.body.data.end, "cleared")
+
+  // 当天通关后再开第二次，种子推进（带 #1），不会完全复刻上一局
+  const v3 = await must(start(me.id, "test-daily", ids))
+  assert.equal(v3.seed, `${firstSeed}#1`)
+  await abandon(me.id)
+
+  // 第二天（过北京时间 4:00）种子变化
+  const d1 = Date.parse("2026-11-24T10:00:00+08:00")
+  const d2 = Date.parse("2026-11-25T04:01:00+08:00")
+  assert.notEqual(dailyMapSeed(me.id, "test-daily", d1), dailyMapSeed(me.id, "test-daily", d2))
+})
+
+await test("镜像卡抽取：不排除自己，且候选池有活跃玩家时能正常抽出对应档位镜像卡", async () => {
+  await newPlayer({ osuId: 990001, onboarded: true, lastSeenAt: new Date() })
+  const def = heroCardDef(
+    { id: 990001, username: "MirrorSelf", avatar_url: "", country_code: "CN", follower_count: 500 },
+    { no: 1, total: 1, globalRank: 3000, pp: "9500", rarity: "R" },
+  )
+  assert.equal(def.rarity, "R")
+  const mirrorId = await upsertMirrorCard(990001, def)
+  assert.equal(mirrorId, "mirror-990001")
+
+  const picked = await pickMirrorCard("normal", mulberry32(42))
+  assert.ok(picked, "有活跃已引导账号时能抽到镜像卡（含自己）")
+  assert.equal(picked!.id, "mirror-990001")
+  assert.equal(picked!.rarity, "R")
 })
 
 console.log(`${passed} 项通过`)

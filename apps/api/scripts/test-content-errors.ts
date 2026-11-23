@@ -155,6 +155,13 @@ const CASES: Case[] = [
   { name: "随机掉落权重为 0", breakIt: editJson("rewards/test-battle.json", (d) => (d.random.entries[0].weight = 0)), expect: "weight" },
   { name: "剧情选项里标记重复", breakIt: editJson("stories/test-intro.json", (d) => (d.lines[1].choice[0].set = ["a", "a"])), expect: "标记重复" },
   { name: "地图文件名不是合法 id", breakIt: (root) => fs.copyFileSync(path.join(root, "maps/test-trial.json"), path.join(root, "maps/bad_id.json")), expect: "maps/bad_id.json" },
+  { name: "槽位节点引用不存在的池", breakIt: editJson("maps/test-patrol.json", (d) => (d.nodes.p2.pool = "no-pool")), expect: "槽位池 no-pool 不存在" },
+  { name: "槽位池里引用不存在的遭遇", breakIt: editJson("maps/test-patrol.json", (d) => (d.pools["patrol-mid"][0].node.encounter = "nobody")), expect: "遭遇 nobody 不存在" },
+  { name: "槽位池里引用不存在的掉落表", breakIt: editJson("maps/test-patrol.json", (d) => (d.pools["patrol-mid"][0].node.rewards = "nope")), expect: "掉落表 nope 不存在" },
+  { name: "生成模板地图同时手写了 nodes", breakIt: editJson("maps/test-daily.json", (d) => (d.nodes = { n1: { type: "rest", next: [] } })), expect: "不能同时手写 nodes" },
+  { name: "生成模板引用不存在的遭遇", breakIt: editJson("maps/test-daily.json", (d) => (d.generate.battles[0].encounter = "nobody")), expect: "遭遇 nobody 不存在" },
+  { name: "生成模板引用不存在的 Boss 遭遇", breakIt: editJson("maps/test-daily.json", (d) => (d.generate.bosses[0].encounter = "nobody")), expect: "遭遇 nobody 不存在" },
+  { name: "生成模板开了 treasure 权重但没配 chests", breakIt: editJson("maps/test-daily.json", (d) => (d.generate.chests = [])), expect: "必须配置 chests" },
   // ---- 文件层面 ----
   { name: "目录里有非 JSON 文件", breakIt: (root) => fs.writeFileSync(path.join(root, "enemies/notes.txt"), "x"), expect: "没接入：enemies/notes.txt" },
   {
