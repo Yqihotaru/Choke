@@ -42,6 +42,7 @@ import {
   evaluateStars,
   hasTankAlive,
   teamHpOf,
+  healEfficiency,
 } from "@choke/shared/battle/engine"
 import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
 import { describeStar, starProgress } from "@choke/shared/battle/stars"
@@ -778,6 +779,7 @@ export function BattleStage({
 
   // ==================== 2. 正式战斗画面（1:1 兰斯10 折线血条 + 垂直红白扣血光柱） ====================
   const team = teamHpOf(battle)
+  const healEff = healEfficiency(battle)
   // 演出投影：血条与数字跟随「已播放到的事件」推进，而不是直接读引擎的终值
   const shownEnemyHp = hpView.enemy ?? battle.enemy.hp
   const shownPartyHp = hpView.party ?? team.hp
@@ -1080,11 +1082,11 @@ export function BattleStage({
               </div>
               <div
                 className="choke-heal-left"
-                data-empty={battle.healLeft === 0 ? "true" : undefined}
-                title="本场还能靠治疗回多少血；用完就不能再回血了"
+                data-empty={healEff < 0.5 ? "true" : undefined}
+                title="本场回血越多，之后每次治疗越弱（回过软上限那么多血时减半）"
               >
-                <i>治疗余量</i>
-                <b>{battle.healLeft === null ? "∞" : battle.healLeft.toLocaleString("en-US")}</b>
+                <i>治疗效率</i>
+                <b>{battle.healSoftCap === null ? "100%" : `${Math.round(healEff * 100)}%`}</b>
               </div>
             </div>
           </div>

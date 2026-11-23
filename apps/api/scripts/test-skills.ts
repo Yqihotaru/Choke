@@ -3,7 +3,7 @@
 import { EXECUTE_LOW_HP_RATIO } from "@choke/shared/battle/config"
 import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import { resolveEncounter } from "@choke/shared/battle/content"
-import { createBattle, effectiveApCost, statOf } from "@choke/shared/battle/engine"
+import { createBattle, effectiveApCost, healEfficiency, statOf } from "@choke/shared/battle/engine"
 import { comboMultiplier } from "@choke/shared/battle/rules"
 import type { BattleState } from "@choke/shared/battle/types"
 import { autoDescribeSkill, checkSkill, checkSkillTable, describeSkill } from "@choke/shared/skill-check"
@@ -191,7 +191,7 @@ for (const [id, job] of [
   check("医者仁心：被 Down 失效", run(["healer_plus"], true) === plain)
 }
 
-// ---------- 7b. 治疗预算 ----------
+// ---------- 7b. 治疗软上限 ----------
 {
   const make = (encounter: typeof spec) => {
     const cards = inputs(
@@ -209,26 +209,28 @@ for (const [id, job] of [
   const heal = (s: BattleState, card: number) => apply(s, { type: "skill", card, skill: "healer_heal" })
 
   const normal = make(spec)
-  check("治疗预算：默认是最大生命的一半", spec.healBudget === 0.5 && normal.healLeft === Math.round(normal.teamHpMax * 0.5))
+  check("治疗软上限：默认是最大生命的一半", spec.healSoftCap === 0.5 && normal.healSoftCap === Math.round(normal.teamHpMax * 0.5))
   const oneHeal = heal(make(spec), 1)
   const onePct = (oneHeal.teamHp - 1) / oneHeal.teamHpMax
-  check("治疗预算：1 AP 治疗约 6%–10% 最大生命（15% 才算大恢复）", onePct > 0.06 && onePct < 0.1, `${(onePct * 100).toFixed(1)}%`)
-  check("治疗预算：治疗后预算按实际回血扣除", oneHeal.healLeft === normal.healLeft! - (oneHeal.teamHp - 1))
+  check("治疗软上限：1 AP 治疗约 6%–10% 最大生命（15% 才算大恢复）", onePct > 0.06 && onePct < 0.1, `${(onePct * 100).toFixed(1)}%`)
+  check("治疗软上限：回血量记入已治疗总量", oneHeal.healed === oneHeal.teamHp - 1)
 
-  const tight = make({ ...spec, healBudget: 0.05 })
-  const cap = tight.healLeft!
+  // 软上限很小时：第一次治疗正常，之后一次比一次弱，但仍然能回血
+  const tight = make({ ...spec, healSoftCap: 0.05 })
   const first = heal(tight, 1)
-  check("治疗预算：一次治疗最多回到预算上限", first.teamHp - 1 === cap && first.healLeft === 0, `${first.teamHp - 1} / ${cap}`)
-  const hpBefore = first.teamHp
   const second = heal(first, 2)
-  check("治疗预算：预算用完后不能再靠治疗回血", second.teamHp === hpBefore)
-  check("治疗预算：用完时日志有提示", second.log.some((line) => line.includes("治疗预算已用尽")))
+  const g1 = first.teamHp - 1
+  const g2 = second.teamHp - first.teamHp
+  check("治疗软上限：回得越多之后越弱", g1 > g2, `${g1} > ${g2}`)
+  check("治疗软上限：不是硬墙，后面仍然能回血", g2 > 0)
+  check("治疗软上限：效率随已治疗总量递减", healEfficiency(second) < healEfficiency(first) && healEfficiency(first) < 1)
+  check("治疗软上限：回过软上限那么多血时效率约减半", Math.abs(healEfficiency({ healed: tight.healSoftCap!, healSoftCap: tight.healSoftCap }) - 0.5) < 1e-9)
 
-  const endless = make({ ...spec, healBudget: "unlimited" })
-  check("治疗预算：unlimited 时不限（永动机 BOSS）", endless.healLeft === null)
+  const endless = make({ ...spec, healSoftCap: "unlimited" })
+  check("治疗软上限：unlimited 时不衰减（永动机 BOSS）", endless.healSoftCap === null)
   const e1 = heal(endless, 1)
   const e2 = heal(e1, 2)
-  check("治疗预算：不限时可以一直回", e2.teamHp > e1.teamHp && e2.healLeft === null)
+  check("治疗软上限：不衰减时效率始终 100%", healEfficiency(e1) === 1 && healEfficiency(e2) === 1 && e2.healed > e1.healed)
 }
 
 // ---------- 8. 触发概率 ----------

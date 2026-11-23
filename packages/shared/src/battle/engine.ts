@@ -368,7 +368,7 @@ export function createBattle(
   )
   const apMax = hasHighTier ? 10 : 7
   const teamHpMax = calcTeamHpMax(cards)
-  const healBudget = encounter.healBudget === "unlimited" ? null : Math.round(teamHpMax * encounter.healBudget)
+  const healSoftCap = encounter.healSoftCap === "unlimited" ? null : Math.round(teamHpMax * encounter.healSoftCap)
 
   // 开局被动侧面支援（目前没有技能提供，留空）
   const playerSupports: SideSupportUnit[] = []
@@ -396,8 +396,8 @@ export function createBattle(
     swapCooldown: 0,
     teamHp: teamHpMax,
     teamHpMax,
-    healBudget,
-    healLeft: healBudget,
+    healSoftCap,
+    healed: 0,
     teamStatuses: [],
     cards,
     bench,
@@ -637,19 +637,21 @@ function healParty(state: BattleState, rawAmount: number, label = "治疗") {
   if (state.teamHp <= 0) return
   const healBonus = teamEffectSum(state.cards, "healBonus")
   const healBlock = state.teamStatuses.some((s) => s.id === "heal_block") ? 0.5 : 1.0
-  const amount = Math.round(rawAmount * (1 + healBonus) * healBlock)
-  const allowed = state.healLeft === null ? amount : Math.min(amount, state.healLeft)
+  const amount = Math.round(rawAmount * (1 + healBonus) * healBlock * healEfficiency(state))
   const before = state.teamHp
-  state.teamHp = Math.min(state.teamHpMax, state.teamHp + allowed)
+  state.teamHp = Math.min(state.teamHpMax, state.teamHp + amount)
   const actual = state.teamHp - before
-  if (state.healLeft !== null) state.healLeft -= actual
+  state.healed += actual
   if (actual > 0) {
     emit(state, { type: "heal", amount: actual, source: label, hpAfter: state.teamHp })
     log(state, `${label} 为队伍恢复 ${actual.toLocaleString("en-US")} HP`)
   }
-  if (state.healLeft === 0 && allowed < amount) {
-    log(state, "本场治疗预算已用尽，队伍不能再靠治疗回血了")
-  }
+}
+
+/** 治疗软上限：本场已经回过的血越多，之后每次治疗越弱。回过软上限那么多时效率减半；null = 不衰减 */
+export function healEfficiency(state: Pick<BattleState, "healed" | "healSoftCap">): number {
+  if (state.healSoftCap === null) return 1
+  return 1 / (1 + state.healed / Math.max(1, state.healSoftCap))
 }
 
 /** 拆毁敌方左侧强度不超过 breakTier 的侧面支援 */
