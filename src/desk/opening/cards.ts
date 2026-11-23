@@ -17,6 +17,7 @@ async function faceOfPulled(item: PulledCard): Promise<CardFaceData> {
     exp: 0,
     foil: item.foil,
     serial: item.serial,
+    skillRefs: item.skillRefs,
   }
   try {
     const detail = await fetchCardDetail(item.cardId)
@@ -36,7 +37,6 @@ async function faceOfPulled(item: PulledCard): Promise<CardFaceData> {
       profileUrl: null,
       art: null,
       banner: null,
-      skillRefs: [],
       version: 1,
       pulled: item.pulled,
     })

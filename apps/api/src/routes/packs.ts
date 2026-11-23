@@ -39,6 +39,7 @@ async function loadHero(userId: string, heroId: string) {
       exp: userCards.exp,
       serial: userCards.serial,
       rollBp: userCards.rollBp,
+      skillRefs: userCards.skillRefs,
       foil: userCards.foil,
     })
     .from(userCards)

@@ -1,3 +1,4 @@
+import { hashSeed, nextRandom } from "./rng"
 import type { CardSkill, CardSkillRef, Element, Job, Rarity } from "./types"
 
 export type SkillKind =
@@ -1037,19 +1038,15 @@ export function hashOf(seed: string): number {
   return h
 }
 
-/** 池卡/本体卡/镜像卡的技能种子 */
-export function skillSeed(cardId: string): string {
-  return cardId.replace(/^(pool|hero|mirror)-/, "")
-}
-
-/** 两个槽的卡里，主动 / 被动配比的权重（百分数，合计 100）；被动偏少 */
+/** 两个槽的卡里，主动 / 被动配比的权重（百分数，合计 100）；2/0 占多数，被动偏少 */
 export const TWO_SLOT_PLANS: Record<"common" | "legendary", { actives: number; weight: number }[]> = {
-  // C / UC / R / E：2 主动 60%，1 主动 + 1 被动 40%
+  // C / UC / R / E：2/0 占 60%，1/1 占 30%，0/2 占 10%
   common: [
     { actives: 2, weight: 60 },
-    { actives: 1, weight: 40 },
+    { actives: 1, weight: 30 },
+    { actives: 0, weight: 10 },
   ],
-  // L：2/0 55%，1/1 35%，0/2 10%
+  // L：2/0 占 55%，1/1 占 35%，0/2 占 10%
   legendary: [
     { actives: 2, weight: 55 },
     { actives: 1, weight: 35 },
@@ -1057,18 +1054,20 @@ export const TWO_SLOT_PLANS: Record<"common" | "legendary", { actives: number; w
   ],
 }
 
-/** 把种子哈希打散后落到 0–99；直接 mod 100 会让相近种子的结果扎堆 */
-function rollPercent(seed: string): number {
-  let h = hashOf(seed)
-  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0
-  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0
-  return ((h ^ (h >>> 16)) >>> 0) % 100
+/** 种子字符串 → 随机流；只给预览、本地原型卡用，真正发牌用服务端的 Math.random */
+export function seededRandom(seed: string): () => number {
+  let state = hashSeed(seed)
+  return () => {
+    const [next, value] = nextRandom(state)
+    state = next
+    return value
+  }
 }
 
-/** 两个槽的卡抽几个主动：同一张卡（同种子）结果恒定 */
-export function twoSlotActiveCount(seed: string, rarity: Rarity): number {
+/** 两个槽的卡按配比抽 2/0、1/1、0/2 */
+export function rollActiveCount(rarity: Rarity, random: () => number): number {
   const plans = rarity === "L" ? TWO_SLOT_PLANS.legendary : TWO_SLOT_PLANS.common
-  let roll = rollPercent(`${seed}|slotplan`)
+  let roll = random() * 100
   for (const plan of plans) {
     if (roll < plan.weight) return plan.actives
     roll -= plan.weight
@@ -1077,33 +1076,31 @@ export function twoSlotActiveCount(seed: string, rarity: Rarity): number {
 }
 
 /**
- * 卡面与战斗共用的技能池（遵循 §4.1 槽位规则）：
- * - C / UC / R / E：2 个槽，60% 为 2 主动，40% 为 1 主动 + 1 被动
- * - L：2 个槽，2/0 占 55%、1/1 占 35%、0/2 占 10%
+ * 给一张新卡发技能：每张卡各掷各的，同名卡的技能互不相同，发出去就固定。
+ * 先按配比定槽型，再在本大职业的池子里一个一个抽，抽到什么是什么（同一张卡内不重复）：
+ * - C / UC / R / E：2/0 占 60%，1/1 占 30%，0/2 占 10%
+ * - L：2/0 占 55%，1/1 占 35%，0/2 占 10%
  * - Mythic / Prismatic / 本体卡：3 个槽（暂定 2 主动 + 1 被动，其余配比等技能池扩充时放开）
  * 绝不额外硬塞第 4、第 5 个技能。
  */
-export function skillDefsFor(seed: string, job: Job, rarity: Rarity, wantThree = false): SkillDef[] {
+export function rollSkillRefs(job: Job, rarity: Rarity, random: () => number, wantThree = false): CardSkillRef[] {
   const pool = Object.values(SKILLS).filter((skill) => skill.job === job)
   const actives = pool.filter((skill) => !skill.passive)
   const passives = pool.filter((skill) => skill.passive)
   const threeSlots = wantThree || rarity === "Mythic" || rarity === "Prismatic"
   const slotCount = threeSlots ? 3 : 2
-  const wantActives = threeSlots ? 2 : twoSlotActiveCount(seed, rarity)
-  const activeCount = Math.min(actives.length, wantActives)
+  const activeCount = Math.min(actives.length, threeSlots ? 2 : rollActiveCount(rarity, random))
   const passiveCount = Math.min(passives.length, slotCount - activeCount)
-  const h = hashOf(`${seed}|skillpick`)
-  const picked: SkillDef[] = []
-  for (let i = 0; i < activeCount; i += 1) {
-    picked.push(actives[(h + i) % actives.length]!)
+  const drawFrom = (source: SkillDef[], count: number): SkillDef[] => {
+    const left = [...source]
+    const picked: SkillDef[] = []
+    for (let i = 0; i < count; i += 1) {
+      picked.push(left.splice(Math.floor(random() * left.length), 1)[0]!)
+    }
+    return picked
   }
-  const ph = hashOf(`${seed}|passivepick`)
-  for (let i = 0; i < passiveCount; i += 1) {
-    picked.push(passives[(ph + i) % passives.length]!)
-  }
-  return picked
+  return [...drawFrom(actives, activeCount), ...drawFrom(passives, passiveCount)].map((def) => ({ skillId: def.id }))
 }
-
 export function skillById(id: string): SkillDef | undefined {
   return SKILLS[id]
 }
@@ -1138,11 +1135,7 @@ export function skillDefFromCardSkill(skill: CardSkill): SkillDef {
 
 export const JOB_ORDER: Job[] = ["tank", "warrior", "mage", "support"]
 
-/** 按大职业 + 稀有度 + 种子发技能引用；种子相同则结果恒定 */
-export function skillRefsFor(job: Job, rarity: Rarity, wantThree: boolean, seed: string): CardSkillRef[] {
-  return skillDefsFor(seed, job, rarity, wantThree).map((def) => ({ skillId: def.id }))
-}
-
+/** 预览 / 本地原型卡用：按种子固定地发一份技能；玩家的卡由服务端发牌时存在卡实例上 */
 export function skillsFor(job: Job, rarity: Rarity, wantThree: boolean, seed: string): CardSkill[] {
-  return skillDefsFor(seed, job, rarity, wantThree).map(cardSkillOf)
+  return cardSkillsFromRefs(rollSkillRefs(job, rarity, seededRandom(`${seed}|skills`), wantThree))
 }

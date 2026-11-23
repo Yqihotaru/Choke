@@ -79,6 +79,7 @@ function percent(owned: number, total: number): number {
 function toPseudoCard(row: ApiCardDef): ApiUserCard {
   return {
     ...row,
+    skillRefs: [],
     userCardId: 0,
     level: 1,
     constellation: 0,

@@ -1,4 +1,4 @@
-import { JOB_ORDER, hashOf, skillRefsFor } from "@choke/shared/skills"
+import { JOB_ORDER, hashOf } from "@choke/shared/skills"
 import type { Rarity } from "@choke/shared/types"
 import { fanCap, lowerRarity, rankCap } from "@choke/shared/pool/score"
 
@@ -45,7 +45,6 @@ export function heroCardDef(
     profileUrl: `https://osu.ppy.sh/users/${me.id}`,
     art: me.avatar_url,
     banner: me.cover?.url ?? null,
-    skillRefs: skillRefsFor(job, rarity, false, String(me.id)),
     version: 1,
   }
 }

@@ -1,5 +1,8 @@
 import { and, eq, sql } from "drizzle-orm"
 
+import { rollSkillRefs } from "@choke/shared/skills"
+import type { CardSkillRef, Job, Rarity } from "@choke/shared/types"
+
 import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
 import { cards, packOpenings, packTokens, userCards, userPacks } from "../db/schema"
@@ -64,6 +67,8 @@ export interface DrawnCard {
   pulled: number
   /** 个体值，千分比 970–1030 */
   rollBp: number
+  /** 这一张自己掷出的技能 id */
+  skillRefs: CardSkillRef[]
 }
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
@@ -72,21 +77,24 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 export async function grantCard(
   tx: Transaction,
   values: { userId: string; cardId: string; foil?: boolean },
-): Promise<{ userCardId: number; serial: number; rollBp: number }> {
+): Promise<{ userCardId: number; serial: number; rollBp: number; skillRefs: CardSkillRef[] }> {
   const [counted] = await tx
     .update(cards)
     .set({ pulled: sql`${cards.pulled} + 1` })
     .where(eq(cards.id, values.cardId))
-    .returning({ pulled: cards.pulled })
+    .returning({ pulled: cards.pulled, job: cards.job, rarity: cards.rarity })
   if (!counted) throw new Error(`卡不存在：${values.cardId}`)
   // 个体值：970–1030（±3%），抽到时掷一次
   const rollBp = 970 + Math.floor(Math.random() * 61)
+  // 技能同样每张卡各掷各的，同名卡互不相同；掷出来就固定在这个实例上
+  // 本体卡槽数沿用旧行为（按稀有度），等本体卡返工时再定
+  const skillRefs = rollSkillRefs(counted.job as Job, counted.rarity as Rarity, Math.random)
   const [inserted] = await tx
     .insert(userCards)
-    .values({ ...values, serial: counted.pulled, rollBp })
+    .values({ ...values, serial: counted.pulled, rollBp, skillRefs })
     .returning({ id: userCards.id })
   if (!inserted) throw new Error("卡实例写入失败")
-  return { userCardId: inserted.id, serial: counted.pulled, rollBp }
+  return { userCardId: inserted.id, serial: counted.pulled, rollBp, skillRefs }
 }
 
 export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) {
@@ -133,7 +141,7 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       const cardId = ids[Math.floor(random() * ids.length)]!
       const foil = random() < PACKS[pool].foilRate
 
-      const { userCardId, serial, rollBp } = await grantCard(tx, { userId, cardId, foil })
+      const { userCardId, serial, rollBp, skillRefs } = await grantCard(tx, { userId, cardId, foil })
       results.push({
         cardId,
         rarity,
@@ -142,6 +150,7 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
         serial,
         pulled: serial,
         rollBp,
+        skillRefs,
         ...(guaranteed ? { guaranteed } : {}),
       })
     }
@@ -162,6 +171,7 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
         serial: granted.serial,
         pulled: granted.serial,
         rollBp: granted.rollBp,
+        skillRefs: granted.skillRefs,
       }
     }
 

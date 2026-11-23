@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 import type { MailAttachment, MailAudience } from "@choke/shared/mail"
+import type { CardSkillRef } from "@choke/shared/types"
 
 export const cards = pgTable(
   "cards",
@@ -33,8 +34,6 @@ export const cards = pgTable(
     profileUrl: text("profile_url"),
     art: text("art"),
     banner: text("banner"),
-    /** 技能引用：[{ skillId }]，卡上只存技能 id */
-    skillRefs: jsonb("skill_refs").notNull().default(sql`'[]'::jsonb`),
     /** pool / hero / mirror；公共卡池只抽 pool */
     cardType: text("card_type").notNull().default("pool"),
     /** 镜像卡对应的 osu! 账号；公共卡与本体卡为 null */
@@ -113,6 +112,8 @@ export const userCards = pgTable(
     serial: integer("serial").notNull().default(0),
     /** 实例个体值，千分比：970–1030；抽到时掷一次，之后不变 */
     rollBp: integer("roll_bp").notNull().default(1000),
+    /** 这张卡自己的技能 id：[{ skillId }]；发卡时掷一次，之后固定。技能挂在实例上，不在卡定义里 */
+    skillRefs: jsonb("skill_refs").$type<CardSkillRef[]>().notNull().default(sql`'[]'::jsonb`),
     mods: jsonb("mods").notNull().default(sql`'[]'::jsonb`),
     obtainedAt: timestamp("obtained_at", { withTimezone: true }).defaultNow().notNull(),
   },

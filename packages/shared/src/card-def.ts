@@ -30,8 +30,6 @@ export interface CardDef {
   profileUrl?: string
   art?: string
   banner?: string
-  /** 技能引用：卡上只存技能 id */
-  skillRefs: CardSkillRef[]
   /** 定义版本，用于热更和回滚 */
   version: number
 }
@@ -44,6 +42,8 @@ export function faceFromDef(
     constellation?: number
     mods?: CardFaceData["mods"]
     foil?: boolean
+    /** 这张卡实例自带的技能 id；技能挂在实例上，不在卡定义里 */
+    skillRefs?: CardSkillRef[]
     rollBp?: number
     serial?: number
     pulled?: number
@@ -72,7 +72,7 @@ export function faceFromDef(
     art: def.art,
     banner: def.banner,
     // 卡面技能与战斗技能共用同一份注册表结果，避免出现「卡上 1 AP、实战 2 AP」
-    skills: cardSkillsFromRefs(def.skillRefs),
+    skills: cardSkillsFromRefs(state.skillRefs ?? []),
   })
 }
 
@@ -92,7 +92,6 @@ export function defFromFace(face: CardFaceData, version = 1): CardDef {
     profileUrl: face.profileUrl,
     art: face.art,
     banner: face.banner,
-    skillRefs: face.skills.map((skill) => ({ skillId: skill.id })),
     version,
   }
 }
@@ -112,7 +111,6 @@ export interface CardDefRow {
   profileUrl?: string
   art?: string
   banner?: string
-  skillRefs: CardSkillRef[]
 }
 
 export function defRow(def: CardDef): CardDefRow {
@@ -130,6 +128,5 @@ export function defRow(def: CardDef): CardDefRow {
     profileUrl: def.profileUrl,
     art: def.art,
     banner: def.banner,
-    skillRefs: def.skillRefs,
   }
 }

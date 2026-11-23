@@ -22,6 +22,7 @@ async function loadDeck(userId: string) {
       exp: userCards.exp,
       serial: userCards.serial,
       rollBp: userCards.rollBp,
+      skillRefs: userCards.skillRefs,
       foil: userCards.foil,
       obtainedAt: userCards.obtainedAt,
     })

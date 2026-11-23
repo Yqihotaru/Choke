@@ -319,6 +319,7 @@ export async function authRoutes(app: FastifyInstance) {
           exp: userCards.exp,
           serial: userCards.serial,
           rollBp: userCards.rollBp,
+          skillRefs: userCards.skillRefs,
           foil: userCards.foil,
         })
         .from(userCards)

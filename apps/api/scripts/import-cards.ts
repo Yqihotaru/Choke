@@ -1,10 +1,6 @@
 import fs from "node:fs"
 import path from "node:path"
 
-import { eq } from "drizzle-orm"
-
-import { requireSkill } from "@choke/shared/skills"
-
 import { db } from "../src/db/client"
 import { cards } from "../src/db/schema"
 import { invalidateCardCache } from "../src/gacha/open"
@@ -24,7 +20,6 @@ interface CardDefRow {
   profileUrl?: string
   art?: string
   banner?: string
-  skillRefs: { skillId: string }[]
 }
 
 const file = path.resolve(process.argv[2] ?? "data/choke-cards.json")
@@ -44,25 +39,8 @@ if (!Array.isArray(raw)) {
 const rows = (raw as CardDefRow[]).filter((row) => row && row.id && row.rarity && row.name)
 console.log(`读取 ${rows.length} 条卡定义`)
 
-// 认不出的技能 id 直接报错，整批不导入
-for (const row of rows) {
-  if (!Array.isArray(row.skillRefs)) {
-    console.error(`卡 ${row.id} 缺少 skillRefs（旧格式的 skills 不再支持）`)
-    process.exit(1)
-  }
-  for (const ref of row.skillRefs) {
-    try {
-      requireSkill(ref.skillId)
-    } catch (error) {
-      console.error(`卡 ${row.id}：${(error as Error).message}`)
-      process.exit(1)
-    }
-  }
-}
-
 const BATCH = 500
 let done = 0
-const skillsOnly = process.argv.includes("--skills-only")
 
 if (process.argv.includes("--replace")) {
   console.log("清空 cards 表")
@@ -84,20 +62,10 @@ for (let i = 0; i < rows.length; i += BATCH) {
     profileUrl: row.profileUrl ?? null,
     art: row.art ?? null,
     banner: row.banner ?? null,
-    skillRefs: row.skillRefs.map((ref) => ({ skillId: ref.skillId })),
     version: 1,
   }))
 
-  if (skillsOnly) {
-    // 只刷新技能：不动 pulled 等发行计数，已有的玩家卡不受影响
-    await db.transaction(async (tx) => {
-      for (const row of batch) {
-        await tx.update(cards).set({ skillRefs: row.skillRefs }).where(eq(cards.id, row.id))
-      }
-    })
-  } else {
-    await db.insert(cards).values(batch).onConflictDoNothing()
-  }
+  await db.insert(cards).values(batch).onConflictDoNothing()
 
   done += batch.length
   console.log(`已导入 ${done}/${rows.length}`)

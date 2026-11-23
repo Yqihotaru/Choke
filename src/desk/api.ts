@@ -70,7 +70,6 @@ function toCardDef(row: ApiCardDef): CardDef {
     profileUrl: row.profileUrl ?? undefined,
     art: row.art ?? undefined,
     banner: row.banner ?? undefined,
-    skillRefs: row.skillRefs,
     version: row.version ?? 1,
   }
 }
@@ -83,6 +82,7 @@ export function toFace(row: ApiUserCard): CardFaceData {
     rollBp: row.rollBp,
     serial: row.serial,
     pulled: row.pulled,
+    skillRefs: row.skillRefs,
   })
 }
 
@@ -466,6 +466,8 @@ export interface OpenPackResult {
     foil: boolean
     serial: number
     pulled: number
+    /** 这张卡掷出的技能；技能挂在卡实例上 */
+    skillRefs: CardSkillRef[]
   }[]
   packs?: Record<string, number>
 }
@@ -515,7 +517,6 @@ export interface ApiCardDef {
   profileUrl: string | null
   art: string | null
   banner: string | null
-  skillRefs: CardSkillRef[]
   version: number
   pulled?: number
   owned?: boolean
