@@ -29,6 +29,7 @@ import { EXPEDITION_LOCK_MESSAGE, anyLocked, lockedUserCardIds } from "../expedi
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
 import { grantItems, loadItems, mergeStacks, spendItems } from "../items"
 import { recordLedger, type LedgerEntryInput } from "../ledger"
+import { recordQuestEvent } from "../quest-events"
 import { TxAbort, lockUser, runTx, type Tx } from "../tx"
 
 const feedBodySchema = z
@@ -282,6 +283,7 @@ export async function progressionRoutes(app: FastifyInstance) {
       if (upgraded.length === 0) {
         throw new TxAbort(400, "max_constellation", "已经满命座")
       }
+      await recordQuestEvent(tx, userId, "fuse")
       return true
     })
     if (!result) return
@@ -387,6 +389,7 @@ export async function progressionRoutes(app: FastifyInstance) {
       }
       ledger.push({ kind: "essence", delta: essenceGained })
       await recordLedger(tx, userId, ledger, { source: "feed", sourceRef: String(userCardId) })
+      await recordQuestEvent(tx, userId, "feed")
 
       return {
         gained,
@@ -549,6 +552,7 @@ export async function progressionRoutes(app: FastifyInstance) {
         ],
         { source: "dismantle", sourceRef: String(userCardId) },
       )
+      await recordQuestEvent(tx, userId, "dismantle")
       return { essence: wallet?.essence ?? 0, itemsGained, items: await loadItems(userId, tx) }
     })
     if (!dismantled) return

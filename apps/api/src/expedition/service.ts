@@ -56,6 +56,7 @@ import {
   users,
 } from "../db/schema"
 import { recordLedger } from "../ledger"
+import { recordQuestEvent } from "../quest-events"
 import { sendMail } from "../mail"
 import { grantAttachment } from "../rewards"
 import { TxAbort, lockUser, type Tx } from "../tx"
@@ -541,6 +542,7 @@ export async function appendActions(
       if (won) {
         const stars = evaluateStars(state).count
         patch.stars = stars
+        await recordQuestEvent(tx, userId, "expedition-win", { mapKind: exp.map.kind, now })
         const node = exp.map.nodes[exp.position]
         const table = isFightNode(node) ? rewardTable(node.rewards) : undefined
         const reward = table
@@ -663,6 +665,7 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
   }
 
   if (cleared) {
+    await recordQuestEvent(tx, exp.userId, "expedition-clear", { mapKind: exp.map.kind, now })
     const date = new Date(now)
     const [row] = await tx
       .select()

@@ -45,6 +45,8 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   foil: "闪卡强化",
   "market-buy": "市场购买",
   "market-sell": "市场出售",
+  quest: "任务奖励",
+  "sign-in": "签到",
 }
 
 /** 在发放 / 扣除的同一个事务里调用，流水和余额一起提交或回滚；delta 为 0 的不记 */

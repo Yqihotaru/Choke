@@ -8,6 +8,7 @@ import { db } from "../db/client"
 import { cards, packOpenings, packTokens, userCards, userPacks } from "../db/schema"
 import { MIRROR_RATE, pickMirrorCard } from "../mirror"
 import { recordLedger } from "../ledger"
+import { recordQuestEvent } from "../quest-events"
 import { PACK_SIZE, PACKS, STARTER_GUARANTEE } from "./packs"
 import { RARITY_ORDER, mulberry32, rollRarity, type PoolId } from "./pools"
 
@@ -216,6 +217,7 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       ],
       { source: "pack-open", sourceRef: pool },
     )
+    await recordQuestEvent(tx, userId, "pack-open")
 
     return {
       seed,

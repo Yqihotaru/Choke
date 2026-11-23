@@ -20,6 +20,32 @@ export function resetDayKey(now: number): string {
   return shifted(now).toISOString().slice(0, 10)
 }
 
+/** 现在属于哪个「重置周」：用这一周周一的重置日表示，格式 YYYY-MM-DD；周一 4:00 换周 */
+export function resetWeekKey(now: number): string {
+  const date = shifted(now)
+  const sinceMonday = (date.getUTCDay() + 6) % 7
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - sinceMonday))
+    .toISOString()
+    .slice(0, 10)
+}
+
+/** 现在属于哪个「重置月」，格式 YYYY-MM；每月 1 日 4:00 换月 */
+export function resetMonthKey(now: number): string {
+  return shifted(now).toISOString().slice(0, 7)
+}
+
+/** 某个周期现在的编号：任务进度按它分开存，换了编号就是新的一轮 */
+export function periodKey(period: ResetPeriod, now: number): string {
+  if (period === "daily") return resetDayKey(now)
+  if (period === "weekly") return resetWeekKey(now)
+  return resetMonthKey(now)
+}
+
+/** 今天是「重置月」的第几天（1–31）；每月 1 日 4:00 才算第 1 天。签到按它发奖励 */
+export function resetMonthDay(now: number): number {
+  return shifted(now).getUTCDate()
+}
+
 /** 下一次重置的时间戳（毫秒）；恰好在重置那一刻算作新的一段，返回的是之后的那次 */
 export function nextReset(period: ResetPeriod, now: number): number {
   const date = shifted(now)

@@ -9,6 +9,7 @@ import { db } from "../db/client"
 import { EXPEDITION_LOCK_MESSAGE, anyLocked } from "../expedition/locks"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
 import { recordLedger } from "../ledger"
+import { recordQuestEvent } from "../quest-events"
 import { TxAbort, runTx } from "../tx"
 
 const cardColumns = {
@@ -370,6 +371,8 @@ export async function marketRoutes(app: FastifyInstance) {
         ],
         { ...origin, source: "market-sell" },
       )
+      await recordQuestEvent(tx, userId, "market-buy")
+      await recordQuestEvent(tx, listing.sellerId, "market-sell")
       return { coins: buyerWallet.coins, price: listing.price, userCardId: listing.userCardId }
     })
     if (!bought) return

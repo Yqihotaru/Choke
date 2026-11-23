@@ -23,6 +23,8 @@
     "./expedition-points": "./src/expedition-points.ts",
     "./lineup": "./src/lineup.ts",
     "./reset": "./src/reset.ts",
+    "./quests": "./src/quests.ts",
+    "./quest-content": "./src/quest-content.ts",
     "./expedition/content": "./src/expedition/content.ts",
     "./expedition/generator": "./src/expedition/generator.ts",
     "./expedition/loot": "./src/expedition/loot.ts",

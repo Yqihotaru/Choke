@@ -11,6 +11,7 @@ import { db } from "../db/client"
 import { dungeonRuns, userPacks, users } from "../db/schema"
 import { grantItems } from "../items"
 import { recordLedger } from "../ledger"
+import { recordQuestEvent } from "../quest-events"
 
 const paramsSchema = z.object({ userId: z.string() })
 const runParamsSchema = z.object({ userId: z.string(), dungeonId: z.string() })
@@ -146,6 +147,7 @@ export async function dungeonRoutes(app: FastifyInstance) {
           ],
           { source: "dungeon", sourceRef: dungeon.id },
         )
+        await recordQuestEvent(tx, userId, "dungeon-run")
 
         await tx.insert(dungeonRuns).values({
           userId,

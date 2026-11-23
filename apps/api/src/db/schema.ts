@@ -378,3 +378,18 @@ export const bestiary = pgTable(
   },
   (table) => [primaryKey({ columns: [table.userId, table.enemyId] })],
 )
+
+/** 任务进度与签到记录：按周期编号分开存，换周期自然从 0 开始（见 migrations/0011） */
+export const questProgress = pgTable(
+  "quest_progress",
+  {
+    userId: text("user_id").notNull(),
+    questId: text("quest_id").notNull(),
+    periodKey: text("period_key").notNull(),
+    progress: integer("progress").notNull().default(0),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    autoClaimed: boolean("auto_claimed").notNull().default(false),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.questId, table.periodKey] })],
+)

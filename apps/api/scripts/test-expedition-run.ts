@@ -17,7 +17,7 @@ const { and, eq } = await import("drizzle-orm")
 const { default: Fastify } = await import("fastify")
 const { default: cookie } = await import("@fastify/cookie")
 const { db, client } = await import("../src/db/client")
-const { users, cards, userCards, ledgerEntries, mails, mapClears, bestiary, expeditions, expeditionBattles } =
+const { users, cards, userCards, ledgerEntries, mails, mapClears, bestiary, expeditions, expeditionBattles, questProgress } =
   await import("../src/db/schema")
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
@@ -343,6 +343,12 @@ await test("通关：剧情标记决定走哪条路，血量跨战斗保留，�
   assert.equal(clear?.clears, 1)
   const seen = await db.select().from(bestiary).where(eq(bestiary.userId, me.id))
   assert.deepEqual(seen.map((row) => row.enemyId).sort(), ["colossus-metronome", "ghost"])
+
+  // 任务进度：打赢 2 场战斗、主线通关 1 次；主线不算周常地图
+  const quest = new Map((await db.select().from(questProgress).where(eq(questProgress.userId, me.id))).map((r) => [r.questId, r.progress]))
+  assert.equal(quest.get("daily-expedition"), 2)
+  assert.equal(quest.get("monthly-expedition-clear"), 1)
+  assert.equal(quest.has("weekly-patrol"), false)
 })
 
 await test("走宝箱那条路：需要剧情标记；首通奖励只发一次", async () => {
@@ -379,6 +385,9 @@ await test("到此结算：只发已经攒下的节点奖励，不发通关奖�
   assert.ok(!res.body.data.rewards.packs, "没有通关奖励的卡包")
   assert.equal((await userOf(me.id)).coins - before.coins, res.body.data.rewards.coins)
   assert.equal((await db.select().from(mapClears).where(eq(mapClears.userId, me.id))).length, 0)
+  const quest = new Map((await db.select().from(questProgress).where(eq(questProgress.userId, me.id))).map((r) => [r.questId, r.progress]))
+  assert.equal(quest.get("daily-expedition"), 1, "打赢的那一场算")
+  assert.equal(quest.has("monthly-expedition-clear"), false, "到此结算不算通关")
 })
 
 await test("放弃：什么奖励都不要", async () => {
@@ -519,7 +528,9 @@ await test("断线恢复：每次上传都存在服务端，半场战斗能接�
     apMax: battle.apMax,
     hpRatio: battle.hpRatioStart,
   })
-  const half = actions.findIndex((a) => a.type === "endTurn") + 1
+  // 机器人偶尔在第一回合结束前就打赢了：这时改成留最后一步到第二段上传
+  const firstTurn = actions.findIndex((a) => a.type === "endTurn") + 1
+  const half = firstTurn > 0 ? Math.min(firstTurn, actions.length - 1) : actions.length - 1
   assert.ok(half > 0 && half < actions.length)
   view = await must(uploadActions(me.id, 0, actions.slice(0, half)))
   assert.equal(view.battle!.status, "fighting")

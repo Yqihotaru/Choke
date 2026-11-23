@@ -1,0 +1,124 @@
+{
+  "signIn": {
+    "base": { "coins": 50 },
+    "bonus": {
+      "7": { "coins": 100, "packs": [{ "pool": "normal", "count": 2 }] },
+      "14": { "coins": 100, "packs": [{ "pool": "golden", "count": 1 }] },
+      "21": { "coins": 100, "packs": [{ "pool": "normal", "count": 3 }] },
+      "28": { "coins": 200, "packs": [{ "pool": "radiant", "count": 1 }] }
+    }
+  },
+  "quests": {
+    "daily-sign-in": {
+      "period": "daily",
+      "name": "今日签到",
+      "desc": "完成一次签到",
+      "event": "sign-in",
+      "target": 1,
+      "rewards": { "coins": 30 },
+      "points": 1
+    },
+    "daily-open-pack": {
+      "period": "daily",
+      "name": "拆一包",
+      "desc": "开 1 个卡包",
+      "event": "pack-open",
+      "target": 1,
+      "rewards": { "coins": 40 },
+      "points": 1
+    },
+    "daily-dungeon": {
+      "period": "daily",
+      "name": "刷一次副本",
+      "desc": "通关 1 次副本",
+      "event": "dungeon-run",
+      "target": 1,
+      "rewards": { "coins": 40, "items": [{ "itemId": "exp-small", "count": 2 }] },
+      "points": 1
+    },
+    "daily-feed": {
+      "period": "daily",
+      "name": "喂喂卡",
+      "desc": "喂养卡牌 1 次",
+      "event": "feed",
+      "target": 1,
+      "rewards": { "coins": 40 },
+      "points": 1
+    },
+    "daily-expedition": {
+      "period": "daily",
+      "name": "出门走走",
+      "desc": "在远征里打赢 2 场战斗",
+      "event": "expedition-win",
+      "target": 2,
+      "rewards": { "coins": 50 },
+      "points": 1
+    },
+
+    "weekly-open-packs": {
+      "period": "weekly",
+      "name": "开包周",
+      "desc": "本周开 10 个卡包",
+      "event": "pack-open",
+      "target": 10,
+      "rewards": { "coins": 200 },
+      "points": 5
+    },
+    "weekly-expedition-win": {
+      "period": "weekly",
+      "name": "远征老手",
+      "desc": "本周在远征里打赢 10 场战斗",
+      "event": "expedition-win",
+      "target": 10,
+      "rewards": { "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] },
+      "points": 5
+    },
+    "weekly-patrol": {
+      "period": "weekly",
+      "name": "巡逻完成",
+      "desc": "通关 1 次周常地图",
+      "event": "expedition-clear",
+      "mapKind": "weekly",
+      "target": 1,
+      "rewards": { "coins": 250, "packs": [{ "pool": "golden", "count": 1 }] },
+      "points": 5
+    },
+    "weekly-dismantle": {
+      "period": "weekly",
+      "name": "大扫除",
+      "desc": "本周分解 10 张卡",
+      "event": "dismantle",
+      "target": 10,
+      "rewards": { "coins": 150, "items": [{ "itemId": "exp-medium", "count": 2 }] },
+      "points": 5
+    },
+
+    "monthly-expedition-clear": {
+      "period": "monthly",
+      "name": "月度远征",
+      "desc": "本月远征通关 20 次",
+      "event": "expedition-clear",
+      "target": 20,
+      "rewards": { "coins": 800, "packs": [{ "pool": "golden", "count": 2 }] },
+      "points": 20
+    },
+    "monthly-open-packs": {
+      "period": "monthly",
+      "name": "开包大户",
+      "desc": "本月开 100 个卡包",
+      "event": "pack-open",
+      "target": 100,
+      "rewards": { "coins": 700, "packs": [{ "pool": "radiant", "count": 1 }] },
+      "points": 15
+    },
+    "monthly-fuse": {
+      "period": "monthly",
+      "name": "命座修行",
+      "desc": "本月融合 10 次",
+      "event": "fuse",
+      "target": 10,
+      "rewards": { "coins": 500, "items": [{ "itemId": "exp-large", "count": 2 }] },
+      "points": 15
+    }
+  }
+}
