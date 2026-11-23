@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, getTableColumns, gte, inArray, lt, ne, sql } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, gte, inArray, lt, ne, sql } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
@@ -330,19 +330,6 @@ export async function progressionRoutes(app: FastifyInstance) {
         }
         if (sources.some((source) => isHeroCardId(source.cardId))) {
           throw new TxAbort(400, "hero_protected", "本体卡不能当材料")
-        }
-
-        const using = new Map<string, number>()
-        for (const source of sources) using.set(source.cardId, (using.get(source.cardId) ?? 0) + 1)
-        const owned = await tx
-          .select({ cardId: userCards.cardId, value: count() })
-          .from(userCards)
-          .where(and(eq(userCards.userId, userId), inArray(userCards.cardId, [...using.keys()])))
-          .groupBy(userCards.cardId)
-        for (const row of owned) {
-          if (Number(row.value) - (using.get(row.cardId) ?? 0) < 1) {
-            throw new TxAbort(400, "last_copy", "每张卡至少要留一张，不能全喂掉")
-          }
         }
 
         for (const source of sources) {

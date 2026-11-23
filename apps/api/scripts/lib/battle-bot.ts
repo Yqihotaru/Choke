@@ -38,6 +38,15 @@ export const DECKS: Record<string, BattleInputCard[]> = {
     ],
     100,
   ),
+  mid: inputs(
+    [
+      face("m-tank", "tank", "R", 40, 3, ["warden_armor", "bulwark_taunt", "bulwark_thorns"]),
+      face("m-war", "warrior", "E", 45, 2, ["breaker_rift", "breaker_counter", "breaker_swift"], ["HR"]),
+      face("m-mage", "mage", "E", 45, 2, ["warlock_meteor", "warlock_frost", "binder_focus"], ["DT"]),
+      face("m-sup", "support", "L", 30, 1, ["healer_heal", "healer_cleanse", "healer_plus"]),
+    ],
+    400,
+  ),
   strong: inputs(
     [
       face("s-tank", "tank", "Mythic", 80, 6, ["warden_stun", "warden_bash", "warden_hold"], ["HR"]),
@@ -58,8 +67,8 @@ export const BENCH = inputs(
 
 // 倒下的卡换替补；3 的倍数回合升 1 档防御；每张卡放第一个能放的技能；结束回合
 
-export function playBot(encounter: EncounterSpec, deck: BattleInputCard[], seed: string) {
-  let state = createBattle(encounter, deck, { seed, bench: BENCH })
+export function playBot(encounter: EncounterSpec, deck: BattleInputCard[], seed: string, bench: BattleInputCard[] = BENCH) {
+  let state = createBattle(encounter, deck, { seed, bench })
   const actions: BattleAction[] = []
   const act = (action: BattleAction) => {
     const result = withAction(state, action)
