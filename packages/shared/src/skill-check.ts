@@ -58,6 +58,7 @@ const skillSchema = z
     once: z.boolean().optional(),
     passive: z.boolean().optional(),
     statusId: z.enum(STATUS_IDS).optional(),
+    statusChance: ratio.optional(),
     selfHpCostPct: ratio.optional(),
     piercePct: ratio.optional(),
     executeBonus: z.number().positive().max(3).optional(),
@@ -110,6 +111,12 @@ const skillSchema = z
     for (const key of PASSIVE_KEYS) if (has(key)) fail(`主动技能不能带被动效果字段 ${key}`)
 
     if (has("statusId") && !has("turns")) fail("带状态的技能必须写 turns")
+    if (has("statusChance") && !has("statusId")) fail("statusChance 必须配合 statusId")
+    if (def.kind === "control") {
+      if (has("statusChance")) fail("硬控技能不写 statusChance（硬控另有判定）")
+    } else if (has("statusId") && !has("statusChance")) {
+      fail("带状态的技能必须写 statusChance")
+    }
     if (has("executeBonus") !== has("executeWhen")) fail("executeBonus 与 executeWhen 必须同时写")
     if (def.executeWhen && new Set(def.executeWhen).size !== def.executeWhen.length) fail("executeWhen 不能重复")
     if (has("hits") && !has("power")) fail("写了 hits 就必须写 power")
@@ -240,7 +247,10 @@ export function autoDescribeSkill(def: SkillDef): string {
       if ((def.power ?? 0) > 0) parts.push(`${hitText}造成 ${pct(def.power ?? 0)} ${element}伤害`)
       break
   }
-  if (def.statusId) parts.push(`附加${STATUS_LABEL[def.statusId]}，持续 ${def.turns} 回合`)
+  if (def.statusId) {
+    const chance = def.statusChance !== undefined ? `（几率 ${pct(def.statusChance)}）` : ""
+    parts.push(`附加${STATUS_LABEL[def.statusId]}，持续 ${def.turns} 回合${chance}`)
+  }
   if (def.selfStatus) parts.push(`自身获得${def.selfStatus.name}（${pct(def.selfStatus.amount)}，${def.selfStatus.turns} 回合）`)
   if (def.once) parts.push("整场限用 1 次")
   return parts.join("；")
@@ -248,5 +258,6 @@ export function autoDescribeSkill(def: SkillDef): string {
 
 /** 界面显示的技能描述：有手写文案用手写，没有则自动生成 */
 export function describeSkill(def: SkillDef): string {
-  return def.desc ?? autoDescribeSkill(def)
+  if (def.desc === undefined) return autoDescribeSkill(def)
+  return def.statusChance !== undefined ? `${def.desc} · 状态几率 ${pct(def.statusChance)}` : def.desc
 }

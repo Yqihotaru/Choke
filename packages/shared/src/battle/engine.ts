@@ -22,6 +22,7 @@ import {
 import {
   EXECUTE_LOW_HP_RATIO,
   PREEMPTIVE_RATE,
+  STATUS_CHANCE_BY_TIER,
   SUPPORT_PROC_RATE,
 } from "./config"
 import {
@@ -426,6 +427,20 @@ function applyEnemyStatusById(state: BattleState, statusId: StatusId, turns = 2)
   addOrStackStatus(state.enemy.statuses, { ...template, turns: turns || template.turns })
 }
 
+/** 技能附带的状态：先过几率（技能自带 × 敌人档位修正），失败写"被抵抗"；返回是否生效 */
+function tryApplySkillStatus(state: BattleState, card: BattleCard, skill: SkillDef): boolean {
+  if (!skill.statusId) return false
+  const chance = Math.min(1, (skill.statusChance ?? 1) * STATUS_CHANCE_BY_TIER[state.enemy.tier])
+  if (roll(state, "player") >= chance) {
+    log(state, `${card.name}「${skill.name}」的状态被敌方抵抗！`)
+    return false
+  }
+  applyEnemyStatusById(state, skill.statusId, skill.turns ?? 2)
+  const name = state.enemy.statuses.find((s) => s.id === skill.statusId)?.name ?? skill.statusId
+  log(state, `敌方陷入【${name}】`)
+  return true
+}
+
 function checkEnemyWakeUp(state: BattleState) {
   if (state.enemy.hardControl) {
     const prev = state.enemy.hardControl === "sleep" ? "眠咒" : "击晕"
@@ -700,8 +715,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
       case "damage": {
         applyDamageToEnemy(state, card, skill, consumedTrigger)
         if (skill.statusId && state.phase === "player") {
-          applyEnemyStatusById(state, skill.statusId, skill.turns ?? 2)
-          log(state, `敌方陷入【${state.enemy.statuses.find((s) => s.id === skill.statusId)?.name ?? skill.statusId}】`)
+          tryApplySkillStatus(state, card, skill)
         }
         if (skill.clearEnemySupports) {
           removeEnemySupports(state, skill.clearEnemySupports, card.name)
@@ -874,8 +888,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           removeEnemySupports(state, skill.clearEnemySupports, card.name)
         }
         if (skill.statusId && state.phase === "player") {
-          applyEnemyStatusById(state, skill.statusId, skill.turns ?? 2)
-          log(state, `${card.name} 对敌方施加【${skill.name}】`)
+          tryApplySkillStatus(state, card, skill)
         }
         break
       }

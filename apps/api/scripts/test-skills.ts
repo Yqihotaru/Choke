@@ -473,6 +473,43 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("支援 combo：校验拒绝负数与过大的值", checkSkill({ ...SKILLS.summoner_call!, supportDef: { ...SKILLS.summoner_call!.supportDef!, combo: -1 } }).length > 0 && checkSkill({ ...SKILLS.summoner_call!, supportDef: { ...SKILLS.summoner_call!.supportDef!, combo: 9 } }).length > 0)
 }
 
+// ---------- 9g. 状态几率 ----------
+{
+  const rate = (id: string, enemyId: string, statusId: string) => {
+    const spec2 = resolveEncounter(BATTLE_CONTENT, enemyId)!
+    let hit = 0
+    let resisted = 0
+    for (const seed of seedsOf(`chance-${id}`)) {
+      const s = start(SKILLS[id]!.job, [id], seed, spec2)
+      s.enemy.hp = s.enemy.hpMax = 1e9
+      s.ap = 6
+      const next = apply(s, { type: "skill", card: 0, skill: id })
+      if (next.enemy.statuses.some((x) => x.id === statusId)) hit += 1
+      if (next.log.some((l) => l.includes("被敌方抵抗"))) resisted += 1
+    }
+    return { hit: hit / SEEDS, resisted: resisted / SEEDS }
+  }
+  const near = (value: number, target: number) => Math.abs(value - target) < 0.07
+  const frost = rate("warlock_frost", "ghost", "freeze")
+  check("状态几率：中等状态（冻结）对普通敌人约 65%", near(frost.hit, 0.65), `${frost.hit}`)
+  check("状态几率：每次施放要么生效要么有“被抵抗”日志（二连发会两者兼有）", frost.hit + frost.resisted >= 1 - 1e-9 && frost.resisted > 0.25, `${frost.hit}+${frost.resisted}`)
+  const frostElite = rate("warlock_frost", "vanguard", "freeze")
+  check("状态几率：精英 ×0.8（约 52%）", near(frostElite.hit, 0.52), `${frostElite.hit}`)
+  const frostBoss = rate("warlock_frost", "conductor", "freeze")
+  check("状态几率：BOSS ×0.65（约 42%）", near(frostBoss.hit, 0.4225), `${frostBoss.hit}`)
+  const charm = rate("binder_charm", "ghost", "charm")
+  check("状态几率：强状态（魅惑）对普通敌人约 45%", near(charm.hit, 0.45), `${charm.hit}`)
+  const bleed = rate("berserker_cleave", "ghost", "bleed")
+  check("状态几率：弱状态（流血）对普通敌人约 80%", near(bleed.hit, 0.8), `${bleed.hit}`)
+  const noChance = Object.values(SKILLS).filter((k) => k.statusId && k.kind !== "control" && k.statusChance === undefined)
+  check("状态几率：除硬控外每个带状态的技能都写了几率", noChance.length === 0, noChance.map((k) => k.id).join(","))
+  check("状态几率：硬控技能不写 statusChance", Object.values(SKILLS).filter((k) => k.kind === "control").every((k) => k.statusChance === undefined))
+  check("状态几率校验：带状态不写几率会报错", checkSkill({ ...SKILLS.warlock_frost!, statusChance: undefined }).length > 0)
+  check("状态几率校验：硬控写几率会报错", checkSkill({ ...SKILLS.warden_stun!, statusChance: 0.5 }).length > 0)
+  check("状态几率校验：几率超过 1 会报错", checkSkill({ ...SKILLS.warlock_frost!, statusChance: 1.5 }).length > 0)
+  check("状态几率：说明文案写出几率（手写与自动都有）", describeSkill(SKILLS.warlock_frost!).includes("65%") && autoDescribeSkill(SKILLS.warlock_frost!).includes("65%"))
+}
+
 // ---------- 10. 坦克只看大职业 ----------
 {
   const tankDeck = start("tank", ["bulwark_quake"])

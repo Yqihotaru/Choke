@@ -29,6 +29,9 @@ export const COMBO_CAP = COMBO_BONUS.length - 1
 /** 斩杀"血量低"的判定线：敌人当前血量 / 最大血量 */
 export const EXECUTE_LOW_HP_RATIO = 0.4
 
+/** 技能附带状态的几率修正：按敌人档位乘在技能自己的 statusChance 上 */
+export const STATUS_CHANCE_BY_TIER = { normal: 1, elite: 0.8, boss: 0.65 } as const
+
 export const ROMAN_TIER = ["0", "I", "II", "III", "IV"] as const
 
 /** 防御档位减伤表（§6.7） */

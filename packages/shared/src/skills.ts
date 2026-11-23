@@ -94,7 +94,8 @@ export interface SkillDef {
     | "slow"
     | "support_ban"
     | "thorns"
-  /** 卖血换输出：消耗队伍当前/最大 HP 比例 */
+  /** 状态附带几率（0–1，基础值，会再乘敌人档位修正）；伤害/减益技能带状态时必写，硬控另有判定 */
+  statusChance?: number
   selfHpCostPct?: number
   /** 穿甲：无视目标部分 DEF/减伤比例 */
   piercePct?: number
@@ -210,6 +211,7 @@ export const SKILLS: Record<string, SkillDef> = {
     hits: 1,
     target: "enemy",
     statusId: "weaken",
+    statusChance: 0.8,
     turns: 2,
     desc: "1.35× 土属性伤害，附带 2 回合【衰弱】（ATK/INT −20%）",
   }),
@@ -311,6 +313,7 @@ export const SKILLS: Record<string, SkillDef> = {
     selfHpCostPct: 0.08,
     target: "enemy",
     statusId: "bleed",
+    statusChance: 0.8,
     turns: 3,
     desc: "消耗队伍 8% 生命，打出 4 段 × 0.42× 火焰斩击并叠【流血】",
   }),
@@ -414,6 +417,7 @@ export const SKILLS: Record<string, SkillDef> = {
     hits: 1,
     target: "enemy",
     statusId: "armor_break",
+    statusChance: 0.8,
     clearEnemySupports: 1,
     turns: 3,
     desc: "1.0× 金属性伤害，施加【破防】（敌方防御档位 −1 或 DEF 削减）并拆毁 1 个敌方支援",
@@ -430,6 +434,7 @@ export const SKILLS: Record<string, SkillDef> = {
     hits: 3,
     target: "enemy",
     statusId: "silence",
+    statusChance: 0.45,
     turns: 2,
     desc: "3 段 × 0.48× 暗属性连斩，附带【沉默】",
   }),
@@ -506,6 +511,7 @@ export const SKILLS: Record<string, SkillDef> = {
     hits: 1,
     piercePct: 0.5,
     statusId: "armor_break",
+    statusChance: 0.8,
     turns: 3,
     target: "enemy",
     desc: "1.65× 冰属性穿透箭，无视 50% 减伤并附加【破防】",
@@ -576,6 +582,7 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 0.45,
     hits: 3,
     statusId: "poison",
+    statusChance: 0.65,
     turns: 4,
     target: "enemy",
     desc: "3 段 × 0.45× 暗影连刺，附带 4 回合【中毒】",
@@ -620,6 +627,7 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 1.35,
     hits: 1,
     statusId: "freeze",
+    statusChance: 0.65,
     turns: 2,
     target: "enemy",
     desc: "1.35× 冰属性法术，附加【冻结】（冰伤+20%、25%行动失败）",
@@ -635,6 +643,7 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 0.95,
     hits: 2,
     statusId: "shock",
+    statusChance: 0.65,
     turns: 3,
     target: "enemy",
     desc: "2 段 × 0.95× 雷属性法术，附加【触电】（受雷伤 +30%）",
@@ -650,6 +659,7 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 3.4,
     hits: 1,
     statusId: "burn",
+    statusChance: 0.65,
     turns: 3,
     target: "enemy",
     desc: "3.4× 火属性究极奥义，附加【燃烧】，最适合在满 Combo 收尾 · 远征累积",
@@ -691,6 +701,7 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 1.1,
     hits: 1,
     statusId: "poison",
+    statusChance: 0.65,
     turns: 4,
     target: "enemy",
     desc: "1.1× 木属性伤害，附加 4 回合【中毒】（每回合扣当前生命 3%）",
@@ -743,6 +754,7 @@ export const SKILLS: Record<string, SkillDef> = {
     kind: "debuff",
     costTag: "normal",
     statusId: "charm",
+    statusChance: 0.45,
     turns: 2,
     target: "enemy",
     desc: "软控（2 AP）：施加 2 回合【魅惑】（50% 概率打错目标自残，受击不打醒）",
@@ -758,6 +770,7 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 0.9,
     hits: 1,
     statusId: "curse",
+    statusChance: 0.65,
     turns: 3,
     target: "enemy",
     desc: "0.9× 木属性伤害并施加 3 回合【诅咒】（倒计时结束扣目标当前生命 15%）",
