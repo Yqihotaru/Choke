@@ -2,7 +2,7 @@
 // 每个被动 / 效果字段：带了生效、没带不生效、卡被 Down 失效。
 import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import { resolveEncounter } from "@choke/shared/battle/content"
-import { createBattle, statOf } from "@choke/shared/battle/engine"
+import { createBattle, effectiveApCost, statOf } from "@choke/shared/battle/engine"
 import type { BattleState } from "@choke/shared/battle/types"
 import { autoDescribeSkill, checkSkill, checkSkillTable, describeSkill } from "@choke/shared/skill-check"
 import { SKILLS } from "@choke/shared/skills"
@@ -349,6 +349,33 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("守护光环：没带时 2 个支援全被拆", without === 0, `${without}`)
   check("守护光环：带了平均每次保住约 0.6 个", Math.abs(withIt - 0.6) < 0.12, `${withIt}`)
   check("守护光环：被 Down 失效", left(["paladin_aura"], true) === 0)
+}
+
+// ---------- 9c. 疲惫：所有主动技能通用 ----------
+{
+  const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
+  const costOf = (s: BattleState, id: string) => effectiveApCost(s, s.cards[0]!, s.cards[0]!.skills.find((k) => k.id === id)!)
+  const bigEnemy = (s: BattleState) => {
+    s.enemy.hp = s.enemy.hpMax = 1e9
+    s.ap = s.apMax
+    return s
+  }
+  const tagless = Object.values(SKILLS).filter((k) => !k.passive && k.costTag !== "accumulate" && k.costTag !== "once")
+  check("技能上不再有 fatigue 标签", !Object.values(SKILLS).some((k) => (k.costTag as string) === "fatigue"))
+  for (const id of ["berserker_zero", "healer_heal", "bard_inspire", "warden_bash", "ranger_zero", "assassin_zero"]) {
+    const def = SKILLS[id]!
+    const base = def.ap
+    let s = bigEnemy(start(def.job, [id], "fatigue-1", ghost))
+    const first = costOf(s, id)
+    s = apply(s, { type: "skill", card: 0, skill: id })
+    s = bigEnemy(apply(s, { type: "endTurn" }))
+    const second = costOf(s, id)
+    s = bigEnemy(apply(s, { type: "endTurn" }))
+    const third = costOf(s, id)
+    check(`疲惫：${def.name} 首次 ${base} AP，连用下一回合 +1，隔一回合恢复`, first === base && second === base + 1 && third === base, `${first}/${second}/${third}`)
+  }
+  check("疲惫：0 费攻击（盾击平推、牵制速射、瞬影刺）都在上面的循环里变成 0、1 交替", ["warden_bash", "ranger_zero", "assassin_zero"].every((id) => SKILLS[id]!.ap === 0))
+  check("疲惫：覆盖到所有主动技能", tagless.length > 30, `${tagless.length}`)
 }
 
 // ---------- 10. 坦克只看大职业 ----------

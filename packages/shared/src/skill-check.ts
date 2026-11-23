@@ -47,7 +47,7 @@ const skillSchema = z
     element: z.enum(ELEMENTS),
     ap: z.int().min(0).max(5),
     kind: z.enum(["damage", "heal", "guard", "taunt", "buff", "debuff", "control", "interrupt", "ap", "summon", "passive"]),
-    costTag: z.enum(["normal", "fatigue", "accumulate", "once"]).optional(),
+    costTag: z.enum(["normal", "accumulate", "once"]).optional(),
     power: z.number().positive().max(10).optional(),
     hits: z.int().min(1).max(10).optional(),
     target: z.enum(["enemy", "self", "ally", "team"]).optional(),

@@ -138,7 +138,6 @@ function WeaknessRibbon({
 }
 
 function costTagLabel(tag: SkillDef["costTag"]): string | null {
-  if (tag === "fatigue") return "疲惫"
   if (tag === "accumulate") return "累积"
   if (tag === "once") return "单次"
   return null

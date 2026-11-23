@@ -14,13 +14,13 @@ export type SkillKind =
   | "passive"
 
 /**
- * 技能费用标签（卡牌数值与战斗机制 v0.1 §6.5）：
+ * 技能费用标签（卡牌数值与战斗机制 v0.1 §6.5）。
+ * 疲惫是所有主动技能的通用机制（这张卡上回合用过该技能，本回合 +1 AP，不叠层），不再是标签：
  * - normal: 常态固定费用
- * - fatigue: 疲惫（上一回合刚用过则本回合 +1 AP，不叠层）
  * - accumulate: 远征累积（每用 1 次，本场/远征永久 +1 AP）
  * - once: 单次（整场战斗限用 1 次）
  */
-export type SkillCostTag = "normal" | "fatigue" | "accumulate" | "once"
+export type SkillCostTag = "normal" | "accumulate" | "once"
 
 export interface SupportSpawnDef {
   kind: "attack" | "armor" | "aura" | "thorns"
@@ -199,13 +199,13 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "earth",
     ap: 2,
     kind: "damage",
-    costTag: "fatigue",
+    costTag: "normal",
     power: 1.35,
     hits: 1,
     target: "enemy",
     statusId: "weaken",
     turns: 2,
-    desc: "1.35× 土属性伤害，附带 2 回合【衰弱】（ATK/INT −20%）· 疲惫",
+    desc: "1.35× 土属性伤害，附带 2 回合【衰弱】（ATK/INT −20%）",
   }),
   bulwark_thorns: S({
     id: "bulwark_thorns",
@@ -260,7 +260,7 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "physical",
     ap: 3,
     kind: "control",
-    costTag: "fatigue",
+    costTag: "normal",
     target: "enemy",
     statusId: "stun",
     turns: 1,
@@ -299,14 +299,14 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "fire",
     ap: 3,
     kind: "damage",
-    costTag: "fatigue",
+    costTag: "normal",
     power: 0.42,
     hits: 4,
     selfHpCostPct: 0.08,
     target: "enemy",
     statusId: "bleed",
     turns: 3,
-    desc: "消耗队伍 8% 生命，打出 4 段 × 0.42× 火焰斩击并叠【流血】· 疲惫",
+    desc: "消耗队伍 8% 生命，打出 4 段 × 0.42× 火焰斩击并叠【流血】",
   }),
   berserker_wind: S({
     id: "berserker_wind",
@@ -376,11 +376,11 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "light",
     ap: 3,
     kind: "damage",
-    costTag: "fatigue",
+    costTag: "normal",
     power: 1.15,
     hits: 2,
     target: "enemy",
-    desc: "2 段 × 1.15× 光属性重击· 疲惫",
+    desc: "2 段 × 1.15× 光属性重击",
   }),
   paladin_aura: S({
     id: "paladin_aura",
@@ -418,13 +418,13 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "dark",
     ap: 2,
     kind: "damage",
-    costTag: "fatigue",
+    costTag: "normal",
     power: 0.48,
     hits: 3,
     target: "enemy",
     statusId: "silence",
     turns: 2,
-    desc: "3 段 × 0.48× 暗属性连斩，附带【沉默】· 疲惫",
+    desc: "3 段 × 0.48× 暗属性连斩，附带【沉默】",
   }),
   breaker_counter: S({
     id: "breaker_counter",
@@ -493,14 +493,14 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "ice",
     ap: 2,
     kind: "damage",
-    costTag: "fatigue",
+    costTag: "normal",
     power: 1.65,
     hits: 1,
     piercePct: 0.5,
     statusId: "armor_break",
     turns: 3,
     target: "enemy",
-    desc: "1.65× 冰属性穿透箭，无视 50% 减伤并附加【破防】· 疲惫",
+    desc: "1.65× 冰属性穿透箭，无视 50% 减伤并附加【破防】",
   }),
   ranger_harvest: S({
     id: "ranger_harvest",
@@ -563,13 +563,13 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "dark",
     ap: 2,
     kind: "damage",
-    costTag: "fatigue",
+    costTag: "normal",
     power: 0.45,
     hits: 3,
     statusId: "poison",
     turns: 4,
     target: "enemy",
-    desc: "3 段 × 0.45× 暗影连刺，附带 4 回合【中毒】· 疲惫",
+    desc: "3 段 × 0.45× 暗影连刺，附带 4 回合【中毒】",
   }),
   assassin_execute: S({
     id: "assassin_execute",
@@ -621,13 +621,13 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "thunder",
     ap: 2,
     kind: "damage",
-    costTag: "fatigue",
+    costTag: "normal",
     power: 0.95,
     hits: 2,
     statusId: "shock",
     turns: 3,
     target: "enemy",
-    desc: "2 段 × 0.95× 雷属性法术，附加【触电】（受雷伤 +30%）· 疲惫",
+    desc: "2 段 × 0.95× 雷属性法术，附加【触电】（受雷伤 +30%）",
   }),
   warlock_meteor: S({
     id: "warlock_meteor",
@@ -693,10 +693,10 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "light",
     ap: 2,
     kind: "heal",
-    costTag: "fatigue",
+    costTag: "normal",
     power: 1.6,
     target: "team",
-    desc: "大幅回复队伍生命并立即唤醒所有被 Down 的队友 · 疲惫",
+    desc: "大幅回复队伍生命并立即唤醒所有被 Down 的队友",
   }),
   life_regen: S({
     id: "life_regen",
@@ -718,7 +718,7 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "dark",
     ap: 3,
     kind: "control",
-    costTag: "fatigue",
+    costTag: "normal",
     statusId: "sleep",
     turns: 1,
     target: "enemy",
@@ -792,7 +792,7 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "earth",
     ap: 2,
     kind: "summon",
-    costTag: "fatigue",
+    costTag: "normal",
     target: "self",
     supportDef: {
       kind: "attack",
@@ -803,7 +803,7 @@ export const SKILLS: Record<string, SkillDef> = {
       procRate: 0.65,
       roleText: "65% 概率回合初 2 连击 +2 Combo",
     },
-    desc: "在右侧支援栏部署【哈尼突击队】，回合初发动 2 段支援连击快速垫高 Combo · 疲惫",
+    desc: "在右侧支援栏部署【哈尼突击队】，回合初发动 2 段支援连击快速垫高 Combo",
   }),
   summoner_ward: S({
     id: "summoner_ward",
@@ -845,7 +845,7 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "light",
     ap: 0,
     kind: "ap",
-    costTag: "fatigue",
+    costTag: "normal",
     amount: 1,
     target: "team",
     desc: "【无偿】：0 AP 换 +1 AP（前 3 回合锁定，第 4 回合起可用；连用触发疲惫变 1 换 1）",
@@ -922,10 +922,10 @@ export const SKILLS: Record<string, SkillDef> = {
     element: "light",
     ap: 2,
     kind: "heal",
-    costTag: "fatigue",
+    costTag: "normal",
     power: 1.5,
     target: "team",
-    desc: "救醒场上所有被 Down 的卡片，并回复 1.5× INT 队伍生命 · 疲惫",
+    desc: "救醒场上所有被 Down 的卡片，并回复 1.5× INT 队伍生命",
   }),
   healer_plus: S({
     id: "healer_plus",

@@ -98,11 +98,11 @@ function hasSwift(card: BattleCard): boolean {
 }
 
 /**
- * 计算技能在当前回合的实际 AP 费用（§6.5 常态 / 疲惫 / 远征累积 / 单次）
+ * 计算技能在当前回合的实际 AP 费用（§6.5 常态 / 疲惫（所有主动技能通用）/ 远征累积 / 单次）
  */
 export function effectiveApCost(state: BattleState, card: BattleCard, skill: SkillDef): number {
   let cost = skill.ap
-  if (skill.costTag === "fatigue" && card.lastTurnSkills.includes(skill.id)) {
+  if (!skill.passive && card.lastTurnSkills.includes(skill.id)) {
     cost += 1
   }
   if (skill.costTag === "accumulate") {
@@ -1485,7 +1485,7 @@ export function endTurn(state: BattleState): string | null {
   const apGain = Math.max(1, 2 + dancerBonus + fearPenalty + idleBonus)
   state.ap = Math.min(state.apMax, state.ap + apGain)
 
-  // 卡片状态推进、疲惫记录交接、MP 回复（§2.6 被沉默不回蓝）、Down 3回合自动清醒（§7.3）
+  // 卡片状态推进、疲惫记录交接、Down 3回合自动清醒（§7.3）
   for (const card of state.cards) {
     card.acted = false
     card.taunt = false
