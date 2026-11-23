@@ -9,7 +9,7 @@ import {
 
 import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
-import type { CardFaceData, Rarity } from "@/card/types"
+import { RARITIES, type CardFaceData, type Rarity } from "@/card/types"
 import type { PackId } from "@choke/shared/content"
 import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
@@ -234,6 +234,14 @@ export function GachaPanel({
       // 桌面已有另一场开包时保留本次结果，不覆盖它，也不丢弃已经入库的卡。
       if (!window.dispatchEvent(event) && isCurrent()) {
         setCards(faces)
+        // 轻量模式没有开包层：撕一声，卡一张张拍到页面上，最后按这一包里最好的那张收个尾
+        playSfx("tear", { volume: 0.7 })
+        faces.forEach((_, i) => playSfx("deal", { delay: 0.16 + i * 0.09, rate: 0.92 + i * 0.05 }))
+        const best = Math.max(...faces.map((card) => RARITIES.indexOf(card.rarity)))
+        playSfx(best >= RARITIES.indexOf("L") ? "levelup" : best >= RARITIES.indexOf("E") ? "success" : "tab", {
+          delay: 0.2 + faces.length * 0.09,
+        })
+        if (faces.some((card) => card.foil)) playSfx("shine", { delay: 0.3 + faces.length * 0.09 })
         emitTutorialEvent("pack-opened")
       }
     } catch (reason) {
@@ -256,7 +264,8 @@ export function GachaPanel({
 
   const sendAllToDesk = () => {
     if (!cards.length) return
-    playSfx("click")
+    playSfx("whoosh")
+    cards.forEach((_, i) => playSfx("deal", { delay: 0.3 + i * 0.07, rate: 0.92 + i * 0.05, volume: 0.75 }))
     const payload = cards.map((card) => toDeskCard(card, card.userCardId))
     emitDeskData("cards", payload)
     setCards([])
@@ -299,7 +308,7 @@ export function GachaPanel({
       data-tutorial-id="gacha-open-button"
       disabled={loading || !userId || packCount <= 0}
       onClick={() => {
-        playSfx("click")
+        playSfx("pick")
         void handleOpenPack()
       }}
     >
@@ -391,9 +400,12 @@ export function GachaPanel({
                 : cards.map((card, index) => (
                     <div
                       className="gacha-results__card"
-                      key={`${card.id}-${index}`}
+                      // key 用卡实例：拖走一张时，剩下的不会重新挂载、再翻一遍
+                      key={card.userCardId}
                       role="group"
                       aria-label={card.name}
+                      data-rarity={card.rarity}
+                      style={{ "--i": index, "--glow": RARITY_COLOR[card.rarity] } as CSSProperties}
                       onPointerDown={(event) =>
                         startCardPointerDrag(
                           event,

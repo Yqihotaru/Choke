@@ -1,0 +1,191 @@
+/* =========================================================
+   开包层的补充演出（基础布局和翻牌在 opener.css）：
+   L 以上翻开那一下的全屏冲击、亮相时的稀有度大字、结算时各块依次出现。
+   只动 transform / opacity。
+   ========================================================= */
+
+/* ---------- L 以上翻开：一道闪光 + 一圈冲击波 + 向外飞的火星 ---------- */
+.op__boom {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.op__boom > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+}
+.op__boom-flash {
+  width: 200vmax;
+  height: 200vmax;
+  translate: -50% -50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--c) 55%, #fff) 0, transparent 46%);
+  animation: op-boom-flash 0.6s ease-out both;
+}
+.op__boom-ring {
+  width: 40vmin;
+  height: 40vmin;
+  translate: -50% -50%;
+  border: 3px solid color-mix(in srgb, var(--c) 70%, #fff);
+  border-radius: 50%;
+  animation: op-boom-ring 0.7s cubic-bezier(0.1, 0.7, 0.2, 1) both;
+}
+.op__boom-spark {
+  width: 5px;
+  height: 22px;
+  margin: -11px 0 0 -2.5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--c) 60%, #fff);
+  rotate: var(--a);
+  /* 飞多远（--far）由组件按奇偶写在每颗火星上：两圈，一远一近 */
+  animation: op-boom-spark 0.9s cubic-bezier(0.1, 0.7, 0.3, 1) both;
+}
+/* 彩虹卡：火星一颗一个颜色 */
+.op__boom[data-rarity="Prismatic"] .op__boom-spark {
+  background: hsl(calc(var(--i) * 26) 90% 72%);
+}
+.op__boom[data-rarity="L"] .op__boom-ring {
+  border-width: 2px;
+}
+@keyframes op-boom-flash {
+  0% {
+    opacity: 0.85;
+    scale: 0.2;
+  }
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+@keyframes op-boom-ring {
+  0% {
+    opacity: 0.9;
+    scale: 0.3;
+  }
+  100% {
+    opacity: 0;
+    scale: 3.2;
+  }
+}
+@keyframes op-boom-spark {
+  0% {
+    opacity: 0;
+    transform: translateY(-8vmin) scaleY(0.4);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(var(--far)) scaleY(1.4);
+  }
+}
+/* 神话 / 彩虹：整张牌桌跟着震一下 */
+.op:has(.op__boom:is([data-rarity="Mythic"], [data-rarity="Prismatic"])) .op__table {
+  animation: op-quake 0.36s ease-out;
+}
+@keyframes op-quake {
+  15% {
+    translate: -7px 4px;
+  }
+  30% {
+    translate: 6px -4px;
+  }
+  45% {
+    translate: -4px 2px;
+  }
+  60% {
+    translate: 3px -2px;
+  }
+  80% {
+    translate: -1px 1px;
+  }
+}
+
+/* ---------- 亮相时的稀有度大字：砸在卡的正下方 ---------- */
+.op__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* 牌桌原点在 46%，亮相的卡放大到 1.32 倍；上方是已翻开的那一排，所以大字放在卡的下沿之外 */
+  top: calc(46% + var(--ch) * 0.66 + 18px);
+  /* 牌桌里的卡最高排到 300，大字要压在它们上面 */
+  z-index: 400;
+  color: var(--c);
+  font-size: clamp(22px, 3.4vw, 44px);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.32em;
+  text-align: center;
+  text-indent: 0.32em;
+  text-shadow:
+    0 2px 0 rgb(0 0 0 / 0.55),
+    0 0 26px color-mix(in srgb, var(--c) 60%, transparent);
+  pointer-events: none;
+  animation: op-title-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.op__title[data-rarity="Prismatic"] {
+  background: linear-gradient(90deg, #ff8fb1, #ffe27a, #7df0d2, #a99bff, #ff8fb1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 0.5));
+}
+@keyframes op-title-in {
+  0% {
+    opacity: 0;
+    transform: scale(1.9);
+    letter-spacing: 0.7em;
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.96);
+  }
+}
+
+/* ---------- 结算：数量签、拖放框、按钮依次出现 ---------- */
+.op__tally li {
+  animation: ui-pop-in 0.26s var(--ui-ease-spring) both;
+}
+.op__tally li:nth-child(2) {
+  animation-delay: 60ms;
+}
+.op__tally li:nth-child(3) {
+  animation-delay: 120ms;
+}
+.op__tally li:nth-child(n + 4) {
+  animation-delay: 180ms;
+}
+.op__drop {
+  animation: ui-rise-in 0.3s var(--ui-ease-out) 0.12s both;
+}
+.op__actions {
+  animation: ui-rise-in 0.3s var(--ui-ease-out) 0.2s both;
+}
+.op__hint {
+  animation: ui-fade-in 0.18s ease-out both;
+}
+.op__confirm {
+  animation: ui-pop-in 0.2s var(--ui-ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op__boom,
+  .op__title,
+  .op__tally li,
+  .op__drop,
+  .op__actions,
+  .op__hint,
+  .op__confirm {
+    animation: none;
+  }
+  .op:has(.op__boom) .op__table {
+    animation: none;
+  }
+}

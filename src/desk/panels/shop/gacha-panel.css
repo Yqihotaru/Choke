@@ -144,3 +144,56 @@
     animation: none;
   }
 }
+
+/* ---------- 轻量模式的开包结果：卡一张张翻着拍到页面上，时刻和 GachaPanel 里的 deal 音效对应 ---------- */
+.gacha-results__card {
+  animation: gacha-card-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(0.16s + var(--i, 0) * 90ms);
+  transition: translate 0.12s ease;
+}
+.gacha-results__card:hover {
+  translate: 0 -3px;
+}
+@keyframes gacha-card-in {
+  0% {
+    opacity: 0;
+    transform: perspective(600px) translateY(-18px) rotateY(80deg) scale(0.9);
+  }
+  70% {
+    opacity: 1;
+    transform: perspective(600px) translateY(2px) rotateY(-6deg) scale(1.02);
+  }
+}
+/* E 以上落定后外圈亮一下稀有度的颜色，一眼看得出哪张好 */
+.gacha-results__card:is([data-rarity="E"], [data-rarity="L"], [data-rarity="Mythic"], [data-rarity="Prismatic"]) {
+  position: relative;
+}
+.gacha-results__card:is([data-rarity="E"], [data-rarity="L"], [data-rarity="Mythic"], [data-rarity="Prismatic"])::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px var(--glow), 0 0 18px var(--glow);
+  opacity: 0;
+  pointer-events: none;
+  animation: gacha-card-glow 0.9s ease-out both;
+  animation-delay: calc(0.4s + var(--i, 0) * 90ms);
+}
+@keyframes gacha-card-glow {
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gacha-results__card,
+  .gacha-results__card::after {
+    animation: none;
+  }
+  .gacha-results__card {
+    transition: none;
+  }
+}
