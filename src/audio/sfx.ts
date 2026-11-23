@@ -471,7 +471,7 @@ const REVEAL_BY_RARITY: Record<string, SfxName> = {
   R: "reveal-r",
   E: "reveal-e",
   L: "reveal-l",
-  Radiant: "reveal-radiant",
+  Mythic: "reveal-radiant",
   Prismatic: "reveal-prismatic",
 }
 

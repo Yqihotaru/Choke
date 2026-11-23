@@ -1028,14 +1028,14 @@ export function skillSeed(cardId: string): string {
 /**
  * 卡面与战斗共用的技能池（严格遵循 §4.1 槽位规则）：
  * - C / UC / R / E / L：固定 2 个技能槽（1 主动 + 1 被动，或 L 的 2 槽）
- * - Radiant / Prismatic / 本体卡：3 个技能槽（2 主动 + 1 被动）
+ * - Mythic / Prismatic / 本体卡：3 个技能槽（2 主动 + 1 被动）
  * 绝不额外硬塞第 4、第 5 个技能。
  */
 export function skillDefsFor(seed: string, job: Job, rarity: Rarity, wantThree = false): SkillDef[] {
   const pool = Object.values(SKILLS).filter((skill) => skill.job === job)
   const actives = pool.filter((skill) => !skill.passive)
   const passives = pool.filter((skill) => skill.passive)
-  const count = wantThree || rarity === "Radiant" || rarity === "Prismatic" ? 3 : 2
+  const count = wantThree || rarity === "Mythic" || rarity === "Prismatic" ? 3 : 2
   const activeCount = Math.min(actives.length, Math.max(1, count - 1))
   const h = hashOf(`${seed}|skillpick`)
   const pickedActives: SkillDef[] = []

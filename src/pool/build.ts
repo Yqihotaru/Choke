@@ -46,7 +46,7 @@ interface Working extends MutualifyRow {
 }
 
 function emptyShares(): PoolShares {
-  return { C: 0, UC: 0, R: 0, E: 0, L: 0, Radiant: 0, Prismatic: 0 }
+  return { C: 0, UC: 0, R: 0, E: 0, L: 0, Mythic: 0, Prismatic: 0 }
 }
 
 function asNumber(value: unknown): number | null {
@@ -206,7 +206,7 @@ export function buildPool(raw: unknown, options: BuildOptions = {}): BuildResult
   }
 }
 
-const TOP_RARITIES = new Set<Rarity>(["L", "Radiant", "Prismatic"])
+const TOP_RARITIES = new Set<Rarity>(["L", "Mythic", "Prismatic"])
 
 function enforceTopShare(cards: PoolCard[], maxShare: number): PoolCard[] {
   const limit = Math.floor(cards.length * maxShare)

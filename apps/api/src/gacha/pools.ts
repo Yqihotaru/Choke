@@ -2,7 +2,7 @@ import { PACKS, type PackId } from "./packs"
 
 export type PoolId = PackId
 
-export const RARITY_ORDER = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"] as const
+export const RARITY_ORDER = ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"] as const
 
 /** 按 packs.ts 里的权重抽一档稀有度。 */
 export function rollRarity(pool: PoolId, random: () => number): string {

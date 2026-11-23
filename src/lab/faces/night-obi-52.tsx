@@ -412,8 +412,8 @@ function RarityGlyph({ rarity, uid }: { rarity: Rarity; uid: string }) {
         </g>
       )}
 
-      {/* L / Radiant / Prismatic：尖角压环 3D 切面五角星 */}
-      {(rarity === "L" || rarity === "Radiant" || rarity === "Prismatic") && (
+      {/* L / Mythic / Prismatic：尖角压环 3D 切面五角星 */}
+      {(rarity === "L" || rarity === "Mythic" || rarity === "Prismatic") && (
         <g>
           {[0, 72, 144, 216, 288].map((deg) => (
             <g key={deg} transform={`rotate(${deg} 50 50)`}>

@@ -85,6 +85,6 @@ export interface PoolShares {
   R: number
   E: number
   L: number
-  Radiant: number
+  Mythic: number
   Prismatic: number
 }

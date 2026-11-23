@@ -64,8 +64,7 @@ export const RARITY_LABEL: Record<Rarity, string> = {
   R: "RARE",
   E: "EPIC",
   L: "LEGENDARY",
-  // 内部 id 仍是 Radiant（数据库和卡池规则不变），只改显示名。
-  Radiant: "MYTHIC",
+  Mythic: "MYTHIC",
   Prismatic: "PRISMATIC",
 }
 
@@ -253,7 +252,7 @@ export const DEMO_CARDS: CardFaceData[] = [
     skills: demoSkills("berserker_cleave", "berserker_wind", "berserker_blood"),
   }),
   makeCard({
-    id: "demo-radiant",
+    id: "demo-mythic",
     name: "Sotarks",
     country: "FR",
     globalRank: 50458,
@@ -262,7 +261,7 @@ export const DEMO_CARDS: CardFaceData[] = [
     art: "https://a.ppy.sh/4452992",
     banner:
       "https://assets.ppy.sh/user-profile-covers/4452992/6930dde80f0cbe68e142f403e551493b83c74f1f58e3e35f81cfc3944d24fd65.jpeg",
-    rarity: "Radiant",
+    rarity: "Mythic",
     job: "support",
     level: 74,
     mods: ["DT"],

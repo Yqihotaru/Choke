@@ -66,7 +66,7 @@
   --r: #e2b13c;
   --glow: 0 0 12px -2px rgb(226 177 60 / 0.55);
 }
-.cfb2[data-rarity="Radiant"] {
+.cfb2[data-rarity="Mythic"] {
   --r: #e8475f;
   --glow: 0 0 14px -2px rgb(232 71 95 / 0.6);
 }
@@ -180,7 +180,7 @@
 .cfb2[data-rarity="R"] .cfb2__emblem { --emblem: url("./tex/emblem-r.svg"); }
 .cfb2[data-rarity="E"] .cfb2__emblem { --emblem: url("./tex/emblem-e.svg"); }
 .cfb2[data-rarity="L"] .cfb2__emblem { --emblem: url("./tex/emblem-l.svg"); }
-.cfb2[data-rarity="Radiant"] .cfb2__emblem { --emblem: url("./tex/emblem-radiant.svg"); }
+.cfb2[data-rarity="Mythic"] .cfb2__emblem { --emblem: url("./tex/emblem-radiant.svg"); }
 .cfb2[data-rarity="Prismatic"] .cfb2__emblem { --emblem: url("./tex/emblem-prismatic.svg"); }
 
 .cfb2__lv {

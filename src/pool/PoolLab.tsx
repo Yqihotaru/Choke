@@ -424,7 +424,7 @@ function countRarity(cards: readonly PoolCard[]): Record<Rarity, number> {  cons
     R: 0,
     E: 0,
     L: 0,
-    Radiant: 0,
+    Mythic: 0,
     Prismatic: 0,
   }
   for (const card of cards) counts[card.rarity] += 1

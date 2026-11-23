@@ -1,5 +1,5 @@
 /** 品质从低到高；界面的筛选、排序、概率展示都从这里取顺序。 */
-export const RARITIES = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"] as const
+export const RARITIES = ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"] as const
 
 export type Rarity = (typeof RARITIES)[number]
 

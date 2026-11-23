@@ -466,7 +466,7 @@ function RarityGlyph({ rarity, uid }: { rarity: Rarity; uid: string }) {
         </g>
       )}
 
-      {(rarity === "L" || rarity === "Radiant" || rarity === "Prismatic") && (
+      {(rarity === "L" || rarity === "Mythic" || rarity === "Prismatic") && (
         <g>
           {/* 3D 切面大五角星（尖角压上外环，带中心棱线） */}
           {[0, 72, 144, 216, 288].map((deg) => (

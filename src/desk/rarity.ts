@@ -7,7 +7,7 @@ export const RARITY_COLOR: Record<Rarity, string> = {
   R: "#5D8CC4",
   E: "#9B74DA",
   L: "#D8B24E",
-  Radiant: "#E0485E",
+  Mythic: "#E0485E",
   Prismatic: "#F4F4F6",
 }
 

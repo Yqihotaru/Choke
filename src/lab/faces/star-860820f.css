@@ -70,7 +70,7 @@
   --accent: #d4b263;
 }
 
-.cfv1[data-rarity="Radiant"] {
+.cfv1[data-rarity="Mythic"] {
   --frame-grad: linear-gradient(120deg, #b0eed4, #45c496 30%, #e0fbf0 52%, #2fa87d 74%, #a4e8cb);
   --frame-rim: #36b88a;
   --frame-w: 2.7cqw;
@@ -785,7 +785,7 @@
   opacity: 0.45;
 }
 
-.cfv1[data-rarity="Radiant"] .cfv1__sheen {
+.cfv1[data-rarity="Mythic"] .cfv1__sheen {
   opacity: 0.55;
 }
 

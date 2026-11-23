@@ -91,10 +91,10 @@
     ]
   },
   {
-    "id": "sample-radiant",
+    "id": "sample-mythic",
     "osuId": 1006,
     "name": "Sotarks",
-    "rarity": "Radiant",
+    "rarity": "Mythic",
     "job": "support",
     "no": 48207,
     "total": 100000,

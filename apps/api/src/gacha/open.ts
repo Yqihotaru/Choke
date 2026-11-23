@@ -97,7 +97,7 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
 
   // PGlite 是单连接：事务内再查 cards 会死锁，先把各档 id 取到内存
   const pools = new Map<string, string[]>()
-  for (const rarity of ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"]) {
+  for (const rarity of ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"]) {
     pools.set(rarity, await idsFor(rarity))
   }
 

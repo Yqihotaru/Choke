@@ -16,7 +16,7 @@ import { cards, deckSlots, decks, userCards, users } from "../src/db/schema"
 import { grantCard } from "../src/gacha/open"
 
 const USER_ID = "test-battle"
-const RARITIES = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"]
+const RARITIES = ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"]
 const PER_RARITY = 8
 
 await db

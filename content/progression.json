@@ -8,7 +8,7 @@
       "R": 40000,
       "E": 220000,
       "L": 340000,
-      "Radiant": 420000,
+      "Mythic": 420000,
       "Prismatic": 550000
     },
     "levelCurve": {
@@ -21,7 +21,7 @@
       "R": 240,
       "E": 600,
       "L": 1440,
-      "Radiant": 3600,
+      "Mythic": 3600,
       "Prismatic": 9600
     },
     "refundRate": 0.75,

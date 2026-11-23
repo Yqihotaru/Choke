@@ -179,175 +179,175 @@
   "turn": 8,
   "actions": 26,
   "stars": 0,
-  "digest": "31767a17460e33e8"
+  "digest": "df35d2d10c05abb9"
  },
  "conductor/strong/1": {
   "phase": "won",
   "turn": 8,
   "actions": 24,
   "stars": 1,
-  "digest": "139b807ebc9d0e01"
+  "digest": "833001559d27442f"
  },
  "conductor/strong/2": {
   "phase": "won",
   "turn": 7,
   "actions": 22,
   "stars": 0,
-  "digest": "538264274728559a"
+  "digest": "f3cf145962357ee5"
  },
  "conductor/strong/3": {
   "phase": "lost",
   "turn": 9,
   "actions": 29,
   "stars": 0,
-  "digest": "71a005417a272d6c"
+  "digest": "488a6672977b00b1"
  },
  "conductor/strong/4": {
   "phase": "won",
   "turn": 8,
   "actions": 24,
   "stars": 1,
-  "digest": "4e8d801130ee622d"
+  "digest": "25eebff2d2efccad"
  },
  "conductor/strong/5": {
   "phase": "lost",
   "turn": 10,
   "actions": 31,
   "stars": 0,
-  "digest": "a813c069bfe9c30a"
+  "digest": "8789748c27cd090e"
  },
  "conductor/strong/6": {
   "phase": "lost",
   "turn": 9,
   "actions": 29,
   "stars": 0,
-  "digest": "1f2f7e177b0ee749"
+  "digest": "f656781effa6f13b"
  },
  "conductor/strong/7": {
   "phase": "lost",
   "turn": 8,
   "actions": 26,
   "stars": 0,
-  "digest": "12e8d47099298a84"
+  "digest": "65a24a25f8b0b5af"
  },
  "conductor/strong/8": {
   "phase": "won",
   "turn": 11,
   "actions": 32,
   "stars": 1,
-  "digest": "edfb1da86af3af62"
+  "digest": "d7c769eed874eb98"
  },
  "conductor/strong/9": {
   "phase": "lost",
   "turn": 8,
   "actions": 25,
   "stars": 0,
-  "digest": "24bdb4a6b2d4b8a1"
+  "digest": "6b919e686085a193"
  },
  "conductor/strong/10": {
   "phase": "won",
   "turn": 10,
   "actions": 30,
   "stars": 0,
-  "digest": "5cda13fa64b1a074"
+  "digest": "af42682c5cb7a644"
  },
  "conductor/strong/11": {
   "phase": "lost",
   "turn": 9,
   "actions": 29,
   "stars": 0,
-  "digest": "902a65d950a0f601"
+  "digest": "ac4f505976ae97fb"
  },
  "conductor/strong/12": {
   "phase": "lost",
   "turn": 10,
   "actions": 33,
   "stars": 0,
-  "digest": "dbad212ecd12eecb"
+  "digest": "6f5eae39a1b108f1"
  },
  "conductor/strong/13": {
   "phase": "won",
   "turn": 11,
   "actions": 33,
   "stars": 0,
-  "digest": "c66fc921915b9874"
+  "digest": "716ebdd11079522e"
  },
  "conductor/strong/14": {
   "phase": "won",
   "turn": 8,
   "actions": 24,
   "stars": 1,
-  "digest": "3aefeff77cf0c78b"
+  "digest": "d2cc312322ee5dd9"
  },
  "conductor/strong/15": {
   "phase": "won",
   "turn": 9,
   "actions": 28,
   "stars": 1,
-  "digest": "e668c884b69528aa"
+  "digest": "74d07ba2bf77f3c2"
  },
  "conductor/strong/16": {
   "phase": "lost",
   "turn": 9,
   "actions": 29,
   "stars": 0,
-  "digest": "27cfa749465503e5"
+  "digest": "7d398b468a9692cc"
  },
  "conductor/strong/17": {
   "phase": "won",
   "turn": 10,
   "actions": 30,
   "stars": 0,
-  "digest": "507c1ea0210a5ce9"
+  "digest": "7788cbd6e72386ad"
  },
  "conductor/strong/18": {
   "phase": "lost",
   "turn": 8,
   "actions": 26,
   "stars": 0,
-  "digest": "ec7d21c8778ecf99"
+  "digest": "ce0f5547cdbc5c87"
  },
  "conductor/strong/19": {
   "phase": "lost",
   "turn": 10,
   "actions": 31,
   "stars": 0,
-  "digest": "ff286b2fbb165cd2"
+  "digest": "ed59619f780c0b39"
  },
  "conductor/strong/20": {
   "phase": "lost",
   "turn": 10,
   "actions": 32,
   "stars": 0,
-  "digest": "f46acc84fba423c6"
+  "digest": "48ee3500916fabd6"
  },
  "conductor/strong/21": {
   "phase": "lost",
   "turn": 9,
   "actions": 29,
   "stars": 0,
-  "digest": "a68ae36311b025d8"
+  "digest": "fc0ae8a9240735b1"
  },
  "conductor/strong/22": {
   "phase": "won",
   "turn": 5,
   "actions": 14,
   "stars": 3,
-  "digest": "53e2f1526c3b6ae2"
+  "digest": "6542269769eb40c4"
  },
  "conductor/strong/23": {
   "phase": "won",
   "turn": 8,
   "actions": 23,
   "stars": 1,
-  "digest": "73a98805b945b117"
+  "digest": "c5e43b7bb753b42f"
  },
  "conductor/strong/24": {
   "phase": "lost",
   "turn": 9,
   "actions": 29,
   "stars": 0,
-  "digest": "847303da4019b80c"
+  "digest": "30b6b464aa77c89f"
  },
  "ghost/normal/0": {
   "phase": "won",
@@ -529,175 +529,175 @@
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "c7dadcc667162b36"
+  "digest": "a64e864dc600333d"
  },
  "ghost/strong/1": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "aede517c58789377"
+  "digest": "bd6d5992c07acaf9"
  },
  "ghost/strong/2": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "f46d8b5661743ef4"
+  "digest": "63fdd3a579dfc15a"
  },
  "ghost/strong/3": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "7af0c666f90ef13b"
+  "digest": "e0ecbe4c52077818"
  },
  "ghost/strong/4": {
   "phase": "won",
   "turn": 2,
   "actions": 3,
   "stars": 3,
-  "digest": "4322788664226c75"
+  "digest": "d693df8c628d29b4"
  },
  "ghost/strong/5": {
   "phase": "won",
   "turn": 3,
   "actions": 7,
   "stars": 3,
-  "digest": "88ce47c9bc0d686d"
+  "digest": "43f868eb961d8ced"
  },
  "ghost/strong/6": {
   "phase": "won",
   "turn": 3,
   "actions": 7,
   "stars": 3,
-  "digest": "254b2aa8834ff747"
+  "digest": "3a1f00e8caea2421"
  },
  "ghost/strong/7": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "5b460abf14be3df6"
+  "digest": "136dc8f969380507"
  },
  "ghost/strong/8": {
   "phase": "won",
   "turn": 3,
   "actions": 7,
   "stars": 3,
-  "digest": "2e5808b611a2bc2d"
+  "digest": "6377a0ec52a784aa"
  },
  "ghost/strong/9": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "7ec56064d4bd86f7"
+  "digest": "10ad2ea9d2c17228"
  },
  "ghost/strong/10": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "650413df52a46c73"
+  "digest": "70a68868ab5504ac"
  },
  "ghost/strong/11": {
   "phase": "won",
   "turn": 5,
   "actions": 12,
   "stars": 1,
-  "digest": "fbccb429a3a91ca0"
+  "digest": "afd1f3241855ae6c"
  },
  "ghost/strong/12": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "2f5187dcfc1cacb6"
+  "digest": "a0f558f8e60799ad"
  },
  "ghost/strong/13": {
   "phase": "won",
   "turn": 3,
   "actions": 5,
   "stars": 3,
-  "digest": "08e3ba03b64d2816"
+  "digest": "67f708f70c6839f3"
  },
  "ghost/strong/14": {
   "phase": "won",
   "turn": 4,
   "actions": 11,
   "stars": 0,
-  "digest": "3cc34c3b43f1d257"
+  "digest": "1b1eaf64684e0ebd"
  },
  "ghost/strong/15": {
   "phase": "won",
   "turn": 3,
   "actions": 7,
   "stars": 3,
-  "digest": "7cc71d71d70880d5"
+  "digest": "66b2346a2c373d2b"
  },
  "ghost/strong/16": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "c9478f69841134a8"
+  "digest": "320f10b0122d0172"
  },
  "ghost/strong/17": {
   "phase": "won",
   "turn": 3,
   "actions": 5,
   "stars": 3,
-  "digest": "ad3097b677fcd14b"
+  "digest": "be68ebb07367e3ca"
  },
  "ghost/strong/18": {
   "phase": "won",
   "turn": 5,
   "actions": 11,
   "stars": 1,
-  "digest": "3874273534be1bdb"
+  "digest": "f820f248e2b04593"
  },
  "ghost/strong/19": {
   "phase": "won",
   "turn": 3,
   "actions": 5,
   "stars": 3,
-  "digest": "5f023035884e79c5"
+  "digest": "31b1a4a789e7c372"
  },
  "ghost/strong/20": {
   "phase": "won",
   "turn": 3,
   "actions": 7,
   "stars": 3,
-  "digest": "d5ed59ad21190c32"
+  "digest": "96e0b55079ef6f59"
  },
  "ghost/strong/21": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "8bf2f5b687d2a3c4"
+  "digest": "0b3f1f8b91e1a6b4"
  },
  "ghost/strong/22": {
   "phase": "won",
   "turn": 5,
   "actions": 13,
   "stars": 1,
-  "digest": "ab9e5f779db91eb5"
+  "digest": "9203a7ff7512bc4a"
  },
  "ghost/strong/23": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "b893ef9b4f65320a"
+  "digest": "dd23b383a6d9c89e"
  },
  "ghost/strong/24": {
   "phase": "won",
   "turn": 3,
   "actions": 8,
   "stars": 3,
-  "digest": "305d4606cf8ffcb5"
+  "digest": "95b9d449c49dbab6"
  },
  "tutorial-ghost/normal/0": {
   "phase": "won",
@@ -879,175 +879,175 @@
   "turn": 1,
   "actions": 0,
   "stars": 3,
-  "digest": "f01ccd681dd32b25"
+  "digest": "f065b56100d2ebb8"
  },
  "tutorial-ghost/strong/1": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "fcad96108498c1b4"
+  "digest": "092a1169b9d907ca"
  },
  "tutorial-ghost/strong/2": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "a30232782225826e"
+  "digest": "65ff54cacd91c81a"
  },
  "tutorial-ghost/strong/3": {
   "phase": "won",
   "turn": 1,
   "actions": 0,
   "stars": 3,
-  "digest": "39d7f2198ab6167b"
+  "digest": "bd290594866ba3ef"
  },
  "tutorial-ghost/strong/4": {
   "phase": "won",
   "turn": 1,
   "actions": 1,
   "stars": 3,
-  "digest": "6ebeb36f4882bb22"
+  "digest": "f8b0462fcdf215c6"
  },
  "tutorial-ghost/strong/5": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "d7ebf63a8d4cad93"
+  "digest": "4854cb4226a6b251"
  },
  "tutorial-ghost/strong/6": {
   "phase": "won",
   "turn": 1,
   "actions": 1,
   "stars": 3,
-  "digest": "5475a4901cb8c22a"
+  "digest": "bca9b09934c91314"
  },
  "tutorial-ghost/strong/7": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "cf38713ae5795d1a"
+  "digest": "d988287b72a2813c"
  },
  "tutorial-ghost/strong/8": {
   "phase": "won",
   "turn": 1,
   "actions": 1,
   "stars": 3,
-  "digest": "b49bff53d775cbc8"
+  "digest": "ac33b2c02dff865c"
  },
  "tutorial-ghost/strong/9": {
   "phase": "won",
   "turn": 1,
   "actions": 1,
   "stars": 3,
-  "digest": "19921c719c5cdffa"
+  "digest": "83e0bc79264ef56a"
  },
  "tutorial-ghost/strong/10": {
   "phase": "won",
   "turn": 1,
   "actions": 0,
   "stars": 3,
-  "digest": "978b4838889b90fe"
+  "digest": "eb499ca3eb250732"
  },
  "tutorial-ghost/strong/11": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "ee781d9591e91e22"
+  "digest": "28f617fcaeec1f09"
  },
  "tutorial-ghost/strong/12": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "4c0eeb2431cbae06"
+  "digest": "b8f992e64d69d821"
  },
  "tutorial-ghost/strong/13": {
   "phase": "won",
   "turn": 1,
   "actions": 1,
   "stars": 3,
-  "digest": "d4dddc96a3ae37ef"
+  "digest": "196704b6a2d4d4fd"
  },
  "tutorial-ghost/strong/14": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "ddda02c2b7e85204"
+  "digest": "f49010f7bb3d1b90"
  },
  "tutorial-ghost/strong/15": {
   "phase": "won",
   "turn": 1,
   "actions": 0,
   "stars": 3,
-  "digest": "495a6666c866a6be"
+  "digest": "b7e9bd93a8648c66"
  },
  "tutorial-ghost/strong/16": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "6f38e7db88caef4a"
+  "digest": "6ba77f928aeeb198"
  },
  "tutorial-ghost/strong/17": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "6f87b51b6c5a8eef"
+  "digest": "f748b84c787386c8"
  },
  "tutorial-ghost/strong/18": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "add17741a19216aa"
+  "digest": "277eeb45940b4fe1"
  },
  "tutorial-ghost/strong/19": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "1965aac1fd4a3457"
+  "digest": "e40d6854c92963cb"
  },
  "tutorial-ghost/strong/20": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "59f69ffd166b0700"
+  "digest": "ac06486de4592dab"
  },
  "tutorial-ghost/strong/21": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "0bb28d8c75308e04"
+  "digest": "8e94cb8a801d8776"
  },
  "tutorial-ghost/strong/22": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "f8d9df9fabb5b53c"
+  "digest": "1bd8a5478b753356"
  },
  "tutorial-ghost/strong/23": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "f5015d7b08959669"
+  "digest": "6b2c8ba6cc6daded"
  },
  "tutorial-ghost/strong/24": {
   "phase": "won",
   "turn": 1,
   "actions": 2,
   "stars": 3,
-  "digest": "4b2af1f637c0189d"
+  "digest": "c869da1b3b7cbc6d"
  },
  "vanguard/normal/0": {
   "phase": "lost",
@@ -1229,174 +1229,174 @@
   "turn": 8,
   "actions": 21,
   "stars": 0,
-  "digest": "e76d01de265e4df0"
+  "digest": "0da98353047e3d40"
  },
  "vanguard/strong/1": {
   "phase": "won",
   "turn": 8,
   "actions": 23,
   "stars": 0,
-  "digest": "29cf14248e19e11e"
+  "digest": "7337b850666d6f89"
  },
  "vanguard/strong/2": {
   "phase": "won",
   "turn": 9,
   "actions": 25,
   "stars": 0,
-  "digest": "c2b0bf71b397300e"
+  "digest": "c6aec5139a56ea3b"
  },
  "vanguard/strong/3": {
   "phase": "won",
   "turn": 12,
   "actions": 31,
   "stars": 0,
-  "digest": "c5abcc519223ff70"
+  "digest": "997f22d534fe2049"
  },
  "vanguard/strong/4": {
   "phase": "won",
   "turn": 10,
   "actions": 28,
   "stars": 0,
-  "digest": "6290334d10ae6c9d"
+  "digest": "14e6355d8ef9d410"
  },
  "vanguard/strong/5": {
   "phase": "won",
   "turn": 9,
   "actions": 24,
   "stars": 0,
-  "digest": "6ba5f7a7c5b16146"
+  "digest": "d924ee9c6e1e7e02"
  },
  "vanguard/strong/6": {
   "phase": "won",
   "turn": 9,
   "actions": 26,
   "stars": 0,
-  "digest": "121738af615b310e"
+  "digest": "7faedf9b8b86f469"
  },
  "vanguard/strong/7": {
   "phase": "won",
   "turn": 8,
   "actions": 23,
   "stars": 0,
-  "digest": "9f1c3fd3d3b77c88"
+  "digest": "66b55cb6179e4992"
  },
  "vanguard/strong/8": {
   "phase": "won",
   "turn": 10,
   "actions": 30,
   "stars": 0,
-  "digest": "52d6c5e974ae3fe0"
+  "digest": "359518e20de8e1d1"
  },
  "vanguard/strong/9": {
   "phase": "won",
   "turn": 10,
   "actions": 27,
   "stars": 0,
-  "digest": "65e0c7dcda77c9d9"
+  "digest": "13e14e0bc4f5d81b"
  },
  "vanguard/strong/10": {
   "phase": "won",
   "turn": 9,
   "actions": 26,
   "stars": 0,
-  "digest": "c849930687027a1c"
+  "digest": "fc1bc82bf230e494"
  },
  "vanguard/strong/11": {
   "phase": "won",
   "turn": 5,
   "actions": 14,
   "stars": 2,
-  "digest": "24a3ec0e22b92840"
+  "digest": "587a131b1aa8292d"
  },
  "vanguard/strong/12": {
   "phase": "won",
   "turn": 8,
   "actions": 23,
   "stars": 0,
-  "digest": "6eb018089b2ecb28"
+  "digest": "aca4821eee19634c"
  },
  "vanguard/strong/13": {
   "phase": "won",
   "turn": 10,
   "actions": 27,
   "stars": 0,
-  "digest": "7617e8298cacbb2d"
+  "digest": "d25d2c1e1d9ed90d"
  },
  "vanguard/strong/14": {
   "phase": "won",
   "turn": 7,
   "actions": 18,
   "stars": 1,
-  "digest": "5e53d69bdad733fb"
+  "digest": "24b297b565764291"
  },
  "vanguard/strong/15": {
   "phase": "won",
   "turn": 8,
   "actions": 22,
   "stars": 0,
-  "digest": "d46cb7292276cb29"
+  "digest": "82012153f6c8f107"
  },
  "vanguard/strong/16": {
   "phase": "won",
   "turn": 10,
   "actions": 29,
   "stars": 0,
-  "digest": "5b51e61928a96500"
+  "digest": "e8aa178c22c0813d"
  },
  "vanguard/strong/17": {
   "phase": "won",
   "turn": 8,
   "actions": 21,
   "stars": 0,
-  "digest": "c652dadfd71f81f1"
+  "digest": "87c75a072cc83139"
  },
  "vanguard/strong/18": {
   "phase": "won",
   "turn": 9,
   "actions": 26,
   "stars": 0,
-  "digest": "b6ae718d4919b187"
+  "digest": "c420e1efbbf9ed27"
  },
  "vanguard/strong/19": {
   "phase": "won",
   "turn": 10,
   "actions": 27,
   "stars": 0,
-  "digest": "a637d2fcc44c29f0"
+  "digest": "0ab10c4488418766"
  },
  "vanguard/strong/20": {
   "phase": "won",
   "turn": 9,
   "actions": 25,
   "stars": 0,
-  "digest": "ca06eef9c08327ce"
+  "digest": "3bf170cca983d0b6"
  },
  "vanguard/strong/21": {
   "phase": "won",
   "turn": 8,
   "actions": 21,
   "stars": 1,
-  "digest": "33fc0245505a8900"
+  "digest": "ec9e37596cf98887"
  },
  "vanguard/strong/22": {
   "phase": "won",
   "turn": 10,
   "actions": 29,
   "stars": 0,
-  "digest": "7d9263688c6e92aa"
+  "digest": "8aefc79c656d7dc0"
  },
  "vanguard/strong/23": {
   "phase": "won",
   "turn": 9,
   "actions": 25,
   "stars": 0,
-  "digest": "7b05b78b352b5543"
+  "digest": "cab2b83eaaa4fe06"
  },
  "vanguard/strong/24": {
   "phase": "won",
   "turn": 12,
   "actions": 33,
   "stars": 0,
-  "digest": "134a2ee29f9c5f1d"
+  "digest": "158c5bf5fd9d8c8e"
  }
 }

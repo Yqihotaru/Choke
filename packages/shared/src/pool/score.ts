@@ -46,7 +46,7 @@ export const RARITY_MIN_SCORE: Record<Rarity, number> = {
   R: 38,
   E: 52,
   L: 65,
-  Radiant: 75,
+  Mythic: 75,
   Prismatic: 85,
 }
 
@@ -227,7 +227,7 @@ export function lowerRarity(a: Rarity, b: Rarity): Rarity {
 }
 
 /**
- * 国内前 10 且 pp ≤ 8000 的人不能进 Radiant 及以上。
+ * 国内前 10 且 pp ≤ 8000 的人不能进 Mythic 及以上。
  * 这是硬上限，优先于国榜下限。
  */
 export function ppCap(

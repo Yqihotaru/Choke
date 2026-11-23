@@ -26,7 +26,7 @@ const RARITY_RANK = sql`CASE ${cards.rarity}
   WHEN 'R' THEN 2
   WHEN 'E' THEN 3
   WHEN 'L' THEN 4
-  WHEN 'Radiant' THEN 5
+  WHEN 'Mythic' THEN 5
   WHEN 'Prismatic' THEN 6
   ELSE -1
 END`

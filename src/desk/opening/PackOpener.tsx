@@ -54,14 +54,14 @@ const CONFIRM_FROM = RARITY_ORDER.indexOf("E")
 /** 结算时最高档达到它就换更隆重的音效 */
 const FINALE_FROM = RARITY_ORDER.indexOf("L")
 /** 翻开时桌面暗下来、扫一道光的档位 */
-const BIG: Record<Rarity, boolean> = { C: false, UC: false, R: false, E: false, L: true, Radiant: true, Prismatic: true }
+const BIG: Record<Rarity, boolean> = { C: false, UC: false, R: false, E: false, L: true, Mythic: true, Prismatic: true }
 /** 翻牌前卡背边缘透出的光，越稀有越亮 */
-const GLOW: Record<Rarity, number> = { C: 0, UC: 0.22, R: 0.38, E: 0.55, L: 0.75, Radiant: 0.9, Prismatic: 1 }
+const GLOW: Record<Rarity, number> = { C: 0, UC: 0.22, R: 0.38, E: 0.55, L: 0.75, Mythic: 0.9, Prismatic: 1 }
 /** 蓄力、展示的时长（ms）；没列出的档位直接翻开 */
 const RITUAL: Partial<Record<Rarity, { charge: number; show: number }>> = {
   E: { charge: 240, show: 420 },
   L: { charge: 550, show: 900 },
-  Radiant: { charge: 600, show: 950 },
+  Mythic: { charge: 600, show: 950 },
   Prismatic: { charge: 650, show: 1000 },
 }
 const REDUCED_RITUAL = { charge: 80, show: 260 }

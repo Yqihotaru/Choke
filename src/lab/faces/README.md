@@ -17,4 +17,4 @@
 
 实验室分享链接使用 `?style=portrait` 或 `?style=b-v1&theme=light&mods=portrait` / `?style=b-v2&theme=dark&mods=name`。支持现有的 `solo`、`embed`、`foil` 和 `mode=battle` 参数；切换卡面、主题、MOD 会同步 URL，刷新保留选择。编辑器通过同一个 registry 自动列出所有版本。
 
-肖像版 Mythic（内部稀有度 id 仍为 `Radiant`）使用宝石红烫印与珠光，而不是旧版铂色。
+肖像版 Mythic 使用宝石红烫印与珠光，而不是旧版铂色。

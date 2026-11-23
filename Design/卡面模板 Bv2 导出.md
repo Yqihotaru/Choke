@@ -16,7 +16,7 @@
 
 1. 卡面 2:3 竖版，卡宽 = 100cqw、卡高 = 150cqw；内部尺寸全部用 `cqw`，不要改成 px。
 2. 同一组件要在 100 / 140 / 220 / 380 / 560px 宽度下复用；100px 下允许隐藏次要文字，但不能爆版。
-3. 七档稀有度必须只靠颜色也能区分：C / UC / R / E / L / Radiant / Prismatic；L 以上有外发光，Prismatic 是镭射渐变。
+3. 七档稀有度必须只靠颜色也能区分：C / UC / R / E / L / Mythic / Prismatic；L 以上有外发光，Prismatic 是镭射渐变。
 4. 支持 `data-tone="dark" | "light"`，只换纸色与墨色，结构不变。
 5. 支持三种 MOD 摆法：`spine`（侧栏）/ `portrait`（头像右上）/ `name`（名字后胶囊）；游戏内用 `name`。
 6. **没有战斗态**：卡片在任何场景都完整渲染；不要再加“小卡精简版”分支。
@@ -361,7 +361,7 @@ export const CardFaceB = memo(function CardFaceB({
   --r: #e2b13c;
   --glow: 0 0 12px -2px rgb(226 177 60 / 0.55);
 }
-.cfb[data-rarity="Radiant"] {
+.cfb[data-rarity="Mythic"] {
   --r: #e8475f;
   --glow: 0 0 14px -2px rgb(232 71 95 / 0.6);
 }
@@ -446,7 +446,7 @@ export const CardFaceB = memo(function CardFaceB({
 .cfb[data-rarity="R"] .cfb__emblem { --emblem: url("./tex/emblem-r.svg"); }
 .cfb[data-rarity="E"] .cfb__emblem { --emblem: url("./tex/emblem-e.svg"); }
 .cfb[data-rarity="L"] .cfb__emblem { --emblem: url("./tex/emblem-l.svg"); }
-.cfb[data-rarity="Radiant"] .cfb__emblem { --emblem: url("./tex/emblem-radiant.svg"); }
+.cfb[data-rarity="Mythic"] .cfb__emblem { --emblem: url("./tex/emblem-radiant.svg"); }
 .cfb[data-rarity="Prismatic"] .cfb__emblem { --emblem: url("./tex/emblem-prismatic.svg"); }
 
 .cfb__lv {
@@ -1311,7 +1311,7 @@ import { CardFace } from "../CardFace"
 export const faceMeta = {
   id: "portrait",
   label: "肖像版",
-  note: "大肖像 / 三角底纹 / 实例序号；Mythic（内部 Radiant）宝石红工艺",
+  note: "大肖像 / 三角底纹 / 实例序号；Mythic 宝石红工艺",
   order: 60,
 } as const
 
@@ -1413,7 +1413,7 @@ export function trackCardLight() {
 
 ```ts
 /** 品质从低到高；界面的筛选、排序、概率展示都从这里取顺序。 */
-export const RARITIES = ["C", "UC", "R", "E", "L", "Radiant", "Prismatic"] as const
+export const RARITIES = ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"] as const
 
 export type Rarity = (typeof RARITIES)[number]
 

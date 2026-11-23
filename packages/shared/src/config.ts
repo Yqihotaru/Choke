@@ -24,7 +24,7 @@ export const RARITY_BASE: Record<Rarity, number> = {
   R: 600,
   E: 740,
   L: 960,
-  Radiant: 1160,
+  Mythic: 1160,
   Prismatic: 1400,
 }
 
@@ -35,6 +35,6 @@ export const CONSTELLATION_BONUS: Record<Rarity, number> = {
   R: 0.08,
   E: 0.07,
   L: 0.05,
-  Radiant: 0.04,
+  Mythic: 0.04,
   Prismatic: 0.03,
 }

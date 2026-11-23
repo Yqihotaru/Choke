@@ -14,16 +14,16 @@ export const BASE_SHARE: PoolShares = {
   R: 0.14,
   E: 0.07,
   L: 0.045,
-  Radiant: 0.02,
+  Mythic: 0.02,
   Prismatic: 0.005,
 }
 
 /**
  * 全国前 N 名的稀有度下限。国家人数少于 N 时这一档不生效，
- * 避免 3 人小国整国变成 Radiant。
+ * 避免 3 人小国整国变成 Mythic。
  */
 export const COUNTRY_FLOORS: { maxRank: number; floor: Rarity }[] = [
-  { maxRank: 10, floor: "Radiant" },
+  { maxRank: 10, floor: "Mythic" },
   { maxRank: 50, floor: "L" },
   { maxRank: 125, floor: "E" },
   { maxRank: 300, floor: "R" },
@@ -35,7 +35,7 @@ const RANK: Record<Rarity, number> = {
   R: 2,
   E: 3,
   L: 4,
-  Radiant: 5,
+  Mythic: 5,
   Prismatic: 6,
 }
 
@@ -94,7 +94,7 @@ export function quotas(total: number, shares: PoolShares): PoolShares {
     R: rows[2].count,
     E: rows[3].count,
     L: rows[4].count,
-    Radiant: rows[5].count,
+    Mythic: rows[5].count,
     Prismatic: rows[6].count,
   }
 }

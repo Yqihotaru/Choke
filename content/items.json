@@ -4,7 +4,7 @@
   "shard-R": { "name": "R 碎片", "kind": "shard", "rarity": "R", "exp": 48 },
   "shard-E": { "name": "E 碎片", "kind": "shard", "rarity": "E", "exp": 120 },
   "shard-L": { "name": "L 碎片", "kind": "shard", "rarity": "L", "exp": 288 },
-  "shard-Radiant": { "name": "Radiant 碎片", "kind": "shard", "rarity": "Radiant", "exp": 720 },
+  "shard-Mythic": { "name": "Mythic 碎片", "kind": "shard", "rarity": "Mythic", "exp": 720 },
   "shard-Prismatic": { "name": "Prismatic 碎片", "kind": "shard", "rarity": "Prismatic", "exp": 1920 },
   "exp-small": { "name": "经验乐谱 · 小", "kind": "exp", "exp": 200 },
   "exp-medium": { "name": "经验乐谱 · 中", "kind": "exp", "exp": 1000 },

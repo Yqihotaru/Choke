@@ -40,7 +40,7 @@ export const DECKS: Record<string, BattleInputCard[]> = {
   ),
   strong: inputs(
     [
-      face("s-tank", "tank", "Radiant", 80, 6, ["warden_stun", "warden_bash", "warden_hold"], ["HR"]),
+      face("s-tank", "tank", "Mythic", 80, 6, ["warden_stun", "warden_bash", "warden_hold"], ["HR"]),
       face("s-war", "warrior", "L", 80, 6, ["breaker_rift", "breaker_counter", "breaker_swift"], ["DT"]),
       face("s-mage", "mage", "Prismatic", 80, 6, ["life_mass", "life_revive", "life_regen"], ["HD", "DT"]),
       face("s-sup", "support", "L", 80, 6, ["bard_anthem", "bard_inspire", "bard_aura"]),

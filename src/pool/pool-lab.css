@@ -124,7 +124,7 @@
 .pool-lab__stat[data-rarity="R"] b { color: #d9488a; }
 .pool-lab__stat[data-rarity="E"] b { color: #ffc24b; }
 .pool-lab__stat[data-rarity="L"] b { color: #b98cff; }
-.pool-lab__stat[data-rarity="Radiant"] b { color: #21e985; }
+.pool-lab__stat[data-rarity="Mythic"] b { color: #21e985; }
 .pool-lab__stat[data-rarity="Prismatic"] b { color: #f4f4f6; }
 
 .pool-lab__grid {

@@ -319,7 +319,7 @@ function EmblemGlyph({ rarity }: { rarity: Rarity }) {
           />
         </svg>
       )
-    case "Radiant":
+    case "Mythic":
       return (
         <svg className="cfn__emblem-svg" viewBox="0 0 24 24">
           <path

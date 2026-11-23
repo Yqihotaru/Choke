@@ -334,9 +334,9 @@ export function createBattle(
 
   const { enemy, enemySupports } = makeEnemyAndSupports(encounter)
 
-  // 若队伍里有高阶卡（Radiant / Prismatic / 本体卡），解锁部队加成 AP 上限 7 → 10（§6.2）
+  // 若队伍里有高阶卡（Mythic / Prismatic / 本体卡），解锁部队加成 AP 上限 7 → 10（§6.2）
   const hasHighTier = cards.some(
-    (c) => c.face.isHero || c.rarity === "Radiant" || c.rarity === "Prismatic",
+    (c) => c.face.isHero || c.rarity === "Mythic" || c.rarity === "Prismatic",
   )
   const apMax = hasHighTier ? 10 : 7
   const teamHpMax = calcTeamHpMax(cards)
