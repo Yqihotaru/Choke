@@ -80,6 +80,11 @@ export const ROMAN_TIER = ["0", "I", "II", "III", "IV"] as const
 export const DEFENSE_REDUCTION_TANK = [0, 0.2, 0.4, 0.7, 0.9]
 export const DEFENSE_REDUCTION_NORMAL = [0, 0.2, 0.35, 0.35, 0.35]
 
+/** 重装甲支援每档给全队 DEF / 魔法抗性 +20%（II 档 = +40%），再走 DEF/(DEF+K) 的减伤公式 */
+export const ARMOR_RESIST_PER_TIER = 0.2
+/** 重装甲（DEF 乘区）和手动防御（绝对减免）叠加后的总减伤上限：任何情况至少吃 10% 伤害 */
+export const TOTAL_DEFENSE_REDUCTION_CAP = 0.9
+
 /** 减伤公式的常数项：def / (def + K)，封顶 70% */
 export const MITIGATION_K = 10000
 export const MITIGATION_CAP = 0.7

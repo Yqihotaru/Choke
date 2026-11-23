@@ -3,8 +3,17 @@
 import { EXECUTE_LOW_HP_RATIO } from "@choke/shared/battle/config"
 import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import { resolveEncounter } from "@choke/shared/battle/content"
-import { createBattle, effectiveApCost, healEfficiency, statOf } from "@choke/shared/battle/engine"
-import { comboMultiplier } from "@choke/shared/battle/rules"
+import {
+  armorSupportTier,
+  createBattle,
+  effectiveApCost,
+  healEfficiency,
+  incomingDamageFactor,
+  manualDefenseTier,
+  playerResist,
+  statOf,
+} from "@choke/shared/battle/engine"
+import { comboMultiplier, mitigation } from "@choke/shared/battle/rules"
 import type { BattleState } from "@choke/shared/battle/types"
 import { autoDescribeSkill, checkSkill, checkSkillTable, describeSkill } from "@choke/shared/skill-check"
 import { SKILLS, requireSkill, rollSkillRefs, seededRandom } from "@choke/shared/skills"
@@ -231,6 +240,48 @@ for (const [id, job] of [
   const e1 = heal(endless, 1)
   const e2 = heal(e1, 2)
   check("治疗软上限：不衰减时效率始终 100%", healEfficiency(e1) === 1 && healEfficiency(e2) === 1 && e2.healed > e1.healed)
+}
+
+// ---------- 7c. 防御：重装甲（DEF 乘区）与手动防御（绝对减免）叠加 ----------
+{
+  const withArmor = (tier: number) => {
+    const s = start("tank", ["bulwark_taunt"])
+    if (tier > 0) {
+      s.playerSupports.push({ id: "t-armor", name: "测试装甲", kind: "armor", element: "metal", defenseTier: tier, tier, roleText: "装甲" })
+    }
+    return s
+  }
+  const factor = (s: BattleState) => incomingDamageFactor(s, playerResist(s, s.cards[0]!, false))
+  const baseDef = statOf(withArmor(0), withArmor(0).cards[0]!, "def")
+
+  const plain = withArmor(0)
+  const armorOnly = withArmor(2)
+  check("重装甲 II：全队 DEF +40%", playerResist(armorOnly, armorOnly.cards[0]!, false) === Math.round(baseDef * 1.4), `${playerResist(armorOnly, armorOnly.cards[0]!, false)} vs ${Math.round(baseDef * 1.4)}`)
+  check("重装甲 II：魔法抗性也 +40%", playerResist(armorOnly, armorOnly.cards[0]!, true) === Math.round(statOf(plain, plain.cards[0]!, "int") * 1.4))
+  check("重装甲 II：承受伤害变少", factor(armorOnly) < factor(plain))
+
+  const manualOnly = withArmor(0)
+  manualOnly.defenseTier = 1
+  const both = withArmor(2)
+  both.defenseTier = 1
+  check("手动防御 Lv1：承受伤害变少", factor(manualOnly) < factor(plain))
+  check("手动 Lv1 + 重装甲 II：比单用任何一个都更减伤（不再被装甲盖掉）", factor(both) < factor(manualOnly) && factor(both) < factor(armorOnly))
+  const expectBoth = (1 - mitigation(playerResist(both, both.cards[0]!, false))) * (1 - 0.2)
+  check("两个乘区相乘", Math.abs(factor(both) - expectBoth) < 1e-9, `${factor(both)} vs ${expectBoth}`)
+
+  const maxed = withArmor(4)
+  maxed.defenseTier = 4
+  check("总减伤封顶 90%", Math.abs(factor(maxed) - 0.1) < 1e-9, `${factor(maxed)}`)
+
+  const broken = withArmor(2)
+  broken.defenseTier = 2
+  broken.teamStatuses.push({ id: "armor_break", name: "破防", amount: 0, turns: 3, stacks: 1, isDebuff: true })
+  check("破防每层同时扣手动档位与装甲档位", manualDefenseTier(broken) === 1 && armorSupportTier(broken) === 1)
+  const noTank = withArmor(0)
+  noTank.cards[1]!.down = true
+  noTank.cards[0] = { ...noTank.cards[0]!, job: "warrior" }
+  noTank.defenseTier = 4
+  check("无坦克在场：手动防御最高只算 Lv2（−35%）", Math.abs(incomingDamageFactor(noTank, 0) - 0.65) < 1e-9)
 }
 
 // ---------- 8. 触发概率 ----------

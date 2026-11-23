@@ -260,9 +260,9 @@ export const SKILLS: Record<string, SkillDef> = {
       element: "metal",
       armorTier: 2,
       tier: 2,
-      roleText: "常驻防御 II 档 (−40%)",
+      roleText: "全队 DEF 与魔抗 +40%",
     },
-    desc: "单次：在右侧支援栏部署强度 2 的【重装甲 II】，常驻提供 II 档防御减伤",
+    desc: "单次：在右侧支援栏部署强度 2 的【重装甲 II】，常驻让全队 DEF 与魔法抗性 +40%，可与手动防御叠加",
   }),
   warden_stun: S({
     id: "warden_stun",

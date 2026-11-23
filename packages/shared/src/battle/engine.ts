@@ -33,9 +33,11 @@ import {
   INTERRUPT_RATE_MAX,
   INTERRUPT_RATE_MIN,
   PREEMPTIVE_RATE,
+  ARMOR_RESIST_PER_TIER,
   STATUS_CHANCE_BY_TIER,
   SUPPORT_PROC_RATE,
   TEAM_STATUS_NAME,
+  TOTAL_DEFENSE_REDUCTION_CAP,
 } from "./config"
 import {
   comboMultiplier,
@@ -201,14 +203,36 @@ export function statOf(state: BattleState, card: BattleCard, stat: "atk" | "int"
   return Math.max(1, Math.round(value * Math.max(0.2, 1 + cardMod + teamMod + supMod + weakenMod)))
 }
 
-/** 计算我方当前生效的防御档位（取主动防御指令与右侧重装甲支援的最高档，再扣除破防层数） */
-export function effectivePlayerDefenseTier(state: BattleState): number {
-  const supportArmor = state.playerSupports
-    .filter((s) => (s.kind === "defense" || s.kind === "armor") && !s.bannedTurns)
+function armorBreakStacks(state: BattleState): number {
+  return state.teamStatuses.find((s) => s.id === "armor_break")?.stacks ?? 0
+}
+
+/** 手动防御档位（右翼防御按钮 / guard 技能）：绝对伤害减免，扣除破防层数 */
+export function manualDefenseTier(state: BattleState): number {
+  return Math.max(0, state.defenseTier - armorBreakStacks(state))
+}
+
+/** 重装甲支援档位（如 warden_armor）：给全队 DEF / 魔法抗性加成，扣除破防层数 */
+export function armorSupportTier(state: BattleState): number {
+  const tier = state.playerSupports
+    .filter((s) => s.kind === "armor" && !s.bannedTurns)
     .reduce((max, s) => Math.max(max, s.defenseTier ?? 0), 0)
-  const rawTier = Math.max(state.defenseTier, supportArmor)
-  const breakStacks = state.teamStatuses.find((s) => s.id === "armor_break")?.stacks ?? 0
-  return Math.max(0, rawTier - breakStacks)
+  return Math.max(0, tier - armorBreakStacks(state))
+}
+
+/** 我方某张卡承受伤害时用的抗性（物理看 DEF，魔法看 INT），含重装甲加成 */
+export function playerResist(state: BattleState, card: BattleCard, magic: boolean): number {
+  const base = statOf(state, card, magic ? "int" : "def")
+  return Math.round(base * (1 + ARMOR_RESIST_PER_TIER * armorSupportTier(state)))
+}
+
+/**
+ * 承受伤害系数：重装甲（走 DEF/(DEF+K)）和手动防御（最终伤害减免）两个乘区叠加，
+ * 总减伤不超过 TOTAL_DEFENSE_REDUCTION_CAP
+ */
+export function incomingDamageFactor(state: BattleState, resist: number): number {
+  const manual = defenseReductionOf(manualDefenseTier(state), hasTankAlive(state.cards))
+  return Math.max(1 - TOTAL_DEFENSE_REDUCTION_CAP, (1 - mitigation(resist)) * (1 - manual))
 }
 
 /** 计算敌方当前生效的防御档位（来自左侧敌方装甲支援，扣除我方施加的破防层数） */
@@ -594,7 +618,7 @@ function applyDamageToEnemy(
     // 敌方侧面支援【荆棘栅栏】逐段固定反伤（每行动最多反 3 段，按攻击卡 INT 减伤 §11.1）
     if (enemyThorns && thornsReflectedCount < 3 && state.teamHp > 0) {
       thornsReflectedCount += 1
-      const cardInt = statOf(state, card, "int")
+      const cardInt = playerResist(state, card, true)
       const thornDmg = Math.max(
         25,
         Math.round((enemyThorns.atk ?? 250) * (1 - mitigation(cardInt))),
@@ -1314,10 +1338,12 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
     (magic ? state.enemy.int : state.enemy.atk) *
     Math.max(0.3, 1 + state.enemy.buff + enemyWeaken + enemyEnrage + chargeBoost)
 
-  const targetDef = statOf(state, primaryTarget, magic ? "int" : "def")
-  const defTier = effectivePlayerDefenseTier(state)
-  const tankPresent = hasTankAlive(state.cards)
-  const tierRed = defenseReductionOf(defTier, tankPresent)
+  const targetDef = playerResist(state, primaryTarget, magic)
+  const incoming = incomingDamageFactor(state, targetDef)
+  const manualTier = manualDefenseTier(state)
+  const armorTier = armorSupportTier(state)
+  const defTier = Math.max(manualTier, armorTier)
+  const totalRed = 1 - incoming
 
   emit(state, {
     type: "cutin",
@@ -1344,8 +1370,7 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
       Math.round(
         rawEnemyAtk *
           intent.power *
-          (1 - mitigation(targetDef)) *
-          (1 - tierRed) *
+          incoming *
           random(state, "enemy", 0.95, 1.05),
       ),
     )
@@ -1388,7 +1413,7 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
 
   log(
     state,
-    `${state.enemy.name}「${intent.label}」命中 ${primaryTarget.name}，队伍承受 ${total.toLocaleString("en-US")} 伤害${tierRed > 0 ? `（防御减免 ${Math.round(tierRed * 100)}%）` : ""}`,
+    `${state.enemy.name}「${intent.label}」命中 ${primaryTarget.name}，队伍承受 ${total.toLocaleString("en-US")} 伤害${manualTier > 0 || armorTier > 0 ? `（防御合计减免约 ${Math.round(totalRed * 100)}%）` : ""}`,
   )
 
   if (intent.statusId) {
@@ -1456,16 +1481,10 @@ export function endTurn(state: BattleState): string | null {
         const living = aliveCards(state.cards)
         if (living.length === 0) break
         const target = pickOne(state, "enemy", living)
-        const defTier = effectivePlayerDefenseTier(state)
-        const tierRed = defenseReductionOf(defTier, hasTankAlive(state.cards))
+        const incomingSup = incomingDamageFactor(state, playerResist(state, target, false))
         const dmg = Math.max(
           1,
-          Math.round(
-            (esup.atk ?? 450) *
-              (esup.power ?? 0.5) *
-              (1 - mitigation(statOf(state, target, "def"))) *
-              (1 - tierRed),
-          ),
+          Math.round((esup.atk ?? 450) * (esup.power ?? 0.5) * incomingSup),
         )
         state.teamHp = Math.max(0, state.teamHp - dmg)
         emit(state, {
