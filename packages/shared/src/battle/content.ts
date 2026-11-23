@@ -153,6 +153,8 @@ export const encounterSchema = z.strictObject({
   intro: z.string().optional(),
   /** 是否出现在自由讨伐列表里（教学关等不出现） */
   listed: z.boolean().default(true),
+  /** 战斗背景图名，对应 public/battle-bg/<名>.jpg；缺省用遭遇 id */
+  background: id.optional(),
 })
 
 export type EnemyAi = z.infer<typeof enemyAiSchema>
@@ -175,6 +177,8 @@ export interface EncounterSpec {
   id: string
   summary: string
   intro?: string
+  /** 背景图名（public/battle-bg/<名>.jpg）；图不存在时前端退回纯色 */
+  background: string
   stars: StarCondition[]
   enemy: EnemyDef & { id: string }
   supports: (EnemySupportDef & { id: string })[]
@@ -311,6 +315,7 @@ export function resolveEncounter(content: BattleContent, encounterId: string): E
     id: encounterId,
     summary: encounter.summary,
     intro: encounter.intro,
+    background: encounter.background ?? encounterId,
     stars: encounter.stars,
     enemy: { id: encounter.enemy, ...enemy },
     supports: encounter.supports.map((supportId) => ({ id: supportId, ...content.supports[supportId]! })),

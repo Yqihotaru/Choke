@@ -84,6 +84,10 @@ interface Props {
   onRestart: () => void
 }
 
+function bossBgStyle(background: string): CSSProperties {
+  return { "--boss-bg": `url(/battle-bg/${background}.jpg)` } as CSSProperties
+}
+
 function elementColor(element: string) {
   return ELEMENT_COLOR[element as Element] ?? "#8a9099"
 }
@@ -586,7 +590,7 @@ export function BattleStage({
     return (
       <div className="choke-viewport">
         <div className="choke-stage" data-phase="prepare" data-production="true">
-          <section className="choke-boss-zone">
+          <section className="choke-boss-zone" style={bossBgStyle(encounter.background)}>
             <div className="choke-boss-backdrop" aria-hidden />
             <div className="choke-tapes choke-tapes--left" aria-hidden>
               <span className="choke-tape">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
@@ -804,7 +808,7 @@ export function BattleStage({
         ref={stageRef}
       >
         {/* ================= 1. 上半区：BOSS 舞台 + 梯形侧面支援铭牌（仅在有支援时显示，无空表框） ================= */}
-        <section className="choke-boss-zone" ref={bossRef}>
+        <section className="choke-boss-zone" ref={bossRef} style={bossBgStyle(encounter.background)}>
           <div
             className="choke-boss-backdrop"
             key={slashKey}
@@ -815,16 +819,13 @@ export function BattleStage({
 
           {slashKey > 0 && <div className="choke-slash-fx" key={`slash-${slashKey}`} aria-hidden />}
 
-          {/* 兰斯10 标志性受击花火与 BOSS 剪影舞台 */}
+          {/* 敌人本体用战区背景图表现，这里只留属性色光晕 */}
           <div
             className="choke-boss-figure"
             style={{ "--el": elementColor(battle.enemy.element) } as CSSProperties}
             aria-hidden
           >
             <div className="choke-boss-aura" />
-            <div className="choke-boss-core">
-              <ElementGlyph element={battle.enemy.element} />
-            </div>
           </div>
 
           {/* 敌方攻击红激光靶线 */}
