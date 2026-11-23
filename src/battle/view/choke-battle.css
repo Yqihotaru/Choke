@@ -571,7 +571,8 @@
   font-size: 1.15cqw;
   white-space: nowrap;
   pointer-events: none;
-  animation: choke-banner-in 0.16s ease-out;
+  /* 一条动画管进场和退场，总时长由组件按当前速度写在 style 上 */
+  animation: choke-banner-life 0.75s both;
 }
 .choke-skill-banner--support {
   bottom: 12cqw;
@@ -586,9 +587,33 @@
   font-size: 0.72cqw;
   font-weight: 900;
 }
-@keyframes choke-banner-in {
-  from { opacity: 0; transform: translateX(-50%) scaleX(0.8); }
-  to { opacity: 1; transform: translateX(-50%) scaleX(1); }
+/* 敌人出招：红边红签，和我方的金色区分开 */
+.choke-skill-banner[data-actor="enemy"] {
+  border-color: #e0483c;
+  color: #ffc9bd;
+}
+.choke-skill-banner[data-actor="enemy"] .choke-banner-tag {
+  background: #c2281c;
+  color: #fff;
+}
+@keyframes choke-banner-life {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.6);
+  }
+  14% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1.04);
+  }
+  22%,
+  82% {
+    opacity: 1;
+    transform: translateX(-50%) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(1.12);
+  }
 }
 
 /* ---------- 2. 中轴 HUD（1:1 兰斯10 外低内高阶梯折线双血条 + 垂直冲顶红白光柱） ---------- */
@@ -1010,11 +1035,11 @@
   animation-direction: reverse;
 }
 
-/* 扣血瞬间的红白闪光残影条快速收缩，实条瞬缩 */
+/* 实条立刻缩到位，红白残影停一拍再追上去：这一下掉了多少血，看残影的长度就知道 */
 .choke-bent-ghost {
   transition:
-    width 0.28s cubic-bezier(0.2, 0.9, 0.2, 1) 0.06s,
-    x 0.28s cubic-bezier(0.2, 0.9, 0.2, 1) 0.06s;
+    width 0.42s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s,
+    x 0.42s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s;
 }
 .choke-bent-fill {
   transition:
@@ -1894,37 +1919,91 @@
   color: #d8d2c4;
 }
 
+/* 打在敌人身上的数字：--px / --py 由组件按「同时飘着几个」错开，连击时不叠在一起 */
+.choke-popup--enemy {
+  translate: var(--px, 0) var(--py, 0);
+}
 @keyframes choke-dmg-pop {
   0% { opacity: 0; transform: translate(-50%, -35%) scale(1.45); }
   20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   80% { opacity: 1; transform: translate(-50%, -55%) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -70%) scale(0.95); }
 }
+/* 暴击 / 打中弱点：砸得更重，落定时再顿一下 */
+.choke-popup--enemy[data-crit="true"],
+.choke-popup--enemy[data-weak="true"] {
+  animation-name: choke-dmg-slam;
+}
+@keyframes choke-dmg-slam {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(2.3) rotate(-7deg); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scale(0.9) rotate(2deg); }
+  24% { transform: translate(-50%, -50%) scale(1.1) rotate(-1deg); }
+  32%, 80% { opacity: 1; transform: translate(-50%, -54%) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(-50%, -72%) scale(0.95); }
+}
 
+/* 横扫屏幕的大字（回合切换 / 开战）：一条压暗的带子从中间拉开，字从一侧冲进来、停住、再冲出去 */
 .choke-turn-banner {
   position: absolute;
   left: 0;
   right: 0;
-  top: 40%;
+  top: 36%;
   z-index: 34;
+  display: grid;
+  place-items: center;
+  height: 6.4cqw;
+  overflow: hidden;
   pointer-events: none;
-  text-align: center;
-  font-size: 4cqw;
-  font-weight: 900;
-  letter-spacing: 0.18em;
+  background: linear-gradient(90deg, transparent, rgb(8 6 10 / 0.86) 22%, rgb(8 6 10 / 0.86) 78%, transparent);
+  border-top: 0.12cqw solid rgb(255 214 130 / 0.75);
+  border-bottom: 0.12cqw solid rgb(255 214 130 / 0.75);
   color: #ffe6a8;
-  text-shadow: 0 0.3cqw 1.2cqw #000, 0 0 2cqw rgb(255 190 80 / 0.5);
-  animation: choke-turn-flash 0.78s ease-out forwards;
+  animation: choke-turn-band 0.78s ease-out both;
+}
+.choke-turn-banner > span {
+  font-size: 3.6cqw;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.16em;
+  /* 字距会在最后一个字后面多出一截，补回来才居中 */
+  margin-right: -0.16em;
+  text-shadow: 0 0.3cqw 1cqw #000;
+  animation: choke-turn-text 0.78s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-duration: inherit;
 }
 .choke-turn-banner[data-owner="enemy"] {
+  border-color: rgb(235 80 64 / 0.8);
   color: #ff9b86;
-  text-shadow: 0 0.3cqw 1.2cqw #000, 0 0 2cqw rgb(220 50 40 / 0.6);
 }
-@keyframes choke-turn-flash {
-  0% { opacity: 0; letter-spacing: 0.4em; }
-  25% { opacity: 1; letter-spacing: 0.18em; }
-  80% { opacity: 1; }
-  100% { opacity: 0; }
+.choke-turn-banner[data-owner="enemy"] > span {
+  animation-name: choke-turn-text-rev;
+}
+.choke-turn-banner[data-owner="start"] {
+  top: 32%;
+  height: 8.4cqw;
+  border-color: #ff5a4a;
+  color: #fff3e2;
+}
+.choke-turn-banner[data-owner="start"] > span {
+  font-size: 5.2cqw;
+}
+@keyframes choke-turn-band {
+  0% { opacity: 0; transform: scaleY(0.1); }
+  16% { opacity: 1; transform: scaleY(1); }
+  82% { opacity: 1; transform: scaleY(1); }
+  100% { opacity: 0; transform: scaleY(0.1); }
+}
+@keyframes choke-turn-text {
+  0% { opacity: 0; transform: translateX(-42cqw) skewX(-18deg); }
+  22% { opacity: 1; transform: translateX(-1.2cqw) skewX(0deg); }
+  76% { opacity: 1; transform: translateX(1.2cqw); }
+  100% { opacity: 0; transform: translateX(42cqw) skewX(-18deg); }
+}
+@keyframes choke-turn-text-rev {
+  0% { opacity: 0; transform: translateX(42cqw) skewX(18deg); }
+  22% { opacity: 1; transform: translateX(1.2cqw) skewX(0deg); }
+  76% { opacity: 1; transform: translateX(-1.2cqw); }
+  100% { opacity: 0; transform: translateX(-42cqw) skewX(18deg); }
 }
 
 /* ---------- 7. 结算面板 ---------- */
@@ -1934,8 +2013,8 @@
   z-index: 40;
   display: grid;
   place-items: center;
-  background: rgb(4 4 6 / 0.78);
-  backdrop-filter: blur(2px);
+  background: rgb(4 4 6 / 0.84);
+  animation: choke-result-dim 0.3s ease-out both;
 }
 .choke-result-card {
   width: 34cqw;
@@ -1998,4 +2077,549 @@
   font-weight: 800;
   cursor: pointer;
   text-decoration: none;
+}
+
+/* 结算：先压暗，卡片落下，然后徽章、标题、说明、三星、按钮依次出现；
+   三星盖下去的时刻（--star-at）和 BattleStage 里播 star 音效的时刻是同一组数 */
+@keyframes choke-result-dim {
+  from { opacity: 0; }
+}
+@keyframes choke-result-drop {
+  0% { opacity: 0; transform: translateY(-2.4cqw) scale(0.94); }
+  70% { opacity: 1; transform: translateY(0.3cqw) scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes choke-result-rise {
+  from { opacity: 0; transform: translateY(0.8cqw); }
+}
+@keyframes choke-result-badge {
+  0% { opacity: 0; transform: scale(0.2) rotate(-40deg); }
+  70% { opacity: 1; transform: scale(1.15) rotate(6deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes choke-star-stamp {
+  0% { opacity: 0; transform: scale(2.6) rotate(-30deg); }
+  60% { opacity: 1; transform: scale(0.85) rotate(6deg); }
+  100% { opacity: 1; transform: none; }
+}
+.choke-result-card {
+  animation: choke-result-drop 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) 0.08s both;
+}
+.choke-result-badge {
+  animation: choke-result-badge 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.26s both;
+}
+.choke-result-card > b {
+  animation: choke-result-rise 0.28s ease-out 0.36s both;
+}
+.choke-result-card > p {
+  animation: choke-result-rise 0.28s ease-out 0.44s both;
+}
+.choke-star-item {
+  animation: choke-result-rise 0.26s ease-out 0.5s both;
+}
+/* 只有拿到的星才盖章（和 star 音效一一对应）；没拿到的灰星跟着格子一起出现 */
+.choke-star-item[data-achieved="true"] svg {
+  animation: choke-star-stamp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) var(--star-at, 0.62s) both;
+}
+.choke-result-actions {
+  animation: choke-result-rise 0.3s ease-out 1.3s both;
+}
+.choke-result-layer[data-outcome="lost"] .choke-result-actions {
+  animation-delay: 0.6s;
+}
+.choke-result-layer[data-outcome="lost"] .choke-result-card {
+  border-color: #8a3a34;
+}
+.choke-result-layer[data-outcome="lost"] .choke-result-badge {
+  border-color: #e0685c;
+  background: radial-gradient(circle, #4a1612, #180806);
+  color: #ff8d80;
+}
+.choke-result-layer[data-outcome="lost"] .choke-result-card > b {
+  color: #ffb3a8;
+}
+
+/* ---------- 8. 我方挨打、濒危 ---------- */
+/* 挨打：四边闪一圈红。只动 opacity，一次画好 */
+.choke-hurt-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 33;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 55%, transparent 52%, rgb(220 30 40 / 0.55) 100%);
+  animation: choke-hurt 0.42s ease-out both;
+}
+.choke-hurt-vignette[data-heavy="true"] {
+  background: radial-gradient(ellipse at 50% 55%, transparent 38%, rgb(230 24 36 / 0.78) 100%);
+}
+@keyframes choke-hurt {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* 队伍血量不到四分之一：指令台四边常驻一圈暗红，慢慢呼吸。伪元素只动 opacity */
+.choke-stage[data-danger="true"] .choke-deck {
+  position: relative;
+}
+.choke-stage[data-danger="true"] .choke-deck::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  box-shadow: inset 0 0 3cqw rgb(220 30 40 / 0.55);
+  animation: choke-danger 1.1s ease-in-out infinite alternate;
+}
+@keyframes choke-danger {
+  from { opacity: 0.35; }
+}
+/* 被敌人瞄准的卡：红框提醒 */
+.choke-card-slot[data-bursting="true"] .choke-card-frame {
+  box-shadow:
+    0 0 0 0.22cqw #ff4a5e,
+    0 0 1.2cqw rgb(255 60 80 / 0.8);
+}
+
+/* ---------- 9. 选中、悬停、按下、键盘焦点 ---------- */
+.choke-card-slot {
+  cursor: pointer;
+}
+.choke-card-slot[data-selected="true"]:not([data-acted="true"]):not([data-down="true"]) {
+  transform: translateY(-0.9cqw);
+  z-index: 7;
+}
+.choke-card-slot[data-selected="true"]:not([data-acted="true"]):not([data-down="true"]) .choke-card-frame {
+  box-shadow:
+    0 0 0 0.2cqw #ffd86b,
+    0 0.6cqw 1.2cqw rgb(0 0 0 / 0.6);
+}
+.choke-card-frame {
+  transition: filter 0.22s ease, box-shadow 0.16s ease;
+}
+/* 技能条：一条条从下面顶上来 */
+.choke-card-overlay-skills {
+  animation: choke-skills-in 0.14s ease-out both;
+  transform-origin: 50% 100%;
+}
+@keyframes choke-skills-in {
+  from { opacity: 0; transform: translateY(0.5cqw) scaleY(0.9); }
+}
+.choke-overlay-skill-btn {
+  transition: transform 0.08s ease, border-color 0.1s ease, background 0.1s ease;
+}
+.choke-overlay-skill-btn:hover:not(:disabled):not([data-passive="true"]) {
+  transform: translateX(0.18cqw);
+}
+.choke-overlay-skill-btn:active:not(:disabled):not([data-passive="true"]) {
+  transform: translateX(0.18cqw) scale(0.97);
+}
+
+/* 舞台上所有按钮共用的手感：悬停亮一档，按下沉一点，Tab 到时有一圈金线 */
+:is(
+    .choke-tool-btn,
+    .choke-stage-pill,
+    .choke-test-toggle,
+    .choke-btn-panel,
+    .choke-btn-mini,
+    .choke-btn-menu,
+    .choke-btn-defend,
+    .choke-btn-end,
+    .choke-swap-close,
+    .choke-swap-slot-pill,
+    .choke-log-toggle,
+    .choke-result-actions > *
+  ) {
+  transition: transform 0.08s ease, filter 0.12s ease, border-color 0.12s ease;
+}
+:is(
+    .choke-tool-btn,
+    .choke-stage-pill,
+    .choke-test-toggle,
+    .choke-btn-panel,
+    .choke-btn-mini,
+    .choke-btn-menu,
+    .choke-btn-defend,
+    .choke-btn-end,
+    .choke-swap-close,
+    .choke-swap-slot-pill,
+    .choke-log-toggle,
+    .choke-result-actions > *
+  ):hover:not(:disabled) {
+  filter: brightness(1.22);
+}
+:is(
+    .choke-tool-btn,
+    .choke-stage-pill,
+    .choke-test-toggle,
+    .choke-btn-panel,
+    .choke-btn-mini,
+    .choke-btn-menu,
+    .choke-btn-defend,
+    .choke-btn-end,
+    .choke-swap-close,
+    .choke-swap-slot-pill,
+    .choke-log-toggle,
+    .choke-result-actions > *
+  ):active:not(:disabled) {
+  transform: translateY(0.12cqw) scale(0.98);
+  filter: brightness(0.94);
+}
+.choke-stage :is(button, a):focus-visible {
+  outline: 0.16cqw solid #ffe38a;
+  outline-offset: 0.14cqw;
+}
+.choke-btn-mini[aria-pressed="true"] {
+  border-color: #ffd86b;
+  color: #fff3c9;
+}
+/* 结算的主按钮（再来一场）用实心金色，和「返回桌面」分出主次 */
+.choke-result-actions button {
+  border-color: #ffd86b;
+  background: linear-gradient(180deg, #e9b44a, #a8741c);
+  color: #1c1204;
+}
+
+/* 「战斗开始」：慢慢呼吸，告诉玩家下一步点这里；只动 transform */
+.choke-stage[data-phase="prepare"] .choke-center-orb {
+  animation: choke-orb-breathe 1.6s ease-in-out infinite;
+  transition: filter 0.12s ease;
+}
+.choke-stage[data-phase="prepare"] .choke-center-orb:hover {
+  filter: brightness(1.2);
+}
+.choke-stage[data-phase="prepare"] .choke-center-orb:active {
+  animation: none;
+  transform: scale(0.94);
+}
+@keyframes choke-orb-breathe {
+  50% { transform: scale(1.06); }
+}
+/* 回合数变了：数字跳一下（数字节点带 key，换回合时重新挂载） */
+.choke-orb-num {
+  animation: choke-orb-tick 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes choke-orb-tick {
+  from { transform: scale(1.7); opacity: 0.2; }
+}
+
+/* AP 宝石：亮起来时弹一下；悬停技能时，将要花掉的那几颗闪动 */
+.choke-ap-gem {
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease, opacity 0.2s ease;
+}
+.choke-ap-gem[data-active="true"] {
+  animation: choke-ap-pop 0.26s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+.choke-ap-gem[data-preview="true"] {
+  animation: choke-ap-preview 0.5s ease-in-out infinite alternate;
+}
+@keyframes choke-ap-pop {
+  from { transform: scale(0.4); }
+}
+@keyframes choke-ap-preview {
+  to { transform: scale(0.84); opacity: 0.7; }
+}
+
+/* 「行動終了」「DOWN」盖章；触发标签（BOOST / 必殺 / 連撃）弹出来 */
+.choke-acted-stamp {
+  animation: choke-result-dim 0.18s ease-out both;
+}
+.choke-acted-circle,
+.choke-stamp-text {
+  animation: choke-acted-slam 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes choke-acted-slam {
+  0% { opacity: 0; transform: scale(2) rotate(-14deg); }
+  65% { opacity: 1; transform: scale(0.92) rotate(2deg); }
+}
+.choke-center-trigger span {
+  animation: choke-trigger-in 0.3s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes choke-trigger-in {
+  from { opacity: 0; transform: scale(0.4); }
+}
+.choke-guard-chip {
+  animation: choke-trigger-in 0.2s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+
+/* 提示框、敌方意图、状态、支援铭牌、连击数：出现时都有一个很短的入场 */
+.choke-tooltip {
+  animation: choke-result-dim 0.12s ease-out both;
+}
+.choke-intent-box,
+.choke-buff-pill,
+.choke-weak-el {
+  animation: choke-trigger-in 0.24s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.choke-rance-support-plate--enemy {
+  animation: choke-plate-in-left 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.choke-rance-support-plate--party {
+  animation: choke-plate-in-right 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes choke-plate-in-left {
+  from { opacity: 0; transform: translateX(-3cqw); }
+}
+@keyframes choke-plate-in-right {
+  from { opacity: 0; transform: translateX(3cqw); }
+}
+/* 硬控横幅本身用 translateX(-50%) 居中，入场只改透明度，不碰位移 */
+.choke-boss-cc-banner {
+  animation: choke-result-dim 0.24s ease-out both;
+}
+
+/* 替补席、战报：从各自的方向滑出来 */
+.choke-swap-drawer {
+  animation: choke-drawer-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes choke-drawer-in {
+  from { opacity: 0; transform: translateY(1.6cqw) scale(0.985); }
+}
+.choke-bench-item {
+  animation: choke-result-rise 0.22s ease-out both;
+}
+.choke-bench-item:nth-child(2) { animation-delay: 30ms; }
+.choke-bench-item:nth-child(3) { animation-delay: 60ms; }
+.choke-bench-item:nth-child(4) { animation-delay: 90ms; }
+.choke-bench-item:nth-child(n + 5) { animation-delay: 120ms; }
+.choke-log-drawer {
+  transform-origin: 100% 100%;
+  animation: choke-log-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  scrollbar-width: thin;
+  scrollbar-color: #7a643b transparent;
+}
+@keyframes choke-log-in {
+  from { opacity: 0; transform: translateY(0.8cqw) scale(0.97); }
+}
+/* 底栏的一句话战况：换了就从下面顶上来（文字节点带 key） */
+.choke-ticker {
+  display: inline-block;
+  animation: choke-result-rise 0.2s ease-out both;
+}
+.choke-ticker[data-error="true"] {
+  color: #ff9a8c;
+  font-weight: 700;
+  animation: choke-ticker-shake 0.3s ease-out both;
+}
+@keyframes choke-ticker-shake {
+  20% { transform: translateX(-0.4cqw); }
+  40% { transform: translateX(0.32cqw); }
+  60% { transform: translateX(-0.22cqw); }
+  80% { transform: translateX(0.12cqw); }
+}
+
+/* ---------- 10. 准备画面的入场：警戒带扫进来 → VS 砸下 → 标题、目标、评价 → 卡一张张发下来 ---------- */
+.choke-stage[data-phase="prepare"] .choke-tapes--left {
+  animation: choke-tape-left 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.choke-stage[data-phase="prepare"] .choke-tapes--right {
+  animation: choke-tape-right 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes choke-tape-left {
+  from { opacity: 0; transform: translateX(-30cqw); }
+}
+@keyframes choke-tape-right {
+  from { opacity: 0; transform: translateX(30cqw); }
+}
+.choke-vs-giant {
+  animation: choke-vs-slam 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s both;
+}
+@keyframes choke-vs-slam {
+  0% { opacity: 0; transform: scale(2.4) rotate(-10deg); }
+  70% { opacity: 1; transform: scale(0.94) rotate(1deg); }
+}
+.choke-prep-badge {
+  animation: choke-prep-badge 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
+}
+@keyframes choke-prep-badge {
+  from { opacity: 0; transform: rotate(15deg) scale(1.9); }
+}
+.choke-prep-title {
+  animation: choke-prep-title 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.24s both;
+}
+@keyframes choke-prep-title {
+  from { opacity: 0; transform: rotate(-8deg) translateX(-4cqw); }
+}
+/* 换一个讨伐目标：名字重新滑进来（标题节点带 key） */
+.choke-stage-selector {
+  animation: choke-plate-in-left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
+}
+.choke-stage-selector__desc {
+  animation: choke-result-dim 0.2s ease-out both;
+}
+.choke-outcome-box {
+  animation: choke-plate-in-right 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.34s both;
+}
+.choke-stage[data-phase="prepare"] .choke-hud-band {
+  animation: choke-result-rise 0.3s ease-out 0.2s both;
+}
+.choke-stage[data-phase="prepare"] .choke-card-slot {
+  animation: choke-card-deal 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(0.36s + var(--slot, 0) * 55ms);
+}
+@keyframes choke-card-deal {
+  0% { opacity: 0; transform: translateY(6cqw) rotate(-5deg); }
+  75% { opacity: 1; transform: translateY(-0.3cqw) rotate(0.6deg); }
+}
+/* ---------- 11. 登录 / 没卡 / 出错 / 加载：和战斗舞台同一套暗金配色（BattlePage 用） ---------- */
+.choke-gate-page {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(52% 60% at 50% 38%, rgb(175 42 30 / 0.32), transparent 72%),
+    #0b080c;
+  color: #f4efe3;
+  font-family: "Outfit Variable", "Outfit", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.choke-gate {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 30px 30px 26px;
+  border: 2px solid #8b6f3b;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #1b1712, #0d0b09);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.75);
+  text-align: center;
+  animation: ui-pop-in var(--ui-slow) var(--ui-ease-out) both;
+}
+.choke-gate > small {
+  color: #e6c473;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+}
+.choke-gate > h1 {
+  margin: 0;
+  color: #ffe6a8;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+.choke-gate > p {
+  margin: 0;
+  color: #c9bda7;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.choke-gate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.choke-gate__actions > * {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 20px;
+  border: 2px solid #8b7141;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #352b1c, #17120c);
+  color: #ffe7b0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.12s ease;
+}
+.choke-gate__actions > :first-child {
+  border-color: #ffd86b;
+  background: linear-gradient(180deg, #e9b44a, #a8741c);
+  color: #1c1204;
+}
+.choke-gate__actions > :hover {
+  filter: brightness(1.15);
+}
+.choke-gate__actions > :active {
+  transform: translateY(1px);
+}
+.choke-gate__actions > :focus-visible {
+  outline: 2px solid #ffe38a;
+  outline-offset: 2px;
+}
+.choke-gate__spin {
+  width: 26px;
+  height: 26px;
+  border: 3px solid rgb(255 255 255 / 0.12);
+  border-top-color: #e6c473;
+  border-radius: 50%;
+  animation: choke-gate-spin 0.8s linear infinite;
+}
+@keyframes choke-gate-spin {
+  to { rotate: 1turn; }
+}
+
+/* ---------- 11b. 版面修正 ---------- */
+/* 讨伐目标有十几个时，三列的面板会一路长上去盖住 VS 和敌人名字：改成五列、封顶，多了就在面板里滚 */
+.choke-stage-selector {
+  width: 41cqw;
+}
+.choke-stage-selector__btns {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-height: 9.4cqw;
+  overflow-y: auto;
+  padding-right: 0.2cqw;
+  scrollbar-width: thin;
+  scrollbar-color: #6b5332 transparent;
+}
+.choke-stage-selector[data-test="true"] .choke-stage-selector__btns {
+  max-height: none;
+  overflow: visible;
+}
+.choke-stage-pill[data-active="true"] b {
+  color: #ffe9a8;
+}
+.choke-stage-pill {
+  padding: 0.2cqw 0.42cqw;
+}
+/* 敌人名字往上让一点，给下面的目标面板腾地方 */
+.choke-prep-title {
+  top: 5.7cqw;
+}
+/* 我方挨打的数字：来源（招式名）缩成数字下面的一行小字，不再和数字一样大、盖住卡面 */
+.choke-popup--card em {
+  display: block;
+  font-style: normal;
+  font-size: 0.7cqw;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  color: #ffd9d2;
+}
+/* 压暗只压卡面：滤镜加在卡框上会把盖在上面的「行動終了」「DOWN」章也一起压暗，章反而看不清 */
+.choke-card-slot[data-acted="true"] .choke-card-frame,
+.choke-card-slot[data-down="true"] .choke-card-frame {
+  filter: none;
+}
+.choke-card-slot[data-acted="true"] .choke-card-frame > .cfb2 {
+  filter: brightness(0.5) saturate(0.55);
+  transition: filter 0.22s ease;
+}
+.choke-card-slot[data-down="true"] .choke-card-frame > .cfb2 {
+  filter: grayscale(1) brightness(0.38);
+  transition: filter 0.22s ease;
+}
+.choke-acted-stamp {
+  background: rgb(10 4 6 / 0.3);
+}
+
+/* ---------- 12. 减少动态效果：系统开了这个选项时，装饰性的动画全停，结果直接到位 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .choke-stage *,
+  .choke-stage *::before,
+  .choke-stage *::after,
+  .choke-gate {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

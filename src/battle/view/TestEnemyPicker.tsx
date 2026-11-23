@@ -51,7 +51,7 @@ export function TestEnemyPicker({ encounters, activeId, onSelect }: Props) {
                     data-active={e.id === activeId ? "true" : undefined}
                     title={e.summary}
                     onClick={() => {
-                      playSfx("click")
+                      playSfx("select")
                       onSelect(e.id)
                     }}
                   >

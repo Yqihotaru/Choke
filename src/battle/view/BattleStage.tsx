@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import gsap from "gsap"
 import {
   GiBroadsword,
@@ -54,6 +54,9 @@ import type { BattleState, EnemyIntent, SideSupportUnit } from "@choke/shared/ba
 import "./choke-battle.css"
 
 const AP_SLOTS = 10
+/** 结算层亮起后，第一颗星盖下去的时刻和每颗星的间隔（毫秒）；choke-battle.css 里的延时与之对应 */
+const RESULT_STAR_DELAY = 620
+const RESULT_STAR_GAP = 260
 
 /**
  * 兰斯10 标志性「外低内高」阶梯折线血条 SVG 路径（viewBox="0 0 460 54"）
@@ -226,14 +229,18 @@ export function BattleStage({
   const [swapOpen, setSwapOpen] = useState(false)
   const [swapOutIdx, setSwapOutIdx] = useState(0)
   const [speedHigh, setSpeedHigh] = useState(false)
+  /** 胜负已定后，等最后一击演完才亮结算层 */
+  const [resultShown, setResultShown] = useState(false)
 
   // 兰斯10 实时演出横幅与扣血垂直光柱状态
   const [cutinBanner, setCutinBanner] = useState<{
+    seq: number
     actor: "card" | "support" | "preemptive" | "enemy"
     title: string
     subtitle: string
     element: Element
   } | null>(null)
+  const cutinSeq = useRef(0)
   const [slashKey, setSlashKey] = useState(0)
   const [laserTargets, setLaserTargets] = useState<number[]>([])
   const [guardChipSlot, setGuardChipSlot] = useState<number | null>(null)
@@ -252,11 +259,16 @@ export function BattleStage({
   const comboRef = useRef<HTMLDivElement | null>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const lastSeq = useRef(0)
-  const fxTimers = useRef<number[]>([])
+  const fxTimers = useRef(new Set<number>())
+  /** 同时飘着几个伤害数字：新数字按这个数错开位置，连击时不会叠成一团 */
+  const popupLive = useRef(0)
 
   const later = useCallback((fn: () => void, ms: number) => {
-    const id = window.setTimeout(fn, ms)
-    fxTimers.current.push(id)
+    const id = window.setTimeout(() => {
+      fxTimers.current.delete(id)
+      fn()
+    }, ms)
+    fxTimers.current.add(id)
     return id
   }, [])
 
@@ -264,6 +276,7 @@ export function BattleStage({
     const timers = fxTimers.current
     return () => {
       timers.forEach((id) => window.clearTimeout(id))
+      timers.clear()
     }
   }, [])
 
@@ -305,8 +318,21 @@ export function BattleStage({
         em.textContent = subLabel
         node.appendChild(em)
       }
+      // 打在敌人身上的数字：第 n 个还没消失的数字往旁边、往上错开，连击时每一段都看得清
+      if (variant === "enemy") {
+        const n = popupLive.current
+        const side = n % 2 === 0 ? 1 : -1
+        node.style.setProperty("--px", `${side * Math.ceil(n / 2) * 6.5}cqw`)
+        node.style.setProperty("--py", `${-(n % 3) * 2.2}cqw`)
+        popupLive.current = n + 1
+      }
+      const life = speedHigh ? 520 : 820
+      node.style.animationDuration = `${life}ms`
       parent.appendChild(node)
-      later(() => node.remove(), speedHigh ? 520 : 820)
+      later(() => {
+        node.remove()
+        if (variant === "enemy") popupLive.current = Math.max(0, popupLive.current - 1)
+      }, life)
     },
     [later, speedHigh],
   )
@@ -356,16 +382,51 @@ export function BattleStage({
     [later],
   )
 
-  const turnBanner = useCallback(
-    (owner: "player" | "enemy", round: number) => {
+  // 我方挨打：屏幕四边闪一圈红，被打的那张卡往下一沉再弹回来
+  const hurt = useCallback(
+    (target: HTMLElement | null, heavy: boolean) => {
+      const parent = stageRef.current
+      if (parent) {
+        const node = document.createElement("div")
+        node.className = "choke-hurt-vignette"
+        if (heavy) node.dataset.heavy = "true"
+        parent.appendChild(node)
+        later(() => node.remove(), 420)
+      }
+      if (target && target !== parent) {
+        gsap.fromTo(
+          target,
+          { y: 0, rotation: 0 },
+          {
+            y: heavy ? 14 : 8,
+            rotation: heavy ? -2.5 : -1.2,
+            duration: 0.06,
+            yoyo: true,
+            repeat: heavy ? 3 : 1,
+            ease: "power2.out",
+            onComplete: () => gsap.set(target, { clearProps: "transform" }),
+          },
+        )
+      }
+    },
+    [later],
+  )
+
+  /** 横扫屏幕的大字：回合切换、开战 */
+  const sweepBanner = useCallback(
+    (text: string, tone: "player" | "enemy" | "start") => {
       const parent = stageRef.current
       if (!parent) return
+      const life = tone === "start" ? 900 : speedHigh ? 500 : 780
       const node = document.createElement("div")
       node.className = "choke-turn-banner"
-      node.dataset.owner = owner
-      node.textContent = owner === "player" ? `ROUND ${round} · PLAYER TURN` : "ENEMY TURN"
+      node.dataset.owner = tone
+      node.style.animationDuration = `${life}ms`
+      const label = document.createElement("span")
+      label.textContent = text
+      node.appendChild(label)
       parent.appendChild(node)
-      later(() => node.remove(), speedHigh ? 500 : 780)
+      later(() => node.remove(), life)
     },
     [later, speedHigh],
   )
@@ -397,8 +458,11 @@ export function BattleStage({
       const delay = idx * stepGap
       later(() => {
         if (event.type === "cutin") {
-          playSfx("cutin")
+          // 敌人出招是预警的低音，我方出招是一道风声
+          playSfx(event.actor === "enemy" ? "warn" : "cutin")
+          const seq = ++cutinSeq.current
           setCutinBanner({
+            seq,
             actor: event.actor,
             title: event.title,
             subtitle: event.subtitle,
@@ -422,11 +486,13 @@ export function BattleStage({
               )
             }
           }
-          later(() => setCutinBanner(null), speedHigh ? 480 : 750)
+          // 只收自己这一条：连着两次出招时，前一条的定时器不会把后一条提前收掉
+          later(() => setCutinBanner((cur) => (cur?.seq === seq ? null : cur)), speedHigh ? 480 : 750)
           return
         }
 
         if (event.type === "laser") {
+          playSfx("laser")
           setLaserTargets(event.targetSlots)
           if (event.guardedSlot != null) {
             setGuardChipSlot(event.guardedSlot)
@@ -491,7 +557,14 @@ export function BattleStage({
             }
             const targetNode = cardRefs.current[event.cardIndex ?? -1] ?? stageRef.current
             popup(targetNode, `-${event.amount.toLocaleString("en-US")}`, "card", event.source)
-            playSfx("hit", { rate: 0.88 })
+            const heavy = event.amount / partyMax > 0.1
+            hurt(targetNode, heavy)
+            // 挨打和打人不是一个声音：被挡下是金属声，吃满是闷响
+            if (event.blocked) playSfx("guard", { rate: 1.15 })
+            else {
+              playSfx("thud", { rate: heavy ? 0.85 : 1 })
+              playSfx("hit", { rate: 0.8, volume: 0.6 })
+            }
           }
           return
         }
@@ -560,25 +633,70 @@ export function BattleStage({
           return
         }
 
+        if (event.type === "ap") {
+          playSfx("ap")
+          return
+        }
+
         if (event.type === "turn") {
-          turnBanner(event.owner, event.round)
+          sweepBanner(event.owner === "player" ? `ROUND ${event.round} · PLAYER TURN` : "ENEMY TURN", event.owner)
           playTurn()
           return
         }
 
-        if (event.type === "won") playWin()
-        if (event.type === "lost") playLose()
+        // 胜负：等最后一击的演出收完再亮结算；三星一颗一颗盖上去
+        if (event.type === "won" || event.type === "lost") {
+          const won = event.type === "won"
+          later(() => {
+            if (won) playWin()
+            else playLose()
+            setResultShown(true)
+            if (!won) return
+            evaluateStars(battle).stars.forEach(({ met }, i) => {
+              if (met) later(() => playSfx("star", { rate: 1 + i * 0.12 }), RESULT_STAR_DELAY + i * RESULT_STAR_GAP)
+            })
+          }, speedHigh ? 260 : 480)
+        }
       }, delay)
     })
 
     // 事件全部播完后回落到引擎真实值，保证长时间挂机也不会和状态脱节
     later(() => setHpView(hpTruth.current), battle.events.length * stepGap + 520)
-  }, [battle, flash, hitBurst, later, popup, spawnLossPillar, speedHigh, turnBanner])
+  }, [battle, flash, hitBurst, hurt, later, popup, spawnLossPillar, speedHigh, sweepBanner])
 
-  const startBattle = () => {
-    playSfx("click")
-    onStart()
+  // 操作被拒（AP 不够、已经行动过……）：底栏会出提示，这里补一声
+  useEffect(() => {
+    if (actionError) playSfx("deny")
+  }, [actionError])
+
+  // 卡面上的技能行实时反映当前回合的实际 AP（疲惫 / 累积 +1）。只在战斗状态变了才重算：
+  // 悬停、飘字、血条推进这些纯演出的重渲染拿到的是同一个对象，7 张卡面不用跟着重画
+  const liveFaces = useMemo(
+    () =>
+      battle?.cards.map((card) => ({
+        ...card.face,
+        skills: card.skills.map((skill) => {
+          if (skill.passive) {
+            return { id: skill.id, name: skill.name, element: skill.element, ap: 0, passive: true }
+          }
+          const actualAp = effectiveApCost(battle, card, skill)
+          return { id: skill.id, name: skill.name, element: skill.element, ap: actualAp, surcharged: actualAp > skill.ap }
+        }),
+      })) ?? [],
+    [battle],
+  )
+
+  /** 开战 / 重开：鼓点 + 横扫的 BATTLE START；run 是页面给的 onStart 或 onRestart */
+  const begin = (run: () => void) => {
+    playSfx("start")
+    setResultShown(false)
+    setSelectedSlot(null)
+    setSwapOpen(false)
+    run()
+    // 等战斗画面挂上去再扫字
+    later(() => sweepBanner("BATTLE START", "start"), 30)
   }
+  const startBattle = () => begin(onStart)
 
   // ==================== 1. 战前准备画面 ====================
   if (!battle) {
@@ -613,7 +731,7 @@ export function BattleStage({
               VS
             </div>
 
-            <div className="choke-prep-title">
+            <div className="choke-prep-title" key={encounter.id}>
               <small>{tutorial ? "TUTORIAL STAGE" : foe.title}</small>
               <div>{enemyName}</div>
             </div>
@@ -630,7 +748,7 @@ export function BattleStage({
                       data-active={testMode ? "true" : undefined}
                       title="开发模式：可选所有敌人，不发奖励、不扣体力、不记弱点发现"
                       onClick={() => {
-                        playSfx("click")
+                        playSfx("toggle")
                         onToggleTest()
                       }}
                     >
@@ -649,7 +767,7 @@ export function BattleStage({
                         className="choke-stage-pill"
                         data-active={st.id === encounter.id ? "true" : undefined}
                         onClick={() => {
-                          playSfx("click")
+                          playSfx("select")
                           onSelectStage(st.id)
                         }}
                       >
@@ -662,7 +780,9 @@ export function BattleStage({
                     ))}
                   </div>
                 )}
-                <p className="choke-stage-selector__desc">{encounter.summary}</p>
+                <p className="choke-stage-selector__desc" key={encounter.id}>
+                  {encounter.summary}
+                </p>
               </div>
             )}
 
@@ -741,8 +861,8 @@ export function BattleStage({
               </a>
             </aside>
             <div className="choke-party-grid">
-              {deck.map((card) => (
-                <div className="choke-card-slot" key={card.id}>
+              {deck.map((card, slot) => (
+                <div className="choke-card-slot" key={card.id} style={{ "--slot": slot } as CSSProperties}>
                   <div className="choke-card-frame">
                     <GameCardFace card={card} eager />
                   </div>
@@ -795,6 +915,11 @@ export function BattleStage({
   const apMax = battle.apMax
   const comboPct = Math.round((comboMultiplier(battle.combo) - 1) * 100)
   const stars = evaluateStars(battle)
+  const ticker = actionError
+    ? `⚠️ ${actionError}`
+    : tutorial && battle.phase === "player" && battle.hiddenFound.length === 0
+      ? "💡 教学提示：弱点条里的“？”是隐藏弱点，用对应属性打中一次才会揭开。幽灵最怕火；没有火属性的卡也不影响通关。"
+      : (battle.log[0] ?? "战斗开始")
 
   const activeSlotIndex = hoveredSlot ?? selectedSlot
   const bossFillWidth = (452 * bossPct) / 100
@@ -806,6 +931,7 @@ export function BattleStage({
       <div
         className="choke-stage"
         data-phase={battle.phase === "player" ? "battle" : battle.phase}
+        data-danger={partyPct > 0 && partyPct <= 25 ? "true" : undefined}
         data-production="true"
         ref={stageRef}
       >
@@ -860,10 +986,7 @@ export function BattleStage({
             <button
               type="button"
               className="choke-tool-btn"
-              onClick={() => {
-                playSfx("click")
-                onRestart()
-              }}
+              onClick={() => begin(onRestart)}
               title="重新开始本场战斗"
             >
               <b>↻</b>
@@ -940,8 +1063,15 @@ export function BattleStage({
           {/* 技能 / 支援 / 抢攻 Cut-in 横幅 */}
           {cutinBanner && (
             <div
+              key={cutinBanner.seq}
               className={`choke-skill-banner ${cutinBanner.actor === "support" || cutinBanner.actor === "preemptive" ? "choke-skill-banner--support" : ""}`}
-              style={{ "--el": elementColor(cutinBanner.element) } as CSSProperties}
+              data-actor={cutinBanner.actor}
+              style={
+                {
+                  "--el": elementColor(cutinBanner.element),
+                  animationDuration: speedHigh ? "480ms" : "750ms",
+                } as CSSProperties
+              }
             >
               <span className="choke-banner-tag">
                 {cutinBanner.actor === "support"
@@ -1106,7 +1236,9 @@ export function BattleStage({
 
             <button type="button" className="choke-center-orb" disabled>
               <i className="choke-orb-round">Round</i>
-              <b className="choke-orb-num">{battle.turn}</b>
+              <b className="choke-orb-num" key={battle.turn}>
+                {battle.turn}
+              </b>
               <span className="choke-orb-vs">VS</span>
             </button>
 
@@ -1145,7 +1277,7 @@ export function BattleStage({
               className="choke-btn-panel"
               disabled={!playerTurn || battle.bench.length === 0}
               onClick={() => {
-                playSfx("click")
+                playSfx(swapOpen ? "close" : "open")
                 setSwapOpen((v) => !v)
               }}
               title="从替补席更换场上人员"
@@ -1165,7 +1297,9 @@ export function BattleStage({
               <button
                 type="button"
                 className="choke-btn-mini"
+                aria-pressed={speedHigh}
                 onClick={() => setSpeedHigh((v) => !v)}
+                data-sfx="toggle"
               >
                 <GiHourglass />
                 <span>速度:{speedHigh ? "高速" : "常速"}</span>
@@ -1173,14 +1307,16 @@ export function BattleStage({
               <button
                 type="button"
                 className="choke-btn-mini"
+                aria-pressed={logOpen}
                 onClick={() => setLogOpen((open) => !open)}
+                data-sfx="paper"
               >
                 <span>战报</span>
               </button>
             </div>
 
-            <a className="choke-btn-menu" href="/">
-              MENU
+            <a className="choke-btn-menu" href="/" data-sfx="close">
+              桌面
             </a>
           </aside>
 
@@ -1189,23 +1325,7 @@ export function BattleStage({
               const isOpen = activeSlotIndex === index && !swapOpen
               const tooltipInfo =
                 hoveredSkill && hoveredSkill.slotIndex === index ? hoveredSkill : null
-              // 卡面上的技能行实时反映当前回合的实际 AP（疲惫 / 累积 +1），加费时变红
-              const liveFace = {
-                ...card.face,
-                skills: card.skills.map((skill) => {
-                  if (skill.passive) {
-                    return { id: skill.id, name: skill.name, element: skill.element, ap: 0, passive: true }
-                  }
-                  const actualAp = effectiveApCost(battle, card, skill)
-                  return {
-                    id: skill.id,
-                    name: skill.name,
-                    element: skill.element,
-                    ap: actualAp,
-                    surcharged: actualAp > skill.ap,
-                  }
-                }),
-              }
+              const liveFace = liveFaces[index] ?? card.face
 
               return (
                 <div
@@ -1224,8 +1344,11 @@ export function BattleStage({
                   data-swap-target={swapOpen && swapOutIdx === index ? "true" : undefined}
                   onClick={() => {
                     if (swapOpen) {
+                      playSfx("tick")
                       setSwapOutIdx(index)
                     } else {
+                      // 能出手的卡是清脆的一声，已经行动 / 倒下的只是轻轻一点
+                      playSfx(playerTurn && !card.acted && !card.down ? "select" : "tick")
                       setSelectedSlot(selectedSlot === index ? null : index)
                     }
                   }}
@@ -1339,6 +1462,7 @@ export function BattleStage({
                               data-surcharged={surcharged ? "true" : undefined}
                               disabled={disabled}
                               onMouseEnter={() => {
+                                if (!disabled) playSfx("hover")
                                 setHoveredSkill({ slotIndex: index, skill, actualAp, reason })
                                 if (!isPassive && !disabled) setPreviewAp(actualAp)
                               }}
@@ -1348,6 +1472,7 @@ export function BattleStage({
                               }}
                               onClick={() => {
                                 if (isPassive || disabled) return
+                                playSfx("select", { rate: 1.12 })
                                 setPreviewAp(0)
                                 setHoveredSkill(null)
                                 onPlay(index, skill.id)
@@ -1386,6 +1511,8 @@ export function BattleStage({
                 setPreviewAp(0)
                 onDefend()
               }}
+              // 架盾的金属声由 guard 事件出，这里不叠默认按键音
+              data-sfx="none"
               title={
                 battle.defenseTier >= maxDefenseTier
                   ? tankPresent
@@ -1406,7 +1533,11 @@ export function BattleStage({
             <button
               type="button"
               className="choke-btn-end"
-              onClick={onEndTurn}
+              onClick={() => {
+                playSfx("whoosh")
+                setSelectedSlot(null)
+                onEndTurn()
+              }}
               disabled={!playerTurn}
             >
               结束该轮
@@ -1430,7 +1561,10 @@ export function BattleStage({
               <button
                 type="button"
                 className="choke-swap-close"
-                onClick={() => setSwapOpen(false)}
+                onClick={() => {
+                  playSfx("close")
+                  setSwapOpen(false)
+                }}
               >
                 返回战斗 ✕
               </button>
@@ -1465,6 +1599,7 @@ export function BattleStage({
                     (battle.hasActedThisTurn && !battle.cards[swapOutIdx]?.down)
                   }
                   onClick={() => {
+                    playSfx("whoosh")
                     onSwap(swapOutIdx, b.uid)
                     setSwapOpen(false)
                   }}
@@ -1483,17 +1618,16 @@ export function BattleStage({
 
         {/* ================= 5. 最底栏与 LOG 抽屉 ================= */}
         <footer className="choke-footer">
-          <span className="choke-ticker">
-            {actionError
-              ? `⚠️ ${actionError}`
-              : tutorial && battle.phase === "player" && battle.hiddenFound.length === 0
-                ? "💡 教学提示：弱点条里的“？”是隐藏弱点，用对应属性打中一次才会揭开。幽灵最怕火；没有火属性的卡也不影响通关。"
-                : (battle.log[0] ?? "战斗开始")}
+          {/* key 用文字本身：战况换了一句，就重新顶上来一次 */}
+          <span className="choke-ticker" key={ticker} data-error={actionError ? "true" : undefined}>
+            {ticker}
           </span>
           <button
             type="button"
             className="choke-log-toggle"
+            aria-expanded={logOpen}
             onClick={() => setLogOpen((open) => !open)}
+            data-sfx="paper"
           >
             {logOpen ? "▼ LOG ▼" : "▲ LOG ▲"}
           </button>
@@ -1510,8 +1644,8 @@ export function BattleStage({
         )}
 
         {/* ================= 6. 战后结算层（三星评价） ================= */}
-        {(battle.phase === "won" || battle.phase === "lost") && (
-          <div className="choke-result-layer">
+        {(battle.phase === "won" || battle.phase === "lost") && resultShown && (
+          <div className="choke-result-layer" data-outcome={battle.phase}>
             <div className="choke-result-card">
               <div className="choke-result-badge">
                 {battle.phase === "won" ? <GiTrophy /> : <GiSkullCrossedBones />}
@@ -1526,7 +1660,12 @@ export function BattleStage({
               {battle.phase === "won" && (
                 <div className="choke-stars-grid">
                   {stars.stars.map(({ condition, met }, i) => (
-                    <div className="choke-star-item" data-achieved={met ? "true" : undefined} key={condition.type}>
+                    <div
+                      className="choke-star-item"
+                      data-achieved={met ? "true" : undefined}
+                      key={condition.type}
+                      style={{ "--star-at": `${RESULT_STAR_DELAY + i * RESULT_STAR_GAP}ms` } as CSSProperties}
+                    >
                       <GiRoundStar />
                       <b>
                         ★{i + 1} {describeStar(condition).title}
@@ -1538,7 +1677,7 @@ export function BattleStage({
               )}
 
               <div className="choke-result-actions">
-                <button type="button" onClick={onRestart}>
+                <button type="button" onClick={() => begin(onRestart)} data-sfx="none">
                   再来一场
                 </button>
                 <a href="/">返回桌面</a>
