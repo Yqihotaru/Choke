@@ -513,6 +513,28 @@ export async function loadSfxLibrary() {
   return { manifest: manifestData, durations }
 }
 
+/** 素材库试听用：播放任意一段音频文件的原始数据，走同一条 master → 压缩器链路；新的一段会掐掉上一段。 */
+let libSource: AudioBufferSourceNode | null = null
+export async function previewRaw(data: ArrayBuffer, options: { volume?: number; rate?: number } = {}) {
+  const { ctx: c, master: m } = ensure()
+  const buf = await c.decodeAudioData(data)
+  try {
+    libSource?.stop()
+  } catch {
+    // 已经播完
+  }
+  const src = c.createBufferSource()
+  src.buffer = buf
+  src.playbackRate.value = options.rate ?? 1
+  const out = c.createGain()
+  out.gain.value = options.volume ?? 1
+  src.connect(out)
+  out.connect(m)
+  src.start()
+  libSource = src
+  return buf.duration
+}
+
 /** 试听页用：这个音名有没有合成版本。 */
 export function hasSynth(name: string): name is SfxName {
   return name in SYNTH

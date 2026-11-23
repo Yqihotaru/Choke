@@ -14,6 +14,7 @@ import {
 import { ELEMENT_LABEL, type Element } from "@/card/types"
 
 import meta from "./sfx-meta.json"
+import { SfxLibrary } from "./SfxLibrary"
 import "./sfx-lab.css"
 
 /**
@@ -81,6 +82,7 @@ export function SfxLab() {
   const [hitCombo, setHitCombo] = useState(0)
   const [hitCrit, setHitCrit] = useState(false)
   const [notice, setNotice] = useState("")
+  const [tab, setTab] = useState<"listen" | "library">(() => (window.location.hash === "#library" ? "library" : "listen"))
   const chainToken = useRef(0)
 
   useEffect(() => {
@@ -182,6 +184,7 @@ export function SfxLab() {
   }, [cur])
 
   useEffect(() => {
+    if (tab !== "listen") return
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       if (target.tagName === "INPUT" || target.tagName === "SELECT") return
@@ -210,7 +213,7 @@ export function SfxLab() {
     }
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
-  }, [items, groups, cur, playVariant, playAll, setMark, compare])
+  }, [items, groups, cur, playVariant, playAll, setMark, compare, tab])
 
   const exportChoice = async () => {
     const keep: Record<string, string[]> = {}
@@ -239,14 +242,24 @@ export function SfxLab() {
         <p>
           仅开发模式 · 播放走游戏自己的链路 · 录音清单 <code>/sfx/manifest.json</code>，出处见 <code>public/sfx/CREDITS.md</code>
         </p>
+        <div className="sfxlab__tabs">
+          <button type="button" className={tab === "listen" ? "is-on" : ""} onClick={() => setTab("listen")}>
+            音效试听
+          </button>
+          <button type="button" className={tab === "library" ? "is-on" : ""} onClick={() => setTab("library")}>
+            素材库
+          </button>
+        </div>
         <div className="sfxlab__bar">
-          <span>
-            <kbd>空格</kbd> 播放 · <kbd>↑</kbd>
-            <kbd>↓</kbd> 变体 · <kbd>←</kbd>
-            <kbd>→</kbd> 音名 · <kbd>1</kbd>
-            <kbd>2</kbd>
-            <kbd>3</kbd> 合成 / 录音+低频 / 纯录音 · <kbd>A</kbd> 连播 · <kbd>K</kbd> 喜欢 · <kbd>X</kbd> 淘汰
-          </span>
+          {tab === "listen" && (
+            <span>
+              <kbd>空格</kbd> 播放 · <kbd>↑</kbd>
+              <kbd>↓</kbd> 变体 · <kbd>←</kbd>
+              <kbd>→</kbd> 音名 · <kbd>1</kbd>
+              <kbd>2</kbd>
+              <kbd>3</kbd> 合成 / 录音+低频 / 纯录音 · <kbd>A</kbd> 连播 · <kbd>K</kbd> 喜欢 · <kbd>X</kbd> 淘汰
+            </span>
+          )}
           <label>
             音量
             <input
@@ -261,23 +274,32 @@ export function SfxLab() {
               }}
             />
           </label>
-          <label title="战斗冲击音（命中、暴击、破防、倒下）在游戏里会叠合成低频体，默认开">
-            <input type="checkbox" checked={body} onChange={(e) => setBody(e.target.checked)} /> 叠合成低频
-          </label>
-          <label title="游戏里每次播放录音都有 ±3% 的音高随机；关掉后每次一样，便于比较">
-            <input type="checkbox" checked={fixedPitch} onChange={(e) => setFixedPitch(e.target.checked)} /> 固定音高
-          </label>
-          <input type="search" placeholder="筛选音名或用途…" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <button type="button" onClick={exportChoice}>
-            复制我的选择（JSON）
-          </button>
-          <span>
-            喜欢 {keepCount} · 淘汰 {dropCount} · 游戏用 {Object.keys(picks).length} 项 {notice}
-          </span>
+          {tab === "listen" && (
+            <>
+              <label title="战斗冲击音（命中、暴击、破防、倒下）在游戏里会叠合成低频体，默认开">
+                <input type="checkbox" checked={body} onChange={(e) => setBody(e.target.checked)} /> 叠合成低频
+              </label>
+              <label title="游戏里每次播放录音都有 ±3% 的音高随机；关掉后每次一样，便于比较">
+                <input type="checkbox" checked={fixedPitch} onChange={(e) => setFixedPitch(e.target.checked)} /> 固定音高
+              </label>
+              <input type="search" placeholder="筛选音名或用途…" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <button type="button" onClick={exportChoice}>
+                复制我的选择（JSON）
+              </button>
+              <span>
+                喜欢 {keepCount} · 淘汰 {dropCount} · 游戏用 {Object.keys(picks).length} 项 {notice}
+              </span>
+            </>
+          )}
         </div>
       </header>
 
-      <main className="sfxlab__main">
+      {tab === "library" && (
+        <main className="sfxlab__main">
+          <SfxLibrary />
+        </main>
+      )}
+      <main className="sfxlab__main" hidden={tab !== "listen"}>
         {error && <div className="sfxlab__error">{error}</div>}
         {!lib && !error && <p className="sfxlab__muted">加载中…</p>}
 
