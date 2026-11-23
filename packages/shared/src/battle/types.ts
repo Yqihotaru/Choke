@@ -112,8 +112,8 @@ export interface EnemyIntent {
   desc: string
   /** 是否附带 Down 威胁 */
   causesDown?: boolean
-  /** 标红「无法打断」（约 1/3 的招牌技） */
-  uninterruptible?: boolean
+  /** 标红「难以打断」：被盲抽到的权重 0.4，打断成功率 ×0.4 */
+  hardToInterrupt?: boolean
   /** 是否已被刺客打断取消 */
   interrupted?: boolean
   /** 是否为蓄力满槽释放的大招 */

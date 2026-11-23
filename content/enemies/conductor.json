@@ -41,8 +41,8 @@
         "power": 1.35,
         "hits": 1,
         "status": "burn",
-        "uninterruptible": true,
-        "desc": "【无法打断】高额火属性全体魔法，附加 3 回合【燃烧】"
+        "hardToInterrupt": true,
+        "desc": "【难以打断】高额火属性全体魔法，附加 3 回合【燃烧】"
       },
       "erase": {
         "kind": "break_support",

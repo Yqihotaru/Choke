@@ -731,7 +731,7 @@
 .choke-intent-box:hover {
   transform: translateY(-0.18cqw) scale(1.05);
 }
-.choke-intent-box[data-uninterruptible="true"] {
+.choke-intent-box[data-hard-to-interrupt="true"] {
   border-color: #ff4242;
 }
 .choke-intent-box[data-interrupted="true"],

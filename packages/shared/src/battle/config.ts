@@ -1,4 +1,4 @@
-import type { Element } from "../types"
+import type { Element, Rarity } from "../types"
 
 /**
  * 战斗数值。敌人与关卡在 content/enemies、content/encounters。
@@ -31,6 +31,27 @@ export const EXECUTE_LOW_HP_RATIO = 0.4
 
 /** 技能附带状态的几率修正：按敌人档位乘在技能自己的 statusChance 上 */
 export const STATUS_CHANCE_BY_TIER = { normal: 1, elite: 0.8, boss: 0.65 } as const
+
+/**
+ * 打断（刺客盲抽）：成功率 = 档位基础率 × 施放者稀有度系数 × （难打断 ×0.4），限制在 5%–95%。
+ * 盲抽时难打断的招式权重 0.4，其他招式 1。
+ */
+export const INTERRUPT_BASE_RATE = { normal: 0.65, elite: 0.55, boss: 0.45 } as const
+export const INTERRUPT_RARITY_FACTOR: Record<Rarity, number> = {
+  C: 0.9,
+  UC: 0.95,
+  R: 1,
+  E: 1.05,
+  L: 1.1,
+  Mythic: 1.15,
+  Prismatic: 1.2,
+}
+/** 本体卡按最高档计 */
+export const INTERRUPT_HERO_FACTOR = 1.2
+export const HARD_TO_INTERRUPT_WEIGHT = 0.4
+export const HARD_TO_INTERRUPT_RATE_FACTOR = 0.4
+export const INTERRUPT_RATE_MIN = 0.05
+export const INTERRUPT_RATE_MAX = 0.95
 
 export const ROMAN_TIER = ["0", "I", "II", "III", "IV"] as const
 

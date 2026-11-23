@@ -974,7 +974,7 @@ export function BattleStage({
                       key={intent.id}
                       className="choke-intent-box"
                       data-interrupted={intent.interrupted ? "true" : undefined}
-                      data-uninterruptible={intent.uninterruptible ? "true" : undefined}
+                      data-hard-to-interrupt={intent.hardToInterrupt ? "true" : undefined}
                       data-cc={disabledByCC ? "true" : undefined}
                       data-down={intent.causesDown ? "true" : undefined}
                       style={{ "--el": elementColor(intent.element) } as CSSProperties}
@@ -986,8 +986,8 @@ export function BattleStage({
                       </span>
                       <i className="choke-intent-box__order">{idx + 1}</i>
                       <em className="choke-intent-box__tier">{tierLabel}</em>
-                      {intent.uninterruptible && (
-                        <b className="choke-intent-box__lock" title="无法打断">
+                      {intent.hardToInterrupt && (
+                        <b className="choke-intent-box__lock" title="难以打断">
                           !
                         </b>
                       )}
@@ -1005,7 +1005,7 @@ export function BattleStage({
                     <div className="choke-tooltip-sub">
                       {elementLabel(hoveredIntent.element)}属性 · 伤害档位：{enemyDamageTier(hoveredIntent)}
                       {hoveredIntent.causesDown ? " · ⚠️ 附带 DOWN" : ""}
-                      {hoveredIntent.uninterruptible ? " · 🔒 无法打断" : " · 可被刺客打断"}
+                      {hoveredIntent.hardToInterrupt ? " · 🔒 难以打断（成功率 ×0.4）" : " · 可被刺客打断"}
                     </div>
                     <div className="choke-tooltip-desc">{hoveredIntent.desc}</div>
                   </div>

@@ -21,6 +21,13 @@ import {
 
 import {
   EXECUTE_LOW_HP_RATIO,
+  HARD_TO_INTERRUPT_RATE_FACTOR,
+  HARD_TO_INTERRUPT_WEIGHT,
+  INTERRUPT_BASE_RATE,
+  INTERRUPT_HERO_FACTOR,
+  INTERRUPT_RARITY_FACTOR,
+  INTERRUPT_RATE_MAX,
+  INTERRUPT_RATE_MIN,
   PREEMPTIVE_RATE,
   STATUS_CHANCE_BY_TIER,
   SUPPORT_PROC_RATE,
@@ -57,6 +64,17 @@ function random(state: BattleState, stream: RngStream, min: number, max: number)
 
 function pickOne<T>(state: BattleState, stream: RngStream, list: T[]): T {
   return list[Math.floor(roll(state, stream) * list.length)]!
+}
+
+/** 按权重抽一个（只消耗一次随机数） */
+function pickWeighted<T>(state: BattleState, stream: RngStream, list: T[], weight: (item: T) => number): T {
+  const total = list.reduce((sum, item) => sum + weight(item), 0)
+  let r = roll(state, stream) * total
+  for (const item of list) {
+    r -= weight(item)
+    if (r < 0) return item
+  }
+  return list[list.length - 1]!
 }
 
 function beginAction(state: BattleState) {
@@ -733,34 +751,36 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           log(state, `${card.name} 发动打断，但敌方本回合已无剩余行动`)
           break
         }
-        const picked = pickOne(state, "player", candidates)
-        const baseRate =
-          state.enemy.tier === "boss" ? 0.45 : state.enemy.tier === "elite" ? 0.55 : 0.65
-        if (picked.intent.uninterruptible) {
+        const picked = pickWeighted(state, "player", candidates, (item) =>
+          item.intent.hardToInterrupt ? HARD_TO_INTERRUPT_WEIGHT : 1,
+        )
+        const rarityFactor = card.face.isHero
+          ? INTERRUPT_HERO_FACTOR
+          : INTERRUPT_RARITY_FACTOR[card.rarity]
+        const rate = Math.min(
+          INTERRUPT_RATE_MAX,
+          Math.max(
+            INTERRUPT_RATE_MIN,
+            INTERRUPT_BASE_RATE[state.enemy.tier] *
+              rarityFactor *
+              (picked.intent.hardToInterrupt ? HARD_TO_INTERRUPT_RATE_FACTOR : 1),
+          ),
+        )
+        const ratePct = Math.round(rate * 100)
+        if (roll(state, "player") >= rate) {
           state.combo = Math.floor(state.combo / 2)
           emit(state, {
             type: "interrupt_roll",
             targetIntentIndex: picked.idx,
             intentLabel: picked.intent.label,
             success: false,
-            reason: "无法打断",
+            reason: picked.intent.hardToInterrupt ? `难以打断 ${ratePct}%` : `成功率 ${ratePct}%`,
           })
           log(
             state,
-            `🎲 ${card.name} 抽中了敌方【${picked.intent.label}】，但该招牌技标红【无法打断】！Combo 减半！`,
-          )
-        } else if (roll(state, "player") > baseRate) {
-          state.combo = Math.floor(state.combo / 2)
-          emit(state, {
-            type: "interrupt_roll",
-            targetIntentIndex: picked.idx,
-            intentLabel: picked.intent.label,
-            success: false,
-            reason: "判定未过",
-          })
-          log(
-            state,
-            `🎲 ${card.name} 抽中【${picked.intent.label}】但打断判定失败！Combo 减半！`,
+            picked.intent.hardToInterrupt
+              ? `🎲 ${card.name} 抽中了【${picked.intent.label}】，该招难以打断（成功率 ${ratePct}%），打断失败！Combo 减半！`
+              : `🎲 ${card.name} 抽中【${picked.intent.label}】但打断判定失败（成功率 ${ratePct}%）！Combo 减半！`,
           )
         } else {
           picked.intent.interrupted = true

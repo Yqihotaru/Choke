@@ -510,6 +510,45 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("状态几率：说明文案写出几率（手写与自动都有）", describeSkill(SKILLS.warlock_frost!).includes("65%") && autoDescribeSkill(SKILLS.warlock_frost!).includes("65%"))
 }
 
+// ---------- 9h. 打断 ----------
+{
+  const id = "assassin_interrupt"
+  const job = SKILLS[id]!.job
+  const run = (opts: { rarity: "C" | "R" | "L" | "Prismatic"; enemyId: string; hard: boolean[]; tag: string }) => {
+    const enc = resolveEncounter(BATTLE_CONTENT, opts.enemyId)!
+    let success = 0
+    let pickedHard = 0
+    for (const seed of seedsOf(opts.tag)) {
+      const cards = inputs([face("under-test", job, opts.rarity, 40, 0, [id]), face("filler", "tank", "L", 40, 0, ["bulwark_quake"])], 10)
+      const s = createBattle(enc, cards, { seed })
+      s.enemy.hp = s.enemy.hpMax = 1e9
+      const base = s.enemy.intents[0]!
+      s.enemy.intents = opts.hard.map((h, i) => ({ ...base, id: `t-${i}`, hardToInterrupt: h || undefined, interrupted: false }))
+      s.ap = 6
+      const next = apply(s, { type: "skill", card: 0, skill: id })
+      const ev = next.events.find((e) => e.type === "interrupt_roll")
+      if (!ev || ev.type !== "interrupt_roll") continue
+      if (ev.success) success += 1
+      if (opts.hard[ev.targetIntentIndex]) pickedHard += 1
+    }
+    return { success: success / SEEDS, pickedHard: pickedHard / SEEDS }
+  }
+  const near = (value: number, target: number) => Math.abs(value - target) < 0.07
+  const r = run({ rarity: "R", enemyId: "ghost", hard: [false], tag: "int-r" })
+  check("打断：普通敌人、R 卡成功率约 65%", near(r.success, 0.65), `${r.success}`)
+  const c = run({ rarity: "C", enemyId: "ghost", hard: [false], tag: "int-c" })
+  check("打断：C 卡 ×0.90（约 58.5%）", near(c.success, 0.585), `${c.success}`)
+  const p = run({ rarity: "Prismatic", enemyId: "ghost", hard: [false], tag: "int-p" })
+  check("打断：Prismatic ×1.20（约 78%）", near(p.success, 0.78), `${p.success}`)
+  check("打断：稀有度越高成功率越高", c.success < r.success && r.success < p.success, `${c.success}<${r.success}<${p.success}`)
+  const bossHard = run({ rarity: "R", enemyId: "conductor", hard: [true], tag: "int-bh" })
+  check("打断：BOSS 的难以打断招式约 18%（45%×0.4）", near(bossHard.success, 0.18), `${bossHard.success}`)
+  const lHard = run({ rarity: "L", enemyId: "ghost", hard: [true], tag: "int-lh" })
+  check("打断：难以打断仍有机会成功，L 卡约 28.6%", lHard.success > 0.15 && near(lHard.success, 0.286), `${lHard.success}`)
+  const mixed = run({ rarity: "R", enemyId: "ghost", hard: [false, true], tag: "int-mix" })
+  check("打断：盲抽权重，难以打断的招式被抽中约 28.6%（0.4/1.4）", near(mixed.pickedHard, 0.4 / 1.4), `${mixed.pickedHard}`)
+}
+
 // ---------- 10. 坦克只看大职业 ----------
 {
   const tankDeck = start("tank", ["bulwark_quake"])

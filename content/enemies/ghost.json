@@ -50,7 +50,7 @@
                 0
               ]
             },
-            "uninterruptible": true
+            "hardToInterrupt": true
           }
         ]
       }

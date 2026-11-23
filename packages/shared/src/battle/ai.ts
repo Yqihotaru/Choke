@@ -33,7 +33,7 @@ function buildIntent(moveId: string, move: EnemyMove, ctx: AiContext, index: num
     desc: fields.desc,
   }
   if (fields.causesDown) intent.causesDown = true
-  if (fields.uninterruptible) intent.uninterruptible = true
+  if (fields.hardToInterrupt) intent.hardToInterrupt = true
   if (fields.chargedUltimate) intent.isChargedUltimate = true
   if (fields.status) intent.statusId = fields.status
   return intent

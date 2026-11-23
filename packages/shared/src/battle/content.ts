@@ -59,8 +59,8 @@ const moveFields = {
   hits: int.min(0),
   /** 附带 DOWN 威胁 */
   causesDown: z.boolean(),
-  /** 无法打断 */
-  uninterruptible: z.boolean(),
+  /** 难以打断：盲抽权重 ×0.4、成功率 ×0.4 */
+  hardToInterrupt: z.boolean(),
   /** 蓄力满槽的大招：释放后清空蓄力支援 */
   chargedUltimate: z.boolean(),
   status: z.enum(STATUS_IDS),
@@ -71,7 +71,7 @@ const moveSchema = z.strictObject({
   ...moveFields,
   hits: moveFields.hits.default(1),
   causesDown: moveFields.causesDown.optional(),
-  uninterruptible: moveFields.uninterruptible.optional(),
+  hardToInterrupt: moveFields.hardToInterrupt.optional(),
   chargedUltimate: moveFields.chargedUltimate.optional(),
   status: moveFields.status.optional(),
   /** 按条件覆盖字段，依次套用（例如「偶数回合附带 DOWN」） */
