@@ -742,8 +742,10 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
       }
 
       case "interrupt": {
-        // 刺客专属盲抽打断（§10.4）
+        // 刺客专属盲抽打断（§10.4）：攻击照常结算，打断只是额外的一次判定
         state.interruptUsedThisTurn = true
+        applyDamageToEnemy(state, card, skill, consumedTrigger)
+        if (state.phase !== "player") break
         const candidates = state.enemy.intents
           .map((intent, idx) => ({ intent, idx }))
           .filter((item) => !item.intent.interrupted)
@@ -768,7 +770,6 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
         )
         const ratePct = Math.round(rate * 100)
         if (roll(state, "player") >= rate) {
-          state.combo = Math.floor(state.combo / 2)
           emit(state, {
             type: "interrupt_roll",
             targetIntentIndex: picked.idx,
@@ -779,8 +780,8 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           log(
             state,
             picked.intent.hardToInterrupt
-              ? `🎲 ${card.name} 抽中了【${picked.intent.label}】，该招难以打断（成功率 ${ratePct}%），打断失败！Combo 减半！`
-              : `🎲 ${card.name} 抽中【${picked.intent.label}】但打断判定失败（成功率 ${ratePct}%）！Combo 减半！`,
+              ? `🎲 ${card.name} 抽中了【${picked.intent.label}】，该招难以打断（成功率 ${ratePct}%），打断失败`
+              : `🎲 ${card.name} 抽中【${picked.intent.label}】但打断判定失败（成功率 ${ratePct}%）`,
           )
         } else {
           picked.intent.interrupted = true
@@ -795,7 +796,6 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
             `🎯 打断成功！${card.name} 抽中并取消了敌方行动【${picked.intent.label}】！`,
           )
           breakEnemyChargeIfPresent(state, card.name)
-          applyDamageToEnemy(state, card, skill, consumedTrigger)
         }
         break
       }

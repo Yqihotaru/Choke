@@ -569,7 +569,7 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 0.8,
     hits: 1,
     target: "enemy",
-    desc: "刺客专属（每回合限 1 次）：从敌方本回合预告意图中随机抽 1 个打断；打断蓄力使其进入【脆弱 (+30%易伤)】",
+    desc: "刺客专属（每回合限 1 次）：0.8× 暗属性伤害照常结算，并额外盲抽敌方本回合 1 个意图尝试打断（失败不影响伤害与 Combo）；打断蓄力使其进入【脆弱 (+30%易伤)】",
   }),
   assassin_backstab: S({
     id: "assassin_backstab",

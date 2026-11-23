@@ -518,6 +518,8 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
     const enc = resolveEncounter(BATTLE_CONTENT, opts.enemyId)!
     let success = 0
     let pickedHard = 0
+    let failedWithDamage = 0
+    let failedComboKept = 0
     for (const seed of seedsOf(opts.tag)) {
       const cards = inputs([face("under-test", job, opts.rarity, 40, 0, [id]), face("filler", "tank", "L", 40, 0, ["bulwark_quake"])], 10)
       const s = createBattle(enc, cards, { seed })
@@ -525,13 +527,20 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
       const base = s.enemy.intents[0]!
       s.enemy.intents = opts.hard.map((h, i) => ({ ...base, id: `t-${i}`, hardToInterrupt: h || undefined, interrupted: false }))
       s.ap = 6
+      s.combo = 6
       const next = apply(s, { type: "skill", card: 0, skill: id })
       const ev = next.events.find((e) => e.type === "interrupt_roll")
       if (!ev || ev.type !== "interrupt_roll") continue
+      const hitDamage = next.events.filter((e) => e.type === "damage" && e.target === "enemy").length === 1
+      const single = next.events.filter((e) => e.type === "interrupt_roll").length === 1
+      if (!ev.success && hitDamage && single) {
+        failedWithDamage += 1
+        if (next.combo === 7) failedComboKept += 1
+      }
       if (ev.success) success += 1
       if (opts.hard[ev.targetIntentIndex]) pickedHard += 1
     }
-    return { success: success / SEEDS, pickedHard: pickedHard / SEEDS }
+    return { success: success / SEEDS, pickedHard: pickedHard / SEEDS, failedWithDamage, failedComboKept }
   }
   const near = (value: number, target: number) => Math.abs(value - target) < 0.07
   const r = run({ rarity: "R", enemyId: "ghost", hard: [false], tag: "int-r" })
@@ -547,6 +556,11 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("打断：难以打断仍有机会成功，L 卡约 28.6%", lHard.success > 0.15 && near(lHard.success, 0.286), `${lHard.success}`)
   const mixed = run({ rarity: "R", enemyId: "ghost", hard: [false, true], tag: "int-mix" })
   check("打断：盲抽权重，难以打断的招式被抽中约 28.6%（0.4/1.4）", near(mixed.pickedHard, 0.4 / 1.4), `${mixed.pickedHard}`)
+  check(
+    "打断：判定失败时攻击照常打出伤害，Combo 不减半",
+    lHard.failedWithDamage > 100 && lHard.failedComboKept === lHard.failedWithDamage,
+    `${lHard.failedComboKept}/${lHard.failedWithDamage}`,
+  )
 }
 
 // ---------- 10. 坦克只看大职业 ----------
