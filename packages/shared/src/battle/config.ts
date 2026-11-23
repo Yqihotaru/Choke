@@ -26,6 +26,9 @@ export const COMBO_BONUS = [1, 1, 1, 1.03, 1.08, 1.14, 1.22, 1.3, 1.4, 1.5]
 
 export const COMBO_CAP = COMBO_BONUS.length - 1
 
+/** 斩杀"血量低"的判定线：敌人当前血量 / 最大血量 */
+export const EXECUTE_LOW_HP_RATIO = 0.4
+
 export const ROMAN_TIER = ["0", "I", "II", "III", "IV"] as const
 
 /** 防御档位减伤表（§6.7） */

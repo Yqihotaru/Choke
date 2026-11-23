@@ -1,5 +1,6 @@
 // pnpm test:skills —— 技能效果测试。
 // 每个被动 / 效果字段：带了生效、没带不生效、卡被 Down 失效。
+import { EXECUTE_LOW_HP_RATIO } from "@choke/shared/battle/config"
 import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import { resolveEncounter } from "@choke/shared/battle/content"
 import { createBattle, effectiveApCost, statOf } from "@choke/shared/battle/engine"
@@ -386,6 +387,60 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("Combo 曲线：9 层及以上封顶 1.50", comboMultiplier(9) === 1.5 && comboMultiplier(30) === 1.5)
   check("Combo 曲线：负数按 0 层算", comboMultiplier(-3) === 1)
   check("Combo 曲线：单调不降且凸", expected.every((v, i) => i < 4 || expected[i]! - expected[i - 1]! >= expected[i - 1]! - expected[i - 2]! - 1e-9))
+}
+
+// ---------- 9e. 斩杀条件 ----------
+{
+  const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
+  const VULN = { id: "vulnerable", name: "脆弱", amount: 0.3, turns: 2, isDebuff: true } as const
+  const WEAK = { id: "weaken", name: "衰弱", stat: "atk", amount: -0.2, turns: 2, isDebuff: true } as const
+  type Setup = (s: BattleState) => void
+  const dealt = (job: Job, id: string, setup?: Setup) => {
+    const s = start(job, [id], "execute-1", ghost)
+    s.enemy.hp = s.enemy.hpMax = 1e9
+    s.ap = 6
+    setup?.(s)
+    const before = s.enemy.hp
+    const next = apply(s, { type: "skill", card: 0, skill: id })
+    return before - next.enemy.hp
+  }
+  const lowHp: Setup = (s) => { s.enemy.hp = Math.round(s.enemy.hpMax * (EXECUTE_LOW_HP_RATIO - 0.05)) }
+  const justAbove: Setup = (s) => { s.enemy.hp = Math.round(s.enemy.hpMax * (EXECUTE_LOW_HP_RATIO + 0.05)) }
+  const vuln: Setup = (s) => { s.enemy.statuses.push({ ...VULN }) }
+  const weak: Setup = (s) => { s.enemy.statuses.push({ ...WEAK }) }
+
+  // 裂空断头台：只看低血
+  const wind = SKILLS.berserker_wind!
+  const windBase = dealt("warrior", "berserker_wind")
+  check("斩杀：裂空断头台只声明低血条件", wind.executeWhen?.join() === "lowHp")
+  const windLow = dealt("warrior", "berserker_wind", lowHp)
+  check("斩杀：裂空断头台血量低于 40% 时加成", Math.abs(windLow / windBase - (1 + wind.executeBonus!)) < 0.01, `${windLow}/${windBase}`)
+  check("斩杀：裂空断头台血量刚高于 40% 不加成", dealt("warrior", "berserker_wind", justAbove) === windBase)
+  check("斩杀：裂空断头台对脆弱不触发斩杀（只吃通用脆弱易伤）", Math.abs(dealt("warrior", "berserker_wind", vuln) / windBase - 1.3) < 0.01)
+
+  // 虚弱收割：只看脆弱
+  const harvest = SKILLS.ranger_harvest!
+  const harvestBase = dealt("warrior", "ranger_harvest")
+  check("斩杀：虚弱收割只声明脆弱条件", harvest.executeWhen?.join() === "vulnerable")
+  check("斩杀：虚弱收割对其他负面状态不再触发", dealt("warrior", "ranger_harvest", weak) === harvestBase)
+  check("斩杀：虚弱收割对低血不触发", dealt("warrior", "ranger_harvest", lowHp) === harvestBase)
+  const harvestVuln = dealt("warrior", "ranger_harvest", vuln)
+  check("斩杀：虚弱收割对脆弱目标触发（比单纯脆弱易伤 ×1.3 高得多）", harvestVuln / harvestBase > 1.3 * 1.2, `${harvestVuln}/${harvestBase}`)
+
+  // 暗杀奥义：脆弱或低血任一
+  const exec = SKILLS.assassin_execute!
+  const execBase = dealt("warrior", "assassin_execute")
+  check("斩杀：暗杀奥义声明脆弱与低血", exec.executeWhen?.slice().sort().join() === "lowHp,vulnerable")
+  const execLow = dealt("warrior", "assassin_execute", lowHp)
+  check("斩杀：暗杀奥义低血触发", Math.abs(execLow / execBase - (1 + exec.executeBonus!)) < 0.01, `${execLow}/${execBase}`)
+  check("斩杀：暗杀奥义对脆弱触发", dealt("warrior", "assassin_execute", vuln) > execBase * 1.3 * 1.01)
+  check("斩杀：暗杀奥义对其他负面状态不触发", dealt("warrior", "assassin_execute", weak) === execBase)
+
+  // 校验
+  check("斩杀校验：写 executeBonus 不写条件会报错", checkSkill({ ...SKILLS.berserker_wind!, executeWhen: undefined }).length > 0)
+  check("斩杀校验：写条件不写加成会报错", checkSkill({ ...SKILLS.berserker_wind!, executeBonus: undefined }).length > 0)
+  check("斩杀校验：未知条件会报错", checkSkill({ ...SKILLS.berserker_wind!, executeWhen: ["anything"] }).length > 0)
+  check("斩杀描述：自动文案写出具体条件", autoDescribeSkill(SKILLS.assassin_execute!).includes("脆弱") && autoDescribeSkill(SKILLS.assassin_execute!).includes("血量低于 40%") && !autoDescribeSkill(SKILLS.ranger_harvest!).includes("血量低于"))
 }
 
 // ---------- 10. 坦克只看大职业 ----------

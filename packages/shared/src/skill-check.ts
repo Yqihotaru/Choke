@@ -60,6 +60,7 @@ const skillSchema = z
     selfHpCostPct: ratio.optional(),
     piercePct: ratio.optional(),
     executeBonus: z.number().positive().max(3).optional(),
+    executeWhen: z.array(z.enum(["vulnerable", "lowHp"])).min(1).max(2).optional(),
     clearEnemySupports: z.int().min(1).max(5).optional(),
     supportDef: supportDef.optional(),
     /** 手写文案；留空则由 describeSkill 自动生成 */
@@ -108,6 +109,8 @@ const skillSchema = z
     for (const key of PASSIVE_KEYS) if (has(key)) fail(`主动技能不能带被动效果字段 ${key}`)
 
     if (has("statusId") && !has("turns")) fail("带状态的技能必须写 turns")
+    if (has("executeBonus") !== has("executeWhen")) fail("executeBonus 与 executeWhen 必须同时写")
+    if (def.executeWhen && new Set(def.executeWhen).size !== def.executeWhen.length) fail("executeWhen 不能重复")
     if (has("hits") && !has("power")) fail("写了 hits 就必须写 power")
     if (has("cleanse") && def.kind !== "heal") fail("cleanse 只能用在 heal 技能上")
     if (has("revive") && def.kind !== "heal") fail("revive 只能用在 heal 技能上")
@@ -202,7 +205,10 @@ export function autoDescribeSkill(def: SkillDef): string {
     case "interrupt":
       parts.push(`${hitText}造成 ${pct(def.power ?? 0)} ${element}伤害`.replace("  ", " "))
       if (def.piercePct) parts.push(`无视目标 ${pct(def.piercePct)} 防御`)
-      if (def.executeBonus) parts.push(`目标处于斩杀条件时伤害 +${pct(def.executeBonus)}`)
+      if (def.executeBonus && def.executeWhen) {
+        const label = def.executeWhen.map((c) => (c === "vulnerable" ? "处于【脆弱】" : "血量低于 40%")).join("或")
+        parts.push(`目标${label}时伤害 +${pct(def.executeBonus)}`)
+      }
       if (def.selfHpCostPct) parts.push(`消耗队伍 ${pct(def.selfHpCostPct)} 生命`)
       if (def.clearEnemySupports) parts.push(`清除敌方 ${def.clearEnemySupports} 个侧面支援`)
       if (def.kind === "interrupt") parts.push("打断敌方蓄力")

@@ -20,6 +20,7 @@ import {
 } from "./types"
 
 import {
+  EXECUTE_LOW_HP_RATIO,
   PREEMPTIVE_RATE,
   SUPPORT_PROC_RATE,
 } from "./config"
@@ -460,14 +461,15 @@ function applyDamageToEnemy(
   if (element === "fire" && state.enemy.statuses.some((s) => s.id === "burn")) statusVuln += 0.2
   if (state.enemy.statuses.some((s) => s.id === "vulnerable")) statusVuln += 0.3
 
-  // 游侠/刺客/狂战士的虚弱/残血收割加成
+  // 斩杀加成：只认技能自己声明的条件（脆弱 / 低血），不再看任意负面状态
   let execMult = 1.0
-  if (
-    skill.executeBonus &&
-    (state.enemy.hp / state.enemy.hpMax < 0.4 ||
-      state.enemy.statuses.some((s) => s.id === "vulnerable" || s.isDebuff))
-  ) {
-    execMult += skill.executeBonus
+  if (skill.executeBonus && skill.executeWhen) {
+    const met = skill.executeWhen.some((cond) =>
+      cond === "vulnerable"
+        ? state.enemy.statuses.some((s) => s.id === "vulnerable")
+        : state.enemy.hp / state.enemy.hpMax < EXECUTE_LOW_HP_RATIO,
+    )
+    if (met) execMult += skill.executeBonus
   }
 
   let total = 0

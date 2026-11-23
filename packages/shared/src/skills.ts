@@ -22,6 +22,8 @@ export type SkillKind =
  */
 export type SkillCostTag = "normal" | "accumulate" | "once"
 
+export type ExecuteCondition = "vulnerable" | "lowHp"
+
 export interface SupportSpawnDef {
   kind: "attack" | "armor" | "aura" | "thorns"
   name: string
@@ -94,8 +96,10 @@ export interface SkillDef {
   selfHpCostPct?: number
   /** 穿甲：无视目标部分 DEF/减伤比例 */
   piercePct?: number
-  /** 虚弱/斩杀收割：目标处于脆弱或低血量时额外倍率 */
+  /** 斩杀加成：满足 executeWhen 任一条件时额外倍率 */
   executeBonus?: number
+  /** 斩杀触发条件（满足任一即触发）：vulnerable = 目标脆弱；lowHp = 目标当前血量低于 40% */
+  executeWhen?: ExecuteCondition[]
   /** 清除敌方侧面支援数量 */
   clearEnemySupports?: number
   /** 召唤/布置侧面支援定义 */
@@ -319,8 +323,9 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 2.3,
     hits: 1,
     executeBonus: 0.4,
+    executeWhen: ["lowHp"],
     target: "enemy",
-    desc: "2.3× 雷属性重劈（目标残血或脆弱时 +40%）· 远征累积 (+1 AP/次)",
+    desc: "2.3× 雷属性重劈（目标血量低于 40% 时 +40%）· 远征累积 (+1 AP/次)",
   }),
   berserker_blood: S({
     id: "berserker_blood",
@@ -513,8 +518,9 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 2.4,
     hits: 1,
     executeBonus: 0.6,
+    executeWhen: ["vulnerable"],
     target: "enemy",
-    desc: "2.4× 终结箭（目标处于【脆弱】或带异常时伤害 +60%）· 远征累积",
+    desc: "2.4× 终结箭（目标处于【脆弱】时伤害 +60%）· 远征累积",
   }),
   ranger_swift: S({
     id: "ranger_swift",
@@ -583,8 +589,9 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 2.8,
     hits: 1,
     executeBonus: 0.5,
+    executeWhen: ["vulnerable", "lowHp"],
     target: "enemy",
-    desc: "单次：2.8× 暗属性必杀一击（目标脆弱或残血时额外 +50%）",
+    desc: "单次：2.8× 暗属性必杀一击（目标脆弱或血量低于 40% 时额外 +50%）",
   }),
   assassin_swift: S({
     id: "assassin_swift",
