@@ -900,6 +900,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
             atk: attack,
             power: def.power ?? 0.5,
             hits: def.hits ?? 1,
+            combo: def.combo ?? 0,
             procRate: def.procRate ?? SUPPORT_PROC_RATE,
             defenseTier: def.armorTier,
             stat: def.stat,
@@ -999,7 +1000,7 @@ export function swapBattleCard(
 
 /**
  * 我方回合开始自动序列（严格遵循 §6.1 & §8.1 顺序）：
- * 1. 侧面支援自动行动（攻击型 60% 发动率，50% 伤害，命中 +1 Combo）
+ * 1. 侧面支援自动行动（攻击型 60% 发动率，50% 伤害，每段命中按支援的 combo 字段加 Combo）
  * 2. 迅捷卡抢攻判定（游侠/刺客/破法者，70% 伤害，命中 +1 Combo）
  * 3. 主队开始消费 AP
  */
@@ -1030,7 +1031,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
 
     for (let h = 0; h < hits; h += 1) {
       checkEnemyWakeUp(state)
-      state.combo += 1
+      state.combo += support.combo ?? 0
       state.maxCombo = Math.max(state.maxCombo, state.combo)
       const elMult = elementMultiplier(
         support.element,

@@ -443,6 +443,36 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("斩杀描述：自动文案写出具体条件", autoDescribeSkill(SKILLS.assassin_execute!).includes("脆弱") && autoDescribeSkill(SKILLS.assassin_execute!).includes("血量低于 40%") && !autoDescribeSkill(SKILLS.ranger_harvest!).includes("血量低于"))
 }
 
+// ---------- 9f. 支援 combo 字段 ----------
+{
+  const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
+  const maxComboWith = (combo: number | undefined, hits: number, seed: string) => {
+    const s = start("mage", ["warlock_frost"], seed, ghost)
+    s.enemy.hp = s.enemy.hpMax = 1e9
+    s.playerSupports.push({ id: "sup-c", name: "测试支援", kind: "attack", element: "physical", power: 0.5, hits, combo, procRate: 0.95, atk: 100, roleText: "测试" })
+    const next = apply(s, { type: "endTurn" })
+    return next.playerSupports.find((x) => x.id === "sup-c")?.triggered ? next.maxCombo : null
+  }
+  const firstHit = (combo: number | undefined, hits: number) => {
+    for (const seed of seedsOf("support-combo")) {
+      const v = maxComboWith(combo, hits, seed)
+      if (v !== null) return v
+    }
+    return null
+  }
+  check("支援 combo：没写默认 0，命中不加 Combo", firstHit(undefined, 2) === 0)
+  check("支援 combo：写 0 命中不加 Combo", firstHit(0, 2) === 0)
+  check("支援 combo：写 1，2 段命中加 2 层", firstHit(1, 2) === 2)
+  check("支援 combo：写 2，2 段命中加 4 层", firstHit(2, 2) === 4)
+  const summons = ["breaker_counter", "summoner_call", "summoner_poison"].map((id) => SKILLS[id]!.supportDef!)
+  check("支援 combo：现有使魔、突击队、破法剑卫都显式写 combo: 1", summons.every((d) => d.combo === 1))
+  const s = start("mage", ["summoner_call"], "summon-combo", ghost)
+  s.ap = 6
+  const summoned = apply(s, { type: "skill", card: 0, skill: "summoner_call" })
+  check("支援 combo：召唤出的支援带上 combo 字段", summoned.playerSupports.some((x) => x.combo === 1))
+  check("支援 combo：校验拒绝负数与过大的值", checkSkill({ ...SKILLS.summoner_call!, supportDef: { ...SKILLS.summoner_call!.supportDef!, combo: -1 } }).length > 0 && checkSkill({ ...SKILLS.summoner_call!, supportDef: { ...SKILLS.summoner_call!.supportDef!, combo: 9 } }).length > 0)
+}
+
 // ---------- 10. 坦克只看大职业 ----------
 {
   const tankDeck = start("tank", ["bulwark_quake"])

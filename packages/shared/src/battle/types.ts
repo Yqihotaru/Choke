@@ -134,6 +134,8 @@ export interface SideSupportUnit {
   atk?: number
   power?: number
   hits?: number
+  /** 攻击型支援每段命中给 Combo 加几层（默认 0） */
+  combo?: number
   /** 攻击型支援发动率（默认 0.60） */
   procRate?: number
   /** 防御/装甲档位 1~4 */

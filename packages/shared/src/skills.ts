@@ -30,6 +30,8 @@ export interface SupportSpawnDef {
   element: Element
   power?: number
   hits?: number
+  /** 每段命中给 Combo 加几层（默认 0） */
+  combo?: number
   procRate?: number
   armorTier?: number
   stat?: "atk" | "int" | "def"
@@ -447,6 +449,7 @@ export const SKILLS: Record<string, SkillDef> = {
       element: "thunder",
       power: 0.5,
       hits: 1,
+      combo: 1,
       procRate: 0.65,
       roleText: "65% 概率回合初雷击 +1 Combo",
     },
@@ -787,6 +790,7 @@ export const SKILLS: Record<string, SkillDef> = {
       element: "dark",
       power: 0.5,
       hits: 1,
+      combo: 1,
       procRate: 0.6,
       roleText: "60% 概率回合初攻击 +1 Combo",
     },
@@ -807,6 +811,7 @@ export const SKILLS: Record<string, SkillDef> = {
       element: "earth",
       power: 0.5,
       hits: 2,
+      combo: 1,
       procRate: 0.65,
       roleText: "65% 概率回合初 2 连击 +2 Combo",
     },

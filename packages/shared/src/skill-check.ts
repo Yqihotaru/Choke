@@ -29,6 +29,7 @@ const supportDef = z.strictObject({
   element: z.enum(ELEMENTS),
   power: z.number().positive().optional(),
   hits: z.int().min(1).optional(),
+  combo: z.int().min(0).max(3).optional(),
   procRate: z.number().min(0).max(1).optional(),
   armorTier: z.int().min(1).optional(),
   stat: z.enum(["atk", "int", "def"]).optional(),
