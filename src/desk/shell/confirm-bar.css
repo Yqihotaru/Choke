@@ -24,3 +24,20 @@
 .confirm-bar__danger:hover:not(:disabled) {
   background: #6e3340;
 }
+/* 确认条是从按钮「变」出来的：原地长出来，不是硬跳 */
+.confirm-bar {
+  animation: ui-pop-in var(--ui-base) var(--ui-ease-out) both;
+}
+/* 亮色纸上用浅红底深红字，暗色那组深酒红在米白纸上太脏 */
+.light .confirm-bar__danger {
+  background: #f3c9c9;
+  color: #8f2323;
+}
+.light .confirm-bar__danger:hover:not(:disabled) {
+  background: #eeb4b4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .confirm-bar {
+    animation: none;
+  }
+}

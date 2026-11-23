@@ -1,50 +1,94 @@
-/* 流水：沿用邮箱的弹层外壳，只加筛选条和列表 */
+/* 流水：沿用邮箱的弹层外壳，只加筛选条和按天分组的列表 */
 
 .ledger-panel {
-  width: min(760px, 100%);
+  width: min(780px, 100%);
 }
 .ledger-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 10px 20px;
+  padding: 12px 22px;
   border-bottom: 1px solid var(--bk-line);
 }
+.ledger-tabs .bk-chip > svg {
+  font-size: 14px;
+}
 .ledger-body {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
-  padding: 8px 12px;
+  padding: 4px 14px 12px;
   overflow-y: auto;
   background: var(--bk-well);
+  scrollbar-width: thin;
+  scrollbar-color: var(--bk-raised-hi) transparent;
 }
 .ledger-empty {
-  padding: 16px 8px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  animation: ui-fade-in var(--ui-base) ease-out both;
+}
+.ledger-empty > span {
+  color: var(--bk-faint);
 }
 .ledger-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
+/* 日期小标题：滚动时贴在顶上，知道现在看的是哪一天 */
+.ledger-day {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px 8px 7px;
+  background: var(--bk-well);
+}
 .ledger-row {
   display: grid;
-  grid-template-columns: 112px 64px minmax(0, 1fr) 120px 72px;
+  grid-template-columns: 68px 92px minmax(0, 1fr) 110px 84px;
   align-items: center;
   gap: 10px;
-  padding: 7px 8px;
-  border-bottom: 1px solid var(--bk-line);
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 7px;
   font-size: 13px;
+  animation: ui-rise-in var(--ui-base) var(--ui-ease-out) both;
+  animation-delay: calc(var(--i, 0) * 18ms);
+}
+.ledger-row:nth-child(even of .ledger-row) {
+  background: rgb(128 128 128 / 0.06);
+}
+.ledger-row:hover {
+  background: var(--bk-raised);
 }
 .ledger-row__time {
   color: var(--bk-faint);
+  font-family: var(--bk-mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 .ledger-row__kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--bk-dim);
+}
+.ledger-row__kind > svg {
+  flex: none;
+  color: var(--bk-osu-text);
+  font-size: 15px;
 }
 .ledger-row__label {
   min-width: 0;
   overflow: hidden;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -56,15 +100,19 @@
   font-weight: 800;
 }
 .ledger-row__source {
+  overflow: hidden;
   color: var(--bk-dim);
   font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ledger-row__delta {
   text-align: right;
+  font-family: var(--bk-mono);
   font-variant-numeric: tabular-nums;
 }
 .ledger-row__delta.is-gain {
-  color: var(--bk-good, #3fae6a);
+  color: var(--bk-good);
 }
 .ledger-row__delta.is-loss {
   color: var(--bk-bad);
@@ -72,13 +120,14 @@
 .ledger-more {
   display: flex;
   justify-content: center;
-  padding: 12px 0 4px;
+  padding: 14px 0 4px;
 }
 
 @media (max-width: 720px) {
   .ledger-row {
-    grid-template-columns: minmax(0, 1fr) 64px;
+    grid-template-columns: minmax(0, 1fr) 76px;
     row-gap: 2px;
+    padding: 6px 8px;
   }
   .ledger-row__time,
   .ledger-row__kind,
@@ -88,5 +137,12 @@
   .ledger-row__delta {
     grid-column: 2;
     grid-row: 1 / span 4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ledger-empty,
+  .ledger-row {
+    animation: none;
   }
 }

@@ -7,6 +7,11 @@
   filter: brightness(0) invert(1);
   opacity: 0.95;
 }
+/* 亮色纸上直接用深色原稿：压成白色会和纸融在一起看不见 */
+.light .about-logo {
+  filter: none;
+  opacity: 1;
+}
 .about-text {
   margin: 0;
   font-size: 15px;
@@ -42,7 +47,8 @@
   gap: 12px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: rgb(255 255 255 / 0.03);
+  background: var(--bk-paper-hi);
+  transition: background 0.14s ease, translate 0.12s ease;
 }
 .about-person b {
   font-size: 14px;
@@ -60,7 +66,8 @@ a.about-person span {
 }
 a.about-person:hover,
 a.about-person:focus-visible {
-  background: rgb(255 255 255 / 0.07);
+  background: var(--bk-raised);
+  translate: 2px 0;
 }
 
 .about-policies {
@@ -70,26 +77,61 @@ a.about-person:focus-visible {
   width: 100%;
 }
 
+/* 隐私政策 / 游玩协议：盖住整个页面的弹层（挂在 body 上），和邮箱弹层同一种纸 */
 .about-policy-layer {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 200000;
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgb(12 8 10 / 0.78);
-  backdrop-filter: blur(3px);
+  background: rgb(14 8 11 / 0.6);
+  color: var(--bk-ink);
+  font-family: "Outfit Variable", "Outfit", "PingFang SC", "Microsoft YaHei", sans-serif;
+  animation: ui-fade-in var(--ui-base) ease-out both;
+}
+.light .about-policy-layer {
+  background: rgb(60 45 35 / 0.42);
+}
+.about-policy-layer:focus {
+  outline: none;
 }
 .about-policy-card {
   width: min(520px, 100%);
   max-height: 76vh;
   overflow-y: auto;
-  padding: 22px 24px;
-  border-radius: 16px;
-  border: 1px solid var(--bk-line);
+  padding: 24px 26px 22px;
+  border-radius: 14px;
   background: var(--bk-paper);
-  box-shadow: 0 18px 50px rgb(0 0 0 / 0.6);
+  box-shadow:
+    0 0 0 4px var(--bk-cover),
+    0 6px 0 4px var(--bk-cover-lo),
+    0 28px 60px rgb(0 0 0 / 0.5);
   text-align: left;
+  animation: ui-pop-in var(--ui-slow) var(--ui-ease-out) both;
+}
+/* 关闭：时长和 AboutPanel 里的 POLICY_EXIT_MS 对应 */
+.about-policy-layer.is-leaving {
+  pointer-events: none;
+  animation: ui-fade-out 170ms ease-in both;
+}
+.about-policy-layer.is-leaving .about-policy-card {
+  animation: ui-pop-out 170ms var(--ui-ease-in) both;
+}
+.about-policy-card > .bk-label {
+  display: block;
+  margin-bottom: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .about-policy-layer,
+  .about-policy-card,
+  .about-policy-layer.is-leaving,
+  .about-policy-layer.is-leaving .about-policy-card {
+    animation: none;
+  }
+  .about-person {
+    transition: none;
+  }
 }
 .about-policy-card > b {
   display: block;
