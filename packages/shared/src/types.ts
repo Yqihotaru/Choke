@@ -45,6 +45,8 @@ export interface CardSkill {
   ap: number
   /** 被动技能：AP 恒 0 */
   passive?: boolean
+  /** 战斗中因疲惫或累积使实际费用高于基础费用时，卡面上的技能行与 AP 圆标变红 */
+  surcharged?: boolean
 }
 
 /**

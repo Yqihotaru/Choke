@@ -193,7 +193,7 @@ export const CardFaceB2 = memo(function CardFaceB2({
 
         <div className="cfb2__skills">
           {card.skills.slice(0, 3).map((skill, i) => (
-            <div className="cfb2__skill" key={i}>
+            <div className="cfb2__skill" key={i} data-surcharged={skill.surcharged ? "true" : undefined}>
               <span
                 className="cfb2__el"
                 style={{ "--el": ELEMENT_COLOR[skill.element] } as CSSProperties}
@@ -202,7 +202,13 @@ export const CardFaceB2 = memo(function CardFaceB2({
                 <ElementGlyph element={skill.element} />
               </span>
               <span className="cfb2__skill-name">{skill.name}</span>
-              {skill.passive ? <span className="cfb2__passive">被动</span> : <span className="cfb2__ap">{skill.ap}</span>}
+              {skill.passive ? (
+                <span className="cfb2__passive">被动</span>
+              ) : (
+                <span className="cfb2__ap" data-surcharged={skill.surcharged ? "true" : undefined}>
+                  {skill.ap}
+                </span>
+              )}
             </div>
           ))}
           {/* 不足三行补空槽，所有卡的技能区一样高 */}

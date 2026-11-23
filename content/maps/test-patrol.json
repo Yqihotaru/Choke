@@ -1,0 +1,12 @@
+{
+  "kind": "weekly",
+  "name": "测试 · 巡逻",
+  "summary": "测试用的两节点周常图：用来验证体力冻结、退回和换图到期。",
+  "staminaCost": 10,
+  "deckSize": 7,
+  "start": "p1",
+  "nodes": {
+    "p1": { "type": "battle", "encounter": "ghost", "rewards": "test-battle", "pos": [0, 0], "next": ["p2"] },
+    "p2": { "type": "treasure", "rewards": "test-chest", "pos": [1, 0], "next": [] }
+  }
+}

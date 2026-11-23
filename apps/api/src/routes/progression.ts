@@ -25,6 +25,7 @@ import {
   type Rarity,
 } from "../shared/cards"
 import { db } from "../db/client"
+import { EXPEDITION_LOCK_MESSAGE, anyLocked, lockedUserCardIds } from "../expedition/locks"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
 import { grantItems, loadItems, mergeStacks, spendItems } from "../items"
 import { recordLedger, type LedgerEntryInput } from "../ledger"
@@ -46,8 +47,11 @@ const feedBodySchema = z
   .refine((body) => body.cards.length > 0 || body.items.length > 0, "至少选一张卡或一种物品")
   .refine((body) => new Set(body.cards).size === body.cards.length, "卡不能重复")
 
-/** 从卡册里移走一张卡：同时清掉布阵和在架的市场单 */
+/** 从卡册里移走一张卡：同时清掉布阵和在架的市场单。出征中的卡不能移走 */
 async function removeUserCard(tx: Tx, userId: string, userCardId: number) {
+  if (await anyLocked(tx, userId, [userCardId])) {
+    throw new TxAbort(400, "in_expedition", EXPEDITION_LOCK_MESSAGE)
+  }
   const removed = await tx
     .delete(userCards)
     .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
@@ -214,7 +218,7 @@ export async function progressionRoutes(app: FastifyInstance) {
       })
     }
 
-    const [duplicate] = await db
+    const duplicates = await db
       .select({ id: userCards.id })
       .from(userCards)
       .where(
@@ -225,9 +229,16 @@ export async function progressionRoutes(app: FastifyInstance) {
         ),
       )
       .orderBy(asc(userCards.level), asc(userCards.id))
-      .limit(1)
+    const locked = await lockedUserCardIds(db, userId)
+    const duplicate = duplicates.find((row) => !locked.has(row.id))
 
     if (!duplicate) {
+      if (duplicates.length > 0) {
+        return reply.code(400).send({
+          ok: false,
+          error: { code: "in_expedition", message: EXPEDITION_LOCK_MESSAGE },
+        })
+      }
       return reply.code(400).send({
         ok: false,
         error: { code: "no_duplicate", message: "没有同名卡可以消耗" },
@@ -236,6 +247,9 @@ export async function progressionRoutes(app: FastifyInstance) {
 
     const result = await runTx(reply, async (tx) => {
       await lockUser(tx, userId)
+      if (await anyLocked(tx, userId, [duplicate.id])) {
+        throw new TxAbort(400, "in_expedition", EXPEDITION_LOCK_MESSAGE)
+      }
       const consumed = await tx
         .delete(userCards)
         .where(and(eq(userCards.id, duplicate.id), eq(userCards.userId, userId)))

@@ -2,7 +2,7 @@
 // 校验失败时 import 就会抛错，进程以非 0 退出。
 import { CONTENT } from "@choke/shared/content"
 
-import { BATTLE_CONTENT, CONTENT_VERSION } from "../src/content"
+import { BATTLE_CONTENT, CONTENT_VERSION, WORLD_CONTENT } from "../src/content"
 
 console.log(`content/ 校验通过 · 版本 ${CONTENT_VERSION}`)
 console.log(
@@ -13,5 +13,8 @@ console.log(
     `敌人 ${Object.keys(BATTLE_CONTENT.enemies).length}`,
     `敌方支援 ${Object.keys(BATTLE_CONTENT.supports).length}`,
     `遭遇 ${Object.keys(BATTLE_CONTENT.encounters).length}`,
+    `地图 ${Object.keys(WORLD_CONTENT.maps).length}`,
+    `掉落表 ${Object.keys(WORLD_CONTENT.rewards).length}`,
+    `剧情 ${Object.keys(WORLD_CONTENT.stories).length}`,
   ].join(" · "),
 )

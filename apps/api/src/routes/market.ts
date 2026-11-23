@@ -6,6 +6,7 @@ import { MARKET_MAX_PRICE } from "../shared/cards"
 import { MARKET_UNLOCK_LEVEL } from "../shared/tutorial"
 import { requireSelf } from "../auth/guard"
 import { db } from "../db/client"
+import { EXPEDITION_LOCK_MESSAGE, anyLocked } from "../expedition/locks"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
 import { recordLedger } from "../ledger"
 import { TxAbort, runTx } from "../tx"
@@ -211,6 +212,12 @@ export async function marketRoutes(app: FastifyInstance) {
       return reply.code(400).send({
         ok: false,
         error: { code: "in_deck", message: "先从卡组里移出再上架" },
+      })
+    }
+    if (await anyLocked(db, userId, [body.data.userCardId])) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "in_expedition", message: EXPEDITION_LOCK_MESSAGE },
       })
     }
 

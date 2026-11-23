@@ -96,17 +96,15 @@ function ensure() {
   noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate)
   const data = noiseBuf.getChannelData(0)
   for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1
-  void preloadSamples(ctx)
   return { ctx, master }
 }
 
 /**
  * 每个音名用什么来源：
- * - synth：纯合成（电子音）
- * - sample：录音 + 合成低频体（战斗冲击音的默认）
+ * - synth：纯合成（电子音，默认）
+ * - sample：录音 + 合成低频体
  * - bare：纯录音，不叠合成
- * 没写的音名：有录音就走 sample，没有就走 synth。
- * 音效试听页（/sfx-lab，仅开发模式）里选好后把结果填到这里。
+ * 游戏默认一律用合成音，不请求 public/sfx/；试听页（/sfx-lab，仅开发模式）需要听录音样本时再按需加载。
  */
 export type SfxSource = "synth" | "sample" | "bare"
 export const SFX_SOURCE: Partial<Record<SfxId, SfxSource>> = {}
@@ -182,7 +180,7 @@ function playSample(c: AudioContext, o: AudioNode, name: SfxName, rate: number, 
 }
 
 function render(c: AudioContext, o: AudioNode, name: SfxName, rate: number, opts: PlayOptions = {}) {
-  const source = opts.source ?? SFX_SOURCE[name] ?? (samples.has(name) ? "sample" : "synth")
+  const source = opts.source ?? SFX_SOURCE[name] ?? "synth"
   if (source !== "synth" && playSample(c, o, name, rate, { ...opts, source })) return
   SYNTH[name](c, o, rate)
 }
@@ -497,7 +495,7 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
 /** 试听页用：不节流，可指定来源与变体，等录音加载完再播。 */
 export async function previewSfx(name: SfxName, options: SfxOptions & PlayOptions = {}) {
   const { ctx: c, master: m } = ensure()
-  await samplesLoading
+  await preloadSamples(c)
   const out = c.createGain()
   out.gain.value = options.volume ?? 1
   out.connect(m)
@@ -506,8 +504,8 @@ export async function previewSfx(name: SfxName, options: SfxOptions & PlayOption
 
 /** 试听页用：录音清单（音名 → 文件）与每个变体的时长，等加载完才有。 */
 export async function loadSfxLibrary() {
-  ensure()
-  await samplesLoading
+  const { ctx: c } = ensure()
+  await preloadSamples(c)
   const durations: Record<string, (number | null)[]> = {}
   for (const [name, variants] of samples) durations[name] = variants.map((b) => b?.duration ?? null)
   return { manifest: manifestData, durations }

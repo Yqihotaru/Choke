@@ -1,0 +1,695 @@
+/**
+ * 远征流程的服务端测试：开始校验、通关、到此结算、战败重试、挂起恢复、篡改操作被拒、
+ * 卡池锁定、体力冻结与退回、到期结算发邮件。用临时 PGlite 数据库，不碰开发库。
+ *
+ *   pnpm test:expedition-run
+ */
+import assert from "node:assert/strict"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
+
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "choke-expedition-test-"))
+process.env.DATABASE_URL = ""
+process.env.PG_DATA_DIR = dataDir
+
+const { and, eq } = await import("drizzle-orm")
+const { default: Fastify } = await import("fastify")
+const { default: cookie } = await import("@fastify/cookie")
+const { db, client } = await import("../src/db/client")
+const { users, cards, userCards, ledgerEntries, mails, mapClears, bestiary, expeditions, expeditionBattles } =
+  await import("../src/db/schema")
+const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
+const { handleError } = await import("../src/error-handler")
+const { expeditionRoutes } = await import("../src/routes/expeditions")
+const { progressionRoutes } = await import("../src/routes/progression")
+const { marketRoutes } = await import("../src/routes/market")
+const { expireDue, expiryOf } = await import("../src/expedition/service")
+const { lockedUserCardIds } = await import("../src/expedition/locks")
+const { WORLD_CONTENT } = await import("../src/content")
+const { withAction, replayBattle } = await import("@choke/shared/battle/actions")
+const { createBattle } = await import("@choke/shared/battle/engine")
+const { nextReset } = await import("@choke/shared/reset")
+const { playBot } = await import("./lib/battle-bot")
+
+import type { BattleAction } from "@choke/shared/battle/actions"
+import type { BattleInputCard } from "@choke/shared/battle/engine"
+import type { ExpeditionView } from "@choke/shared/expedition/view"
+
+const app = Fastify()
+app.setErrorHandler(handleError)
+await app.register(cookie)
+for (const routes of [expeditionRoutes, progressionRoutes, marketRoutes]) await app.register(routes)
+await app.ready()
+
+let passed = 0
+async function test(name: string, fn: () => Promise<void>) {
+  try {
+    await fn()
+    passed += 1
+    console.log(`  ok  ${name}`)
+  } catch (error) {
+    console.error(`FAIL  ${name}`)
+    console.error(error)
+    await cleanup()
+    process.exit(1)
+  }
+}
+
+async function cleanup() {
+  await app.close().catch(() => {})
+  await client?.close().catch(() => {})
+  fs.rmSync(dataDir, { recursive: true, force: true })
+}
+
+interface Reply {
+  status: number
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  body: any
+}
+const call = async (userId: string | null, method: "GET" | "POST", url: string, payload?: unknown): Promise<Reply> => {
+  const res = await app.inject({
+    method,
+    url,
+    payload: payload as never,
+    headers: userId ? { cookie: `${COOKIE_NAME}=${makeSession(userId)}` } : {},
+  })
+  return { status: res.statusCode, body: res.json() }
+}
+
+// ---------- 造数据 ----------
+
+const FULL = { slots: 4, apUpgrade: true, maxRarity: "Prismatic" }
+
+const STRONG = [
+  { id: "ex-tank", rarity: "Mythic", job: "tank", skills: ["warden_stun", "warden_bash", "warden_hold"], mods: ["HR"] },
+  { id: "ex-war", rarity: "L", job: "warrior", skills: ["breaker_rift", "breaker_counter", "breaker_swift"], mods: ["DT"] },
+  { id: "ex-mage", rarity: "Prismatic", job: "mage", skills: ["life_mass", "life_revive", "life_regen"], mods: ["HD", "DT"] },
+  { id: "ex-sup", rarity: "L", job: "support", skills: ["bard_anthem", "bard_inspire", "bard_aura"], mods: [] },
+]
+const WEAK = ["ex-w1", "ex-w2", "ex-w3", "ex-w4"]
+
+for (const card of STRONG) {
+  await db.insert(cards).values({ id: card.id, name: card.id, rarity: card.rarity, job: card.job, no: 1, total: 1 })
+}
+for (const id of WEAK) await db.insert(cards).values({ id, name: id, rarity: "C", job: "warrior", no: 1, total: 1 })
+
+let seq = 0
+/** 前 4 张是满级强卡，后 4 张是 1 级弱卡 */
+async function newPlayer(patch: Partial<typeof users.$inferInsert> = {}) {
+  seq += 1
+  const id = `exp-test-${seq}`
+  await db.insert(users).values({
+    id,
+    username: id,
+    email: `${id}@test.local`,
+    tutorialDone: true,
+    playerLevel: 50,
+    stamina: 200,
+    staminaUpdatedAt: Date.now(),
+    ...patch,
+  })
+  const ids: number[] = []
+  for (const card of STRONG) {
+    const [row] = await db
+      .insert(userCards)
+      .values({
+        userId: id,
+        cardId: card.id,
+        level: 80,
+        constellation: 6,
+        skillRefs: card.skills.map((skillId) => ({ skillId })),
+        mods: card.mods,
+      })
+      .returning({ id: userCards.id })
+    ids.push(row!.id)
+  }
+  for (const cardId of WEAK) {
+    const [row] = await db.insert(userCards).values({ userId: id, cardId }).returning({ id: userCards.id })
+    ids.push(row!.id)
+  }
+  return { id, ids }
+}
+
+const userOf = async (userId: string) => (await db.select().from(users).where(eq(users.id, userId)))[0]!
+const entriesOf = (userId: string) => db.select().from(ledgerEntries).where(eq(ledgerEntries.userId, userId))
+const sumOf = async (userId: string, kind: string, source?: string) =>
+  (await entriesOf(userId))
+    .filter((e) => e.kind === kind && (source === undefined || e.source === source))
+    .reduce((sum, e) => sum + e.delta, 0)
+
+const base = (userId: string) => `/users/${userId}/expeditions`
+const start = (userId: string, mapId: string, cardIds: number[], allocation: object = FULL) =>
+  call(userId, "POST", base(userId), { mapId, cardIds, allocation })
+const current = async (userId: string): Promise<ExpeditionView | null> =>
+  (await call(userId, "GET", `${base(userId)}/current`)).body.data
+
+async function must(reply: Promise<Reply>): Promise<ExpeditionView> {
+  const res = await reply
+  assert.equal(res.status, 200, JSON.stringify(res.body))
+  return res.body.data
+}
+
+const inputsOf = (view: ExpeditionView, ids: number[]): BattleInputCard[] =>
+  ids.map((uid) => {
+    const entry = view.pool.find((p) => p.userCardId === uid)!
+    return { uid, cardId: entry.face.id, face: entry.face }
+  })
+
+const pickLineup = (userId: string, lineup: number[]) =>
+  call(userId, "POST", `${base(userId)}/current/battle/lineup`, { lineup })
+const uploadActions = (userId: string, from: number, actions: unknown[]) =>
+  call(userId, "POST", `${base(userId)}/current/battle/actions`, { base: from, actions })
+
+/** 选阵容并用机器人把当前战斗打完；返回结束后的视图 */
+async function fight(userId: string, lineupIds: number[], expect: "won" | "lost" = "won"): Promise<ExpeditionView> {
+  let view = await must(pickLineup(userId, lineupIds))
+  const battle = view.battle!
+  const { actions } = playBot(battle.encounter, inputsOf(view, battle.lineup), battle.seed, inputsOf(view, battle.bench), {
+    apMax: battle.apMax,
+    hpRatio: battle.hpRatioStart,
+  })
+  view = await must(uploadActions(userId, 0, actions))
+  assert.equal(view.battle!.status, expect, `期望 ${expect}，实际 ${view.battle!.status}`)
+  return view
+}
+
+/** 故意什么都不做，一直结束回合直到战败 */
+async function loseOn(userId: string, lineupIds: number[]): Promise<ExpeditionView> {
+  let view = await must(pickLineup(userId, lineupIds))
+  const battle = view.battle!
+  let state = createBattle(battle.encounter, inputsOf(view, battle.lineup), {
+    seed: battle.seed,
+    bench: inputsOf(view, battle.bench),
+    apMax: battle.apMax,
+    hpRatio: battle.hpRatioStart,
+  })
+  const actions: BattleAction[] = []
+  for (let i = 0; i < 300 && state.phase === "player"; i += 1) {
+    const result = withAction(state, { type: "endTurn" })
+    assert.equal(result.error, null)
+    state = result.state
+    actions.push({ type: "endTurn" })
+  }
+  assert.equal(state.phase, "lost", "空过回合应该会输")
+  view = await must(uploadActions(userId, 0, actions))
+  assert.equal(view.battle!.status, "lost")
+  return view
+}
+
+const strongIds = (ids: number[]) => ids.slice(0, 4)
+const weakIds = (ids: number[]) => ids.slice(4, 8)
+
+const move = (userId: string, to: string) => call(userId, "POST", `${base(userId)}/current/node`, { to })
+const story = (userId: string, choices: number[]) => call(userId, "POST", `${base(userId)}/current/story`, { choices })
+const settle = (userId: string) => call(userId, "POST", `${base(userId)}/current/settle`, {})
+const abandon = (userId: string) => call(userId, "POST", `${base(userId)}/current/abandon`, {})
+const suspend = (userId: string) => call(userId, "POST", `${base(userId)}/current/suspend`, {})
+const resume = (userId: string) => call(userId, "POST", `${base(userId)}/current/resume`, {})
+const retry = (userId: string) => call(userId, "POST", `${base(userId)}/current/battle/retry`, {})
+
+/** 把 test-trial 一路打通到终点（不结算）。takeKey：剧情里选不选钥匙，决定走宝箱还是篝火 */
+async function walkTrial(userId: string, ids: number[], takeKey: boolean): Promise<ExpeditionView> {
+  const afterStory = await must(story(userId, [takeKey ? 0 : 1]))
+  assert.equal(afterStory.nodeDone, true)
+  await must(move(userId, "n2"))
+  await fight(userId, strongIds(ids))
+  await must(move(userId, "n3"))
+  await must(move(userId, takeKey ? "n4b" : "n4a"))
+  await must(move(userId, "n5"))
+  const end = await fight(userId, strongIds(ids))
+  assert.equal(end.atEnd, true)
+  return end
+}
+
+console.log("expedition run tests")
+
+// ---------- 开始出征的校验 ----------
+
+await test("开始出征：数量、重复、别人的卡、权限都在服务端校验", async () => {
+  const me = await newPlayer()
+  const other = await newPlayer()
+
+  let res = await start(me.id, "test-trial", me.ids.slice(0, 5))
+  assert.equal(res.status, 400, "数量不对")
+  res = await start(me.id, "test-trial", [...me.ids.slice(0, 7), me.ids[0]!])
+  assert.equal(res.status, 400, "重复")
+  res = await start(me.id, "test-trial", [...me.ids.slice(0, 7), other.ids[0]!])
+  assert.equal(res.status, 400, "别人的卡")
+  res = await start(me.id, "no-such-map", me.ids)
+  assert.equal(res.status, 404)
+  res = await start(me.id, "test-trial", me.ids, { slots: 4, apUpgrade: false, maxRarity: "E" })
+  assert.equal(res.status, 400, "带了 Mythic 却没点稀有度")
+  assert.match(res.body.error.message, /稀有度/)
+  res = await start(me.id, "test-trial", me.ids, { slots: 9, apUpgrade: true, maxRarity: "Prismatic" })
+  assert.equal(res.status, 400, "点数超出")
+  res = await start(me.id, "test-trial", me.ids, { slots: 4, apUpgrade: false, maxRarity: "Mythic" })
+  assert.equal(res.status, 400, "只点到 Mythic，带 Prismatic 卡不行")
+  res = await call(null, "POST", base(me.id), { mapId: "test-trial", cardIds: me.ids, allocation: FULL })
+  assert.equal(res.status, 401)
+  res = await call(other.id, "POST", base(me.id), { mapId: "test-trial", cardIds: me.ids, allocation: FULL })
+  assert.equal(res.status, 403)
+  assert.equal(await current(me.id), null)
+  assert.equal((await db.select().from(expeditions).where(eq(expeditions.userId, me.id))).length, 0)
+})
+
+await test("等级不够点数：服务端按玩家等级算，不信前端", async () => {
+  const me = await newPlayer({ playerLevel: 1 })
+  const res = await start(me.id, "test-trial", me.ids, FULL)
+  assert.equal(res.status, 400)
+  assert.equal(await current(me.id), null)
+})
+
+await test("同一时间只能有一个出征（含已挂起）", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  let res = await start(me.id, "test-trial", me.ids)
+  assert.equal(res.status, 409)
+  await must(suspend(me.id))
+  res = await start(me.id, "test-trial", me.ids)
+  assert.equal(res.status, 409, "挂起的也算")
+  assert.equal((await abandon(me.id)).status, 200, "挂起的出征也能放弃")
+})
+
+await test("市场上架中的卡不能带出征", async () => {
+  const me = await newPlayer()
+  const listed = await call(me.id, "POST", `/users/${me.id}/market/list`, { userCardId: me.ids[7], price: 10 })
+  assert.equal(listed.status, 200, JSON.stringify(listed.body))
+  const res = await start(me.id, "test-trial", me.ids)
+  assert.equal(res.status, 400)
+  assert.equal(res.body.error.code, "card_listed")
+})
+
+// ---------- 通关与结算 ----------
+
+await test("通关：剧情标记决定走哪条路，血量跨战斗保留，休息回满，通关奖励一次性发", async () => {
+  const me = await newPlayer()
+  const before = await userOf(me.id)
+  let view = await must(start(me.id, "test-trial", me.ids))
+  assert.equal(view.position, "n1")
+  assert.equal(view.pool.length, 8)
+  assert.equal(view.battle, null)
+  assert.ok(view.story)
+
+  assert.equal((await move(me.id, "n2")).status, 400, "剧情没看完不能走")
+  assert.equal((await story(me.id, [])).status, 400, "选项数量对不上")
+  assert.equal((await story(me.id, [5])).status, 400, "选项不存在")
+  view = await must(story(me.id, [1]))
+  assert.deepEqual(view.flags, [])
+  assert.deepEqual(view.availableNext, ["n2"])
+  assert.equal((await move(me.id, "n5")).status, 400, "不能跳节点")
+
+  view = await must(move(me.id, "n2"))
+  assert.equal(view.battle?.status, "preparing")
+  assert.equal(view.battle?.seed, `${view.seed}/battle-n2`)
+  assert.equal((await move(me.id, "n3")).status, 400, "没打完不能走")
+  view = await fight(me.id, strongIds(me.ids))
+  assert.equal(view.nodeDone, true)
+  assert.ok(view.stars >= 1)
+  assert.ok(view.pending.coins! >= 50)
+  const afterFight = view.hpRatio
+
+  view = await must(move(me.id, "n3"))
+  assert.deepEqual(view.availableNext, ["n4a"], "没拿钥匙，宝箱那条路走不了")
+  assert.equal((await move(me.id, "n4b")).status, 400)
+  view = await must(move(me.id, "n4a"))
+  assert.equal(view.hpRatio, 1, "休息回满血")
+  assert.ok(afterFight <= 1)
+  view = await must(move(me.id, "n5"))
+  assert.equal(view.battle?.hpRatioStart, 1)
+  view = await fight(me.id, strongIds(me.ids))
+  assert.equal(view.atEnd, true)
+
+  const res = await settle(me.id)
+  assert.equal(res.status, 200, JSON.stringify(res.body))
+  const result = res.body.data
+  assert.equal(result.end, "cleared")
+  // 战斗 50 + 首通 500 + Boss 200（战斗随机最多 +20 ×2）
+  assert.ok(result.rewards.coins >= 750 && result.rewards.coins <= 790, `coins ${result.rewards.coins}`)
+  assert.ok(result.rewards.packs.some((p: { pool: string }) => p.pool === "golden"))
+
+  const after = await userOf(me.id)
+  assert.equal(after.coins - before.coins, result.rewards.coins)
+  assert.equal(await sumOf(me.id, "coins", "expedition"), result.rewards.coins)
+  assert.equal(await current(me.id), null)
+  assert.ok(after.playerExp > before.playerExp || after.playerLevel > before.playerLevel, "玩家经验随结算加上")
+
+  const [clear] = await db.select().from(mapClears).where(eq(mapClears.userId, me.id))
+  assert.equal(clear?.clears, 1)
+  const seen = await db.select().from(bestiary).where(eq(bestiary.userId, me.id))
+  assert.deepEqual(seen.map((row) => row.enemyId).sort(), ["colossus-metronome", "ghost"])
+})
+
+await test("走宝箱那条路：需要剧情标记；首通奖励只发一次", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await walkTrial(me.id, me.ids, true)
+  let res = await settle(me.id)
+  assert.equal(res.status, 200)
+  // 首通 500 + 战斗 50 + 宝箱 100 + Boss 200
+  assert.ok(res.body.data.rewards.coins >= 850, `coins ${res.body.data.rewards.coins}`)
+  assert.ok(res.body.data.rewards.packs.some((p: { pool: string }) => p.pool === "normal"), "宝箱里的卡包")
+  const first = res.body.data.rewards.coins
+
+  await must(start(me.id, "test-trial", me.ids))
+  await walkTrial(me.id, me.ids, true)
+  res = await settle(me.id)
+  assert.equal(res.status, 200)
+  assert.ok(res.body.data.rewards.coins <= first - 500 + 20, "第二次没有首通奖励")
+  const [clear] = await db.select().from(mapClears).where(eq(mapClears.userId, me.id))
+  assert.equal(clear?.clears, 2)
+})
+
+await test("到此结算：只发已经攒下的节点奖励，不发通关奖励，不记通关", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await must(story(me.id, [0]))
+  await must(move(me.id, "n2"))
+  await fight(me.id, strongIds(me.ids))
+  const before = await userOf(me.id)
+  const res = await settle(me.id)
+  assert.equal(res.status, 200)
+  assert.equal(res.body.data.end, "early")
+  assert.ok(res.body.data.rewards.coins >= 50 && res.body.data.rewards.coins <= 70)
+  assert.ok(!res.body.data.rewards.packs, "没有通关奖励的卡包")
+  assert.equal((await userOf(me.id)).coins - before.coins, res.body.data.rewards.coins)
+  assert.equal((await db.select().from(mapClears).where(eq(mapClears.userId, me.id))).length, 0)
+})
+
+await test("放弃：什么奖励都不要", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await must(story(me.id, [0]))
+  await must(move(me.id, "n2"))
+  await fight(me.id, strongIds(me.ids))
+  const before = await userOf(me.id)
+  const res = await abandon(me.id)
+  assert.equal(res.status, 200)
+  assert.equal(res.body.data.end, "abandoned")
+  assert.deepEqual(res.body.data.rewards, {})
+  assert.equal((await userOf(me.id)).coins, before.coins)
+  assert.equal(await current(me.id), null)
+  const [row] = await db.select().from(expeditions).where(eq(expeditions.userId, me.id))
+  assert.equal(row?.status, "abandoned")
+})
+
+// ---------- 战斗与防作弊 ----------
+
+await test("篡改操作被拒：形状不对、技能不存在、条数对不上、没选阵容就上传", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await must(story(me.id, [0]))
+  await must(move(me.id, "n2"))
+
+  let res = await uploadActions(me.id, 0, [{ type: "endTurn" }])
+  assert.equal(res.status, 400, "没选阵容就上传")
+  const lineup = await must(pickLineup(me.id, strongIds(me.ids)))
+  assert.equal(lineup.battle?.status, "fighting")
+
+  res = await pickLineup(me.id, weakIds(me.ids))
+  assert.equal(res.status, 400, "开打后不能换阵容")
+  res = await uploadActions(me.id, 0, [{ type: "cheat" }])
+  assert.equal(res.status, 400, "形状不对")
+  res = await uploadActions(me.id, 0, [{ type: "skill", card: 0, skill: "no-such-skill" }])
+  assert.equal(res.status, 400, "技能不存在")
+  assert.equal(res.body.error.code, "invalid_action")
+  res = await uploadActions(me.id, 3, [{ type: "endTurn" }])
+  assert.equal(res.status, 409, "条数对不上")
+  assert.equal((await current(me.id))!.battle!.actions.length, 0, "被拒的操作一条都没存")
+})
+
+await test("战败：同种子重试，次数只记统计；通关照常；战败也记图鉴", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await must(story(me.id, [0]))
+  await must(move(me.id, "n2"))
+  let view = await loseOn(me.id, weakIds(me.ids))
+  const seed = view.battle!.seed
+  const hpStart = view.battle!.hpRatioStart
+  assert.equal(view.nodeDone, false)
+  assert.equal(view.battle!.stars, null)
+  assert.deepEqual(view.pending, {})
+  assert.equal((await move(me.id, "n3")).status, 400, "战败不算通过")
+  assert.equal((await db.select().from(bestiary).where(eq(bestiary.userId, me.id))).length, 1, "败北也记图鉴")
+
+  assert.equal((await retry(me.id)).status, 200)
+  view = (await current(me.id))!
+  assert.equal(view.battle!.status, "preparing")
+  assert.equal(view.battle!.retries, 1)
+  assert.equal(view.battle!.seed, seed)
+  assert.equal(view.battle!.hpRatioStart, hpStart)
+  assert.equal(view.battle!.actions.length, 0)
+  assert.equal((await retry(me.id)).status, 400, "没输不能重试")
+
+  view = await fight(me.id, strongIds(me.ids))
+  assert.equal(view.battle!.retries, 1)
+  assert.equal(view.nodeDone, true)
+  const [row] = await db.select().from(expeditionBattles).where(eq(expeditionBattles.expeditionId, view.id))
+  assert.equal(row?.retries, 1)
+})
+
+await test("服务端复算和客户端本地算出的结果一致", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await must(story(me.id, [0]))
+  await must(move(me.id, "n2"))
+  const done = await fight(me.id, strongIds(me.ids))
+  const battle = done.battle!
+  const result = replayBattle(
+    {
+      encounter: battle.encounter,
+      cards: inputsOf(done, battle.lineup),
+      bench: inputsOf(done, battle.bench),
+      seed: battle.seed,
+      apMax: battle.apMax,
+      hpRatio: battle.hpRatioStart,
+    },
+    battle.actions,
+  )
+  assert.equal(result.invalidAt, null)
+  assert.equal(result.state.phase, "won")
+  assert.ok(Math.abs(result.state.teamHp / result.state.teamHpMax - done.hpRatio) < 1e-9)
+})
+
+await test("战败后直接退出：不要奖励，体力退回", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-patrol", me.ids.slice(0, 7)))
+  assert.equal(await sumOf(me.id, "stamina"), -10)
+  await loseOn(me.id, [...weakIds(me.ids).slice(0, 3), me.ids[3]!])
+  const res = await abandon(me.id)
+  assert.equal(res.status, 200)
+  assert.equal(res.body.data.staminaRefunded, 10)
+  assert.equal(await sumOf(me.id, "stamina"), 0)
+})
+
+// ---------- 存档 ----------
+
+await test("保存并退出：挂起期间不能操作，继续后进度原样", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await must(story(me.id, [0]))
+  await must(move(me.id, "n2"))
+  await must(pickLineup(me.id, strongIds(me.ids)))
+
+  const suspended = await must(suspend(me.id))
+  assert.equal(suspended.status, "suspended")
+  const res = await uploadActions(me.id, 0, [{ type: "endTurn" }])
+  assert.equal(res.status, 409, "挂起时不能操作")
+  assert.equal((await current(me.id))!.status, "suspended", "刷新后还能读到")
+
+  const resumed = await must(resume(me.id))
+  assert.equal(resumed.status, "active")
+  assert.equal(resumed.position, "n2")
+  assert.deepEqual(resumed.battle!.lineup, strongIds(me.ids))
+})
+
+await test("断线恢复：每次上传都存在服务端，半场战斗能接着打", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await must(story(me.id, [0]))
+  await must(move(me.id, "n2"))
+  let view = await must(pickLineup(me.id, strongIds(me.ids)))
+  const battle = view.battle!
+  const { actions } = playBot(battle.encounter, inputsOf(view, battle.lineup), battle.seed, inputsOf(view, battle.bench), {
+    apMax: battle.apMax,
+    hpRatio: battle.hpRatioStart,
+  })
+  const half = actions.findIndex((a) => a.type === "endTurn") + 1
+  assert.ok(half > 0 && half < actions.length)
+  view = await must(uploadActions(me.id, 0, actions.slice(0, half)))
+  assert.equal(view.battle!.status, "fighting")
+
+  const reloaded = (await current(me.id))!
+  assert.equal(reloaded.battle!.actions.length, half)
+  view = await must(uploadActions(me.id, half, actions.slice(half)))
+  assert.equal(view.battle!.status, "won")
+})
+
+// ---------- 卡池锁定 ----------
+
+await test("出征期间参战的卡不能出售、分解、被喂、被融合吃掉；接收方可以，快照不变", async () => {
+  const me = await newPlayer()
+  const pooled = me.ids[1]! // ex-war，在卡池里
+  await db.update(userCards).set({ level: 50 }).where(eq(userCards.id, pooled))
+  // 再来两张同名卡，不在卡池里
+  const extra: number[] = []
+  for (let i = 0; i < 2; i += 1) {
+    const [row] = await db
+      .insert(userCards)
+      .values({ userId: me.id, cardId: "ex-war", level: 10, skillRefs: [{ skillId: "breaker_rift" }] })
+      .returning({ id: userCards.id })
+    extra.push(row!.id)
+  }
+  const view = await must(start(me.id, "test-trial", me.ids))
+  const locked = await lockedUserCardIds(db, me.id)
+  assert.deepEqual([...locked].sort(), [...me.ids].sort())
+
+  const card = (id: number, action: string) => `/users/${me.id}/cards/${id}/${action}`
+  let res = await call(me.id, "POST", `/users/${me.id}/market/list`, { userCardId: pooled, price: 10 })
+  assert.equal(res.body.error?.code, "in_expedition", "出售")
+  res = await call(me.id, "POST", card(pooled, "dismantle"))
+  assert.equal(res.body.error?.code, "in_expedition", "分解")
+  res = await call(me.id, "POST", card(extra[0]!, "feed"), { cards: [pooled] })
+  assert.equal(res.body.error?.code, "in_expedition", "被喂")
+
+  // 融合：被吃的会跳过卡池里的卡，挑那张没入池的
+  res = await call(me.id, "POST", card(extra[0]!, "constellation"))
+  assert.equal(res.status, 200, JSON.stringify(res.body))
+  res = await call(me.id, "POST", card(extra[0]!, "constellation"))
+  assert.equal(res.status, 400)
+  assert.equal(res.body.error?.code, "in_expedition", "剩下的同名卡都在卡池里，不能被吃")
+
+  // 接收方可以：给卡池里的卡喂经验，卡册里它升级了，出征快照里没变
+  const [material] = await db
+    .insert(userCards)
+    .values({ userId: me.id, cardId: "ex-w1" })
+    .returning({ id: userCards.id })
+  res = await call(me.id, "POST", card(pooled, "feed"), { cards: [material!.id] })
+  assert.equal(res.status, 200, JSON.stringify(res.body))
+  const [owned] = await db.select().from(userCards).where(eq(userCards.id, pooled))
+  assert.ok(owned!.exp > 0 || owned!.level > 50, "卡册里的卡吃到了经验")
+  const still = (await current(me.id))!.pool.find((p) => p.userCardId === pooled)!
+  assert.equal(still.face.level, view.pool.find((p) => p.userCardId === pooled)!.face.level, "快照里的等级不变")
+  assert.equal(still.face.level, 50)
+})
+
+await test("出征结束后卡解锁", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  assert.equal((await lockedUserCardIds(db, me.id)).size, 8)
+  await abandon(me.id)
+  assert.equal((await lockedUserCardIds(db, me.id)).size, 0)
+  const res = await call(me.id, "POST", `/users/${me.id}/cards/${me.ids[7]}/dismantle`)
+  assert.equal(res.status, 200, JSON.stringify(res.body))
+})
+
+// ---------- 体力 ----------
+
+await test("体力不够：不开始、不记账", async () => {
+  const me = await newPlayer({ stamina: 5 })
+  const res = await start(me.id, "test-patrol", me.ids.slice(0, 7))
+  assert.equal(res.status, 400)
+  assert.equal(res.body.error.code, "not_enough_stamina")
+  assert.equal((await entriesOf(me.id)).length, 0)
+  assert.equal(await current(me.id), null)
+})
+
+await test("体力冻结：放弃退回；什么都没拿到结算也退回；拿到东西才真扣", async () => {
+  const me = await newPlayer()
+  const ids = me.ids.slice(0, 7)
+
+  await must(start(me.id, "test-patrol", ids))
+  assert.equal(await sumOf(me.id, "stamina", "expedition"), -10)
+  let res = await abandon(me.id)
+  assert.equal(res.body.data.staminaRefunded, 10)
+  assert.equal(await sumOf(me.id, "stamina"), 0)
+
+  await must(start(me.id, "test-patrol", ids))
+  res = await settle(me.id)
+  assert.equal(res.body.data.end, "early")
+  assert.equal(res.body.data.staminaRefunded, 10, "空手结算退回体力")
+  assert.equal(await sumOf(me.id, "stamina"), 0)
+
+  await must(start(me.id, "test-patrol", ids))
+  await fight(me.id, strongIds(me.ids))
+  res = await settle(me.id)
+  assert.equal(res.body.data.staminaSpent, 10)
+  assert.equal(res.body.data.staminaRefunded, 0)
+  assert.equal(await sumOf(me.id, "stamina"), -10, "拿到了东西，体力保留扣除")
+  assert.ok((await sumOf(me.id, "coins", "expedition")) >= 50)
+})
+
+await test("主线地图不扣体力，也没有体力流水", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await abandon(me.id)
+  assert.equal((await entriesOf(me.id)).filter((e) => e.kind === "stamina").length, 0)
+})
+
+// ---------- 到期 ----------
+
+await test("到期：奖励以邮件发到邮箱，玩家经验直接加，卡解锁，出征读不到了", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await must(story(me.id, [0]))
+  await must(move(me.id, "n2"))
+  await fight(me.id, strongIds(me.ids))
+  const before = await userOf(me.id)
+
+  const done = await expireDue(me.id, Date.now() + 25 * 3_600_000)
+  assert.equal(done, 1)
+  const [row] = await db.select().from(expeditions).where(eq(expeditions.userId, me.id))
+  assert.equal(row?.status, "expired")
+  assert.equal(row?.endReason, "expired")
+  assert.equal(row?.settlement?.viaMail, true)
+
+  const sent = await db.select().from(mails).where(and(eq(mails.userId, me.id), eq(mails.kind, "expedition")))
+  assert.equal(sent.length, 1)
+  assert.ok(sent[0]!.attachment!.coins! >= 50)
+  const after = await userOf(me.id)
+  assert.equal(after.coins, before.coins, "金币还在邮件里，没直接到账")
+  assert.ok(after.playerExp > before.playerExp, "玩家经验直接加")
+  assert.equal(await current(me.id), null)
+  assert.equal((await lockedUserCardIds(db, me.id)).size, 0)
+})
+
+await test("到期的出征：体力按拿到才扣处理，空手的退回", async () => {
+  const me = await newPlayer()
+  await must(start(me.id, "test-patrol", me.ids.slice(0, 7)))
+  assert.equal(await sumOf(me.id, "stamina"), -10)
+  await expireDue(me.id, Date.now() + 25 * 3_600_000)
+  assert.equal(await sumOf(me.id, "stamina"), 0, "什么都没拿到，退回")
+  assert.equal((await db.select().from(mails).where(eq(mails.userId, me.id))).length, 0, "没有奖励就不发邮件")
+})
+
+await test("到期时间：24 小时和换图时间先到者为准；已过期但没处理的不锁卡", async () => {
+  const now = Date.parse("2026-11-23T10:00:00+08:00")
+  const daily = { ...WORLD_CONTENT.maps["test-patrol"]!, kind: "daily" as const }
+  const weekly = { ...WORLD_CONTENT.maps["test-patrol"]!, kind: "weekly" as const }
+  const main = WORLD_CONTENT.maps["test-trial"]!
+  assert.equal(expiryOf(main, now), now + 24 * 3_600_000)
+  assert.equal(expiryOf(daily, now), nextReset("daily", now), "日常图换图在次日 4:00")
+  assert.equal(expiryOf(daily, now), Date.parse("2026-11-24T04:00:00+08:00"))
+  assert.equal(expiryOf(weekly, now), now + 24 * 3_600_000, "周一 4:00 还远，24 小时先到")
+  const lateSunday = Date.parse("2026-11-29T23:00:00+08:00")
+  assert.equal(expiryOf(weekly, lateSunday), Date.parse("2026-11-30T04:00:00+08:00"), "周日深夜，换图先到")
+
+  const me = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  await db.update(expeditions).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(expeditions.userId, me.id))
+  assert.equal((await lockedUserCardIds(db, me.id)).size, 0)
+  assert.equal(await current(me.id), null, "读取时顺便结算")
+})
+
+await test("别人的出征看不到也动不了", async () => {
+  const me = await newPlayer()
+  const other = await newPlayer()
+  await must(start(me.id, "test-trial", me.ids))
+  assert.equal(await current(other.id), null)
+  const res = await call(other.id, "POST", `${base(other.id)}/current/node`, { to: "n2" })
+  assert.equal(res.status, 404)
+  assert.equal((await call(other.id, "GET", `${base(me.id)}/current`)).status, 403)
+})
+
+console.log(`${passed} 项通过`)
+await cleanup()

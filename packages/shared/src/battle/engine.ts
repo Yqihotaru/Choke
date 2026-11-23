@@ -379,7 +379,13 @@ function syncDefenseSupportSlot(state: BattleState) {
 export function createBattle(
   encounter: EncounterSpec,
   inputs: BattleInputCard[],
-  options: { seed: string; apMax: number; bench?: BattleInputCard[] },
+  options: {
+    seed: string
+    apMax: number
+    bench?: BattleInputCard[]
+    /** 开场队伍血量占最大生命的比例（0–1）；出征里上一场剩多少血，下一场就从多少血开始。缺省满血 */
+    hpRatio?: number
+  },
 ): BattleState {
   const cards = inputs.map((input) => createBattleCard(input.face, input.uid, input.cardId))
   const bench = (options.bench ?? []).map((input) => createBattleCard(input.face, input.uid, input.cardId))
@@ -415,7 +421,7 @@ export function createBattle(
     interruptUsedThisTurn: false,
     hasActedThisTurn: false,
     swapCooldown: 0,
-    teamHp: teamHpMax,
+    teamHp: options.hpRatio === undefined ? teamHpMax : Math.max(1, Math.min(teamHpMax, Math.round(teamHpMax * options.hpRatio))),
     teamHpMax,
     healSoftCap,
     healed: 0,

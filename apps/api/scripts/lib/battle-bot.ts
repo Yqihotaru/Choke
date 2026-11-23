@@ -73,8 +73,19 @@ export function testApMax(deck: BattleInputCard[]): number {
   return deck.some((c) => c.face.isHero || c.face.rarity === "Mythic" || c.face.rarity === "Prismatic") ? 10 : 7
 }
 
-export function playBot(encounter: EncounterSpec, deck: BattleInputCard[], seed: string, bench: BattleInputCard[] = BENCH) {
-  let state = createBattle(encounter, deck, { seed, bench, apMax: testApMax(deck) })
+export function playBot(
+  encounter: EncounterSpec,
+  deck: BattleInputCard[],
+  seed: string,
+  bench: BattleInputCard[] = BENCH,
+  extra: { apMax?: number; hpRatio?: number } = {},
+) {
+  let state = createBattle(encounter, deck, {
+    seed,
+    bench,
+    apMax: extra.apMax ?? testApMax(deck),
+    ...(extra.hpRatio === undefined ? {} : { hpRatio: extra.hpRatio }),
+  })
   const actions: BattleAction[] = []
   const act = (action: BattleAction) => {
     const result = withAction(state, action)

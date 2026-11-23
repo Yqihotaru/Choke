@@ -606,6 +606,20 @@
   color: #fff;
 }
 
+.cfb2__skill[data-surcharged="true"] {
+  border-left-color: #ef4444;
+  background: color-mix(in srgb, #ef4444 18%, var(--row));
+}
+
+.cfb2__skill[data-surcharged="true"] .cfb2__skill-name {
+  color: #ffa69e;
+}
+
+.cfb2__ap[data-surcharged="true"] {
+  background: #d9381e;
+  box-shadow: 0 0 1.4cqw #ff6a4d;
+}
+
 .cfb2__passive {
   padding: 1.2cqw 1.8cqw;
   border: 0.3cqw solid color-mix(in srgb, var(--dim) 60%, transparent);

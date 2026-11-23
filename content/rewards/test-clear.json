@@ -1,0 +1,7 @@
+{
+  "fixed": { "packs": [{ "pool": "golden", "count": 1 }] },
+  "starBonus": {
+    "3": { "packs": [{ "pool": "golden", "count": 1 }] }
+  },
+  "firstClear": { "coins": 500 }
+}

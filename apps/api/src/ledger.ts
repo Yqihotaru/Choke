@@ -37,6 +37,8 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   starter: "新手礼包",
   "hero-claim": "领取本体卡",
   dungeon: "副本",
+  expedition: "远征",
+  "expedition-refund": "远征体力退回",
   feed: "喂养",
   fuse: "融合",
   dismantle: "分解",

@@ -1,0 +1,17 @@
+{
+  "kind": "main",
+  "name": "测试 · 试炼之路",
+  "summary": "给开发和测试用的小地图：剧情、分支、普通战、休息、宝箱、BOSS 各一个。",
+  "staminaCost": 0,
+  "deckSize": 8,
+  "start": "n1",
+  "rewards": "test-clear",
+  "nodes": {
+    "n1": { "type": "story", "story": "test-intro", "pos": [0, 0], "next": ["n2"] },
+    "n2": { "type": "battle", "encounter": "ghost", "rewards": "test-battle", "pos": [1, 0], "next": ["n3"] },
+    "n3": { "type": "branch", "prompt": "前面有两条路", "pos": [2, 0], "next": ["n4a", "n4b"] },
+    "n4a": { "type": "rest", "title": "篝火", "pos": [3, -1], "next": ["n5"] },
+    "n4b": { "type": "treasure", "rewards": "test-chest", "requires": { "flag": "took-key" }, "pos": [3, 1], "next": ["n5"] },
+    "n5": { "type": "boss", "encounter": "colossus-metronome", "rewards": "test-boss", "pos": [4, 0], "next": [] }
+  }
+}

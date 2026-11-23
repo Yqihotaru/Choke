@@ -1189,6 +1189,23 @@ export function BattleStage({
               const isOpen = activeSlotIndex === index && !swapOpen
               const tooltipInfo =
                 hoveredSkill && hoveredSkill.slotIndex === index ? hoveredSkill : null
+              // 卡面上的技能行实时反映当前回合的实际 AP（疲惫 / 累积 +1），加费时变红
+              const liveFace = {
+                ...card.face,
+                skills: card.skills.map((skill) => {
+                  if (skill.passive) {
+                    return { id: skill.id, name: skill.name, element: skill.element, ap: 0, passive: true }
+                  }
+                  const actualAp = effectiveApCost(battle, card, skill)
+                  return {
+                    id: skill.id,
+                    name: skill.name,
+                    element: skill.element,
+                    ap: actualAp,
+                    surcharged: actualAp > skill.ap,
+                  }
+                }),
+              }
 
               return (
                 <div
@@ -1235,11 +1252,19 @@ export function BattleStage({
                             </span>
                           )
                         )}
+                        {!tooltipInfo.skill.passive &&
+                          card.lastTurnSkills.includes(tooltipInfo.skill.id) && (
+                            <span className="choke-tooltip-badge">疲惫 +1 AP</span>
+                          )}
                       </div>
                       <div className="choke-tooltip-sub">
                         {tooltipInfo.skill.passive
                           ? `${JOB_LABEL[card.job]} · 被动技能（无需点击，自动生效）`
                           : `${elementLabel(tooltipInfo.skill.element)} · 消耗 ${tooltipInfo.actualAp} AP${
+                              tooltipInfo.actualAp > tooltipInfo.skill.ap
+                                ? `（原 ${tooltipInfo.skill.ap} AP）`
+                                : ""
+                            }${
                               tooltipInfo.skill.hits && tooltipInfo.skill.hits > 1
                                 ? ` · ${tooltipInfo.skill.hits} 段连击`
                                 : ""
@@ -1255,7 +1280,7 @@ export function BattleStage({
                   {guardChipSlot === index && <span className="choke-guard-chip">嘲讽援护!</span>}
 
                   <div className="choke-card-frame">
-                    <GameCardFace card={card.face} eager />
+                    <GameCardFace card={liveFace} eager />
 
                     {/* 兰斯10 风格：覆盖在未行动卡片中央的炫光艺术大字 BOOST / 必殺 / 連撃（见参考图第2张卡） */}
                     {card.trigger && !card.acted && !card.down && (

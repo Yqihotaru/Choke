@@ -1,0 +1,13 @@
+{
+  "fixed": { "coins": 50, "playerExp": 30 },
+  "random": {
+    "rolls": 2,
+    "entries": [
+      { "weight": 3, "reward": { "coins": 10 } },
+      { "weight": 1 }
+    ]
+  },
+  "starBonus": {
+    "3": { "items": [{ "itemId": "exp-small", "count": 1 }] }
+  }
+}

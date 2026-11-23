@@ -3,6 +3,7 @@ import {
   bigint,
   bigserial,
   boolean,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -16,6 +17,17 @@ import {
 } from "drizzle-orm/pg-core"
 
 import type { MailAttachment, MailAudience } from "@choke/shared/mail"
+import type { BattleAction } from "@choke/shared/battle/actions"
+import type { EncounterSpec } from "@choke/shared/battle/content"
+import type { ExpeditionAllocation } from "@choke/shared/expedition-points"
+import type { MapDef, Reward } from "@choke/shared/expedition/content"
+import type {
+  BattleStatus,
+  ExpeditionEnd,
+  ExpeditionPoolCard,
+  ExpeditionSettlement,
+  ExpeditionStatus,
+} from "@choke/shared/expedition/view"
 import type { CardSkillRef } from "@choke/shared/types"
 
 export const cards = pgTable(
@@ -284,4 +296,85 @@ export const ledgerEntries = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index("ledger_user_idx").on(table.userId, table.id.desc())],
+)
+
+/** 远征：一次出征的全部进度。同一玩家最多一个未结束（active / suspended）的 */
+export const expeditions = pgTable(
+  "expeditions",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    mapId: text("map_id").notNull(),
+    status: text("status").$type<ExpeditionStatus>().notNull().default("active"),
+    seed: text("seed").notNull(),
+    contentVersion: text("content_version").notNull(),
+    map: jsonb("map").$type<MapDef>().notNull(),
+    pool: jsonb("pool").$type<ExpeditionPoolCard[]>().notNull(),
+    allocation: jsonb("allocation").$type<ExpeditionAllocation>().notNull(),
+    position: text("position").notNull(),
+    nodeDone: boolean("node_done").notNull().default(false),
+    flags: jsonb("flags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    hpRatio: doublePrecision("hp_ratio").notNull().default(1),
+    drops: jsonb("drops").$type<{ node: string; reward: Reward }[]>().notNull().default(sql`'[]'::jsonb`),
+    staminaCost: integer("stamina_cost").notNull().default(0),
+    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    endReason: text("end_reason").$type<ExpeditionEnd>(),
+    settlement: jsonb("settlement").$type<ExpeditionSettlement>(),
+  },
+  (table) => [
+    index("expeditions_user_idx").on(table.userId, table.id.desc()),
+    uniqueIndex("expeditions_one_open_idx")
+      .on(table.userId)
+      .where(sql`${table.status} in ('active', 'suspended')`),
+  ],
+)
+
+export const expeditionBattles = pgTable(
+  "expedition_battles",
+  {
+    id: serial("id").primaryKey(),
+    expeditionId: integer("expedition_id").notNull(),
+    nodeId: text("node_id").notNull(),
+    status: text("status").$type<BattleStatus>().notNull().default("preparing"),
+    encounter: jsonb("encounter").$type<EncounterSpec>().notNull(),
+    seed: text("seed").notNull(),
+    apMax: integer("ap_max").notNull(),
+    hpRatioStart: doublePrecision("hp_ratio_start").notNull(),
+    lineup: jsonb("lineup").$type<number[]>().notNull().default(sql`'[]'::jsonb`),
+    bench: jsonb("bench").$type<number[]>().notNull().default(sql`'[]'::jsonb`),
+    actions: jsonb("actions").$type<BattleAction[]>().notNull().default(sql`'[]'::jsonb`),
+    retries: integer("retries").notNull().default(0),
+    stars: integer("stars"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("expedition_battles_node_idx").on(table.expeditionId, table.nodeId)],
+)
+
+export const mapClears = pgTable(
+  "map_clears",
+  {
+    userId: text("user_id").notNull(),
+    mapId: text("map_id").notNull(),
+    bestStars: integer("best_stars").notNull().default(0),
+    clears: integer("clears").notNull().default(0),
+    firstClearedAt: timestamp("first_cleared_at", { withTimezone: true }).defaultNow().notNull(),
+    lastClearedAt: timestamp("last_cleared_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.mapId] })],
+)
+
+/** 图鉴数据：每个敌人击败过几次、揭开过哪些隐藏弱点 */
+export const bestiary = pgTable(
+  "bestiary",
+  {
+    userId: text("user_id").notNull(),
+    enemyId: text("enemy_id").notNull(),
+    defeated: integer("defeated").notNull().default(0),
+    hiddenFound: jsonb("hidden_found").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.enemyId] })],
 )

@@ -1401,12 +1401,12 @@
     0 0 1.3cqw rgb(74 232 255 / 0.85);
 }
 
-/* 兰斯10 风格：覆盖在未行动卡片中央的触发标签（清晰字重，不用描边/斜体） */
+/* 兰斯10 风格：覆盖在未行动卡片上部（横幅与头像上沿，避开下方的名字与 BP）的触发标签 */
 .choke-center-trigger {
   position: absolute;
   left: 0;
   right: 0;
-  top: 46%;
+  top: 19%;
   z-index: 7;
   transform: translateY(-50%);
   display: flex;
@@ -1536,27 +1536,31 @@
   font-weight: 800;
 }
 
-/* 卡面底部技能指令行（主动与被动长成一个样子，仅覆盖卡面下部的技能栏区域，绝不遮挡头像与名字） */
+/* 卡面底部技能指令行（与卡面技能区三行位置对齐，不遮挡上方的名字、也不漏出半截卡面技能行） */
 .choke-card-overlay-skills {
   position: absolute;
-  left: 0.32cqw;
-  right: 0.32cqw;
-  bottom: 1.35cqw;
+  left: 0.9cqw;
+  right: 0.35cqw;
+  top: 57%;
+  bottom: 7.2%;
   z-index: 8;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   gap: 0.2cqw;
-  padding: 0.22cqw;
+  padding: 0.24cqw;
   border-radius: 0.28cqw;
   border: 0.1cqw solid #d8aa50;
-  background: rgb(14 12 10 / 0.94);
+  background: rgb(14 12 10 / 0.96);
   box-shadow: 0 -0.2cqw 0.7cqw rgb(0 0 0 / 0.85);
 }
 .choke-overlay-skill-btn {
+  flex: 1 1 0;
+  max-height: 1.95cqw;
   display: flex;
   align-items: center;
   gap: 0.32cqw;
-  padding: 0.22cqw 0.36cqw;
+  padding: 0.18cqw 0.36cqw;
   border: 0.08cqw solid #786035;
   border-radius: 0.2cqw;
   background: linear-gradient(180deg, #322819, #1b150c);
@@ -1602,8 +1606,13 @@
   border-color: #9ab8d8;
   color: #cfe4ff;
 }
+.choke-overlay-skill-btn[data-surcharged="true"] {
+  border-color: #e0523c;
+  color: #ffb8ad;
+}
 .choke-overlay-skill-btn[data-surcharged="true"] i {
   background: #d9381e;
+  border-color: #ffb4a2;
   box-shadow: 0 0 0.35cqw #ff6a4d;
 }
 .choke-overlay-skill-btn span {

@@ -3,6 +3,7 @@ import fs from "node:fs"
 import path from "node:path"
 
 import { parseBattleContent, type BattleContent } from "@choke/shared/battle/content"
+import { parseWorldContent, type WorldContent } from "@choke/shared/expedition/content"
 // import 时即完成 schema + 交叉引用校验；失败会直接抛错，服务端拒绝启动
 import { CONTENT_FILES } from "@choke/shared/content"
 
@@ -10,7 +11,7 @@ export const CONTENT_DIR = path.resolve(import.meta.dirname, "../../../content")
 
 /** 由服务端从磁盘读的内容：单文件 + 「一个文件一个 id」的目录 */
 const BATTLE_FILE = "enemy-supports.json"
-const BATTLE_DIRS = ["enemies", "encounters"] as const
+const BATTLE_DIRS = ["enemies", "encounters", "maps", "rewards", "stories"] as const
 
 function isDirEntry(file: string): boolean {
   return BATTLE_DIRS.some(
@@ -85,14 +86,22 @@ function hashContent(root: string, files: string[]): string {
  * 读取并校验一个内容目录：文件清单 → 战斗内容 schema 与交叉引用 → 版本号。任何一步不过都抛错。
  * 服务端用真实的 content/；测试拿临时目录的副本来改坏。
  */
-export function loadContentDir(root: string): { version: string; battle: BattleContent } {
+export function loadContentDir(root: string): { version: string; battle: BattleContent; world: WorldContent } {
   const files = checkFiles(root)
   const battle = parseBattleContent({
     enemies: readDir(root, files, "enemies"),
     supports: readJson(root, BATTLE_FILE),
     encounters: readDir(root, files, "encounters"),
   })
-  return { version: hashContent(root, files), battle }
+  const world = parseWorldContent(
+    {
+      maps: readDir(root, files, "maps"),
+      rewards: readDir(root, files, "rewards"),
+      stories: readDir(root, files, "stories"),
+    },
+    battle,
+  )
+  return { version: hashContent(root, files), battle, world }
 }
 
 const loaded = loadContentDir(CONTENT_DIR)
@@ -101,3 +110,6 @@ export const CONTENT_VERSION = loaded.version
 
 /** 敌人 / 敌方支援 / 遭遇 */
 export const BATTLE_CONTENT: BattleContent = loaded.battle
+
+/** 地图 / 掉落表 / 剧情 */
+export const WORLD_CONTENT: WorldContent = loaded.world

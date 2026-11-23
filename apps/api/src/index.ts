@@ -12,6 +12,7 @@ import { battleRoutes } from "./routes/battle"
 import { cardRoutes } from "./routes/cards"
 import { deckRoutes } from "./routes/decks"
 import { dungeonRoutes } from "./routes/dungeons"
+import { expeditionRoutes } from "./routes/expeditions"
 import { adminRoutes } from "./routes/admin"
 import { mailRoutes } from "./routes/mails"
 import { ledgerRoutes } from "./routes/ledger"
@@ -40,6 +41,7 @@ await app.register(ledgerRoutes)
 await app.register(adminRoutes)
 await app.register(progressionRoutes)
 await app.register(dungeonRoutes)
+await app.register(expeditionRoutes)
 await app.register(progressRoutes)
 
 app.get("/health", async () => ({ ok: true, data: { status: "up", contentVersion: CONTENT_VERSION } }))
