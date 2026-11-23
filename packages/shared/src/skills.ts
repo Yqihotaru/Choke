@@ -274,7 +274,7 @@ export const SKILLS: Record<string, SkillDef> = {
     target: "enemy",
     statusId: "stun",
     turns: 1,
-    desc: "硬控（3 AP）：作废目标本回合全部行动（受击即打醒；可打断蓄力使其脆弱）",
+    desc: "硬控（3 AP）：作废目标本回合全部行动（受击即打醒；可打断蓄力使其脆弱）。本回合有难以打断的招式时成功率 ×0.4",
   }),
   warden_hold: S({
     id: "warden_hold",
@@ -746,7 +746,7 @@ export const SKILLS: Record<string, SkillDef> = {
     statusId: "sleep",
     turns: 1,
     target: "enemy",
-    desc: "硬控（3 AP）：催眠目标作废其本回合全部行动（受击即打醒；可打断蓄力）",
+    desc: "硬控（3 AP）：催眠目标作废其本回合全部行动（受击即打醒；可打断蓄力）。本回合有难以打断的招式时成功率 ×0.4",
   }),
   binder_charm: S({
     id: "binder_charm",

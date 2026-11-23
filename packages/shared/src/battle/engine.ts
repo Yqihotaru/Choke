@@ -21,6 +21,10 @@ import {
 
 import {
   EXECUTE_LOW_HP_RATIO,
+  HARD_CONTROL_BASE_RATE,
+  HARD_CONTROL_HARD_FACTOR,
+  HARD_CONTROL_RATE_MAX,
+  HARD_CONTROL_RATE_MIN,
   HARD_TO_INTERRUPT_RATE_FACTOR,
   HARD_TO_INTERRUPT_WEIGHT,
   INTERRUPT_BASE_RATE,
@@ -215,6 +219,11 @@ export function effectiveEnemyDefenseTier(state: BattleState): number {
   return Math.max(0, enemyArmor - breakStacks)
 }
 
+/** 硬壳支援的伤害门槛：单段伤害低于它只算 100；硬壳不能被拆除，也不受禁援影响 */
+function shellThreshold(state: BattleState): number {
+  return state.enemySupports.reduce((max, s) => (s.kind === "shell" ? Math.max(max, s.threshold ?? 0) : max), 0)
+}
+
 function enemyDefence(state: BattleState, magic: boolean): number {
   const base = magic ? state.enemy.int : state.enemy.def
   const bonus = statusBonus(state.enemy.statuses, magic ? "int" : "def")
@@ -255,7 +264,6 @@ function makeEnemyAndSupports(spec: EncounterSpec): { enemy: Enemy; enemySupport
     hardControlCount: 0,
     buff: 0,
   }
-  if (def.damageThreshold !== undefined) enemy.damageThreshold = def.damageThreshold
   if (def.enrageOnInterrupt !== undefined) enemy.enrageOnInterrupt = def.enrageOnInterrupt
   const enemySupports = spec.supports.map((unit): SideSupportUnit => ({ ...unit }))
   return { enemy, enemySupports }
@@ -555,7 +563,7 @@ function applyDamageToEnemy(
         (crit ? 1.5 : 1),
     )
 
-    if (state.enemy.damageThreshold && damage < state.enemy.damageThreshold) {
+    if (damage < shellThreshold(state)) {
       damage = 100
     }
 
@@ -640,6 +648,7 @@ function removeEnemySupports(state: BattleState, count: number, actorName: strin
   let removed = 0
   let tooStrong = 0
   for (let i = state.enemySupports.length - 1; i >= 0 && removed < count; i -= 1) {
+    if (state.enemySupports[i]!.kind === "shell") continue
     if ((state.enemySupports[i]!.tier ?? 1) > breakTier) {
       tooStrong += 1
       continue
@@ -817,9 +826,14 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           break
         }
         const focusBonus = cardEffectSum(card, "controlBonus")
-        const rate =
-          (state.enemy.tier === "boss" ? 0.5 : state.enemy.tier === "elite" ? 0.65 : 0.8) +
-          focusBonus
+        const hasHardIntent = state.enemy.intents.some((i) => i.hardToInterrupt && !i.interrupted)
+        const rate = Math.min(
+          HARD_CONTROL_RATE_MAX,
+          Math.max(
+            HARD_CONTROL_RATE_MIN,
+            (HARD_CONTROL_BASE_RATE[state.enemy.tier] + focusBonus) * (hasHardIntent ? HARD_CONTROL_HARD_FACTOR : 1),
+          ),
+        )
         if (roll(state, "player") <= rate) {
           const ctrlType = skill.statusId === "sleep" ? "sleep" : "stun"
           state.enemy.hardControl = ctrlType

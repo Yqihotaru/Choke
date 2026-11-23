@@ -615,6 +615,79 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   )
 }
 
+// ---------- 9i. 硬控 ----------
+{
+  const rate = (id: string, enemyId: string, hard: boolean, tag: string) => {
+    const enc = resolveEncounter(BATTLE_CONTENT, enemyId)!
+    let ok = 0
+    for (const seed of seedsOf(tag)) {
+      const s = start(SKILLS[id]!.job, [id], seed, enc)
+      s.enemy.hp = s.enemy.hpMax = 1e9
+      const base = s.enemy.intents[0]!
+      s.enemy.intents = [{ ...base, hardToInterrupt: hard || undefined, interrupted: false }]
+      s.ap = 6
+      if (apply(s, { type: "skill", card: 0, skill: id }).enemy.hardControl) ok += 1
+    }
+    return ok / SEEDS
+  }
+  const near = (value: number, target: number) => Math.abs(value - target) < 0.07
+  const normal = rate("warden_stun", "ghost", false, "hc-n")
+  check("硬控：普通敌人没有难以打断招式时约 80%", near(normal, 0.8), `${normal}`)
+  const normalHard = rate("warden_stun", "ghost", true, "hc-nh")
+  check("硬控：普通敌人有难以打断招式时约 32%（80%×0.4）", near(normalHard, 0.32), `${normalHard}`)
+  const elite = rate("binder_sleep", "vanguard", false, "hc-e")
+  check("硬控：精英约 65%", near(elite, 0.65), `${elite}`)
+  const eliteHard = rate("binder_sleep", "vanguard", true, "hc-eh")
+  check("硬控：精英有难以打断招式时约 26%", near(eliteHard, 0.26), `${eliteHard}`)
+  const boss = rate("warden_stun", "conductor", false, "hc-b")
+  check("硬控：BOSS 约 50%", near(boss, 0.5), `${boss}`)
+  const bossHard = rate("warden_stun", "conductor", true, "hc-bh")
+  check("硬控：BOSS 有难以打断招式时约 20%", near(bossHard, 0.2), `${bossHard}`)
+  check("硬控：说明文案写出难以打断的修正", describeSkill(SKILLS.warden_stun!).includes("×0.4") && describeSkill(SKILLS.binder_sleep!).includes("×0.4"))
+}
+
+// ---------- 9j. 硬壳支援 ----------
+{
+  const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
+  const shell = (threshold: number) => ({
+    id: "t-shell",
+    name: "测试硬壳",
+    kind: "shell" as const,
+    element: "earth" as const,
+    threshold,
+    roleText: "硬壳",
+  })
+  const armor = { id: "t-armor", name: "测试装甲", kind: "armor" as const, element: "metal" as const, defenseTier: 1, roleText: "装甲" }
+  const hitAmounts = (supports: (typeof ghost)["supports"], hidden: boolean) => {
+    const enc = { ...ghost, enemy: { ...ghost.enemy, hiddenWeaknesses: hidden ? ["physical" as const] : [] }, supports }
+    const s = start("warrior", ["berserker_zero"], "shell-1", enc)
+    s.enemy.hp = s.enemy.hpMax = 1e9
+    s.ap = 6
+    const next = apply(s, { type: "skill", card: 0, skill: "berserker_zero" })
+    return { amounts: next.events.filter((e) => e.type === "damage" && e.target === "enemy").map((e) => (e.type === "damage" ? e.amount : 0)), found: next.hiddenFound }
+  }
+  const none = hitAmounts([], false)
+  const high = hitAmounts([shell(1e9)], false)
+  const low = hitAmounts([shell(1)], false)
+  check("硬壳：没有硬壳时伤害正常", none.amounts.length > 0 && none.amounts.every((a) => a > 100), none.amounts.join(","))
+  check("硬壳：单段伤害低于门槛只算 100", high.amounts.length === none.amounts.length && high.amounts.every((a) => a === 100), high.amounts.join(","))
+  check("硬壳：门槛很低时不影响伤害", low.amounts.join(",") === none.amounts.join(","))
+  check("硬壳：伤害被压成 100 也记隐藏弱点", hitAmounts([shell(1e9)], true).found.includes("physical"))
+
+  const breakWith = (supports: (typeof ghost)["supports"]) => {
+    const s = start(SKILLS.breaker_break!.job, ["breaker_break"], "shell-2", { ...ghost, supports })
+    s.enemy.hp = s.enemy.hpMax = 1e9
+    s.ap = 6
+    return apply(s, { type: "skill", card: 0, skill: "breaker_break" }).enemySupports.map((u) => u.id)
+  }
+  const afterBreak = breakWith([armor, shell(5000)])
+  check("硬壳：拆支援拆得掉别的，拆不掉硬壳", afterBreak.length === 1 && afterBreak[0] === "t-shell", afterBreak.join(","))
+  check("硬壳：只有硬壳时拆支援无效", breakWith([shell(5000)]).join(",") === "t-shell")
+
+  const baseSupport = BATTLE_CONTENT.supports
+  check("硬壳校验：内容里的硬壳都写了 threshold", Object.values(baseSupport).filter((u) => u.kind === "shell").every((u) => u.threshold !== undefined))
+}
+
 // ---------- 10. 坦克只看大职业 ----------
 {
   const tankDeck = start("tank", ["bulwark_quake"])

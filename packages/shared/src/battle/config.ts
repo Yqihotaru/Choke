@@ -53,6 +53,15 @@ export const HARD_TO_INTERRUPT_RATE_FACTOR = 0.4
 export const INTERRUPT_RATE_MIN = 0.05
 export const INTERRUPT_RATE_MAX = 0.95
 
+/**
+ * 硬控（眠咒 / 击晕）：成功率 =（档位基础率 + 控制专精）×（本回合有未被打断的难以打断招式时 ×0.4），限制在 5%–95%。
+ * 难以打断的招式不该被一发硬控整个绕过，所以和打断用同一个系数。
+ */
+export const HARD_CONTROL_BASE_RATE = { normal: 0.8, elite: 0.65, boss: 0.5 } as const
+export const HARD_CONTROL_HARD_FACTOR = 0.4
+export const HARD_CONTROL_RATE_MIN = 0.05
+export const HARD_CONTROL_RATE_MAX = 0.95
+
 export const ROMAN_TIER = ["0", "I", "II", "III", "IV"] as const
 
 /** 防御档位减伤表（§6.7） */

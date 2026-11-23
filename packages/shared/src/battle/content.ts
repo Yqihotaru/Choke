@@ -114,7 +114,6 @@ export const enemySchema = z.strictObject({
   weaknessWindows: z.array(weaknessWindowSchema).default([]),
   traits: z.array(z.enum(ENEMY_TRAITS)).default([]),
   stats: z.strictObject({ hp: int.positive(), atk: int.min(0), int: int.min(0), def: int.min(0) }),
-  damageThreshold: int.min(0).optional(),
   enrageOnInterrupt: z.boolean().optional(),
   ai: enemyAiSchema,
 })
@@ -130,6 +129,8 @@ export const enemySupportSchema = z.strictObject({
   defenseTier: int.min(1).max(4).optional(),
   stacks: int.min(0).optional(),
   maxStacks: int.min(1).optional(),
+  /** 硬壳支援：单段伤害低于这个值只算 100 */
+  threshold: int.min(1).optional(),
   tier: int.min(1).max(3).optional(),
   roleText: z.string(),
 })
@@ -256,6 +257,12 @@ const battleContentSchema = z
       }
       if (support.kind === "armor" && support.defenseTier === undefined) {
         issue(["supports", supportId, "defenseTier"], "装甲支援必须写 defenseTier")
+      }
+      if (support.kind === "shell" && support.threshold === undefined) {
+        issue(["supports", supportId, "threshold"], "硬壳支援必须写 threshold")
+      }
+      if (support.kind !== "shell" && support.threshold !== undefined) {
+        issue(["supports", supportId, "threshold"], "threshold 只能写在硬壳支援上")
       }
     }
 

@@ -125,7 +125,7 @@ export interface EnemyIntent {
 }
 
 /** 侧面支援栏单位（敌方在左侧 7 格，我方在右侧 7 格） */
-export const SUPPORT_KINDS = ["attack", "defense", "armor", "aura", "thorns", "charge"] as const
+export const SUPPORT_KINDS = ["attack", "defense", "armor", "aura", "thorns", "charge", "shell"] as const
 
 export interface SideSupportUnit {
   id: string
@@ -146,6 +146,8 @@ export interface SideSupportUnit {
   amount?: number
   stacks?: number
   maxStacks?: number
+  /** 硬壳支援：单段伤害低于此值只算 100；不能被拆除，也不受禁援影响 */
+  threshold?: number
   /** 支援强度 1~3（默认 1）：拆除来源的 breakTier ≥ 强度才拆得动 */
   tier?: number
   /** 仅本回合生效（如我方主动防御指令） */
@@ -183,8 +185,6 @@ export interface Enemy {
   atk: number
   int: number
   def: number
-  /** 特殊关卡机制：伤害门槛（低于此值只结算 100 点固定伤害，0 为无门槛） */
-  damageThreshold?: number
   /** 被打断蓄力后是否进入狂暴（而非脆弱） */
   enrageOnInterrupt?: boolean
   /** 招式表 + 行为脚本；放在状态里，战斗自带全部规则，重放不依赖外部内容 */

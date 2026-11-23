@@ -20,6 +20,7 @@ import {
   GiSkullCrossedBones,
   GiSleepy,
   GiStarSwirl,
+  GiStoneBlock,
   GiStunGrenade,
   GiTargetLaser,
   GiThornyVine,
@@ -174,6 +175,8 @@ function SupportKindIcon({ unit }: { unit: SideSupportUnit }) {
       return <GiThornyVine />
     case "charge":
       return <GiFlame />
+    case "shell":
+      return <GiStoneBlock />
     case "aura":
       return <GiTrumpetFlag />
     case "attack":
@@ -1000,7 +1003,7 @@ export function BattleStage({
                     <div className="choke-tooltip-sub">
                       {elementLabel(hoveredIntent.element)}属性 · 伤害档位：{enemyDamageTier(hoveredIntent)}
                       {hoveredIntent.causesDown ? " · ⚠️ 附带 DOWN" : ""}
-                      {hoveredIntent.hardToInterrupt ? " · 🔒 难以打断（成功率 ×0.4）" : " · 可被刺客打断"}
+                      {hoveredIntent.hardToInterrupt ? " · 🔒 难以打断（打断、硬控成功率 ×0.4）" : " · 可被刺客打断"}
                     </div>
                     <div className="choke-tooltip-desc">{hoveredIntent.desc}</div>
                   </div>
