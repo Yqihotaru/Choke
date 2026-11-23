@@ -39,3 +39,17 @@ export async function runTx<T>(
 export async function lockUser(tx: Tx, userId: string) {
   await tx.select({ id: users.id }).from(users).where(eq(users.id, userId)).for("update")
 }
+
+/** 业务函数自己开事务时用：TxAbort 转成统一的错误响应并返回 null，其它错误继续往上抛 */
+export async function guardAbort<T>(reply: FastifyReply, fn: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fn()
+  } catch (error) {
+    if (!(error instanceof TxAbort)) throw error
+    reply.code(error.status).send({
+      ok: false,
+      error: { code: error.code, message: error.message, ...error.extra },
+    })
+    return null
+  }
+}

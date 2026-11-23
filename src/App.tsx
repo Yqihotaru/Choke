@@ -23,6 +23,10 @@ const SfxLab = import.meta.env.DEV
 const LoginPage = lazy(() =>
   import("@/desk/LoginPage").then((m) => ({ default: m.LoginPage }))
 )
+// 管理后台：单独的 chunk，普通玩家不会下载；权限在服务端校验
+const AdminPage = lazy(() =>
+  import("@/admin/AdminPage").then((m) => ({ default: m.AdminPage }))
+)
 
 const FALLBACK = (
   <div
@@ -45,6 +49,13 @@ export function App() {
     return (
       <Suspense fallback={FALLBACK}>
         <LoginPage />
+      </Suspense>
+    )
+  }
+  if (path.endsWith("admin")) {
+    return (
+      <Suspense fallback={FALLBACK}>
+        <AdminPage />
       </Suspense>
     )
   }

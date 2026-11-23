@@ -11,7 +11,7 @@ import {
 import { IS_PRODUCTION } from "../auth/env"
 import { requireSelf, requireSession } from "../auth/guard"
 import { claimAllMails, claimMail, deleteMail, listMails, mailSummary, markRead, sendMail, setPinned } from "../mail"
-import { TxAbort } from "../tx"
+import { guardAbort } from "../tx"
 
 const paramsSchema = z.object({ userId: z.string() })
 const mailParamsSchema = z.object({ userId: z.string(), mailId: z.coerce.number().int().positive() })
@@ -22,20 +22,6 @@ const devMailSchema = z.object({
   body: z.string().max(MAIL_BODY_MAX).optional(),
   attachment: mailAttachmentSchema.nullish(),
 })
-
-/** 事务里的 TxAbort 转成统一的错误响应 */
-async function guarded<T>(reply: Parameters<typeof requireSession>[1], fn: () => Promise<T>): Promise<T | null> {
-  try {
-    return await fn()
-  } catch (error) {
-    if (!(error instanceof TxAbort)) throw error
-    reply.code(error.status).send({
-      ok: false,
-      error: { code: error.code, message: error.message, ...error.extra },
-    })
-    return null
-  }
-}
 
 export async function mailRoutes(app: FastifyInstance) {
   app.get("/users/:userId/mails", async (request, reply) => {
@@ -56,7 +42,7 @@ export async function mailRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
-    const result = await guarded(reply, () => claimAllMails(userId))
+    const result = await guardAbort(reply, () => claimAllMails(userId))
     if (!result) return
     return { ok: true, data: result }
   })
@@ -65,7 +51,7 @@ export async function mailRoutes(app: FastifyInstance) {
     const params = mailParamsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
-    const done = await guarded(reply, async () => {
+    const done = await guardAbort(reply, async () => {
       await markRead(userId, params.mailId)
       return true
     })
@@ -77,7 +63,7 @@ export async function mailRoutes(app: FastifyInstance) {
     const params = mailParamsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
-    const attachment = await guarded(reply, () => claimMail(userId, params.mailId))
+    const attachment = await guardAbort(reply, () => claimMail(userId, params.mailId))
     if (!attachment) return
     return { ok: true, data: { attachment } }
   })
@@ -87,7 +73,7 @@ export async function mailRoutes(app: FastifyInstance) {
     const body = pinBodySchema.parse(request.body)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
-    const done = await guarded(reply, async () => {
+    const done = await guardAbort(reply, async () => {
       await setPinned(userId, params.mailId, body.pinned)
       return true
     })
@@ -99,7 +85,7 @@ export async function mailRoutes(app: FastifyInstance) {
     const params = mailParamsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
-    const done = await guarded(reply, async () => {
+    const done = await guardAbort(reply, async () => {
       await deleteMail(userId, params.mailId)
       return true
     })

@@ -93,7 +93,7 @@ export function defToFace(row: ApiCardDef): CardFaceData {
 
 const REQUEST_TIMEOUT_MS = 15_000
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout
   let res: Response
@@ -330,6 +330,8 @@ export interface AccountMe {
   email?: string | null
   /** 游客：既没有 osu! 也没有邮箱 */
   isGuest?: boolean
+  /** 只决定要不要显示后台入口；真正的权限在服务端 */
+  isAdmin?: boolean
   avatarUrl: string | null
   profileUrl: string | null
   onboarded: boolean

@@ -12,6 +12,7 @@ import { battleRoutes } from "./routes/battle"
 import { cardRoutes } from "./routes/cards"
 import { deckRoutes } from "./routes/decks"
 import { dungeonRoutes } from "./routes/dungeons"
+import { adminRoutes } from "./routes/admin"
 import { mailRoutes } from "./routes/mails"
 import { marketRoutes } from "./routes/market"
 import { packRoutes } from "./routes/packs"
@@ -34,6 +35,7 @@ await app.register(cardRoutes)
 await app.register(deckRoutes)
 await app.register(marketRoutes)
 await app.register(mailRoutes)
+await app.register(adminRoutes)
 await app.register(progressionRoutes)
 await app.register(dungeonRoutes)
 await app.register(progressRoutes)

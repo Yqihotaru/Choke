@@ -85,3 +85,48 @@ export interface MailView {
   /** 到期时间；被 Pin 的为 null */
   expiresAt: string | null
 }
+
+/** 后台发信时的单封附件上限：防止多打一个 0 */
+export const ADMIN_ATTACHMENT_LIMITS = {
+  coins: 100_000,
+  essence: 10_000,
+  stamina: 360,
+  itemCount: 1_000,
+  packCount: 50,
+  cards: 20,
+} as const
+
+/** 超限返回提示文字，没问题返回 null */
+export function adminAttachmentProblem(attachment: MailAttachment | null | undefined): string | null {
+  if (!attachment) return null
+  const limits = ADMIN_ATTACHMENT_LIMITS
+  if ((attachment.coins ?? 0) > limits.coins) return `金币最多 ${limits.coins}`
+  if ((attachment.essence ?? 0) > limits.essence) return `闪卡精华最多 ${limits.essence}`
+  if ((attachment.stamina ?? 0) > limits.stamina) return `体力最多 ${limits.stamina}`
+  if (attachment.items?.some((item) => item.count > limits.itemCount)) return `单种道具最多 ${limits.itemCount}`
+  if (attachment.packs?.some((pack) => pack.count > limits.packCount)) return `单种卡包最多 ${limits.packCount}`
+  const cardTotal = attachment.cards?.reduce((sum, card) => sum + card.count, 0) ?? 0
+  if (cardTotal > limits.cards) return `卡牌最多 ${limits.cards} 张`
+  return null
+}
+
+/** 收件人：指定玩家 / 全体 / 等级不低于某值 */
+export const mailAudienceSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("users"), userIds: z.array(z.string().min(1)).min(1).max(200) }),
+  z.object({ type: z.literal("all") }),
+  z.object({ type: z.literal("level"), minLevel: z.int().min(1).max(1000) }),
+])
+
+export type MailAudience = z.infer<typeof mailAudienceSchema>
+
+export const adminMailSchema = z.object({
+  audience: mailAudienceSchema,
+  kind: z.enum(MAIL_KINDS).default("system"),
+  title: z.string().trim().min(1).max(MAIL_TITLE_MAX),
+  body: z.string().max(MAIL_BODY_MAX).default(""),
+  attachment: mailAttachmentSchema.nullish(),
+  /** 全体 / 按等级发送必须带上预览时看到的人数，对不上就拒绝（防止确认之后人数变了） */
+  confirmCount: z.int().min(0).optional(),
+})
+
+export type AdminMailInput = z.infer<typeof adminMailSchema>

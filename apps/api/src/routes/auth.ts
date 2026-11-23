@@ -341,6 +341,8 @@ export async function authRoutes(app: FastifyInstance) {
         avatarUrl: user.osuId == null ? null : `https://a.ppy.sh/${user.osuId}`,
         profileUrl: user.osuId == null ? null : `https://osu.ppy.sh/users/${user.osuId}`,
         onboarded: user.onboarded,
+        /** 只用来决定要不要显示后台入口；真正的权限每次请求都在服务端查 */
+        isAdmin: user.isAdmin,
         essence: user.essence,
         items: await loadItems(user.id),
         coins: user.coins,

@@ -15,7 +15,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core"
 
-import type { MailAttachment } from "@choke/shared/mail"
+import type { MailAttachment, MailAudience } from "@choke/shared/mail"
 
 export const cards = pgTable(
   "cards",
@@ -92,6 +92,8 @@ export const users = pgTable("users", {
   staminaUpdatedAt: bigint("stamina_updated_at", { mode: "number" }).notNull().default(0),
   /** 最近一次活跃（/auth/me 刷新）；镜像池按它筛活跃账号 */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+  /** 管理员：只能在数据库里改（scripts/set-admin.ts），没有任何接口能设置 */
+  isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 })
 
@@ -242,9 +244,28 @@ export const mails = pgTable(
     readAt: timestamp("read_at", { withTimezone: true }),
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
     pinned: boolean("pinned").notNull().default(false),
+    /** 后台群发的批次；系统自动发的为 null */
+    batchId: integer("batch_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index("mails_user_created_idx").on(table.userId, table.createdAt.desc())],
+)
+
+/** 后台发信记录：谁、发给谁、发了什么 */
+export const adminMailBatches = pgTable(
+  "admin_mail_batches",
+  {
+    id: serial("id").primaryKey(),
+    adminId: text("admin_id").notNull(),
+    audience: jsonb("audience").$type<MailAudience>().notNull(),
+    recipientCount: integer("recipient_count").notNull(),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    attachment: jsonb("attachment").$type<MailAttachment | null>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("admin_mail_batches_created_idx").on(table.createdAt.desc())],
 )
 
 /** 流水：所有货币、道具、卡包、卡牌的增减，正数是得到、负数是失去 */

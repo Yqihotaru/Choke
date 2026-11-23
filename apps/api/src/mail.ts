@@ -50,6 +50,23 @@ export async function sendMail(userId: string, mail: NewMail, executor: Tx | typ
 
 const cutoff = (now: number) => new Date(now - MAIL_RETENTION_MS)
 
+const BULK_CHUNK = 500
+
+/** 同一封邮件发给很多人：每人一封独立邮件，各自领取、各自置顶；必须在事务里调用 */
+export async function sendMailBulk(tx: Tx, userIds: readonly string[], mail: NewMail, batchId: number) {
+  const attachment = mail.attachment ? mailAttachmentSchema.parse(mail.attachment) : null
+  const base = {
+    kind: mail.kind ?? "system",
+    title: mail.title.slice(0, MAIL_TITLE_MAX),
+    body: (mail.body ?? "").slice(0, MAIL_BODY_MAX),
+    attachment: isAttachmentEmpty(attachment) ? null : attachment,
+    batchId,
+  }
+  for (let i = 0; i < userIds.length; i += BULK_CHUNK) {
+    await tx.insert(mails).values(userIds.slice(i, i + BULK_CHUNK).map((userId) => ({ userId, ...base })))
+  }
+}
+
 /** 数据库里存的附件按 schema 再过一遍；坏数据当作没有附件，不让一封坏信毁掉整个列表 */
 function readAttachment(row: MailRow): MailAttachment | null {
   if (!row.attachment) return null
