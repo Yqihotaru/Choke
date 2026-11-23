@@ -330,6 +330,10 @@ export interface BattleState {
   /** 队伍总血条（= 场上主队卡片 HP 贡献之和） */
   teamHp: number
   teamHpMax: number
+  /** 本场还能靠治疗回多少 HP；null = 不限（永动机 BOSS）。所有回血（治疗技能、生生不息、吸血）都扣它 */
+  healLeft: number | null
+  /** 本场治疗预算总量；null = 不限 */
+  healBudget: number | null
   /** 我方队伍级状态（冻结/触电/燃烧/中毒/流血/恐惧/诅咒/破防/治疗阻断/衰弱） */
   teamStatuses: StatusEffect[]
   /** 场上 7 张主队卡 */

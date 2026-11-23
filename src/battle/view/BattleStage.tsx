@@ -1078,6 +1078,14 @@ export function BattleStage({
                 <i>Hp</i>
                 <b>{shownPartyHp.toLocaleString("en-US")}</b>
               </div>
+              <div
+                className="choke-heal-left"
+                data-empty={battle.healLeft === 0 ? "true" : undefined}
+                title="本场还能靠治疗回多少血；用完就不能再回血了"
+              >
+                <i>治疗余量</i>
+                <b>{battle.healLeft === null ? "∞" : battle.healLeft.toLocaleString("en-US")}</b>
+              </div>
             </div>
           </div>
 

@@ -698,6 +698,31 @@
 .choke-side-info--party .choke-hp-num {
   justify-content: flex-end;
 }
+.choke-heal-left {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.4cqw;
+  margin-top: 0.35cqw;
+  line-height: 1;
+  text-shadow: 0 0.14cqw 0.32cqw #000, 0 0 0.5cqw #000;
+}
+.choke-heal-left i {
+  font-style: normal;
+  font-size: 0.9cqw;
+  font-weight: 700;
+  color: #9fd8a6;
+}
+.choke-heal-left b {
+  font-size: 1.2cqw;
+  font-weight: 800;
+  color: #d9f5dc;
+  font-variant-numeric: tabular-nums;
+}
+.choke-heal-left[data-empty="true"] i,
+.choke-heal-left[data-empty="true"] b {
+  color: #8a8a8a;
+}
 .choke-hp-num i {
   font-style: normal;
   font-size: 1.05cqw;

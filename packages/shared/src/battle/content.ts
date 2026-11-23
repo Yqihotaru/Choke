@@ -12,6 +12,8 @@ const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]*$/, "id 只能用字母、
 
 /** 新手教学战用的遭遇；教程流程写死引用它，所以内容里必须有 */
 export const TUTORIAL_ENCOUNTER_ID = "tutorial-ghost"
+/** 遭遇没写 healBudget 时的治疗预算：最大生命的一半 */
+export const DEFAULT_HEAL_BUDGET = 0.5
 const element = z.enum(ELEMENTS)
 const int = z.number().int()
 
@@ -153,6 +155,11 @@ export const encounterSchema = z.strictObject({
   intro: z.string().optional(),
   /** 是否出现在自由讨伐列表里（教学关等不出现） */
   listed: z.boolean().default(true),
+  /**
+   * 本场治疗预算：最多靠治疗回最大生命的几倍（0.5 = 一半）；"unlimited" = 不限（永动机 BOSS 用）。
+   * 治疗技能、生生不息、吸血都算进去，用完就不能再回血
+   */
+  healBudget: z.union([z.number().min(0).max(3), z.literal("unlimited")]).default(DEFAULT_HEAL_BUDGET),
   /** 战斗背景图名，对应 public/battle-bg/<名>.jpg；缺省用遭遇 id */
   background: id.optional(),
 })
@@ -179,6 +186,8 @@ export interface EncounterSpec {
   intro?: string
   /** 背景图名（public/battle-bg/<名>.jpg）；图不存在时前端退回纯色 */
   background: string
+  /** 治疗预算（最大生命的倍数）；"unlimited" 不限 */
+  healBudget: number | "unlimited"
   stars: StarCondition[]
   enemy: EnemyDef & { id: string }
   supports: (EnemySupportDef & { id: string })[]
@@ -316,6 +325,7 @@ export function resolveEncounter(content: BattleContent, encounterId: string): E
     summary: encounter.summary,
     intro: encounter.intro,
     background: encounter.background ?? encounterId,
+    healBudget: encounter.healBudget,
     stars: encounter.stars,
     enemy: { id: encounter.enemy, ...enemy },
     supports: encounter.supports.map((supportId) => ({ id: supportId, ...content.supports[supportId]! })),

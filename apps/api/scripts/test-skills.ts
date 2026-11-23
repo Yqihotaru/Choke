@@ -163,7 +163,7 @@ for (const [id, job] of [
   const without = hpAfter(start("mage", ["warlock_frost"]))
   const s0 = start("mage", ["life_regen"])
   check("生生不息：带了每回合多回血", withIt > without, `${withIt} vs ${without}`)
-  check("生生不息：多回约 4% 最大生命", Math.abs(withIt - without - s0.teamHpMax * 0.04) <= 2)
+  check("生生不息：多回约 1.5% 最大生命", Math.abs(withIt - without - s0.teamHpMax * 0.015) <= 2)
   check("生生不息：被 Down 失效", hpAfter(down(start("mage", ["life_regen"]))) === without)
 }
 
@@ -189,6 +189,46 @@ for (const [id, job] of [
   const boosted = run(["healer_plus"], false)
   check("医者仁心：带了治疗量 +20%", Math.abs(boosted / plain - 1.2) < 0.03, `${boosted}/${plain}`)
   check("医者仁心：被 Down 失效", run(["healer_plus"], true) === plain)
+}
+
+// ---------- 7b. 治疗预算 ----------
+{
+  const make = (encounter: typeof spec) => {
+    const cards = inputs(
+      [
+        face("big", "tank", "L", 80, 6, ["bulwark_quake"]),
+        face("healer-a", "support", "L", 40, 0, ["healer_heal"]),
+        face("healer-b", "support", "L", 40, 0, ["healer_heal"]),
+      ],
+      10,
+    )
+    const s = createBattle(encounter, cards, { seed: "budget-1" })
+    s.teamHp = 1
+    return s
+  }
+  const heal = (s: BattleState, card: number) => apply(s, { type: "skill", card, skill: "healer_heal" })
+
+  const normal = make(spec)
+  check("治疗预算：默认是最大生命的一半", spec.healBudget === 0.5 && normal.healLeft === Math.round(normal.teamHpMax * 0.5))
+  const oneHeal = heal(make(spec), 1)
+  const onePct = (oneHeal.teamHp - 1) / oneHeal.teamHpMax
+  check("治疗预算：1 AP 治疗约 6%–10% 最大生命（15% 才算大恢复）", onePct > 0.06 && onePct < 0.1, `${(onePct * 100).toFixed(1)}%`)
+  check("治疗预算：治疗后预算按实际回血扣除", oneHeal.healLeft === normal.healLeft! - (oneHeal.teamHp - 1))
+
+  const tight = make({ ...spec, healBudget: 0.05 })
+  const cap = tight.healLeft!
+  const first = heal(tight, 1)
+  check("治疗预算：一次治疗最多回到预算上限", first.teamHp - 1 === cap && first.healLeft === 0, `${first.teamHp - 1} / ${cap}`)
+  const hpBefore = first.teamHp
+  const second = heal(first, 2)
+  check("治疗预算：预算用完后不能再靠治疗回血", second.teamHp === hpBefore)
+  check("治疗预算：用完时日志有提示", second.log.some((line) => line.includes("治疗预算已用尽")))
+
+  const endless = make({ ...spec, healBudget: "unlimited" })
+  check("治疗预算：unlimited 时不限（永动机 BOSS）", endless.healLeft === null)
+  const e1 = heal(endless, 1)
+  const e2 = heal(e1, 2)
+  check("治疗预算：不限时可以一直回", e2.teamHp > e1.teamHp && e2.healLeft === null)
 }
 
 // ---------- 8. 触发概率 ----------

@@ -368,6 +368,7 @@ export function createBattle(
   )
   const apMax = hasHighTier ? 10 : 7
   const teamHpMax = calcTeamHpMax(cards)
+  const healBudget = encounter.healBudget === "unlimited" ? null : Math.round(teamHpMax * encounter.healBudget)
 
   // 开局被动侧面支援（目前没有技能提供，留空）
   const playerSupports: SideSupportUnit[] = []
@@ -395,6 +396,8 @@ export function createBattle(
     swapCooldown: 0,
     teamHp: teamHpMax,
     teamHpMax,
+    healBudget,
+    healLeft: healBudget,
     teamStatuses: [],
     cards,
     bench,
@@ -635,12 +638,17 @@ function healParty(state: BattleState, rawAmount: number, label = "治疗") {
   const healBonus = teamEffectSum(state.cards, "healBonus")
   const healBlock = state.teamStatuses.some((s) => s.id === "heal_block") ? 0.5 : 1.0
   const amount = Math.round(rawAmount * (1 + healBonus) * healBlock)
+  const allowed = state.healLeft === null ? amount : Math.min(amount, state.healLeft)
   const before = state.teamHp
-  state.teamHp = Math.min(state.teamHpMax, state.teamHp + amount)
+  state.teamHp = Math.min(state.teamHpMax, state.teamHp + allowed)
   const actual = state.teamHp - before
+  if (state.healLeft !== null) state.healLeft -= actual
   if (actual > 0) {
     emit(state, { type: "heal", amount: actual, source: label, hpAfter: state.teamHp })
     log(state, `${label} 为队伍恢复 ${actual.toLocaleString("en-US")} HP`)
+  }
+  if (state.healLeft === 0 && allowed < amount) {
+    log(state, "本场治疗预算已用尽，队伍不能再靠治疗回血了")
   }
 }
 
