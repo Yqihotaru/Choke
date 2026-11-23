@@ -100,8 +100,20 @@ function ensure() {
   return { ctx, master }
 }
 
-/** 真实录音样本：public/sfx/manifest.json 里列出的音名走样本，其余回退合成。 */
-const samples = new Map<SfxName, AudioBuffer[]>()
+/**
+ * 每个音名用什么来源：
+ * - synth：纯合成（电子音）
+ * - sample：录音 + 合成低频体（战斗冲击音的默认）
+ * - bare：纯录音，不叠合成
+ * 没写的音名：有录音就走 sample，没有就走 synth。
+ * 音效试听页（/sfx-lab，仅开发模式）里选好后把结果填到这里。
+ */
+export type SfxSource = "synth" | "sample" | "bare"
+export const SFX_SOURCE: Partial<Record<SfxId, SfxSource>> = {}
+
+/** 真实录音样本：public/sfx/manifest.json 里列出的音名走样本，其余回退合成。解码失败的变体留 null，保证下标与清单对齐。 */
+const samples = new Map<SfxName, (AudioBuffer | null)[]>()
+let manifestData: Record<string, string[]> = {}
 let samplesLoading: Promise<void> | null = null
 
 function preloadSamples(c: AudioContext) {
@@ -116,6 +128,7 @@ function preloadSamples(c: AudioContext) {
     } catch {
       return
     }
+    manifestData = manifest
     await Promise.all(
       Object.entries(manifest).map(async ([name, files]) => {
         const decoded = await Promise.all(
@@ -129,8 +142,7 @@ function preloadSamples(c: AudioContext) {
             }
           }),
         )
-        const ok = decoded.filter((b): b is AudioBuffer => b !== null)
-        if (ok.length > 0) samples.set(name as SfxName, ok)
+        if (decoded.some((b) => b !== null)) samples.set(name as SfxName, decoded)
       }),
     )
   })()
@@ -145,17 +157,34 @@ const SAMPLE_BODY: Partial<Record<SfxName, (c: AudioContext, o: AudioNode, r: nu
   down: (c, o, r) => tone(c, o, { type: "sine", f0: 70, f1: 30, dur: 0.6, gain: 0.6 }, r),
 }
 
-function playSample(c: AudioContext, o: AudioNode, name: SfxName, rate: number) {
+interface PlayOptions {
+  source?: SfxSource
+  /** 指定第几个变体；不指定则随机 */
+  variant?: number
+  /** 关掉 ±3% 的音高随机 */
+  fixedPitch?: boolean
+}
+
+function playSample(c: AudioContext, o: AudioNode, name: SfxName, rate: number, opts: PlayOptions = {}) {
   const variants = samples.get(name)
   if (!variants) return false
+  const usable = variants.filter((b): b is AudioBuffer => b !== null)
+  const buffer = opts.variant != null ? variants[opts.variant] : usable[Math.floor(Math.random() * usable.length)]
+  if (!buffer) return false
   const src = c.createBufferSource()
-  src.buffer = variants[Math.floor(Math.random() * variants.length)]!
+  src.buffer = buffer
   // 同一个音每次略有不同，连点时不会像机关枪
-  src.playbackRate.value = rate * (0.97 + Math.random() * 0.06)
+  src.playbackRate.value = rate * (opts.fixedPitch ? 1 : 0.97 + Math.random() * 0.06)
   src.connect(o)
   src.start()
-  SAMPLE_BODY[name]?.(c, o, rate)
+  if (opts.source !== "bare") SAMPLE_BODY[name]?.(c, o, rate)
   return true
+}
+
+function render(c: AudioContext, o: AudioNode, name: SfxName, rate: number, opts: PlayOptions = {}) {
+  const source = opts.source ?? SFX_SOURCE[name] ?? (samples.has(name) ? "sample" : "synth")
+  if (source !== "synth" && playSample(c, o, name, rate, { ...opts, source })) return
+  SYNTH[name](c, o, rate)
 }
 
 interface ToneSpec {
@@ -459,10 +488,39 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
     const out = c.createGain()
     out.gain.value = options.volume ?? 1
     out.connect(m)
-    if (!playSample(c, out, name, options.rate ?? 1)) SYNTH[name](c, out, options.rate ?? 1)
+    render(c, out, name, options.rate ?? 1)
   } catch {
     // 无音频设备或被浏览器拦截时静默
   }
+}
+
+/** 试听页用：不节流，可指定来源与变体，等录音加载完再播。 */
+export async function previewSfx(name: SfxName, options: SfxOptions & PlayOptions = {}) {
+  const { ctx: c, master: m } = ensure()
+  await samplesLoading
+  const out = c.createGain()
+  out.gain.value = options.volume ?? 1
+  out.connect(m)
+  render(c, out, name, options.rate ?? 1, options)
+}
+
+/** 试听页用：录音清单（音名 → 文件）与每个变体的时长，等加载完才有。 */
+export async function loadSfxLibrary() {
+  ensure()
+  await samplesLoading
+  const durations: Record<string, (number | null)[]> = {}
+  for (const [name, variants] of samples) durations[name] = variants.map((b) => b?.duration ?? null)
+  return { manifest: manifestData, durations }
+}
+
+/** 试听页用：这个音名有没有合成版本。 */
+export function hasSynth(name: string): name is SfxName {
+  return name in SYNTH
+}
+
+/** 试听页用：这个音名播录音时是否会叠合成低频体。 */
+export function hasSampleBody(name: string) {
+  return name in SAMPLE_BODY
 }
 
 const REVEAL_BY_RARITY: Record<string, SfxName> = {

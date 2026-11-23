@@ -16,6 +16,10 @@ const CardLab = lazy(() =>
 const PoolLab = lazy(() =>
   import("@/pool/PoolLab").then((m) => ({ default: m.PoolLab }))
 )
+// 仅开发模式：正式版打包时这一行整个被摘掉，不会生成 chunk
+const SfxLab = import.meta.env.DEV
+  ? lazy(() => import("@/lab/SfxLab").then((m) => ({ default: m.SfxLab })))
+  : null
 const LoginPage = lazy(() =>
   import("@/desk/LoginPage").then((m) => ({ default: m.LoginPage }))
 )
@@ -78,6 +82,16 @@ export function App() {
       <>
         <Suspense fallback={FALLBACK}>
           <PoolLab />
+        </Suspense>
+        <BackToDesk />
+      </>
+    )
+  }
+  if (SfxLab && path.endsWith("sfx-lab")) {
+    return (
+      <>
+        <Suspense fallback={FALLBACK}>
+          <SfxLab />
         </Suspense>
         <BackToDesk />
       </>

@@ -27,6 +27,17 @@ const TOOLS = [
     note: "闪卡 / 箔面效果的视觉参考页。",
     external: true,
   },
+  // 音效实验室只在开发模式存在，正式版不带
+  ...(import.meta.env.DEV
+    ? [
+        {
+          href: "/sfx-lab",
+          label: "音效实验室",
+          note: "按游戏内的播放链路试听全部音效，对比合成与录音，挑选素材并导出清单。",
+          external: false,
+        },
+      ]
+    : []),
 ]
 
 const CONTRIBUTORS = [
@@ -116,10 +127,6 @@ export function AboutPanel() {
             <p className="bk-note">
               <a href="/sfx/CREDITS.md" target="_blank" rel="noreferrer">
                 逐文件出处
-              </a>
-              {" · "}
-              <a href="/sfx-audition.html" target="_blank" rel="noreferrer">
-                音效试听（开发用）
               </a>
             </p>
           </div>

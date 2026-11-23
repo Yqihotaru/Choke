@@ -1,0 +1,416 @@
+{
+  "groups": [
+    [
+      "UI 与桌面",
+      [
+        "click",
+        "tick",
+        "pick",
+        "lift",
+        "drop",
+        "thud",
+        "paper",
+        "flip",
+        "slide",
+        "coin",
+        "equip",
+        "unequip",
+        "deny",
+        "error",
+        "success",
+        "levelup"
+      ]
+    ],
+    [
+      "熔卡 / 分解",
+      [
+        "melt",
+        "shatter"
+      ]
+    ],
+    [
+      "开包",
+      [
+        "tear",
+        "charge",
+        "shine",
+        "reveal-c",
+        "reveal-r",
+        "reveal-e",
+        "reveal-l",
+        "reveal-radiant",
+        "reveal-prismatic"
+      ]
+    ],
+    [
+      "战斗",
+      [
+        "hit",
+        "crit",
+        "miss",
+        "heal",
+        "guard",
+        "turn",
+        "cutin",
+        "break",
+        "down",
+        "win",
+        "lose"
+      ]
+    ]
+  ],
+  "uses": {
+    "click": "通用按钮点击",
+    "tick": "选择 / 悬停的极轻反馈",
+    "pick": "选中一张卡",
+    "lift": "拿起卡牌",
+    "drop": "把卡放下到桌面",
+    "thud": "抽屉合上 / 卡放入背包的闷响",
+    "paper": "纸张沙沙(翻看卡册、打开面板)",
+    "flip": "翻牌 / 翻页",
+    "slide": "抽屉滑轨 / 卡牌滑动",
+    "coin": "金币入账",
+    "levelup": "升级短旋律",
+    "melt": "熔卡:卡牌融化成能量",
+    "shatter": "分解卡牌:碎裂",
+    "deny": "操作被拒绝(条件不满足)",
+    "error": "错误提示",
+    "success": "操作成功",
+    "equip": "装备上阵",
+    "unequip": "取下卡牌",
+    "tear": "撕开卡包",
+    "charge": "稀有卡蓄力(开包前奏,上升感)",
+    "shine": "闪光(稀有卡高光)",
+    "reveal-c": "开包翻牌 · 普通(就是普通翻牌声)",
+    "reveal-r": "开包翻牌 · 稀有(翻牌 + 轻柔风铃)",
+    "reveal-e": "开包翻牌 · 史诗(翻牌 + 双层风铃)",
+    "reveal-l": "开包翻牌 · 传说(翻牌 + 钟琴与风铃)",
+    "reveal-radiant": "开包翻牌 · 辉耀(蓄力上升 → 钟声 + 钟琴爆发)",
+    "reveal-prismatic": "开包翻牌 · 棱彩(最华丽:蓄力 → 钟声 + 钟琴 + 胜利乐句)",
+    "hit": "普通命中(叠在合成低频上,≤0.4s)",
+    "crit": "暴击(叠在合成低频上,≤0.4s)",
+    "miss": "未命中 / 闪避的挥空声",
+    "heal": "治疗",
+    "guard": "防御 / 格挡",
+    "turn": "回合切换",
+    "cutin": "必杀技插入画面",
+    "break": "破防 / 击破",
+    "down": "单位倒下",
+    "win": "战斗胜利短 jingle",
+    "lose": "战斗失败短 jingle"
+  },
+  "sources": {
+    "click/click-1.mp3": "Kenney UI Audio · click2.ogg",
+    "click/click-2.mp3": "Kenney UI Audio · click3.ogg",
+    "click/click-3.mp3": "Kenney UI Audio · mouseclick1.ogg",
+    "click/click-4.mp3": "OGA 100 CC0 SFX · switch_01.ogg",
+    "tick/tick-1.mp3": "Kenney UI Audio · rollover2.ogg",
+    "tick/tick-2.mp3": "Kenney UI Audio · rollover3.ogg",
+    "tick/tick-3.mp3": "Kenney Interface Sounds · tick_004.ogg",
+    "pick/pick-1.mp3": "Kenney Casino Audio · chip-lay-1.ogg",
+    "pick/pick-2.mp3": "Kenney Casino Audio · chip-lay-3.ogg",
+    "pick/pick-3.mp3": "Kenney Casino Audio · chips-stack-6.ogg",
+    "lift/lift-1.mp3": "Kenney Casino Audio · cards-pack-take-out-1.ogg",
+    "lift/lift-2.mp3": "Kenney Casino Audio · cards-pack-take-out-2.ogg",
+    "lift/lift-3.mp3": "Kenney Casino Audio · card-fan-1.ogg",
+    "drop/drop-1.mp3": "Kenney Casino Audio · card-place-1.ogg",
+    "drop/drop-2.mp3": "Kenney Casino Audio · card-place-2.ogg",
+    "drop/drop-3.mp3": "Kenney Casino Audio · card-place-4.ogg",
+    "drop/drop-4.mp3": "Kenney Casino Audio · card-place-3.ogg",
+    "thud/thud-1.mp3": "Kenney RPG Audio · bookPlace1.ogg",
+    "thud/thud-2.mp3": "Kenney RPG Audio · bookPlace2.ogg",
+    "thud/thud-3.mp3": "Kenney Impact Sounds · impactSoft_heavy_001.ogg",
+    "thud/thud-4.mp3": "Kenney RPG Audio · dropLeather.ogg",
+    "paper/paper-1.mp3": "OGA Various Paper Sound Effects · Paper Sound - 1.mp3",
+    "paper/paper-2.mp3": "OGA Various Paper Sound Effects · Paper Sound - 2.mp3",
+    "paper/paper-3.mp3": "OGA Various Paper Sound Effects · Paper Sound - 3.mp3",
+    "paper/paper-4.mp3": "OGA 100 CC0 SFX · paper_01.ogg",
+    "flip/flip-1.mp3": "Kenney RPG Audio · bookFlip1.ogg",
+    "flip/flip-2.mp3": "Kenney RPG Audio · bookFlip3.ogg",
+    "flip/flip-3.mp3": "BigSoundBank · Pages that turn #6",
+    "flip/flip-4.mp3": "BigSoundBank · Pages that turn #4",
+    "slide/slide-1.mp3": "Kenney Casino Audio · card-slide-1.ogg",
+    "slide/slide-2.mp3": "Kenney Casino Audio · card-slide-3.ogg",
+    "slide/slide-3.mp3": "Kenney Casino Audio · card-slide-5.ogg",
+    "slide/slide-4.mp3": "Kenney Casino Audio · card-shove-3.ogg",
+    "coin/coin-1.mp3": "Kenney RPG Audio · handleCoins2.ogg",
+    "coin/coin-2.mp3": "Kenney RPG Audio · handleCoins.ogg",
+    "coin/coin-3.mp3": "Kenney Casino Audio · chips-collide-1.ogg",
+    "coin/coin-4.mp3": "Kenney Casino Audio · chips-handle-3.ogg",
+    "levelup/levelup-1.mp3": "OGA 85 Short music jingles (Kenney) · jingles_STEEL10.ogg",
+    "levelup/levelup-2.mp3": "OGA 85 Short music jingles (Kenney) · jingles_PIZZA10.ogg",
+    "levelup/levelup-3.mp3": "OGA 85 Short music jingles (Kenney) · jingles_SAX10.ogg",
+    "melt/melt-1.mp3": "Kenney Sci-Fi Sounds · slime_000.ogg",
+    "melt/melt-2.mp3": "Kenney Sci-Fi Sounds · slime_001.ogg",
+    "melt/melt-3.mp3": "BigSoundBank · Chimes \"dream\" #7  +  Kenney Sci-Fi Sounds · slime_000.ogg",
+    "shatter/shatter-1.mp3": "OGA 75 CC0 breaking / falling / hit sfx · bfh1_glass_breaking_02.ogg",
+    "shatter/shatter-2.mp3": "OGA 75 CC0 breaking / falling / hit sfx · bfh1_glass_breaking_05.ogg",
+    "shatter/shatter-3.mp3": "BigSoundBank · Glass Burst",
+    "shatter/shatter-4.mp3": "BigSoundBank · Broken Glass of Champagne",
+    "deny/deny-1.mp3": "Kenney RPG Audio · metalLatch.ogg",
+    "deny/deny-2.mp3": "Kenney RPG Audio · creak3.ogg",
+    "deny/deny-3.mp3": "Kenney Impact Sounds · impactSoft_medium_001.ogg",
+    "error/error-1.mp3": "Kenney Impact Sounds · impactPlate_light_002.ogg",
+    "error/error-2.mp3": "Kenney Impact Sounds · impactMetal_light_003.ogg",
+    "error/error-3.mp3": "Kenney Interface Sounds · error_006.ogg",
+    "success/success-1.mp3": "OGA 85 Short music jingles (Kenney) · jingles_PIZZA08.ogg",
+    "success/success-2.mp3": "OGA 85 Short music jingles (Kenney) · jingles_STEEL08.ogg",
+    "success/success-3.mp3": "BigSoundBank · Chimes \"butterfly\" #2",
+    "equip/equip-1.mp3": "Kenney RPG Audio · beltHandle1.ogg",
+    "equip/equip-2.mp3": "Kenney RPG Audio · beltHandle2.ogg",
+    "equip/equip-3.mp3": "Kenney RPG Audio · clothBelt.ogg",
+    "equip/equip-4.mp3": "Kenney RPG Audio · metalClick.ogg",
+    "unequip/unequip-1.mp3": "Kenney RPG Audio · handleSmallLeather.ogg",
+    "unequip/unequip-2.mp3": "Kenney RPG Audio · handleSmallLeather2.ogg",
+    "unequip/unequip-3.mp3": "Kenney RPG Audio · cloth2.ogg",
+    "unequip/unequip-4.mp3": "Kenney RPG Audio · cloth3.ogg",
+    "tear/tear-1.mp3": "Kenney Casino Audio · cards-pack-open-1.ogg",
+    "tear/tear-2.mp3": "Kenney Casino Audio · cards-pack-open-2.ogg",
+    "tear/tear-3.mp3": "BigSoundBank · Torn paper #9",
+    "tear/tear-4.mp3": "OGA Various Paper Sound Effects · Paper Ripped - 1.mp3",
+    "charge/charge-1.mp3": "BigSoundBank · Chimes \"Dream\" #8",
+    "charge/charge-2.mp3": "BigSoundBank · Chimes \"Dream\" #1",
+    "charge/charge-3.mp3": "BigSoundBank · Glockenspiel",
+    "shine/shine-1.mp3": "BigSoundBank · Chimes \"dream\" #3",
+    "shine/shine-2.mp3": "BigSoundBank · Chimes \"dream\" #5",
+    "shine/shine-3.mp3": "BigSoundBank · Chimes \"butterfly\" #3",
+    "reveal-c/reveal-c-1.mp3": "Kenney Casino Audio · card-slide-8.ogg",
+    "reveal-c/reveal-c-2.mp3": "Kenney Casino Audio · card-slide-6.ogg",
+    "reveal-c/reveal-c-3.mp3": "Kenney RPG Audio · bookFlip2.ogg",
+    "reveal-r/reveal-r-1.mp3": "Kenney Casino Audio · card-slide-2.ogg  +  BigSoundBank · Chimes \"dream\" #3",
+    "reveal-r/reveal-r-2.mp3": "Kenney Casino Audio · card-slide-4.ogg  +  BigSoundBank · Chimes \"dream\" #2",
+    "reveal-e/reveal-e-1.mp3": "Kenney Casino Audio · card-slide-6.ogg  +  BigSoundBank · Chimes \"butterfly\" #1  +  BigSoundBank · Chimes \"dream\" #4",
+    "reveal-e/reveal-e-2.mp3": "Kenney Casino Audio · card-slide-7.ogg  +  BigSoundBank · Chimes \"butterfly\" #2  +  BigSoundBank · Chimes \"dream\" #5",
+    "reveal-l/reveal-l-1.mp3": "Kenney Casino Audio · card-slide-1.ogg  +  BigSoundBank · Glockenspiel  +  BigSoundBank · Chimes \"Dream\" #8",
+    "reveal-l/reveal-l-2.mp3": "Kenney Casino Audio · card-place-3.ogg  +  BigSoundBank · Chimes \"Dream\" #8  +  BigSoundBank · Chimes \"butterfly\" #3  +  BigSoundBank · Chimes \"dream\" #7",
+    "reveal-radiant/reveal-radiant-1.mp3": "BigSoundBank · Chimes \"Dream\" #8  +  Kenney Impact Sounds · impactBell_heavy_002.ogg  +  BigSoundBank · Dreamcatcher  +  BigSoundBank · Glockenspiel",
+    "reveal-radiant/reveal-radiant-2.mp3": "BigSoundBank · Chimes \"Dream\" #1  +  Kenney Casino Audio · card-place-3.ogg  +  BigSoundBank · Chimes \"butterfly\" #2  +  BigSoundBank · Chimes \"dream\" #6",
+    "reveal-prismatic/reveal-prismatic-1.mp3": "BigSoundBank · Chimes \"Dream\" #1  +  Kenney Impact Sounds · impactBell_heavy_000.ogg  +  BigSoundBank · Dreamcatcher  +  BigSoundBank · Glockenspiel  +  OGA 85 Short music jingles (Kenney) · jingles_STEEL02.ogg",
+    "reveal-prismatic/reveal-prismatic-2.mp3": "BigSoundBank · Chimes \"Dream\" #8  +  Kenney Impact Sounds · impactBell_heavy_001.ogg  +  BigSoundBank · Chimes \"butterfly\" #3  +  BigSoundBank · Chimes \"butterfly\" #1  +  OGA 85 Short music jingles (Kenney) · jingles_PIZZA02.ogg",
+    "hit/hit-1.mp3": "Kenney Impact Sounds · impactPunch_medium_000.ogg",
+    "hit/hit-2.mp3": "Kenney Impact Sounds · impactPunch_medium_001.ogg",
+    "hit/hit-3.mp3": "Kenney Impact Sounds · impactWood_heavy_000.ogg",
+    "crit/crit-1.mp3": "Kenney Impact Sounds · impactPunch_heavy_002.ogg  +  Kenney Impact Sounds · impactMetal_light_000.ogg",
+    "crit/crit-2.mp3": "Kenney Impact Sounds · impactPunch_heavy_003.ogg  +  Kenney Impact Sounds · impactMetal_light_001.ogg",
+    "crit/crit-3.mp3": "Kenney Impact Sounds · impactMetal_heavy_001.ogg",
+    "miss/miss-1.mp3": "Kenney RPG Audio · cloth1.ogg",
+    "miss/miss-2.mp3": "Kenney RPG Audio · cloth2.ogg",
+    "miss/miss-3.mp3": "Kenney RPG Audio · clothBelt.ogg",
+    "heal/heal-1.mp3": "BigSoundBank · Chimes \"dream\" #6",
+    "heal/heal-2.mp3": "BigSoundBank · Chimes \"dream\" #7",
+    "guard/guard-1.mp3": "Kenney Impact Sounds · impactMetal_medium_000.ogg",
+    "guard/guard-2.mp3": "Kenney Impact Sounds · impactMetal_medium_001.ogg",
+    "guard/guard-3.mp3": "Kenney Impact Sounds · impactPlate_medium_000.ogg",
+    "turn/turn-1.mp3": "Kenney Impact Sounds · impactBell_heavy_004.ogg",
+    "turn/turn-2.mp3": "Kenney Impact Sounds · impactBell_heavy_003.ogg",
+    "turn/turn-3.mp3": "OGA 100 CC0 SFX · bell_02.ogg",
+    "cutin/cutin-1.mp3": "Kenney RPG Audio · knifeSlice.ogg  +  Kenney Impact Sounds · impactMetal_light_000.ogg",
+    "cutin/cutin-2.mp3": "Kenney RPG Audio · knifeSlice2.ogg  +  Kenney Impact Sounds · impactPlate_light_000.ogg",
+    "break/break-1.mp3": "Kenney Impact Sounds · impactGlass_heavy_000.ogg",
+    "break/break-2.mp3": "Kenney Impact Sounds · impactGlass_heavy_002.ogg",
+    "break/break-3.mp3": "Kenney Impact Sounds · impactMetal_heavy_001.ogg",
+    "down/down-1.mp3": "Kenney Impact Sounds · impactSoft_heavy_002.ogg",
+    "down/down-2.mp3": "Kenney RPG Audio · dropLeather.ogg",
+    "down/down-3.mp3": "Kenney Impact Sounds · impactWood_heavy_003.ogg",
+    "win/win-1.mp3": "OGA 85 Short music jingles (Kenney) · jingles_STEEL02.ogg",
+    "win/win-2.mp3": "OGA 85 Short music jingles (Kenney) · jingles_PIZZA02.ogg",
+    "win/win-3.mp3": "OGA 85 Short music jingles (Kenney) · jingles_SAX02.ogg",
+    "lose/lose-1.mp3": "OGA 85 Short music jingles (Kenney) · jingles_STEEL01.ogg",
+    "lose/lose-2.mp3": "OGA 85 Short music jingles (Kenney) · jingles_STEEL07.ogg",
+    "lose/lose-3.mp3": "OGA 85 Short music jingles (Kenney) · jingles_PIZZA01.ogg"
+  },
+  "flags": {
+    "click/click-1.mp3": [],
+    "click/click-2.mp3": [],
+    "click/click-3.mp3": [],
+    "click/click-4.mp3": [],
+    "tick/tick-1.mp3": [],
+    "tick/tick-2.mp3": [],
+    "tick/tick-3.mp3": [
+      "偏电子/设计音"
+    ],
+    "pick/pick-1.mp3": [],
+    "pick/pick-2.mp3": [],
+    "pick/pick-3.mp3": [],
+    "lift/lift-1.mp3": [],
+    "lift/lift-2.mp3": [],
+    "lift/lift-3.mp3": [],
+    "drop/drop-1.mp3": [],
+    "drop/drop-2.mp3": [],
+    "drop/drop-3.mp3": [],
+    "drop/drop-4.mp3": [],
+    "thud/thud-1.mp3": [],
+    "thud/thud-2.mp3": [],
+    "thud/thud-3.mp3": [],
+    "thud/thud-4.mp3": [],
+    "paper/paper-1.mp3": [],
+    "paper/paper-2.mp3": [],
+    "paper/paper-3.mp3": [],
+    "paper/paper-4.mp3": [],
+    "flip/flip-1.mp3": [],
+    "flip/flip-2.mp3": [],
+    "flip/flip-3.mp3": [],
+    "flip/flip-4.mp3": [],
+    "slide/slide-1.mp3": [],
+    "slide/slide-2.mp3": [],
+    "slide/slide-3.mp3": [],
+    "slide/slide-4.mp3": [],
+    "coin/coin-1.mp3": [],
+    "coin/coin-2.mp3": [],
+    "coin/coin-3.mp3": [],
+    "coin/coin-4.mp3": [],
+    "levelup/levelup-1.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "levelup/levelup-2.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "levelup/levelup-3.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "melt/melt-1.mp3": [
+      "偏电子/设计音"
+    ],
+    "melt/melt-2.mp3": [
+      "偏电子/设计音"
+    ],
+    "melt/melt-3.mp3": [
+      "多层混合",
+      "含倒放衍生",
+      "偏电子/设计音"
+    ],
+    "shatter/shatter-1.mp3": [],
+    "shatter/shatter-2.mp3": [],
+    "shatter/shatter-3.mp3": [],
+    "shatter/shatter-4.mp3": [],
+    "deny/deny-1.mp3": [],
+    "deny/deny-2.mp3": [],
+    "deny/deny-3.mp3": [],
+    "error/error-1.mp3": [],
+    "error/error-2.mp3": [],
+    "error/error-3.mp3": [
+      "偏电子/设计音"
+    ],
+    "success/success-1.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "success/success-2.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "success/success-3.mp3": [],
+    "equip/equip-1.mp3": [],
+    "equip/equip-2.mp3": [],
+    "equip/equip-3.mp3": [],
+    "equip/equip-4.mp3": [],
+    "unequip/unequip-1.mp3": [],
+    "unequip/unequip-2.mp3": [],
+    "unequip/unequip-3.mp3": [],
+    "unequip/unequip-4.mp3": [],
+    "tear/tear-1.mp3": [],
+    "tear/tear-2.mp3": [],
+    "tear/tear-3.mp3": [],
+    "tear/tear-4.mp3": [],
+    "charge/charge-1.mp3": [
+      "含倒放衍生"
+    ],
+    "charge/charge-2.mp3": [
+      "含倒放衍生"
+    ],
+    "charge/charge-3.mp3": [
+      "含倒放衍生"
+    ],
+    "shine/shine-1.mp3": [],
+    "shine/shine-2.mp3": [],
+    "shine/shine-3.mp3": [],
+    "reveal-c/reveal-c-1.mp3": [],
+    "reveal-c/reveal-c-2.mp3": [],
+    "reveal-c/reveal-c-3.mp3": [],
+    "reveal-r/reveal-r-1.mp3": [
+      "多层混合"
+    ],
+    "reveal-r/reveal-r-2.mp3": [
+      "多层混合"
+    ],
+    "reveal-e/reveal-e-1.mp3": [
+      "多层混合"
+    ],
+    "reveal-e/reveal-e-2.mp3": [
+      "多层混合"
+    ],
+    "reveal-l/reveal-l-1.mp3": [
+      "多层混合"
+    ],
+    "reveal-l/reveal-l-2.mp3": [
+      "多层混合"
+    ],
+    "reveal-radiant/reveal-radiant-1.mp3": [
+      "多层混合",
+      "含倒放衍生"
+    ],
+    "reveal-radiant/reveal-radiant-2.mp3": [
+      "多层混合",
+      "含倒放衍生"
+    ],
+    "reveal-prismatic/reveal-prismatic-1.mp3": [
+      "多层混合",
+      "含倒放衍生",
+      "乐器 jingle(非现场录音)"
+    ],
+    "reveal-prismatic/reveal-prismatic-2.mp3": [
+      "多层混合",
+      "含倒放衍生",
+      "乐器 jingle(非现场录音)"
+    ],
+    "hit/hit-1.mp3": [],
+    "hit/hit-2.mp3": [],
+    "hit/hit-3.mp3": [],
+    "crit/crit-1.mp3": [
+      "多层混合"
+    ],
+    "crit/crit-2.mp3": [
+      "多层混合"
+    ],
+    "crit/crit-3.mp3": [],
+    "miss/miss-1.mp3": [],
+    "miss/miss-2.mp3": [],
+    "miss/miss-3.mp3": [],
+    "heal/heal-1.mp3": [],
+    "heal/heal-2.mp3": [],
+    "guard/guard-1.mp3": [],
+    "guard/guard-2.mp3": [],
+    "guard/guard-3.mp3": [],
+    "turn/turn-1.mp3": [],
+    "turn/turn-2.mp3": [],
+    "turn/turn-3.mp3": [],
+    "cutin/cutin-1.mp3": [
+      "多层混合"
+    ],
+    "cutin/cutin-2.mp3": [
+      "多层混合"
+    ],
+    "break/break-1.mp3": [],
+    "break/break-2.mp3": [],
+    "break/break-3.mp3": [],
+    "down/down-1.mp3": [],
+    "down/down-2.mp3": [],
+    "down/down-3.mp3": [],
+    "win/win-1.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "win/win-2.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "win/win-3.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "lose/lose-1.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "lose/lose-2.mp3": [
+      "乐器 jingle(非现场录音)"
+    ],
+    "lose/lose-3.mp3": [
+      "乐器 jingle(非现场录音)"
+    ]
+  }
+}

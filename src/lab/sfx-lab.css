@@ -1,0 +1,266 @@
+.sfxlab {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --line: #262b36;
+  --txt: #e6e8ee;
+  --mut: #8b93a5;
+  --acc: #7aa2ff;
+  --ok: #5fd38d;
+  --bad: #ff6b6b;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--txt);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  color-scheme: dark;
+}
+
+.sfxlab * {
+  box-sizing: border-box;
+}
+
+.sfxlab__head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(15, 17, 21, 0.95);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 20px 10px 96px;
+}
+
+.sfxlab__head h1 {
+  margin: 0 0 2px;
+  font-size: 16px;
+}
+
+.sfxlab__head p {
+  margin: 0;
+  color: var(--mut);
+  font-size: 12px;
+}
+
+.sfxlab code {
+  background: var(--panel);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--acc);
+}
+
+.sfxlab kbd {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+  font-size: 11px;
+}
+
+.sfxlab__bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--mut);
+}
+
+.sfxlab__bar input[type="range"] {
+  width: 120px;
+  vertical-align: middle;
+}
+
+.sfxlab__bar button,
+.sfxlab__bar input[type="search"],
+.sfxlab select {
+  background: var(--panel);
+  color: var(--txt);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font: inherit;
+}
+
+.sfxlab__bar button {
+  cursor: pointer;
+}
+
+.sfxlab__bar button:hover {
+  border-color: var(--acc);
+}
+
+.sfxlab__main {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 8px 20px 80px;
+}
+
+.sfxlab h2 {
+  margin: 28px 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--mut);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+
+.sfxlab__error {
+  margin: 20px 0;
+  padding: 12px;
+  border: 1px solid var(--bad);
+  border-radius: 8px;
+  color: var(--bad);
+}
+
+.sfxlab__muted {
+  color: var(--mut);
+  font-size: 12px;
+}
+
+.sfxlab__gap {
+  margin-left: 16px;
+}
+
+.sfxlab__name {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 10px 0;
+  padding: 10px 12px;
+}
+
+.sfxlab__head-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sfxlab__title {
+  font-weight: 600;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.sfxlab__use {
+  color: var(--mut);
+  flex: 1;
+}
+
+.sfxlab__row-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.sfxlab__btn,
+.sfxlab__chip {
+  background: #222735;
+  color: var(--txt);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.sfxlab__btn:hover,
+.sfxlab__chip:hover {
+  border-color: var(--acc);
+}
+
+.sfxlab__btn.is-last {
+  border-color: var(--acc);
+  background: #1a2132;
+}
+
+.sfxlab__chip {
+  background: transparent;
+  color: var(--mut);
+}
+
+.sfxlab__chip.is-on {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.sfxlab__variant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  margin-top: 4px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.sfxlab__variant:hover {
+  background: #1d212b;
+}
+
+.sfxlab__variant.is-cur {
+  border-color: var(--acc);
+  background: #1a2132;
+}
+
+.sfxlab__play {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #2a3042;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.sfxlab__file {
+  font-family: ui-monospace, Consolas, monospace;
+  min-width: 200px;
+}
+
+.sfxlab__dur {
+  color: var(--mut);
+  width: 56px;
+  text-align: right;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.sfxlab__src {
+  color: var(--mut);
+  flex: 1;
+  font-size: 12px;
+}
+
+.sfxlab__tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 8px;
+  background: #2b2438;
+  color: #c9a8ff;
+}
+
+.sfxlab__mark {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--mut);
+  border-radius: 6px;
+  width: 28px;
+  height: 26px;
+  cursor: pointer;
+  flex: none;
+}
+
+.sfxlab__mark.is-on.is-keep {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.sfxlab__mark.is-on.is-drop {
+  color: var(--bad);
+  border-color: var(--bad);
+}
