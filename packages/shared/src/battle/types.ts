@@ -116,7 +116,7 @@ export interface EnemyIntent {
   hardToInterrupt?: boolean
   /** 拆支援招式（break_support）的拆除强度，默认 1 */
   breakTier?: number
-  /** 是否已被刺客打断取消 */
+  /** 是否已被打断取消 */
   interrupted?: boolean
   /** 是否为蓄力满槽释放的大招 */
   isChargedUltimate?: boolean
@@ -321,7 +321,7 @@ export interface BattleState {
   downCount: number
   /** 本回合主动防御档位 0–4 */
   defenseTier: number
-  /** 本回合刺客是否已尝试过打断（每回合限 1 次） */
+  /** 本回合是否已尝试过打断（每回合限 1 次） */
   interruptUsedThisTurn: boolean
   /** 本回合是否已在本回合行动过（一旦行动过，本回合不可再主动换人） */
   hasActedThisTurn: boolean

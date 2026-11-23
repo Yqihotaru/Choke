@@ -33,7 +33,7 @@ export const EXECUTE_LOW_HP_RATIO = 0.4
 export const STATUS_CHANCE_BY_TIER = { normal: 1, elite: 0.8, boss: 0.65 } as const
 
 /**
- * 打断（刺客盲抽）：成功率 = 档位基础率 × 施放者稀有度系数 × （难打断 ×0.4），限制在 5%–95%。
+ * 打断（盲抽打断技能）：成功率 = 档位基础率 × 施放者稀有度系数 × （难打断 ×0.4），限制在 5%–95%。
  * 盲抽时难打断的招式权重 0.4，其他招式 1。
  */
 export const INTERRUPT_BASE_RATE = { normal: 0.65, elite: 0.55, boss: 0.45 } as const

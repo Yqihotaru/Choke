@@ -266,7 +266,6 @@ export const CardFaceB = memo(function CardFaceB({
                 <ElementGlyph element={skill.element} />
               </span>
               <span className="cfb__skill-name">{skill.name}</span>
-              {skill.mp !== undefined && <span className="cfb__mp">{skill.mp}</span>}
               {skill.passive ? <span className="cfb__passive">被动</span> : <span className="cfb__ap">{skill.ap}</span>}
             </div>
           ))}
@@ -1417,7 +1416,7 @@ export const RARITIES = ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"] as con
 
 export type Rarity = (typeof RARITIES)[number]
 
-/** 职业四大类；十四子职业后续在此扩展 */
+/** 职业四大类；没有子职业，技能直接归大职业 */
 export type Job = "tank" | "warrior" | "mage" | "support"
 
 /** 九属性，挂在技能上，不挂在卡上 */
@@ -1451,9 +1450,7 @@ export interface CardSkill {
   element: Element
   /** 行动点消耗 */
   ap: number
-  /** 法系才有的 MP 消耗 */
-  mp?: number
-  /** 被动技能：AP 恒 0，且不显示 MP */
+  /** 被动技能：AP 恒 0 */
   passive?: boolean
 }
 

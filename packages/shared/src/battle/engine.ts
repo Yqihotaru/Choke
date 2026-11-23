@@ -360,7 +360,7 @@ export function createBattle(
   const apMax = hasHighTier ? 10 : 7
   const teamHpMax = calcTeamHpMax(cards)
 
-  // 开局被动侧面支援（如圣骑士在场自动带 1 格初阶圣印）
+  // 开局被动侧面支援（目前没有技能提供，留空）
   const playerSupports: SideSupportUnit[] = []
 
   const state: BattleState = {
@@ -691,7 +691,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
     card.accumulatedUses[skill.id] = (card.accumulatedUses[skill.id] ?? 0) + 1
   }
 
-  // 狂战士等卖血换输出技能（§6.5 扣除队伍 HP，最低保留 1 HP）
+  // 卖血换输出技能（§6.5 扣除队伍 HP，最低保留 1 HP）
   if (skill.selfHpCostPct && state.teamHp > 1) {
     const hpCost = Math.min(state.teamHp - 1, Math.round(state.teamHpMax * skill.selfHpCostPct))
     if (hpCost > 0) {
@@ -748,7 +748,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
       }
 
       case "interrupt": {
-        // 刺客专属盲抽打断（§10.4）：攻击照常结算，打断只是额外的一次判定
+        // 盲抽打断（§10.4）：攻击照常结算，打断只是额外的一次判定
         state.interruptUsedThisTurn = true
         applyDamageToEnemy(state, card, skill, consumedTrigger)
         if (state.phase !== "player") break
@@ -893,7 +893,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           amount: skill.amount ?? 0.2,
           turns: skill.turns ?? 2,
         })
-        // 吟游诗人专拐技能：直接为未行动队友点亮 BOOST
+        // 专拐技能：直接为未行动队友点亮 BOOST
         if (skill.boostAllies) {
           const candidates = state.cards.filter((c, idx) => idx !== cardIndex && !c.down && !c.acted && !c.trigger)
           for (const target of candidates.slice(0, skill.boostAllies)) {
@@ -1046,7 +1046,7 @@ export function swapBattleCard(
 /**
  * 我方回合开始自动序列（严格遵循 §6.1 & §8.1 顺序）：
  * 1. 侧面支援自动行动（攻击型 60% 发动率，50% 伤害，每段命中按支援的 combo 字段加 Combo）
- * 2. 迅捷卡抢攻判定（游侠/刺客/破法者，70% 伤害，命中 +1 Combo）
+ * 2. 迅捷卡抢攻判定（带迅捷被动的卡，70% 伤害，命中 +1 Combo）
  * 3. 主队开始消费 AP
  */
 function runPlayerTurnStartSequence(state: BattleState) {
@@ -1123,7 +1123,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
       const card = state.cards[idx]!
       if (card.down || !hasSwift(card)) continue
       if (card.statuses.some((s) => s.id === "slow" || s.id === "stun")) continue
-      // 游侠/刺客/破法者抢攻率（默认 12% 让战中能稳定体验到抢攻垫刀，文档基础 4%+迅捷专精）
+      // 迅捷卡抢攻率（默认 12% 让战中能稳定体验到抢攻垫刀，文档基础 4%+迅捷专精）
       if (roll(state, "player") > PREEMPTIVE_RATE) continue
 
       checkEnemyWakeUp(state)
@@ -1497,7 +1497,7 @@ export function endTurn(state: BattleState): string | null {
     return null
   }
 
-  // 4. 结算我方队伍 DOT 与生术师每回合回复
+  // 4. 结算我方队伍 DOT 与每回合回复
   for (const status of state.teamStatuses) {
     if (status.id === "burn" || status.id === "poison" || status.id === "bleed") {
       const loss = Math.round(state.teamHpMax * 0.03 * (status.stacks ?? 1))

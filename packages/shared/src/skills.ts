@@ -175,7 +175,7 @@ export const ARCHETYPE_COEF: Record<Job, number> = {
 const S = (skill: SkillDef) => skill
 
 export const SKILLS: Record<string, SkillDef> = {
-  /* ==================== 坦克：肉坦 (bulwark) ==================== */
+  /* ==================== 坦克：bulwark_* ==================== */
   bulwark_taunt: S({
     id: "bulwark_taunt",
     job: "tank",
@@ -229,7 +229,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：开局自带 2 回合【荆棘】，受击时按自身 INT 反弹固定魔法伤害",
   }),
 
-  /* ==================== 坦克：战坦 (warden) ==================== */
+  /* ==================== 坦克：warden_* ==================== */
   warden_bash: S({
     id: "warden_bash",
     job: "tank",
@@ -288,7 +288,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：常驻 DEF +10%",
   }),
 
-  /* ==================== 战士：狂战士 (berserker) ==================== */
+  /* ==================== 战士：berserker_* ==================== */
   berserker_zero: S({
     id: "berserker_zero",
     job: "warrior",
@@ -347,7 +347,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：队伍生命低于 30% 时 ATK +25%，造成伤害时 20% 吸血回复队伍生命",
   }),
 
-  /* ==================== 战士：圣骑士 (paladin) ==================== */
+  /* ==================== 战士：paladin_* ==================== */
   paladin_smite: S({
     id: "paladin_smite",
     job: "warrior",
@@ -406,7 +406,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：敌方拆毁我方侧面支援时，每个目标有 30% 概率免于被拆",
   }),
 
-  /* ==================== 战士：破法者 (spellbreaker) ==================== */
+  /* ==================== 战士：breaker_* ==================== */
   breaker_break: S({
     id: "breaker_break",
     job: "warrior",
@@ -475,7 +475,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：【迅捷】标签（命中 +5%，回合初可触发 0.7× 免费抢攻）",
   }),
 
-  /* ==================== 战士：游侠 (ranger) ==================== */
+  /* ==================== 战士：ranger_* ==================== */
   ranger_zero: S({
     id: "ranger_zero",
     job: "warrior",
@@ -547,7 +547,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：【迅捷】标签（命中 +5%，可抢攻，对脆弱目标暴击率 +15%）",
   }),
 
-  /* ==================== 战士：刺客 (assassin) ==================== */
+  /* ==================== 战士：assassin_* ==================== */
   assassin_zero: S({
     id: "assassin_zero",
     job: "warrior",
@@ -572,7 +572,7 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 0.8,
     hits: 1,
     target: "enemy",
-    desc: "刺客专属（每回合限 1 次）：0.8× 暗属性伤害照常结算，并额外盲抽敌方本回合 1 个意图尝试打断（失败不影响伤害与 Combo）；打断蓄力使其进入【脆弱 (+30%易伤)】",
+    desc: "每回合限 1 次：0.8× 暗属性伤害照常结算，并额外盲抽敌方本回合 1 个意图尝试打断（失败不影响伤害与 Combo）；打断蓄力使其进入【脆弱 (+30%易伤)】",
   }),
   assassin_backstab: S({
     id: "assassin_backstab",
@@ -618,7 +618,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：【迅捷】标签（命中 +5%，回合初高概率触发免费抢攻）",
   }),
 
-  /* ==================== 法师：咒术师 (warlock) ==================== */
+  /* ==================== 法师：warlock_* ==================== */
   warlock_frost: S({
     id: "warlock_frost",
     job: "mage",
@@ -680,7 +680,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：队伍生命低于 30% 时 INT +25%，法术暴击率 +10%",
   }),
 
-  /* ==================== 法师：生术师 (lifebringer) ==================== */
+  /* ==================== 法师：life_* ==================== */
   life_renew: S({
     id: "life_renew",
     job: "mage",
@@ -734,7 +734,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：每回合开始自动为队伍回复 4% 最大生命",
   }),
 
-  /* ==================== 法师：缚术师 (binder) ==================== */
+  /* ==================== 法师：binder_* ==================== */
   binder_sleep: S({
     id: "binder_sleep",
     job: "mage",
@@ -790,7 +790,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：硬控与软控判定成功率 +15%",
   }),
 
-  /* ==================== 法师：召唤师 (summoner) ==================== */
+  /* ==================== 法师：summoner_* ==================== */
   summoner_call: S({
     id: "summoner_call",
     job: "mage",
@@ -864,7 +864,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：我方所有攻击型侧面支援发动率 +15%",
   }),
 
-  /* ==================== 辅助：舞者 (dancer) ==================== */
+  /* ==================== 辅助：dancer_* ==================== */
   dancer_step: S({
     id: "dancer_step",
     job: "support",
@@ -916,7 +916,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动形态：该卡存活在场时，我方每回合基础 AP 恢复由 +2 提升至 +3",
   }),
 
-  /* ==================== 辅助：治疗师 (healer) ==================== */
+  /* ==================== 辅助：healer_* ==================== */
   healer_heal: S({
     id: "healer_heal",
     job: "support",
@@ -967,7 +967,7 @@ export const SKILLS: Record<string, SkillDef> = {
     desc: "被动：全队治疗量 +20%",
   }),
 
-  /* ==================== 辅助：吟游诗人 (bard) ==================== */
+  /* ==================== 辅助：bard_* ==================== */
   bard_inspire: S({
     id: "bard_inspire",
     job: "support",
