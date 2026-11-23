@@ -1,0 +1,20 @@
+{
+  "enemy": "wind-chime",
+  "supports": [
+    "enemy-sup-chime-echo"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 4
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 8
+    }
+  ],
+  "summary": "金属小怪：每回合 4 段低伤连击，偶数回合上【衰弱】；隐藏着一个意想不到的弱点。"
+}

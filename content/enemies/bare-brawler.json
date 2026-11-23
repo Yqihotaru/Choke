@@ -1,0 +1,76 @@
+{
+  "name": "无谱拳手",
+  "title": "连拳破甲 · 第 1 回合露破绽",
+  "tier": "elite",
+  "element": "physical",
+  "weaknesses": [
+    "thunder"
+  ],
+  "weaknessWindows": [
+    {
+      "when": {
+        "turnMod": [
+          3,
+          1
+        ]
+      },
+      "elements": [
+        "light"
+      ]
+    }
+  ],
+  "stats": {
+    "hp": 50000,
+    "atk": 880,
+    "int": 300,
+    "def": 1900
+  },
+  "ai": {
+    "moves": {
+      "jab": {
+        "kind": "attack",
+        "label": "连环直拳",
+        "element": "physical",
+        "power": 0.5,
+        "hits": 3,
+        "desc": "3 段物理连拳"
+      },
+      "sunder": {
+        "kind": "debuff",
+        "label": "破甲肘击",
+        "element": "physical",
+        "power": 0.6,
+        "hits": 1,
+        "status": "armor_break",
+        "desc": "物理攻击，削减我方防御"
+      },
+      "haymaker": {
+        "kind": "heavy_phys",
+        "label": "无谱重拳",
+        "element": "physical",
+        "power": 1.7,
+        "hits": 1,
+        "causesDown": true,
+        "hardToInterrupt": true,
+        "desc": "【难以打断】高额物理重击（附带 DOWN 击倒威胁）"
+      }
+    },
+    "script": [
+      {
+        "always": "jab"
+      },
+      {
+        "always": "sunder"
+      },
+      {
+        "when": {
+          "turnMod": [
+            3,
+            0
+          ]
+        },
+        "use": "haymaker"
+      }
+    ]
+  }
+}

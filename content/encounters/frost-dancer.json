@@ -1,0 +1,20 @@
+{
+  "enemy": "frost-dancer",
+  "supports": [
+    "enemy-sup-frost-chill"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 5
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 9
+    }
+  ],
+  "summary": "冰系舞者：每 3 回合冻结全队，血量低于一半时会露出新的弱点。"
+}

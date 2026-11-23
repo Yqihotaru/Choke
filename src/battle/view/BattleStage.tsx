@@ -48,6 +48,7 @@ import { describeStar, starProgress } from "@choke/shared/battle/stars"
 import { describeSkill } from "@choke/shared/skill-check"
 import { BentGauge } from "./BentGauge"
 import { playHit, playLose, playSfx, playTurn, playWin } from "../sfx"
+import { TestEnemyPicker } from "./TestEnemyPicker"
 import type { BattleState, EnemyIntent, SideSupportUnit } from "@choke/shared/battle/types"
 import "./choke-battle.css"
 
@@ -70,6 +71,9 @@ interface Props {
   /** 可选的讨伐目标 */
   encounters: EncounterSummary[]
   tutorial: boolean
+  /** 战斗测试：可选所有敌人，不发奖励、不扣体力、不记发现；只在开发模式传入 onToggleTest */
+  testMode?: boolean
+  onToggleTest?: () => void
   actionError: string | null
   onSelectStage: (stageId: string) => void
   onStart: () => void
@@ -192,6 +196,8 @@ export function BattleStage({
   encounter,
   encounters,
   tutorial,
+  testMode = false,
+  onToggleTest,
   actionError,
   onSelectStage,
   onStart,
@@ -606,33 +612,51 @@ export function BattleStage({
               <small>{tutorial ? "TUTORIAL STAGE" : foe.title}</small>
               <div>{enemyName}</div>
             </div>
-            <div className="choke-prep-badge">{tutorial ? "教学战斗" : "准备战斗"}</div>
+            <div className="choke-prep-badge">{tutorial ? "教学战斗" : testMode ? "战斗测试" : "准备战斗"}</div>
 
             {!tutorial && (
-              <div className="choke-stage-selector">
+              <div className="choke-stage-selector" data-test={testMode ? "true" : undefined}>
                 <span className="choke-stage-selector__label">
-                  <GiTargetLaser /> 选择讨伐目标
-                </span>
-                <div className="choke-stage-selector__btns">
-                  {encounters.map((st) => (
+                  <GiTargetLaser /> {testMode ? "选择测试对象" : "选择讨伐目标"}
+                  {onToggleTest && (
                     <button
-                      key={st.id}
                       type="button"
-                      className="choke-stage-pill"
-                      data-active={st.id === encounter.id ? "true" : undefined}
+                      className="choke-test-toggle"
+                      data-active={testMode ? "true" : undefined}
+                      title="开发模式：可选所有敌人，不发奖励、不扣体力、不记弱点发现"
                       onClick={() => {
                         playSfx("click")
-                        onSelectStage(st.id)
+                        onToggleTest()
                       }}
                     >
-                      <b>{st.name}</b>
-                      <small>
-                        {st.tier === "boss" ? "BOSS" : st.tier === "elite" ? "高T精英" : "常规"} · HP{" "}
-                        {st.hp.toLocaleString("en-US")}
-                      </small>
+                      战斗测试
                     </button>
-                  ))}
-                </div>
+                  )}
+                </span>
+                {testMode ? (
+                  <TestEnemyPicker encounters={encounters} activeId={encounter.id} onSelect={onSelectStage} />
+                ) : (
+                  <div className="choke-stage-selector__btns">
+                    {encounters.map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        className="choke-stage-pill"
+                        data-active={st.id === encounter.id ? "true" : undefined}
+                        onClick={() => {
+                          playSfx("click")
+                          onSelectStage(st.id)
+                        }}
+                      >
+                        <b>{st.name}</b>
+                        <small>
+                          {st.tier === "boss" ? "BOSS" : st.tier === "elite" ? "高T精英" : "常规"} · HP{" "}
+                          {st.hp.toLocaleString("en-US")}
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <p className="choke-stage-selector__desc">{encounter.summary}</p>
               </div>
             )}
@@ -737,8 +761,10 @@ export function BattleStage({
           <footer className="choke-footer">
             <span className="choke-ticker">
               {tutorial
-                ? "教学战：熟悉连击 Combo、AP 继承与右侧【防御】侧面支援。"
-                : "确认讨伐目标与编队后，点击中央【战斗开始】。"}
+                ? "教学战：熟悉连击 Combo、AP 继承与右侧【防御】侧面支援；弱点条上的“？”是隐藏弱点。"
+                : testMode
+                  ? "战斗测试：不发奖励、不扣体力、不记弱点发现。"
+                  : "确认讨伐目标与编队后，点击中央【战斗开始】。"}
             </span>
           </footer>
         </div>
@@ -1422,7 +1448,11 @@ export function BattleStage({
         {/* ================= 5. 最底栏与 LOG 抽屉 ================= */}
         <footer className="choke-footer">
           <span className="choke-ticker">
-            {actionError ? `⚠️ ${actionError}` : (battle.log[0] ?? "战斗开始")}
+            {actionError
+              ? `⚠️ ${actionError}`
+              : tutorial && battle.phase === "player" && battle.hiddenFound.length === 0
+                ? "💡 教学提示：弱点条里的“？”是隐藏弱点，用对应属性打中一次才会揭开。幽灵最怕火；没有火属性的卡也不影响通关。"
+                : (battle.log[0] ?? "战斗开始")}
           </span>
           <button
             type="button"

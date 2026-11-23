@@ -1,0 +1,21 @@
+{
+  "enemy": "ember-scribe",
+  "supports": [
+    "enemy-sup-ember-afterglow",
+    "enemy-sup-ember-page"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 6
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 12
+    }
+  ],
+  "summary": "火系精英：燃烧可叠层，每 3 回合“抹谱”拆我方支援，带追击支援【余烬】。"
+}

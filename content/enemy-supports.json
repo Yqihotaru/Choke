@@ -56,5 +56,145 @@
     "hits": 1,
     "procRate": 0.6,
     "roleText": "60% 概率协同攻击"
+  },
+  "enemy-sup-chime-echo": {
+    "name": "风铃余响",
+    "kind": "attack",
+    "element": "metal",
+    "atk": 420,
+    "power": 0.4,
+    "hits": 1,
+    "procRate": 0.5,
+    "roleText": "敌方支援 · 回合末追击"
+  },
+  "enemy-sup-drum-shell": {
+    "name": "岩鼓硬壳",
+    "kind": "shell",
+    "element": "earth",
+    "threshold": 500,
+    "roleText": "单段伤害低于 500 只算 100 · 无法拆除"
+  },
+  "enemy-sup-frost-chill": {
+    "name": "寒潮",
+    "kind": "attack",
+    "element": "ice",
+    "atk": 400,
+    "power": 0.5,
+    "hits": 1,
+    "procRate": 0.5,
+    "roleText": "敌方支援 · 回合末追击"
+  },
+  "enemy-sup-ember-afterglow": {
+    "name": "余烬",
+    "kind": "attack",
+    "element": "fire",
+    "atk": 600,
+    "power": 0.5,
+    "hits": 1,
+    "procRate": 0.6,
+    "roleText": "敌方支援 · 回合末追击"
+  },
+  "enemy-sup-ember-page": {
+    "name": "焦纸护页",
+    "kind": "armor",
+    "element": "fire",
+    "defenseTier": 1,
+    "roleText": "敌方防御 I 档 (−20%)"
+  },
+  "enemy-sup-chorister-charge": {
+    "name": "圣咏蓄力",
+    "kind": "charge",
+    "element": "light",
+    "stacks": 0,
+    "maxStacks": 3,
+    "tier": 2,
+    "roleText": "每回合+1层增伤 · 满层放终焉圣咏"
+  },
+  "enemy-sup-chorister-veil": {
+    "name": "圣光帷幕",
+    "kind": "armor",
+    "element": "light",
+    "defenseTier": 1,
+    "roleText": "敌方防御 I 档 (−20%)"
+  },
+  "enemy-sup-dusk-echo": {
+    "name": "暮钟余音",
+    "kind": "attack",
+    "element": "dark",
+    "atk": 550,
+    "power": 0.45,
+    "hits": 1,
+    "procRate": 0.5,
+    "roleText": "敌方支援 · 回合末追击"
+  },
+  "enemy-sup-dusk-veil": {
+    "name": "暮色帷幕",
+    "kind": "armor",
+    "element": "dark",
+    "defenseTier": 1,
+    "roleText": "敌方防御 I 档 (−20%)"
+  },
+  "enemy-sup-storm-charge": {
+    "name": "雷鸣蓄力",
+    "kind": "charge",
+    "element": "thunder",
+    "stacks": 0,
+    "maxStacks": 3,
+    "tier": 2,
+    "roleText": "每回合+1层增伤 · 满层放蓄力过载"
+  },
+  "enemy-sup-storm-armor": {
+    "name": "导电护罩",
+    "kind": "armor",
+    "element": "thunder",
+    "defenseTier": 1,
+    "roleText": "敌方防御 I 档 (−20%)"
+  },
+  "enemy-sup-matriarch-thorns": {
+    "name": "荆冠",
+    "kind": "thorns",
+    "element": "wood",
+    "atk": 380,
+    "power": 1,
+    "roleText": "反伤支援 · 每受1段反伤 380"
+  },
+  "enemy-sup-matriarch-bark": {
+    "name": "树皮甲",
+    "kind": "armor",
+    "element": "wood",
+    "defenseTier": 2,
+    "tier": 2,
+    "roleText": "常驻防御 II 档 (−40%) · 强度 2，普通拆除拆不动"
+  },
+  "enemy-sup-metronome-shell": {
+    "name": "巨像硬壳",
+    "kind": "shell",
+    "element": "earth",
+    "threshold": 1000,
+    "roleText": "单段伤害低于 1000 只算 100 · 无法拆除"
+  },
+  "enemy-sup-metronome-armor": {
+    "name": "岩铸外壳",
+    "kind": "armor",
+    "element": "earth",
+    "defenseTier": 1,
+    "roleText": "敌方防御 I 档 (−20%)"
+  },
+  "enemy-sup-glacier-shell": {
+    "name": "冰川外壳",
+    "kind": "armor",
+    "element": "ice",
+    "defenseTier": 1,
+    "roleText": "敌方防御 I 档 (−20%)"
+  },
+  "enemy-sup-glacier-chill": {
+    "name": "寒潮余韵",
+    "kind": "attack",
+    "element": "ice",
+    "atk": 700,
+    "power": 0.5,
+    "hits": 1,
+    "procRate": 0.5,
+    "roleText": "敌方支援 · 回合末追击"
   }
 }

@@ -1,0 +1,53 @@
+{
+  "name": "缠弦藤妖",
+  "title": "毒藤琴师 · 荆棘护身",
+  "tier": "normal",
+  "element": "wood",
+  "weaknesses": [
+    "fire"
+  ],
+  "hiddenWeaknesses": [
+    "metal"
+  ],
+  "stats": {
+    "hp": 30000,
+    "atk": 560,
+    "int": 700,
+    "def": 1200
+  },
+  "ai": {
+    "moves": {
+      "lash": {
+        "kind": "attack",
+        "label": "藤鞭",
+        "element": "wood",
+        "power": 0.8,
+        "hits": 1,
+        "desc": "木属性物理鞭打"
+      },
+      "venom": {
+        "kind": "magic",
+        "label": "毒汁弦音",
+        "element": "wood",
+        "power": 0.7,
+        "hits": 1,
+        "status": "poison",
+        "desc": "木属性魔法，附加 3 回合【中毒】"
+      }
+    },
+    "script": [
+      {
+        "always": "lash"
+      },
+      {
+        "when": {
+          "turnMod": [
+            2,
+            0
+          ]
+        },
+        "use": "venom"
+      }
+    ]
+  }
+}

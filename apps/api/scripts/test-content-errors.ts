@@ -55,7 +55,9 @@ const CASES: Case[] = [
   {
     name: "没有任何列出的遭遇",
     breakIt: (root) => {
-      for (const id of ["ghost", "vanguard", "conductor"]) editJson(`encounters/${id}.json`, (d) => (d.listed = false))(root)
+      for (const file of fs.readdirSync(path.join(root, "encounters"))) {
+        editJson(`encounters/${file}`, (d) => (d.listed = false))(root)
+      }
     },
     expect: "至少要有一场",
   },
@@ -114,6 +116,16 @@ const CASES: Case[] = [
     name: "装甲支援缺 defenseTier",
     breakIt: editJson("enemy-supports.json", (d) => delete d["enemy-sup-vg-armor"].defenseTier),
     expect: "装甲支援必须写 defenseTier",
+  },
+  {
+    name: "硬壳支援缺 threshold",
+    breakIt: editJson("enemy-supports.json", (d) => delete d["enemy-sup-drum-shell"].threshold),
+    expect: "硬壳支援必须写 threshold",
+  },
+  {
+    name: "非硬壳支援写了 threshold",
+    breakIt: editJson("enemy-supports.json", (d) => (d["enemy-sup-vg-armor"].threshold = 500)),
+    expect: "threshold 只能写在硬壳支援上",
   },
   // ---- 文件层面 ----
   { name: "目录里有非 JSON 文件", breakIt: (root) => fs.writeFileSync(path.join(root, "enemies/notes.txt"), "x"), expect: "没接入：enemies/notes.txt" },

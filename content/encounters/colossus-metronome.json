@@ -1,0 +1,21 @@
+{
+  "enemy": "colossus-metronome",
+  "supports": [
+    "enemy-sup-metronome-shell",
+    "enemy-sup-metronome-armor"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 9
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 22
+    }
+  ],
+  "summary": "土系 BOSS：自带无法拆除的【巨像硬壳】，行动严格按“滴、答、咚”三拍循环，第 3 拍露出雷属性破绽。"
+}

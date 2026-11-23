@@ -322,6 +322,51 @@
   line-height: 1.35;
   color: #cfc2aa;
 }
+.choke-test-toggle {
+  margin-left: auto;
+  padding: 0.1cqw 0.45cqw;
+  border: 0.1cqw dashed #6b5332;
+  border-radius: 0.25cqw;
+  background: transparent;
+  color: #b7a689;
+  font-size: 0.62cqw;
+  cursor: pointer;
+}
+.choke-test-toggle[data-active="true"] {
+  border-style: solid;
+  border-color: #7fd6ff;
+  color: #bfeaff;
+  background: rgb(40 90 120 / 0.45);
+}
+.choke-test-picker__search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0.35cqw;
+  padding: 0.25cqw 0.4cqw;
+  border: 0.1cqw solid #6b5332;
+  border-radius: 0.25cqw;
+  background: rgb(26 20 16 / 0.9);
+  color: #e9dec7;
+  font-size: 0.68cqw;
+}
+.choke-test-picker__list {
+  max-height: 11cqw;
+  overflow-y: auto;
+  padding-right: 0.25cqw;
+}
+.choke-test-picker__list h4 {
+  margin: 0.3cqw 0 0.2cqw;
+  font-size: 0.64cqw;
+  color: #ffd984;
+}
+.choke-test-picker__list h4 small {
+  color: #b7a689;
+}
+.choke-test-picker__empty {
+  margin: 0.4cqw 0;
+  font-size: 0.64cqw;
+  color: #b7a689;
+}
 
 .choke-outcome-box {
   position: absolute;

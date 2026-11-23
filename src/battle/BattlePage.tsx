@@ -48,11 +48,12 @@ export function BattlePage() {
   /** 本场已执行的合法操作；第 4 步上传给服务端复算 */
   const actions = useRef<BattleAction[]>([])
 
-  // 链接里的 stage 不存在时回落到列表第一场
-  const listed = encounters?.filter((e) => e.listed) ?? []
+  // 链接里的 stage 不存在时回落到列表第一场；战斗测试（仅开发模式）可选所有遭遇，含没上架的
+  const [testMode, setTestMode] = useState(false)
+  const pool = (testMode && import.meta.env.DEV ? encounters : encounters?.filter((e) => e.listed)) ?? []
   const encounterId = tutorialRun
     ? TUTORIAL_ENCOUNTER_ID
-    : (listed.find((e) => e.id === stageId) ?? listed[0])?.id ?? null
+    : (pool.find((e) => e.id === stageId) ?? pool[0])?.id ?? null
 
   useEffect(() => {
     let cancelled = false
@@ -232,8 +233,10 @@ export function BattlePage() {
       playerName={user?.username ?? "玩家"}
       deck={cards.map(toFace)}
       encounter={encounter}
-      encounters={listed}
+      encounters={pool}
       tutorial={tutorialRun}
+      testMode={testMode && import.meta.env.DEV}
+      onToggleTest={import.meta.env.DEV ? () => setTestMode((on) => !on) : undefined}
       actionError={actionError}
       onSelectStage={(nextId) => setStageId(nextId)}
       onStart={start}

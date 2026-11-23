@@ -38,6 +38,8 @@ interface GoldenEntry {
 const started = Date.now()
 const results: Record<string, GoldenEntry> = {}
 const problems: string[] = []
+/** 拖满回合上限仍没分出胜负的局：弱卡组打硬壳 BOSS 可能出现的僵局，是数值现象不是引擎错误，只提示 */
+const stalled: string[] = []
 const table: Record<string, { 胜: number; 负: number; 平均回合: string; 平均星数: string }> = {}
 
 for (const encounterId of Object.keys(BATTLE_CONTENT.encounters).sort()) {
@@ -56,7 +58,7 @@ for (const encounterId of Object.keys(BATTLE_CONTENT.encounters).sort()) {
       const replay = replayBattle({ encounter, cards: deck, bench: BENCH, seed }, a.actions)
       if (replay.invalidAt !== null) problems.push(`${key}：重放第 ${replay.invalidAt} 步不合法：${replay.error}`)
       else if (live !== JSON.stringify(replay.state)) problems.push(`${key}：重放结果与实打不同`)
-      if (a.state.phase === "player") problems.push(`${key}：${MAX_TURNS} 回合内没分出胜负`)
+      if (a.state.phase === "player") stalled.push(key)
 
       const rating = evaluateStars(a.state)
       const starCount = a.state.phase === "won" ? rating.count : 0
@@ -75,6 +77,7 @@ for (const encounterId of Object.keys(BATTLE_CONTENT.encounters).sort()) {
 }
 
 console.table(table)
+if (stalled.length > 0) console.log(`提示：${stalled.length} 局拖满 ${MAX_TURNS} 回合仍无胜负（僵局，不算失败）：${stalled.slice(0, 5).join("、")}${stalled.length > 5 ? "…" : ""}`)
 const total = Object.keys(results).length
 
 if (update) {

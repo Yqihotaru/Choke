@@ -1,0 +1,90 @@
+{
+  "name": "巨像节拍器",
+  "title": "三拍巨像 · BOSS",
+  "tier": "boss",
+  "element": "earth",
+  "weaknesses": [
+    "wood"
+  ],
+  "hiddenWeaknesses": [
+    "ice"
+  ],
+  "weaknessWindows": [
+    {
+      "when": {
+        "turnMod": [
+          3,
+          0
+        ]
+      },
+      "elements": [
+        "thunder"
+      ]
+    }
+  ],
+  "stats": {
+    "hp": 140000,
+    "atk": 1150,
+    "int": 700,
+    "def": 3000
+  },
+  "ai": {
+    "moves": {
+      "tick": {
+        "kind": "attack",
+        "label": "滴",
+        "element": "earth",
+        "power": 0.9,
+        "hits": 1,
+        "desc": "第 1 拍：土属性物理攻击"
+      },
+      "tock": {
+        "kind": "attack",
+        "label": "答",
+        "element": "earth",
+        "power": 0.65,
+        "hits": 2,
+        "desc": "第 2 拍：2 段土属性物理连击"
+      },
+      "boom": {
+        "kind": "heavy_phys",
+        "label": "咚",
+        "element": "earth",
+        "power": 2,
+        "hits": 1,
+        "causesDown": true,
+        "hardToInterrupt": true,
+        "desc": "【难以打断】第 3 拍：高额物理重击（附带 DOWN 击倒威胁）；这一拍外壳松动，露出破绽"
+      }
+    },
+    "script": [
+      {
+        "when": {
+          "turnMod": [
+            3,
+            1
+          ]
+        },
+        "use": "tick"
+      },
+      {
+        "when": {
+          "turnMod": [
+            3,
+            2
+          ]
+        },
+        "use": "tock"
+      },
+      {
+        "when": {
+          "turnMod": [
+            3,
+            0
+          ]
+        },
+        "use": "boom"
+      }
+    ]
+  }
+}

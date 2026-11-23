@@ -1,0 +1,64 @@
+{
+  "name": "走调风铃",
+  "title": "多段连击 · 偶数回合扰乱",
+  "tier": "normal",
+  "element": "metal",
+  "weaknesses": [
+    "fire"
+  ],
+  "hiddenWeaknesses": [
+    "thunder"
+  ],
+  "stats": {
+    "hp": 24000,
+    "atk": 600,
+    "int": 540,
+    "def": 1000
+  },
+  "ai": {
+    "moves": {
+      "ping": {
+        "kind": "attack",
+        "label": "叮当连响",
+        "element": "metal",
+        "power": 0.35,
+        "hits": 4,
+        "desc": "4 段低伤金属连击"
+      },
+      "chime": {
+        "kind": "magic",
+        "label": "风铃回响",
+        "element": "metal",
+        "power": 0.75,
+        "hits": 1,
+        "desc": "金属魔法攻击"
+      },
+      "rattle": {
+        "kind": "debuff",
+        "label": "失谐颤音",
+        "element": "metal",
+        "power": 0,
+        "hits": 0,
+        "status": "weaken",
+        "desc": "施加【衰弱】（ATK / INT −20%）"
+      }
+    },
+    "script": [
+      {
+        "always": "ping"
+      },
+      {
+        "always": "chime"
+      },
+      {
+        "when": {
+          "turnMod": [
+            2,
+            0
+          ]
+        },
+        "use": "rattle"
+      }
+    ]
+  }
+}

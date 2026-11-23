@@ -1,0 +1,64 @@
+{
+  "name": "焚谱书记官",
+  "title": "燃烧叠加 · 抹谱拆援",
+  "tier": "elite",
+  "element": "fire",
+  "weaknesses": [
+    "ice"
+  ],
+  "hiddenWeaknesses": [
+    "earth"
+  ],
+  "stats": {
+    "hp": 48000,
+    "atk": 760,
+    "int": 860,
+    "def": 1900
+  },
+  "ai": {
+    "moves": {
+      "flame": {
+        "kind": "magic",
+        "label": "烈焰音符",
+        "element": "fire",
+        "power": 0.9,
+        "hits": 1,
+        "status": "burn",
+        "desc": "火属性魔法，附加 3 回合【燃烧】，可叠层"
+      },
+      "scorch": {
+        "kind": "attack",
+        "label": "焦痕笔触",
+        "element": "fire",
+        "power": 0.7,
+        "hits": 2,
+        "desc": "2 段火属性连击"
+      },
+      "erase": {
+        "kind": "break_support",
+        "label": "抹谱",
+        "element": "fire",
+        "power": 0.4,
+        "hits": 1,
+        "desc": "拆毁我方右侧支援栏的支援（强度 1）"
+      }
+    },
+    "script": [
+      {
+        "always": "flame"
+      },
+      {
+        "always": "scorch"
+      },
+      {
+        "when": {
+          "turnMod": [
+            3,
+            0
+          ]
+        },
+        "use": "erase"
+      }
+    ]
+  }
+}

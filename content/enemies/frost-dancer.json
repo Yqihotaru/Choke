@@ -1,0 +1,60 @@
+{
+  "name": "凝霜舞者",
+  "title": "冻结舞步 · 残血露破绽",
+  "tier": "normal",
+  "element": "ice",
+  "weaknesses": [
+    "fire"
+  ],
+  "weaknessWindows": [
+    {
+      "when": {
+        "hpBelow": 0.5
+      },
+      "elements": [
+        "thunder"
+      ]
+    }
+  ],
+  "stats": {
+    "hp": 26000,
+    "atk": 540,
+    "int": 740,
+    "def": 900
+  },
+  "ai": {
+    "moves": {
+      "step": {
+        "kind": "magic",
+        "label": "冰晶舞步",
+        "element": "ice",
+        "power": 0.6,
+        "hits": 2,
+        "desc": "2 段冰属性魔法"
+      },
+      "waltz": {
+        "kind": "magic",
+        "label": "冻结舞步",
+        "element": "ice",
+        "power": 0.7,
+        "hits": 1,
+        "status": "freeze",
+        "desc": "冰属性魔法，附加 3 回合【冻结】（25% 技能失败，无法抢攻）"
+      }
+    },
+    "script": [
+      {
+        "always": "step"
+      },
+      {
+        "when": {
+          "turnMod": [
+            3,
+            0
+          ]
+        },
+        "use": "waltz"
+      }
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "name": "碎岩鼓手",
+  "title": "硬壳重击 · 震地鼓点",
+  "tier": "normal",
+  "element": "earth",
+  "weaknesses": [
+    "wood"
+  ],
+  "hiddenWeaknesses": [
+    "ice"
+  ],
+  "stats": {
+    "hp": 34000,
+    "atk": 700,
+    "int": 400,
+    "def": 1500
+  },
+  "ai": {
+    "moves": {
+      "beat": {
+        "kind": "attack",
+        "label": "沉鼓重击",
+        "element": "earth",
+        "power": 0.9,
+        "hits": 1,
+        "desc": "土属性物理重击"
+      },
+      "rubble": {
+        "kind": "attack",
+        "label": "碎石连打",
+        "element": "earth",
+        "power": 0.45,
+        "hits": 2,
+        "desc": "2 段土属性连打"
+      },
+      "quake": {
+        "kind": "heavy_phys",
+        "label": "震地鼓点",
+        "element": "earth",
+        "power": 1.5,
+        "hits": 1,
+        "causesDown": true,
+        "desc": "高额物理攻击（附带 DOWN 击倒威胁）"
+      }
+    },
+    "script": [
+      {
+        "always": "beat"
+      },
+      {
+        "always": "rubble"
+      },
+      {
+        "when": {
+          "turnMod": [
+            3,
+            0
+          ]
+        },
+        "use": "quake"
+      }
+    ]
+  }
+}

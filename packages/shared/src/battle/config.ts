@@ -29,6 +29,18 @@ export const COMBO_CAP = COMBO_BONUS.length - 1
 /** 斩杀"血量低"的判定线：敌人当前血量 / 最大血量 */
 export const EXECUTE_LOW_HP_RATIO = 0.4
 
+/** 敌方招式挂在我方队伍上的状态的显示名（只影响显示与日志，不影响随机） */
+export const TEAM_STATUS_NAME: Record<string, string> = {
+  burn: "燃烧",
+  poison: "中毒",
+  bleed: "流血",
+  freeze: "冻结",
+  heal_block: "禁疗",
+  weaken: "衰弱",
+  fear: "恐惧",
+  armor_break: "破防",
+}
+
 /** 技能附带状态的几率修正：按敌人档位乘在技能自己的 statusChance 上 */
 export const STATUS_CHANCE_BY_TIER = { normal: 1, elite: 0.8, boss: 0.65 } as const
 

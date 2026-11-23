@@ -1,0 +1,20 @@
+{
+  "enemy": "vine-fiddler",
+  "supports": [
+    "enemy-sup-vg-thorns"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 5
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 9
+    }
+  ],
+  "summary": "木属性毒藤：偶数回合上【中毒】，左侧有荆棘栅栏，近战连打要小心反伤。"
+}

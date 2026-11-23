@@ -35,6 +35,7 @@ import {
   PREEMPTIVE_RATE,
   STATUS_CHANCE_BY_TIER,
   SUPPORT_PROC_RATE,
+  TEAM_STATUS_NAME,
 } from "./config"
 import {
   comboMultiplier,
@@ -1383,7 +1384,7 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
   if (intent.statusId) {
     addOrStackStatus(state.teamStatuses, {
       id: intent.statusId,
-      name: intent.statusId === "burn" ? "燃烧" : intent.statusId === "armor_break" ? "破防" : "负面",
+      name: TEAM_STATUS_NAME[intent.statusId] ?? "负面",
       amount: 0.03,
       turns: 3,
       stacks: 1,

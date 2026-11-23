@@ -1,0 +1,116 @@
+{
+  "name": "冰川安魂曲",
+  "title": "永冬挽歌 · BOSS",
+  "tier": "boss",
+  "element": "ice",
+  "weaknesses": [
+    "fire"
+  ],
+  "hiddenWeaknesses": [
+    "thunder"
+  ],
+  "weaknessWindows": [
+    {
+      "when": {
+        "hpBelow": 0.35
+      },
+      "elements": [
+        "metal"
+      ]
+    }
+  ],
+  "stats": {
+    "hp": 115000,
+    "atk": 900,
+    "int": 1250,
+    "def": 2400
+  },
+  "ai": {
+    "moves": {
+      "lament": {
+        "kind": "magic",
+        "label": "霜降挽歌",
+        "element": "ice",
+        "power": 0.9,
+        "hits": 1,
+        "desc": "冰属性魔法"
+      },
+      "chill": {
+        "kind": "magic",
+        "label": "凝冰咏叹",
+        "element": "ice",
+        "power": 0.7,
+        "hits": 1,
+        "status": "freeze",
+        "desc": "冰属性魔法，附加 3 回合【冻结】（25% 技能失败，无法抢攻）"
+      },
+      "hush": {
+        "kind": "debuff",
+        "label": "迟缓寒意",
+        "element": "ice",
+        "power": 0,
+        "hits": 0,
+        "status": "fear",
+        "desc": "施加【恐惧】（每回合 AP 恢复 −1）"
+      },
+      "blizzard": {
+        "kind": "heavy_magic",
+        "label": "暴风雪",
+        "element": "ice",
+        "power": 1.8,
+        "hits": 1,
+        "causesDown": true,
+        "hardToInterrupt": true,
+        "desc": "【难以打断】高额冰属性全体魔法（附带 DOWN 击倒威胁）",
+        "variants": [
+          {
+            "when": {
+              "hpBelow": 0.5
+            },
+            "power": 2.2
+          }
+        ]
+      },
+      "shatter": {
+        "kind": "magic",
+        "label": "冰壳破裂",
+        "element": "ice",
+        "power": 0.7,
+        "hits": 3,
+        "desc": "二阶段：冰壳碎裂，3 段冰属性魔法"
+      }
+    },
+    "script": [
+      {
+        "always": "lament"
+      },
+      {
+        "when": {
+          "turnMod": [
+            2,
+            0
+          ]
+        },
+        "use": "chill"
+      },
+      {
+        "otherwise": "hush"
+      },
+      {
+        "when": {
+          "turnMod": [
+            3,
+            0
+          ]
+        },
+        "use": "blizzard"
+      },
+      {
+        "when": {
+          "hpBelow": 0.5
+        },
+        "use": "shatter"
+      }
+    ]
+  }
+}

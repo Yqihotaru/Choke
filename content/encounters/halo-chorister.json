@@ -1,0 +1,21 @@
+{
+  "enemy": "halo-chorister",
+  "supports": [
+    "enemy-sup-chorister-charge",
+    "enemy-sup-chorister-veil"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 6
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 13
+    }
+  ],
+  "summary": "光系精英：圣咏蓄力满 3 层放终焉圣咏；蓄力达到 2 层时会露出雷属性弱点。"
+}

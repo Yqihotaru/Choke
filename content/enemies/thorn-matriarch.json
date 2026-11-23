@@ -1,0 +1,97 @@
+{
+  "name": "荆冠母树",
+  "title": "荆棘森林之主 · BOSS",
+  "tier": "boss",
+  "element": "wood",
+  "weaknesses": [
+    "fire"
+  ],
+  "hiddenWeaknesses": [
+    "metal"
+  ],
+  "weaknessWindows": [
+    {
+      "when": {
+        "turnMod": [
+          4,
+          0
+        ]
+      },
+      "elements": [
+        "ice"
+      ]
+    }
+  ],
+  "stats": {
+    "hp": 125000,
+    "atk": 980,
+    "int": 1100,
+    "def": 2800
+  },
+  "ai": {
+    "moves": {
+      "whip": {
+        "kind": "attack",
+        "label": "荆冠鞭挞",
+        "element": "wood",
+        "power": 0.9,
+        "hits": 2,
+        "desc": "2 段木属性物理鞭挞"
+      },
+      "spore": {
+        "kind": "magic",
+        "label": "孢子云",
+        "element": "wood",
+        "power": 0.8,
+        "hits": 1,
+        "status": "poison",
+        "desc": "木属性魔法，附加 3 回合【中毒】"
+      },
+      "root": {
+        "kind": "debuff",
+        "label": "缠根",
+        "element": "wood",
+        "power": 0,
+        "hits": 0,
+        "status": "fear",
+        "desc": "施加【恐惧】（每回合 AP 恢复 −1）"
+      },
+      "bloom": {
+        "kind": "heavy_phys",
+        "label": "花开重压",
+        "element": "wood",
+        "power": 1.8,
+        "hits": 1,
+        "causesDown": true,
+        "hardToInterrupt": true,
+        "desc": "【难以打断】高额物理重压（附带 DOWN 击倒威胁）；这一回合树冠绽开，露出破绽"
+      }
+    },
+    "script": [
+      {
+        "always": "whip"
+      },
+      {
+        "when": {
+          "turnMod": [
+            2,
+            1
+          ]
+        },
+        "use": "spore"
+      },
+      {
+        "otherwise": "root"
+      },
+      {
+        "when": {
+          "turnMod": [
+            4,
+            0
+          ]
+        },
+        "use": "bloom"
+      }
+    ]
+  }
+}

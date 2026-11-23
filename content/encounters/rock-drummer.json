@@ -1,0 +1,20 @@
+{
+  "enemy": "rock-drummer",
+  "supports": [
+    "enemy-sup-drum-shell"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 6
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 10
+    }
+  ],
+  "summary": "带【岩鼓硬壳】的土系小怪：低于门槛的单段伤害只算 100，每 3 回合一次带击倒威胁的震地。"
+}

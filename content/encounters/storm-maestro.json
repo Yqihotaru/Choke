@@ -1,0 +1,21 @@
+{
+  "enemy": "storm-maestro",
+  "supports": [
+    "enemy-sup-storm-charge",
+    "enemy-sup-storm-armor"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 8
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 20
+    }
+  ],
+  "summary": "雷系 BOSS：蓄力过载、强度 2 的“断弦”拆援、召唤静电场；蓄力达 2 层时露出金属弱点。"
+}

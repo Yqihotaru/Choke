@@ -1,0 +1,72 @@
+{
+  "name": "暮钟守夜人",
+  "title": "禁疗诅咒 · 被打断会暴怒",
+  "tier": "elite",
+  "element": "dark",
+  "weaknesses": [
+    "light"
+  ],
+  "hiddenWeaknesses": [
+    "metal"
+  ],
+  "enrageOnInterrupt": true,
+  "stats": {
+    "hp": 56000,
+    "atk": 820,
+    "int": 780,
+    "def": 2300
+  },
+  "ai": {
+    "moves": {
+      "toll": {
+        "kind": "magic",
+        "label": "暮钟敲响",
+        "element": "dark",
+        "power": 0.9,
+        "hits": 1,
+        "desc": "暗属性魔法"
+      },
+      "hex": {
+        "kind": "magic",
+        "label": "封愈之咒",
+        "element": "dark",
+        "power": 0.6,
+        "hits": 1,
+        "status": "heal_block",
+        "desc": "暗属性魔法，附加 3 回合【禁疗】"
+      },
+      "dirge": {
+        "kind": "heavy_magic",
+        "label": "午夜丧钟",
+        "element": "dark",
+        "power": 1.5,
+        "hits": 1,
+        "causesDown": true,
+        "desc": "高额暗属性魔法（附带 DOWN 击倒威胁）"
+      }
+    },
+    "script": [
+      {
+        "always": "toll"
+      },
+      {
+        "when": {
+          "turnMod": [
+            2,
+            0
+          ]
+        },
+        "use": "hex"
+      },
+      {
+        "when": {
+          "turnMod": [
+            3,
+            0
+          ]
+        },
+        "use": "dirge"
+      }
+    ]
+  }
+}

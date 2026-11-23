@@ -1,0 +1,21 @@
+{
+  "enemy": "thorn-matriarch",
+  "supports": [
+    "enemy-sup-matriarch-thorns",
+    "enemy-sup-matriarch-bark"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 8
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 20
+    }
+  ],
+  "summary": "木系 BOSS：强度 2 的树皮甲加荆棘，孢子中毒与缠根；每 4 回合开花，露出冰属性破绽，也是一记重压。"
+}

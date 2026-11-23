@@ -1,0 +1,75 @@
+{
+  "name": "圣咏唱诗者",
+  "title": "蓄力大招 · 满层前露破绽",
+  "tier": "elite",
+  "element": "light",
+  "weaknesses": [
+    "dark"
+  ],
+  "weaknessWindows": [
+    {
+      "when": {
+        "supportStacks": {
+          "support": "enemy-sup-chorister-charge",
+          "gte": 2
+        }
+      },
+      "elements": [
+        "thunder"
+      ]
+    }
+  ],
+  "stats": {
+    "hp": 54000,
+    "atk": 700,
+    "int": 880,
+    "def": 2100
+  },
+  "ai": {
+    "moves": {
+      "hymn": {
+        "kind": "magic",
+        "label": "圣咏颂歌",
+        "element": "light",
+        "power": 0.85,
+        "hits": 1,
+        "desc": "光属性魔法"
+      },
+      "halo": {
+        "kind": "magic",
+        "label": "光轮回旋",
+        "element": "light",
+        "power": 0.6,
+        "hits": 2,
+        "desc": "2 段光属性魔法"
+      },
+      "finale": {
+        "kind": "heavy_magic",
+        "label": "终焉圣咏",
+        "element": "light",
+        "power": 2,
+        "hits": 1,
+        "causesDown": true,
+        "chargedUltimate": true,
+        "desc": "蓄力满槽释放的圣咏！伤害极高且附带 DOWN 威胁（可打断蓄力）"
+      }
+    },
+    "script": [
+      {
+        "when": {
+          "supportStacks": {
+            "support": "enemy-sup-chorister-charge",
+            "gte": 3
+          }
+        },
+        "use": "finale"
+      },
+      {
+        "otherwise": "hymn"
+      },
+      {
+        "always": "halo"
+      }
+    ]
+  }
+}

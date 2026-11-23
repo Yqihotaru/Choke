@@ -1,0 +1,21 @@
+{
+  "enemy": "glacier-requiem",
+  "supports": [
+    "enemy-sup-glacier-shell",
+    "enemy-sup-glacier-chill"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 8
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 20
+    }
+  ],
+  "summary": "冰系 BOSS：冻结与迟缓，难以打断的暴风雪；血量低于一半进入二阶段，低于 35% 露出金属弱点。"
+}

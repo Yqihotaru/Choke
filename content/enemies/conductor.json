@@ -8,6 +8,19 @@
     "ice",
     "fire"
   ],
+  "weaknessWindows": [
+    {
+      "when": {
+        "supportStacks": {
+          "support": "enemy-sup-conductor-charge",
+          "gte": 2
+        }
+      },
+      "elements": [
+        "metal"
+      ]
+    }
+  ],
   "stats": {
     "hp": 120000,
     "atk": 1080,

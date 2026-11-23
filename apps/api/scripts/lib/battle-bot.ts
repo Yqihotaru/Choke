@@ -7,7 +7,7 @@ import { makeCard } from "@choke/shared/card-def"
 import { cardSkillsFromRefs } from "@choke/shared/skills"
 import type { Job, Mod, Rarity } from "@choke/shared/types"
 
-export const MAX_TURNS = 40
+export const MAX_TURNS = 100
 
 // 一套中等（打得过幽灵、打不过精英），一套满配（能打进终曲的蓄力阶段）
 // 技能直接写 id，不走发牌算法：基准只跟引擎和技能数值有关

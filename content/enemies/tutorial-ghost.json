@@ -7,6 +7,9 @@
     "light",
     "physical"
   ],
+  "hiddenWeaknesses": [
+    "fire"
+  ],
   "traits": [
     "spirit"
   ],

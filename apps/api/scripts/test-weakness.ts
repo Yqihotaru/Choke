@@ -143,5 +143,17 @@ function findHit(state: BattleState): BattleAction {
   check("整场：确实有局打出了隐藏弱点（测试不是空转）", foundSomething > 0)
 }
 
+// ---------- 5. 内容里的窗口弱点与教学引导 ----------
+{
+  const open = (id: string) => createBattle(resolveEncounter(BATTLE_CONTENT, id)!, deck, { seed: `window-${id}` })
+  check("内容：无谱拳手第 1 回合露出光破绽", open("bare-brawler").enemy.exposed.join() === "light", open("bare-brawler").enemy.exposed.join())
+  check("内容：巨像节拍器第 1 拍没有破绽（第 3 拍才露出）", open("colossus-metronome").enemy.exposed.length === 0)
+  check("内容：圣咏唱诗者开局蓄力不足，没有破绽", open("halo-chorister").enemy.exposed.length === 0)
+  check("内容：终曲指挥带蓄力窗口弱点（金）", BATTLE_CONTENT.enemies.conductor!.weaknessWindows.some((w) => w.elements.includes("metal")))
+  check("内容：教学幽灵带一个隐藏弱点（教程里有引导）", BATTLE_CONTENT.enemies["tutorial-ghost"]!.hiddenWeaknesses.length === 1)
+  const covered = new Set(Object.values(BATTLE_CONTENT.enemies).map((e) => e.element))
+  check("内容：敌人覆盖全部 9 种属性", ALL.every((el) => covered.has(el)), ALL.filter((el) => !covered.has(el)).join())
+}
+
 console.log(`\n${count} 项检查，未通过 ${failures.length}`)
 if (failures.length > 0) process.exitCode = 1

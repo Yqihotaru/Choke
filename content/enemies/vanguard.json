@@ -7,6 +7,9 @@
     "fire",
     "ice"
   ],
+  "hiddenWeaknesses": [
+    "earth"
+  ],
   "stats": {
     "hp": 52000,
     "atk": 820,
