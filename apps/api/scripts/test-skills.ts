@@ -253,6 +253,32 @@ for (const [id, job] of [
   check("医者仁心：被 Down 失效", run(["healer_plus"], true) === plain)
 }
 
+// ---------- 7a. 治疗量按最大生命百分比，不随卡牌等级变 ----------
+{
+  const healAt = (level: number, id: string, carrier: Job = "support") => {
+    const s = createBattle(
+      spec,
+      inputs([face("h", carrier, "L", level, 0, [id]), face("t", "tank", "L", level, 0, ["bulwark_quake"])], 10),
+      { apMax: 7, seed: "pct-1" },
+    )
+    s.teamHp = 1
+    for (const c of s.cards) c.trigger = null
+    const after = apply(s, { type: "skill", card: 0, skill: id })
+    return { gain: after.teamHp - 1, max: s.teamHpMax }
+  }
+  const lowLevel = healAt(10, "healer_heal")
+  const highLevel = healAt(80, "healer_heal")
+  check("治疗按百分比：圣光治愈回 7% 最大生命", Math.abs(lowLevel.gain / lowLevel.max - 0.07) < 0.002 && Math.abs(highLevel.gain / highLevel.max - 0.07) < 0.002, `${lowLevel.gain}/${lowLevel.max}、${highLevel.gain}/${highLevel.max}`)
+  const mageHeal = healAt(40, "life_renew", "mage")
+  check("治疗按百分比：生机涌动回 6% 最大生命", Math.abs(mageHeal.gain / mageHeal.max - 0.06) < 0.002, `${mageHeal.gain}/${mageHeal.max}`)
+  const sameCardInt = (level: number) => healAt(level, "healer_heal").gain / healAt(level, "healer_heal").max
+  check("治疗按百分比：10 级和 80 级回血占比一样", Math.abs(sameCardInt(10) - sameCardInt(80)) < 0.002)
+  check("技能表校验：heal 不写 healPct 被拒", checkSkillTable({ x: { ...SKILLS.healer_heal!, id: "x", healPct: undefined } }).length > 0)
+  check("技能表校验：heal 写 power 被拒", checkSkillTable({ x: { ...SKILLS.healer_heal!, id: "x", power: 0.2 } }).length > 0)
+  check("技能表校验：单次治疗超过 15% 被拒", checkSkillTable({ x: { ...SKILLS.healer_heal!, id: "x", healPct: 0.2 } }).length > 0)
+  check("所有现有治疗都不超过 15%", Object.values(SKILLS).filter((d) => d.kind === "heal").every((d) => (d.healPct ?? 0) <= 0.15))
+}
+
 // ---------- 7b. 治疗软上限 ----------
 {
   const make = (encounter: typeof spec) => {

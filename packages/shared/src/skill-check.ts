@@ -70,6 +70,7 @@ const skillSchema = z
     desc: z.string().min(1).optional(),
     minRarity: z.enum(RARITIES).optional(),
     maxRarity: z.enum(RARITIES).optional(),
+    healPct: ratio.optional(),
 
     openingStatus: selfStatus.optional(),
     defMul: z.number().min(1).max(2).optional(),
@@ -134,6 +135,10 @@ const skillSchema = z
         if (!has("power") || !has("hits")) fail("damage 必须写 power 和 hits")
         break
       case "heal":
+        if (!has("healPct")) fail("heal 必须写 healPct（占队伍最大生命的比例）")
+        if (has("power")) fail("heal 不写 power，治疗量用 healPct")
+        if (def.healPct! > 0.15) fail("单次治疗不能超过 15% 最大生命（大恢复的上限）")
+        break
       case "guard":
         if (!has("power")) fail(`${def.kind} 必须写 power`)
         break
@@ -228,7 +233,7 @@ export function autoDescribeSkill(def: SkillDef): string {
       if (def.kind === "interrupt") parts.push("打断敌方蓄力")
       break
     case "heal":
-      if (def.power) parts.push(`为队伍回复 ${pct(def.power)} INT 的生命`)
+      if (def.healPct) parts.push(`为队伍回复 ${Math.round(def.healPct * 1000) / 10}% 最大生命`)
       if (def.cleanse) parts.push("清除队伍所有负面状态")
       if (def.revive) parts.push(def.revive === "all" ? "救醒所有倒下的队友" : `救醒 ${def.revive} 名倒下的队友`)
       break

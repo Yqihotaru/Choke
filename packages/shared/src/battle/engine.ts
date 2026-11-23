@@ -912,7 +912,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           }
           log(state, `✨ ${card.name} 净化了全队负面状态！`)
         }
-        const amount = Math.round(attack * (skill.power ?? 0.8))
+        const amount = Math.round(state.teamHpMax * (skill.healPct ?? 0))
         healParty(state, amount, `${card.name}「${skill.name}」`)
         break
       }

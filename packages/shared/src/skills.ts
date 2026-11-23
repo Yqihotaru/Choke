@@ -70,6 +70,8 @@ export interface SkillDef {
   costTag?: SkillCostTag
   power?: number
   hits?: number
+  /** 治疗量：占队伍最大生命的比例（不随卡牌等级变）；只用于 heal 技能 */
+  healPct?: number
   target?: "enemy" | "self" | "ally" | "team"
   stat?: "atk" | "int" | "def"
   amount?: number
@@ -692,9 +694,9 @@ export const SKILLS: Record<string, SkillDef> = {
     ap: 1,
     kind: "heal",
     costTag: "normal",
-    power: 0.15,
+    healPct: 0.06,
     target: "team",
-    desc: "为队伍总血条回复 0.15× INT 生命值",
+    desc: "为队伍回复 6% 最大生命",
   }),
   life_mass: S({
     id: "life_mass",
@@ -721,9 +723,9 @@ export const SKILLS: Record<string, SkillDef> = {
     ap: 2,
     kind: "heal",
     costTag: "normal",
-    power: 0.36,
+    healPct: 0.15,
     target: "team",
-    desc: "回复 0.36× INT 队伍生命并立即唤醒所有被 Down 的队友",
+    desc: "回复 15% 队伍最大生命，并立即唤醒所有被 Down 的队友",
   }),
   life_regen: S({
     id: "life_regen",
@@ -929,9 +931,9 @@ export const SKILLS: Record<string, SkillDef> = {
     ap: 1,
     kind: "heal",
     costTag: "normal",
-    power: 0.2,
+    healPct: 0.07,
     target: "team",
-    desc: "1 AP 为队伍总血条回复 0.2× INT 生命值",
+    desc: "1 AP 为队伍回复 7% 最大生命",
   }),
   healer_cleanse: S({
     id: "healer_cleanse",
@@ -942,9 +944,9 @@ export const SKILLS: Record<string, SkillDef> = {
     ap: 1,
     kind: "heal",
     costTag: "normal",
-    power: 0.1,
+    healPct: 0.035,
     target: "team",
-    desc: "回复 0.1× INT 队伍生命，并净化全队与卡片身上的负面异常状态",
+    desc: "回复 3.5% 队伍最大生命，并净化全队与卡片身上的负面异常状态",
   }),
   healer_revive: S({
     id: "healer_revive",
@@ -955,9 +957,9 @@ export const SKILLS: Record<string, SkillDef> = {
     ap: 2,
     kind: "heal",
     costTag: "normal",
-    power: 0.35,
+    healPct: 0.12,
     target: "team",
-    desc: "救醒场上所有被 Down 的卡片，并回复 0.35× INT 队伍生命",
+    desc: "救醒场上所有被 Down 的卡片，并回复 12% 队伍最大生命",
   }),
   healer_plus: S({
     id: "healer_plus",
