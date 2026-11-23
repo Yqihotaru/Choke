@@ -1,3 +1,4 @@
+/* 实验室页面左下角的「回桌面」：和桌面顶栏的按钮一个做法，跟随亮暗主题 */
 .back-to-desk {
   position: fixed;
   left: 18px;
@@ -5,27 +6,66 @@
   z-index: 1200;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 38px;
-  padding: 0 15px;
-  border: 2px solid rgba(60, 186, 219, 0.45);
-  border-radius: 999px;
-  background: rgba(11, 15, 23, 0.86);
-  color: #9fd9ea;
-  font-family: "Outfit Variable", "Outfit", sans-serif;
-  font-size: 12px;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px 0 12px;
+  border-radius: 8px;
+  background: #34272d;
+  color: #f2e9ed;
+  font-family: "Outfit Variable", "Outfit", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.06em;
   text-decoration: none;
-  box-shadow: 4px 4px 0 rgba(5, 7, 11, 0.75);
-  backdrop-filter: blur(6px);
-  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 2px 0 #1f161a,
+    0 8px 18px rgb(0 0 0 / 0.35);
+  transition: translate 0.08s ease, background 0.14s ease, box-shadow 0.08s ease;
+  animation: ui-rise-in var(--ui-slow) var(--ui-ease-out) 0.2s both;
 }
 .back-to-desk span {
   font-size: 18px;
   line-height: 1;
+  transition: translate var(--ui-fast) var(--ui-ease-out);
 }
 .back-to-desk:hover {
-  background: #3cbadb;
-  border-color: #3cbadb;
-  color: #0b0d10;
+  background: #ff66aa;
+  color: #1c1216;
+}
+.back-to-desk:hover span {
+  translate: -3px 0;
+}
+.back-to-desk:active {
+  translate: 0 1px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 1px 0 #1f161a,
+    0 4px 10px rgb(0 0 0 / 0.3);
+}
+.back-to-desk:focus-visible {
+  outline: 2px solid #ff66aa;
+  outline-offset: 2px;
+}
+.light .back-to-desk {
+  background: #d9d0c6;
+  color: #2b231e;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    0 2px 0 #b8ab9b,
+    0 8px 18px rgb(60 40 25 / 0.22);
+}
+.light .back-to-desk:hover {
+  background: #ff66aa;
+  color: #1c1216;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-desk {
+    animation: none;
+  }
+  .back-to-desk,
+  .back-to-desk span {
+    transition: none;
+  }
 }
