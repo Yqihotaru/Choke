@@ -39,5 +39,25 @@
     },
     "expPerStamina": 1,
     "marketUnlockLevel": 3
+  },
+  "expedition": {
+    "baseSlots": 4,
+    "slotCosts": [3, 3, 3],
+    "ap": { "base": 6, "upgraded": 10, "cost": 8 },
+    "rarityCosts": { "L": 3, "Mythic": 5, "Prismatic": 8 },
+    "pointsByLevel": [
+      [1, 8],
+      [3, 3],
+      [5, 3],
+      [10, 3],
+      [15, 3],
+      [20, 3],
+      [25, 3],
+      [30, 3],
+      [35, 3],
+      [40, 3],
+      [45, 3],
+      [50, 3]
+    ]
   }
 }

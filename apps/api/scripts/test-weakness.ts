@@ -11,7 +11,7 @@ import type { BattleEvent, BattleState } from "@choke/shared/battle/types"
 import { ELEMENTS, type Element } from "@choke/shared/types"
 
 import { BATTLE_CONTENT } from "../src/content"
-import { BENCH, DECKS, playBot } from "./lib/battle-bot"
+import { BENCH, DECKS, playBot, testApMax } from "./lib/battle-bot"
 
 const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
 const deck = DECKS.normal!
@@ -31,7 +31,7 @@ function check(name: string, ok: boolean, detail = "") {
 }
 
 const seed = "weakness-seed-2"
-const start = (spec: EncounterSpec) => createBattle(spec, deck, { seed, bench: BENCH })
+const start = (spec: EncounterSpec) => createBattle(spec, deck, { seed, bench: BENCH, apMax: testApMax(deck) })
 const apply = (state: BattleState, action: BattleAction) => {
   const result = withAction(state, action)
   if (result.error) throw new Error(`操作不合法：${result.error}`)
@@ -134,7 +134,7 @@ function findHit(state: BattleState): BattleAction {
       const a = playBot(spec, cards, s)
       const b = playBot(spec, cards, s)
       const live = JSON.stringify(a.state)
-      const replay = replayBattle({ encounter: spec, cards, bench: BENCH, seed: s }, a.actions)
+      const replay = replayBattle({ encounter: spec, cards, bench: BENCH, seed: s, apMax: testApMax(cards) }, a.actions)
       if (live !== JSON.stringify(b.state) || replay.invalidAt !== null || live !== JSON.stringify(replay.state)) bad += 1
       if (a.state.hiddenFound.length > 0) foundSomething += 1
     }
@@ -145,7 +145,7 @@ function findHit(state: BattleState): BattleAction {
 
 // ---------- 5. 内容里的窗口弱点与教学引导 ----------
 {
-  const open = (id: string) => createBattle(resolveEncounter(BATTLE_CONTENT, id)!, deck, { seed: `window-${id}` })
+  const open = (id: string) => createBattle(resolveEncounter(BATTLE_CONTENT, id)!, deck, { seed: `window-${id}`, apMax: testApMax(deck) })
   check("内容：无谱拳手第 1 回合露出光破绽", open("bare-brawler").enemy.exposed.join() === "light", open("bare-brawler").enemy.exposed.join())
   check("内容：巨像节拍器第 1 拍没有破绽（第 3 拍才露出）", open("colossus-metronome").enemy.exposed.length === 0)
   check("内容：圣咏唱诗者开局蓄力不足，没有破绽", open("halo-chorister").enemy.exposed.length === 0)

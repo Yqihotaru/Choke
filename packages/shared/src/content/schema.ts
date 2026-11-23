@@ -60,6 +60,17 @@ export const progressionSchema = z.strictObject({
     expPerStamina: nonNegative,
     marketUnlockLevel: positiveInt,
   }),
+  expedition: z.strictObject({
+    /** 免费卡槽数；slotCosts 的第 i 项 = 买第 baseSlots+i+1 个卡槽的点数 */
+    baseSlots: positiveInt,
+    slotCosts: z.array(positiveInt),
+    /** AP 上限：基础值，花 cost 点一次性升到 upgraded */
+    ap: z.strictObject({ base: positiveInt, upgraded: positiveInt, cost: positiveInt }),
+    /** 稀有度权限：C、UC、R、E 免费；这三档按 L → Mythic → Prismatic 的顺序逐级解锁，前一档没点后一档不能点 */
+    rarityCosts: z.strictObject({ L: positiveInt, Mythic: positiveInt, Prismatic: positiveInt }),
+    /** [玩家等级, 到这一级时一次性给的点数]；按等级累加 */
+    pointsByLevel: z.array(z.tuple([positiveInt, positiveInt])).min(1),
+  }),
 })
 
 const itemSchema = z.discriminatedUnion("kind", [
@@ -151,6 +162,23 @@ export const contentSchema = z
     }
     if (player.marketUnlockLevel > player.maxLevel) {
       issue(["progression", "player", "marketUnlockLevel"], "不能超过玩家等级上限")
+    }
+
+    const { expedition } = content.progression
+    if (expedition.ap.upgraded <= expedition.ap.base) {
+      issue(["progression", "expedition", "ap", "upgraded"], "升级后的 AP 上限必须高于基础值")
+    }
+    expedition.pointsByLevel.forEach(([level], i) => {
+      const previous = expedition.pointsByLevel[i - 1]?.[0] ?? 0
+      if (level <= previous) {
+        issue(["progression", "expedition", "pointsByLevel", i], "等级必须严格递增")
+      }
+      if (level > player.maxLevel) {
+        issue(["progression", "expedition", "pointsByLevel", i], "不能超过玩家等级上限")
+      }
+    })
+    if (expedition.pointsByLevel[0]![0] !== 1) {
+      issue(["progression", "expedition", "pointsByLevel", 0], "第一项必须是 1 级（新玩家开局就有点数）")
     }
 
     // 每个品质恰好一种碎片，id 固定为 shard-<品质>；分解再喂必须比直接喂亏

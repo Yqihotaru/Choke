@@ -17,7 +17,7 @@ import { evaluateStars } from "@choke/shared/battle/stars"
 import type { BattleState } from "@choke/shared/battle/types"
 
 import { BATTLE_CONTENT } from "../src/content"
-import { BENCH, DECKS, MAX_TURNS, playBot } from "./lib/battle-bot"
+import { BENCH, DECKS, MAX_TURNS, playBot, testApMax } from "./lib/battle-bot"
 
 const GOLDEN = path.resolve(import.meta.dirname, "fixtures/battle-golden.json")
 const SEEDS_PER_DECK = 25
@@ -55,7 +55,7 @@ for (const encounterId of Object.keys(BATTLE_CONTENT.encounters).sort()) {
       const b = playBot(encounter, deck, seed)
       const live = JSON.stringify(a.state)
       if (live !== JSON.stringify(b.state)) problems.push(`${key}：同种子打两遍结果不同（引擎里有不走种子的随机或依赖外部状态）`)
-      const replay = replayBattle({ encounter, cards: deck, bench: BENCH, seed }, a.actions)
+      const replay = replayBattle({ encounter, cards: deck, bench: BENCH, seed, apMax: testApMax(deck) }, a.actions)
       if (replay.invalidAt !== null) problems.push(`${key}：重放第 ${replay.invalidAt} 步不合法：${replay.error}`)
       else if (live !== JSON.stringify(replay.state)) problems.push(`${key}：重放结果与实打不同`)
       if (a.state.phase === "player") stalled.push(key)

@@ -379,18 +379,15 @@ function syncDefenseSupportSlot(state: BattleState) {
 export function createBattle(
   encounter: EncounterSpec,
   inputs: BattleInputCard[],
-  options: { seed: string; bench?: BattleInputCard[] },
+  options: { seed: string; apMax: number; bench?: BattleInputCard[] },
 ): BattleState {
   const cards = inputs.map((input) => createBattleCard(input.face, input.uid, input.cardId))
   const bench = (options.bench ?? []).map((input) => createBattleCard(input.face, input.uid, input.cardId))
 
   const { enemy, enemySupports } = makeEnemyAndSupports(encounter)
 
-  // 若队伍里有高阶卡（Mythic / Prismatic / 本体卡），解锁部队加成 AP 上限 7 → 10（§6.2）
-  const hasHighTier = cards.some(
-    (c) => c.face.isHero || c.rarity === "Mythic" || c.rarity === "Prismatic",
-  )
-  const apMax = hasHighTier ? 10 : 7
+  // AP 上限由出征前的点数分配决定（expedition-points），引擎不再自己判断
+  const { apMax } = options
   const teamHpMax = calcTeamHpMax(cards)
   const healSoftCap = encounter.healSoftCap === "unlimited" ? null : Math.round(teamHpMax * encounter.healSoftCap)
 

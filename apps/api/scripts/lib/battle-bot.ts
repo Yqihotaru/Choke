@@ -67,8 +67,14 @@ export const BENCH = inputs(
 
 // 倒下的卡换替补；3 的倍数回合升 1 档防御；每张卡放第一个能放的技能；结束回合
 
+// 测试用的 AP 上限：沿用引擎改造前的规则（队里有 Mythic / Prismatic / 本体卡为 10，否则 7），
+// 这样老基准不变。真实游戏里 AP 上限来自远征点数分配，见 expedition-points。
+export function testApMax(deck: BattleInputCard[]): number {
+  return deck.some((c) => c.face.isHero || c.face.rarity === "Mythic" || c.face.rarity === "Prismatic") ? 10 : 7
+}
+
 export function playBot(encounter: EncounterSpec, deck: BattleInputCard[], seed: string, bench: BattleInputCard[] = BENCH) {
-  let state = createBattle(encounter, deck, { seed, bench })
+  let state = createBattle(encounter, deck, { seed, bench, apMax: testApMax(deck) })
   const actions: BattleAction[] = []
   const act = (action: BattleAction) => {
     const result = withAction(state, action)

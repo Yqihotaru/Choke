@@ -34,7 +34,7 @@ function check(name: string, ok: boolean, detail = "") {
 /** 一张被测卡 + 一张不带技能的陪衬卡（保证队里始终有人） */
 function start(job: Job, skillIds: string[], seed = "skills-1", encounter = spec): BattleState {
   const cards = inputs([face("under-test", job, "L", 40, 0, skillIds), face("filler", "tank", "L", 40, 0, ["bulwark_quake"])], 10)
-  return createBattle(encounter, cards, { seed })
+  return createBattle(encounter, cards, { apMax: 7, seed })
 }
 const apply = (state: BattleState, action: BattleAction) => {
   const result = withAction(state, action)
@@ -188,7 +188,7 @@ for (const [id, job] of [
       ],
       10,
     )
-    const s = createBattle(spec, cards, { seed: "heal-1" })
+    const s = createBattle(spec, cards, { apMax: 7, seed: "heal-1" })
     s.teamHp = 1
     if (downIt) s.cards[0]!.down = true
     const before = s.teamHp
@@ -211,7 +211,7 @@ for (const [id, job] of [
       ],
       10,
     )
-    const s = createBattle(encounter, cards, { seed: "budget-1" })
+    const s = createBattle(encounter, cards, { apMax: 7, seed: "budget-1" })
     s.teamHp = 1
     return s
   }
@@ -351,7 +351,7 @@ for (const [id, job] of [
     ],
     10,
   )
-  const s = createBattle(spec, cards, { seed: "boost-1" })
+  const s = createBattle(spec, cards, { apMax: 7, seed: "boost-1" })
   for (const c of s.cards) c.trigger = null
   const after = apply(s, { type: "skill", card: 0, skill: "bard_ward" })
   const boosted = after.cards.filter((c, i) => i > 0 && c.trigger === "boost").length
@@ -700,7 +700,7 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
     let failedComboKept = 0
     for (const seed of seedsOf(opts.tag)) {
       const cards = inputs([face("under-test", job, opts.rarity, 40, 0, [id]), face("filler", "tank", "L", 40, 0, ["bulwark_quake"])], 10)
-      const s = createBattle(enc, cards, { seed })
+      const s = createBattle(enc, cards, { apMax: 7, seed })
       s.enemy.hp = s.enemy.hpMax = 1e9
       const base = s.enemy.intents[0]!
       s.enemy.intents = opts.hard.map((h, i) => ({ ...base, id: `t-${i}`, hardToInterrupt: h || undefined, interrupted: false }))
@@ -817,7 +817,7 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
 // ---------- 10. 坦克只看大职业 ----------
 {
   const tankDeck = start("tank", ["bulwark_quake"])
-  const warriorDeck = createBattle(spec, inputs([face("w", "warrior", "L", 40, 0, ["paladin_smite"])], 10), { seed: "t" })
+  const warriorDeck = createBattle(spec, inputs([face("w", "warrior", "L", 40, 0, ["paladin_smite"])], 10), { apMax: 7, seed: "t" })
   check("四维权重：坦克 DEF 高于战士", tankDeck.cards[0]!.stats.def > warriorDeck.cards[0]!.stats.def)
 }
 

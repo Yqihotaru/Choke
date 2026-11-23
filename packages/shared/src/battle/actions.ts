@@ -46,6 +46,7 @@ export interface ReplayInput {
   cards: BattleInputCard[]
   bench: BattleInputCard[]
   seed: string
+  apMax: number
 }
 
 export interface ReplayResult {
@@ -57,7 +58,7 @@ export interface ReplayResult {
 
 /** 从头重放一场战斗。服务端复算用的就是它 */
 export function replayBattle(input: ReplayInput, actions: BattleAction[]): ReplayResult {
-  const state = createBattle(input.encounter, input.cards, { seed: input.seed, bench: input.bench })
+  const state = createBattle(input.encounter, input.cards, { seed: input.seed, apMax: input.apMax, bench: input.bench })
   for (let i = 0; i < actions.length; i += 1) {
     const error = applyAction(state, actions[i]!)
     if (error) return { state, invalidAt: i, error }

@@ -14,6 +14,7 @@ import { GuestLoginButton } from "@/desk/GuestLoginButton"
 import { advanceTutorial, useTutorialProgress } from "@/tutorial/store"
 
 import { createBattle } from "@choke/shared/battle/engine"
+import { FREE_ALLOCATION, apMaxOf } from "@choke/shared/expedition-points"
 import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import { TUTORIAL_ENCOUNTER_ID, type EncounterSpec, type EncounterSummary } from "@choke/shared/battle/content"
 import type { BattleState } from "@choke/shared/battle/types"
@@ -189,6 +190,8 @@ export function BattlePage() {
         {
           // 第 4 步改为服务端下发种子；现在本地试玩先在前端生成
           seed: randomSeed(),
+          // 本机练习不花远征点数，用免费分配（AP 上限 6）
+          apMax: apMaxOf(FREE_ALLOCATION),
           bench: benchCards.map((card) => ({
             uid: card.userCardId,
             cardId: card.id,
