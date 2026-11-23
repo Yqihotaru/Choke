@@ -162,7 +162,10 @@
   position: relative;
   isolation: isolate;
   flex: 1;
-  overflow: hidden;
+  /* clip 而不是 hidden：合着的抽屉有一截在桌面下沿之外，hidden 的容器仍会被键盘聚焦 / scrollIntoView 滚上去，
+     整张桌子跟着错位；clip 不是滚动容器，所以补一个 min-height 让它照常被压缩 */
+  min-height: 0;
+  overflow: clip;
   background: #1c1216;
 }
 
@@ -414,4 +417,14 @@
   .obj-box__clasp {
     transition: none;
   }
+}
+
+/* 顶栏按钮里的图标（静音）：和文字按钮一样高，图标居中 */
+.desk-button > svg:only-child {
+  display: block;
+  font-size: 17px;
+}
+/* 顶栏按钮按下去沉一点，和面板里的按钮手感一致 */
+.desk-button:active:not(:disabled) {
+  translate: 0 1px;
 }

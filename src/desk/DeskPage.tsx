@@ -64,6 +64,8 @@ import { publishDeskCardIds } from "@/desk/session/presence"
 import { cardsToItems, ITEM_SIZE, newId, sizeOf, useDesk } from "@/desk/session/store"
 import type { CardData, DeskItem, PackPool } from "@/desk/lib/types"
 import { DeskCard, DeskPack, LevelMeter } from "@/desk/shell/DeskBits"
+import { GiSpeaker, GiSpeakerOff } from "react-icons/gi"
+
 import { getSfxVolume, playSfx, setSfxVolume } from "@/audio/sfx"
 import { useTheme } from "@/components/theme-provider"
 import { UI_SCALE_STEPS, useUiScale } from "@/desk/lib/ui-scale"
@@ -509,6 +511,8 @@ export function DeskPage() {
   const land = (receiver: DeskObjectId) => {
     setAwaiting(null)
     setReceiving(receiver)
+    // 掉进盒子里的那一下
+    playSfx("thud", { volume: 0.55, rate: 1.2 })
     if (receiveTimer.current) window.clearTimeout(receiveTimer.current)
     receiveTimer.current = window.setTimeout(() => setReceiving(null), 540)
     if (itemsRef.current.some((it) => it.object === receiver && it.stowed))
@@ -674,6 +678,10 @@ export function DeskPage() {
     const flying = [...cards, ...packs]
     if (!flying.length) return
     playSfx("paper")
+    // 一张张飞走：最多响 6 下，音一下比一下高
+    for (let i = 0; i < Math.min(flying.length, 6); i += 1) {
+      playSfx("deal", { delay: 0.05 + i * 0.06, rate: 0.9 + i * 0.06, volume: 0.6 })
+    }
     setQuickTargets(
       Object.fromEntries(
         flying.map((it, index) => {
@@ -813,6 +821,9 @@ export function DeskPage() {
         token: payload.token,
       }
       spawn([pack])
+      // 卡包从上面甩下来（desk-deal 0.64s），落桌时闷响一声
+      playSfx("whoosh", { volume: 0.7 })
+      playSfx("thud", { delay: 0.46, volume: 0.7 })
       showToast(`${meta.label} · 卡包已发到桌面`)
     } catch (reason) {
       showToast(
@@ -1055,7 +1066,8 @@ export function DeskPage() {
       if (!moved && Math.abs(dx) + Math.abs(dy) < 4) return
       if (!moved) {
         moved = true
-        playSfx("lift")
+        // 越重的东西拿起来声音越沉：卡 < 卡包 < 桌上的物件
+        playSfx("lift", { rate: item.kind === "object" ? 0.72 : item.kind === "pack" ? 0.9 : 1.12 })
         liftPointer.current = { x: rect.left + originX, y: rect.top + originY }
         setLifted({ item, grab })
       }
@@ -1156,7 +1168,10 @@ export function DeskPage() {
       // 落桌：轻轻弹一下，影子收紧；从抽屉里拖出来的就落在松手的地方
       if (fromDrawer) unstow(item.id, nx / rect.width, ny / rect.height)
       else move(item.id, nx / rect.width, ny / rect.height)
-      playSfx("drop")
+      // 卡是轻轻一拍，卡包略沉，物件是闷的一声
+      if (item.kind === "card") playSfx("deal")
+      else if (item.kind === "pack") playSfx("drop", { rate: 0.88 })
+      else playSfx("thud", { rate: 1.1 })
       setSettling(item.id)
       if (settleTimer.current) window.clearTimeout(settleTimer.current)
       settleTimer.current = window.setTimeout(() => setSettling(null), 460)
@@ -1309,6 +1324,10 @@ export function DeskPage() {
   const finishOpening = () => {
     if (!opening) return
     spawn(cardsToItems(opening.cards, opening.x + 0.01, opening.y + 0.02))
+    // 几张卡依次落到桌上
+    opening.cards.forEach((_, i) =>
+      playSfx("deal", { delay: 0.3 + i * 0.07, rate: 0.92 + i * 0.05, volume: 0.75 }),
+    )
     openingBusy.current = false
     setOpening(null)
     emitTutorialEvent("pack-opened")
@@ -1483,6 +1502,8 @@ export function DeskPage() {
       setSfxVolume(0)
     } else {
       setSfxVolume(unmutedVolume.current)
+      // 恢复声音时响一下，听得到「开了」
+      playSfx("tab")
     }
     setSfxVolumeState(getSfxVolume())
   }
@@ -1497,6 +1518,7 @@ export function DeskPage() {
     // 带 token 的卡包是从背包预扣的，store 的 reset 会把它们留在桌上
     const kept = items.filter((it) => it.kind === "pack" && it.token).length
     reset()
+    playSfx("whoosh")
     stowInvite(false)
     showToast(
       kept ? `桌面已重置 · ${kept} 个卡包还在桌上，可放回背包` : "桌面已重置"
@@ -1564,7 +1586,7 @@ export function DeskPage() {
             {user && <LevelMeter level={progress.level} exp={progress.exp} />}
           </div>
           <div className="desk-topbar__actions">
-            <div className="desk-zoom" role="group" aria-label="界面大小">
+            <div className="desk-zoom" role="group" aria-label="界面大小" data-sfx="tick">
               <button
                 type="button"
                 className="desk-button"
@@ -1598,6 +1620,7 @@ export function DeskPage() {
               onClick={() => setTheme(resolvedTheme === "light" ? "dark" : "light")}
               aria-label={resolvedTheme === "light" ? "切换到暗色" : "切换到亮色"}
               title={resolvedTheme === "light" ? "切换到暗色" : "切换到亮色"}
+              data-sfx="toggle"
             >
               {resolvedTheme === "light" ? "☾ 暗色" : "☀ 亮色"}
             </button>
@@ -1609,7 +1632,7 @@ export function DeskPage() {
               aria-label="静音"
               title={sfxVolume === 0 ? "音效已静音，点一下恢复" : "静音"}
             >
-              {sfxVolume === 0 ? "🔇" : "🔊"}
+              {sfxVolume === 0 ? <GiSpeakerOff aria-hidden /> : <GiSpeaker aria-hidden />}
             </button>
             {user && (
             <>

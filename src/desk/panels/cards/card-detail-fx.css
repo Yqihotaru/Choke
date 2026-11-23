@@ -1,0 +1,54 @@
+/* 卡牌详情的入场（布局在 card-detail.css）：遮罩只淡入，纸面浮上来，卡从左边翻着落定，右边的信息一行行跟上。
+   原来是整层连遮罩一起缩放，边缘会露出底下的页面。 */
+.card-detail {
+  animation: ui-fade-in 0.18s ease-out both;
+}
+.card-detail__panel {
+  animation: ui-pop-in var(--ui-slow) var(--ui-ease-out) both;
+}
+.card-detail__face {
+  animation: card-detail-face 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) 0.06s both;
+}
+@keyframes card-detail-face {
+  0% {
+    opacity: 0;
+    transform: perspective(900px) translateX(-22px) rotateY(28deg) scale(0.94);
+  }
+  70% {
+    opacity: 1;
+    transform: perspective(900px) translateX(2px) rotateY(-3deg) scale(1.01);
+  }
+}
+.card-detail__info > * {
+  animation: ui-rise-in var(--ui-base) var(--ui-ease-out) both;
+}
+.card-detail__info > :nth-child(1) {
+  animation-delay: 80ms;
+}
+.card-detail__info > :nth-child(2) {
+  animation-delay: 110ms;
+}
+.card-detail__info > :nth-child(3) {
+  animation-delay: 140ms;
+}
+.card-detail__info > :nth-child(n + 4) {
+  animation-delay: 170ms;
+}
+.card-detail__close {
+  transition: rotate var(--ui-base) var(--ui-ease-out), background var(--ui-fast) ease;
+}
+.card-detail__close:hover {
+  rotate: 90deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-detail,
+  .card-detail__panel,
+  .card-detail__face,
+  .card-detail__info > * {
+    animation: none;
+  }
+  .card-detail__close {
+    transition: none;
+  }
+}
