@@ -635,15 +635,21 @@ function healParty(state: BattleState, rawAmount: number, label = "治疗") {
   }
 }
 
-/** 拆毁敌方左侧非锁定侧面支援 */
-function removeEnemySupports(state: BattleState, count: number, actorName: string) {
+/** 拆毁敌方左侧强度不超过 breakTier 的侧面支援 */
+function removeEnemySupports(state: BattleState, count: number, actorName: string, breakTier: number) {
   let removed = 0
+  let tooStrong = 0
   for (let i = state.enemySupports.length - 1; i >= 0 && removed < count; i -= 1) {
-    if (!state.enemySupports[i].locked) {
-      const [del] = state.enemySupports.splice(i, 1)
-      removed += 1
-      log(state, `${actorName} 拆毁了敌方侧面支援【${del.name}】！`)
+    if ((state.enemySupports[i]!.tier ?? 1) > breakTier) {
+      tooStrong += 1
+      continue
     }
+    const [del] = state.enemySupports.splice(i, 1)
+    removed += 1
+    log(state, `${actorName} 拆毁了敌方侧面支援【${del!.name}】！`)
+  }
+  if (removed === 0 && tooStrong > 0) {
+    log(state, `${actorName} 的拆除强度只有 ${breakTier}，拆不动敌方强度更高的支援`)
   }
 }
 
@@ -736,7 +742,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           tryApplySkillStatus(state, card, skill)
         }
         if (skill.clearEnemySupports) {
-          removeEnemySupports(state, skill.clearEnemySupports, card.name)
+          removeEnemySupports(state, skill.clearEnemySupports, card.name, skill.breakTier ?? 1)
         }
         break
       }
@@ -905,7 +911,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           applyDamageToEnemy(state, card, skill, consumedTrigger)
         }
         if (skill.clearEnemySupports) {
-          removeEnemySupports(state, skill.clearEnemySupports, card.name)
+          removeEnemySupports(state, skill.clearEnemySupports, card.name, skill.breakTier ?? 1)
         }
         if (skill.statusId && state.phase === "player") {
           tryApplySkillStatus(state, card, skill)
@@ -938,14 +944,20 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
             defenseTier: def.armorTier,
             stat: def.stat,
             amount: def.amount,
-            locked: def.locked,
+            tier: def.tier,
             roleText: def.roleText,
           }
           if (state.playerSupports.length < MAX_SUPPORT_SLOTS) {
             state.playerSupports.push(unit)
           } else {
-            // 若满 7 格，替换第一个非锁定非防御支援
-            const repIdx = state.playerSupports.findIndex((s) => !s.locked && s.kind !== "defense")
+            // 满 7 格：替换强度最低的非防御支援，且被替换的强度不能高于新支援
+            const newTier = unit.tier ?? 1
+            let repIdx = -1
+            state.playerSupports.forEach((s, i) => {
+              const t = s.tier ?? 1
+              if (s.kind === "defense" || t > newTier) return
+              if (repIdx < 0 || t < (state.playerSupports[repIdx]!.tier ?? 1)) repIdx = i
+            })
             if (repIdx >= 0) state.playerSupports[repIdx] = unit
           }
           log(state, `✨ ${card.name} 在右侧支援栏部署了【${unit.name}】（${unit.roleText}）`)
@@ -1205,14 +1217,20 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
   }
 
   if (intent.kind === "break_support") {
-    // 削减/无力化玩家支援（§12 第 8 条：一次性拆毁 ≥2 个非锁定支援）
+    // 削减/无力化玩家支援（§12 第 8 条：一次性拆毁 ≥2 个强度够得着的支援）
+    const breakTier = intent.breakTier ?? 1
     let removed = 0
     let shielded = 0
     let targeted = 0
+    let tooStrong = 0
     const shield = Math.min(0.9, teamEffectSum(state.cards, "supportShield"))
     for (let i = state.playerSupports.length - 1; i >= 0 && targeted < 2; i -= 1) {
       const sup = state.playerSupports[i]!
-      if (sup.locked || sup.kind === "defense") continue
+      if (sup.kind === "defense") continue
+      if ((sup.tier ?? 1) > breakTier) {
+        tooStrong += 1
+        continue
+      }
       targeted += 1
       if (shield > 0 && roll(state, "enemy") < shield) {
         shielded += 1
@@ -1224,10 +1242,12 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
     log(
       state,
       removed > 0
-        ? `💥 敌方发动【${intent.label}】，摧毁了我方右侧 ${removed} 个非锁定侧面支援！${shielded > 0 ? `（${shielded} 个被守护光环挡下）` : ""}`
+        ? `💥 敌方发动【${intent.label}】，摧毁了我方右侧 ${removed} 个侧面支援！${shielded > 0 ? `（${shielded} 个被守护光环挡下）` : ""}`
         : shielded > 0
           ? `🛡️ 敌方发动【${intent.label}】，但守护光环挡下了所有拆毁！`
-          : `🛡️ 敌方发动【${intent.label}】，但我方没有可被拆毁的侧面支援！`,
+          : tooStrong > 0
+            ? `🛡️ 敌方发动【${intent.label}】（拆除强度 ${breakTier}），但拆不动我方强度更高的支援！`
+            : `🛡️ 敌方发动【${intent.label}】，但我方没有可被拆毁的侧面支援！`,
     )
     return
   }

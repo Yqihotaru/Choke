@@ -353,6 +353,58 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("守护光环：被 Down 失效", left(["paladin_aura"], true) === 0)
 }
 
+// ---------- 9b2. 支援强度 ----------
+{
+  const aura = (id: string, tier?: number) => ({ id, name: id, kind: "aura" as const, element: "light" as const, stat: "def" as const, amount: 0.1, tier, roleText: "测试" })
+  const breakWith = (breakTier: number) => {
+    const def = SKILLS.breaker_break!
+    const old = def.breakTier
+    def.breakTier = breakTier
+    try {
+      const s = start("warrior", ["breaker_break"], "tier-1")
+      s.enemy.hp = s.enemy.hpMax = 1e9
+      s.ap = 6
+      s.enemySupports = [aura("t1"), aura("t2", 2), aura("t3", 3)]
+      return apply(s, { type: "skill", card: 0, skill: "breaker_break" }).enemySupports.map((x) => x.id).join(",")
+    } finally {
+      def.breakTier = old
+    }
+  }
+  check("支援强度：拆除强度 1 只拆得动强度 1", breakWith(1) === "t2,t3", breakWith(1))
+  check("支援强度：拆除强度 2 拆得动强度 2", breakWith(2) === "t1,t3", breakWith(2))
+  check("支援强度：拆除强度 3 拆得动强度 3", breakWith(3) === "t1,t2", breakWith(3))
+
+  const enemyBreak = (breakTier?: number) => {
+    const s = start("warrior", ["paladin_smite"], "tier-2")
+    s.playerSupports = [aura("p1"), aura("p2", 2)]
+    s.enemy.intents = [{ id: "brk", kind: "break_support", label: "拆除", element: "physical", power: 0, hits: 1, desc: "", breakTier }]
+    return apply(s, { type: "endTurn" }).playerSupports.filter((x) => x.id.startsWith("p")).map((x) => x.id).join(",")
+  }
+  check("支援强度：敌方拆除默认强度 1，拆不动我方强度 2", enemyBreak() === "p2", enemyBreak())
+  check("支援强度：敌方拆除强度 2 能拆强度 2", enemyBreak(2) === "", enemyBreak(2))
+
+  const summon = (initialTiers: number[]) => {
+    const def = SKILLS.summoner_call!
+    const s = start(def.job, ["summoner_call"], "tier-3")
+    s.playerSupports = initialTiers.map((t, i) => aura(`q${i}`, t))
+    s.ap = 6
+    return apply(s, { type: "skill", card: 0, skill: "summoner_call" }).playerSupports.map((x) => x.id).join(",")
+  }
+  const replaced = summon([2, 1, 1, 1, 1, 1, 1]).split(",")
+  check("支援强度：满格时替换强度最低的支援，不动强度高的", replaced.length === 7 && replaced.includes("q0") && !replaced.includes("q1") && replaced.some((x) => x.startsWith("sup-")), replaced.join(","))
+  check("支援强度：满格且全是更高强度时不替换", !summon([2, 2, 2, 2, 2, 2, 2]).includes("sup-"), summon([2, 2, 2, 2, 2, 2, 2]))
+
+  check("支援强度：重装甲和守护圣印是强度 2", SKILLS.warden_armor!.supportDef!.tier === 2 && SKILLS.paladin_protect!.supportDef!.tier === 2)
+  check("支援强度：敌方终曲蓄力是强度 2", BATTLE_CONTENT.supports["enemy-sup-conductor-charge"]!.tier === 2)
+  check("支援强度：不再有 locked 字段", !JSON.stringify(SKILLS).includes('"locked"') && !JSON.stringify(BATTLE_CONTENT.supports).includes('"locked"'))
+  check("支援强度：拆支援技能都写了 breakTier", Object.values(SKILLS).filter((k) => k.clearEnemySupports).every((k) => k.breakTier !== undefined))
+  check("支援强度校验：写了 clearEnemySupports 不写 breakTier 会报错", checkSkill({ ...SKILLS.breaker_break!, breakTier: undefined }).length > 0)
+  check("支援强度校验：breakTier 超出 1–3 会报错", checkSkill({ ...SKILLS.breaker_break!, breakTier: 4 }).length > 0)
+  check("支援强度校验：没有拆除却写 breakTier 会报错", checkSkill({ ...SKILLS.warlock_frost!, breakTier: 1 }).length > 0)
+  check("支援强度校验：支援强度超出 1–3 会报错", checkSkill({ ...SKILLS.warden_armor!, supportDef: { ...SKILLS.warden_armor!.supportDef!, tier: 4 } }).length > 0)
+  check("支援强度：自动描述写出强度", autoDescribeSkill(SKILLS.warden_armor!).includes("强度 2") && autoDescribeSkill(SKILLS.breaker_break!).includes("≤1"))
+}
+
 // ---------- 9c. 疲惫：所有主动技能通用 ----------
 {
   const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!

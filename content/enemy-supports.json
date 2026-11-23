@@ -37,7 +37,7 @@
     "element": "fire",
     "stacks": 1,
     "maxStacks": 3,
-    "locked": true,
+    "tier": 2,
     "roleText": "每回合+1层增伤 · 满层放魔导炮"
   },
   "enemy-sup-conductor-armor": {

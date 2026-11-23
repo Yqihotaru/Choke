@@ -34,7 +34,7 @@ const supportDef = z.strictObject({
   armorTier: z.int().min(1).optional(),
   stat: z.enum(["atk", "int", "def"]).optional(),
   amount: z.number().optional(),
-  locked: z.boolean().optional(),
+  tier: z.int().min(1).max(3).optional(),
   roleText: z.string().min(1),
 })
 
@@ -64,6 +64,7 @@ const skillSchema = z
     executeBonus: z.number().positive().max(3).optional(),
     executeWhen: z.array(z.enum(["vulnerable", "lowHp"])).min(1).max(2).optional(),
     clearEnemySupports: z.int().min(1).max(5).optional(),
+    breakTier: z.int().min(1).max(3).optional(),
     supportDef: supportDef.optional(),
     /** 手写文案；留空则由 describeSkill 自动生成 */
     desc: z.string().min(1).optional(),
@@ -119,6 +120,7 @@ const skillSchema = z
     }
     if (has("executeBonus") !== has("executeWhen")) fail("executeBonus 与 executeWhen 必须同时写")
     if (def.executeWhen && new Set(def.executeWhen).size !== def.executeWhen.length) fail("executeWhen 不能重复")
+    if (has("clearEnemySupports") !== has("breakTier")) fail("clearEnemySupports 与 breakTier 必须同时写")
     if (has("hits") && !has("power")) fail("写了 hits 就必须写 power")
     if (has("cleanse") && def.kind !== "heal") fail("cleanse 只能用在 heal 技能上")
     if (has("revive") && def.kind !== "heal") fail("revive 只能用在 heal 技能上")
@@ -218,7 +220,7 @@ export function autoDescribeSkill(def: SkillDef): string {
         parts.push(`目标${label}时伤害 +${pct(def.executeBonus)}`)
       }
       if (def.selfHpCostPct) parts.push(`消耗队伍 ${pct(def.selfHpCostPct)} 生命`)
-      if (def.clearEnemySupports) parts.push(`清除敌方 ${def.clearEnemySupports} 个侧面支援`)
+      if (def.clearEnemySupports) parts.push(`清除敌方 ${def.clearEnemySupports} 个强度 ≤${def.breakTier ?? 1} 的侧面支援`)
       if (def.kind === "interrupt") parts.push("打断敌方蓄力")
       break
     case "heal":
@@ -240,11 +242,15 @@ export function autoDescribeSkill(def: SkillDef): string {
       parts.push(`获得 ${def.amount} 点 AP`)
       break
     case "summon":
-      if (def.supportDef) parts.push(`布置侧面支援【${def.supportDef.name}】：${def.supportDef.roleText}`)
+      if (def.supportDef) {
+        const tier = def.supportDef.tier ?? 1
+        parts.push(`布置${tier > 1 ? `强度 ${tier} 的` : ""}侧面支援【${def.supportDef.name}】：${def.supportDef.roleText}`)
+      }
       break
     case "control":
     case "debuff":
       if ((def.power ?? 0) > 0) parts.push(`${hitText}造成 ${pct(def.power ?? 0)} ${element}伤害`)
+      if (def.clearEnemySupports) parts.push(`清除敌方 ${def.clearEnemySupports} 个强度 ≤${def.breakTier ?? 1} 的侧面支援`)
       break
   }
   if (def.statusId) {

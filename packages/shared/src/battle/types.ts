@@ -114,6 +114,8 @@ export interface EnemyIntent {
   causesDown?: boolean
   /** 标红「难以打断」：被盲抽到的权重 0.4，打断成功率 ×0.4 */
   hardToInterrupt?: boolean
+  /** 拆支援招式（break_support）的拆除强度，默认 1 */
+  breakTier?: number
   /** 是否已被刺客打断取消 */
   interrupted?: boolean
   /** 是否为蓄力满槽释放的大招 */
@@ -144,8 +146,8 @@ export interface SideSupportUnit {
   amount?: number
   stacks?: number
   maxStacks?: number
-  /** 锁定支援不可被拆毁 */
-  locked?: boolean
+  /** 支援强度 1~3（默认 1）：拆除来源的 breakTier ≥ 强度才拆得动 */
+  tier?: number
   /** 仅本回合生效（如我方主动防御指令） */
   temporary?: boolean
   /** 被【支援排除】封印的剩余回合数 */

@@ -61,6 +61,8 @@ const moveFields = {
   causesDown: z.boolean(),
   /** 难以打断：盲抽权重 ×0.4、成功率 ×0.4 */
   hardToInterrupt: z.boolean(),
+  /** 拆除强度 1~3（只对 break_support 有意义，默认 1）：拆得动强度不超过它的我方支援 */
+  breakTier: int.min(1).max(3),
   /** 蓄力满槽的大招：释放后清空蓄力支援 */
   chargedUltimate: z.boolean(),
   status: z.enum(STATUS_IDS),
@@ -72,6 +74,7 @@ const moveSchema = z.strictObject({
   hits: moveFields.hits.default(1),
   causesDown: moveFields.causesDown.optional(),
   hardToInterrupt: moveFields.hardToInterrupt.optional(),
+  breakTier: moveFields.breakTier.optional(),
   chargedUltimate: moveFields.chargedUltimate.optional(),
   status: moveFields.status.optional(),
   /** 按条件覆盖字段，依次套用（例如「偶数回合附带 DOWN」） */
@@ -127,7 +130,7 @@ export const enemySupportSchema = z.strictObject({
   defenseTier: int.min(1).max(4).optional(),
   stacks: int.min(0).optional(),
   maxStacks: int.min(1).optional(),
-  locked: z.boolean().optional(),
+  tier: int.min(1).max(3).optional(),
   roleText: z.string(),
 })
 
@@ -230,6 +233,10 @@ const battleContentSchema = z
       const { moves, script } = enemy.ai
       for (const [moveId, move] of Object.entries(moves)) {
         move.variants?.forEach((v, i) => checkCondition(v.when, [...base, "moves", moveId, "variants", i, "when"]))
+        const writesBreakTier = move.breakTier !== undefined || move.variants?.some((v) => v.breakTier !== undefined)
+        if (writesBreakTier && move.kind !== "break_support") {
+          issue([...base, "moves", moveId, "breakTier"], "breakTier 只能写在 break_support 招式上")
+        }
       }
       script.forEach((entry, i) => {
         const path = [...base, "script", i]

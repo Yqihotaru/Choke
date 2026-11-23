@@ -438,30 +438,31 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.choke-plate-lock {
-  position: relative;
-  z-index: 2;
-  color: #ffe88a;
-  font-size: 0.92cqw;
-  filter: drop-shadow(0 0.08cqw 0.2cqw #000);
+/* 支援强度：强度 1 不显示；2、3 在铭牌最底层衬一个大号斜体数字 */
+.choke-plate-icon,
+.choke-plate-text {
+  z-index: 1;
 }
-.choke-plate-chains {
+.choke-plate-tier {
   position: absolute;
-  right: 0.4cqw;
-  top: 0;
-  bottom: 0;
-  width: 6.2cqw;
+  z-index: 0;
+  top: 50%;
+  right: 1.2cqw;
+  transform: translateY(-50%);
+  font-size: 3cqw;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  color: rgb(255 255 255 / 0.2);
   pointer-events: none;
-  opacity: 0.48;
-  background:
-    repeating-linear-gradient(-32deg, transparent 0 0.45cqw, rgb(255 245 215 / 0.85) 0.45cqw 0.62cqw, transparent 0.62cqw 1.05cqw),
-    repeating-linear-gradient(32deg, transparent 0 0.45cqw, rgb(255 215 150 / 0.65) 0.45cqw 0.62cqw, transparent 0.62cqw 1.05cqw);
-  mask-image: linear-gradient(90deg, transparent, #000 45%, #000);
 }
-.choke-rance-support-plate--party .choke-plate-chains {
-  left: 0.4cqw;
+.choke-rance-support-plate--party .choke-plate-tier {
   right: auto;
-  mask-image: linear-gradient(270deg, transparent, #000 45%, #000);
+  left: 1.5cqw;
+}
+.choke-rance-support-plate[data-tier="3"] .choke-plate-tier {
+  color: rgb(255 226 120 / 0.38);
+  text-shadow: 0 0 0.5cqw rgb(255 190 60 / 0.6);
 }
 .choke-card-slot[data-bursting="true"] {
   z-index: 28;

@@ -15,7 +15,6 @@ import {
   GiIceBolt,
   GiLightningBow,
   GiMagicPortal,
-  GiPadlock,
   GiRoundStar,
   GiShield,
   GiSkullCrossedBones,
@@ -852,9 +851,15 @@ export function BattleStage({
                   className="choke-rance-support-plate choke-rance-support-plate--enemy"
                   key={unit.id}
                   data-kind={unit.kind}
+                  data-tier={(unit.tier ?? 1) > 1 ? unit.tier : undefined}
                   style={{ "--el": elementColor(unit.element) } as CSSProperties}
-                  title={`${unit.name}：${unit.roleText}`}
+                  title={`${unit.name}：${unit.roleText}（强度 ${unit.tier ?? 1}）`}
                 >
+                  {(unit.tier ?? 1) > 1 && (
+                    <span className="choke-plate-tier" aria-hidden>
+                      {unit.tier}
+                    </span>
+                  )}
                   <div className="choke-plate-icon">
                     <SupportKindIcon unit={unit} />
                     {unit.defenseTier != null && <i>{unit.defenseTier}</i>}
@@ -864,14 +869,6 @@ export function BattleStage({
                     <b>{unit.name}</b>
                     <small>{unit.roleText}</small>
                   </div>
-                  {unit.locked && (
-                    <>
-                      <span className="choke-plate-chains" aria-hidden />
-                      <span className="choke-plate-lock" title="锁定支援">
-                        <GiPadlock />
-                      </span>
-                    </>
-                  )}
                 </div>
               ))}
             </div>
@@ -886,9 +883,15 @@ export function BattleStage({
                   key={unit.id}
                   data-kind={unit.kind}
                   data-active={unit.triggered ? "true" : undefined}
+                  data-tier={(unit.tier ?? 1) > 1 ? unit.tier : undefined}
                   style={{ "--el": elementColor(unit.element) } as CSSProperties}
-                  title={`${unit.name}：${unit.roleText}`}
+                  title={`${unit.name}：${unit.roleText}（强度 ${unit.tier ?? 1}）`}
                 >
+                  {(unit.tier ?? 1) > 1 && (
+                    <span className="choke-plate-tier" aria-hidden>
+                      {unit.tier}
+                    </span>
+                  )}
                   <div className="choke-plate-icon">
                     <SupportKindIcon unit={unit} />
                     {unit.defenseTier != null && <i>{unit.defenseTier}</i>}
@@ -897,14 +900,6 @@ export function BattleStage({
                     <b>{unit.name}</b>
                     <small>{unit.roleText}</small>
                   </div>
-                  {unit.locked && (
-                    <>
-                      <span className="choke-plate-chains" aria-hidden />
-                      <span className="choke-plate-lock" title="锁定保护">
-                        <GiPadlock />
-                      </span>
-                    </>
-                  )}
                 </div>
               ))}
             </div>

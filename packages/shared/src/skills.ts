@@ -36,7 +36,8 @@ export interface SupportSpawnDef {
   armorTier?: number
   stat?: "atk" | "int" | "def"
   amount?: number
-  locked?: boolean
+  /** 支援强度 1~3（默认 1） */
+  tier?: number
   roleText: string
 }
 
@@ -105,7 +106,8 @@ export interface SkillDef {
   executeWhen?: ExecuteCondition[]
   /** 清除敌方侧面支援数量 */
   clearEnemySupports?: number
-  /** 召唤/布置侧面支援定义 */
+  /** 拆除强度 1~3：只拆得动强度不超过它的敌方支援；写了 clearEnemySupports 必须写 */
+  breakTier?: number
   supportDef?: SupportSpawnDef
   /** 手写文案（覆盖）；留空则由 describeSkill 按字段自动生成 */
   desc?: string
@@ -256,10 +258,10 @@ export const SKILLS: Record<string, SkillDef> = {
       name: "重装甲 II",
       element: "metal",
       armorTier: 2,
-      locked: true,
+      tier: 2,
       roleText: "常驻防御 II 档 (−40%)",
     },
-    desc: "单次：在右侧支援栏部署锁定【重装甲 II】，常驻提供 II 档防御减伤",
+    desc: "单次：在右侧支援栏部署强度 2 的【重装甲 II】，常驻提供 II 档防御减伤",
   }),
   warden_stun: S({
     id: "warden_stun",
@@ -374,10 +376,10 @@ export const SKILLS: Record<string, SkillDef> = {
       element: "light",
       stat: "def",
       amount: 0.2,
-      locked: true,
-      roleText: "锁定支援 · 全队 DEF+20%",
+      tier: 2,
+      roleText: "强度 2 支援 · 全队 DEF+20%",
     },
-    desc: "在右侧支援栏展开锁定【守护圣印】，保护我方支援栏免遭敌方拆毁",
+    desc: "在右侧支援栏展开强度 2 的【守护圣印】，普通拆除拆不动，保护我方支援栏",
   }),
   paladin_judgment: S({
     id: "paladin_judgment",
@@ -419,8 +421,9 @@ export const SKILLS: Record<string, SkillDef> = {
     statusId: "armor_break",
     statusChance: 0.8,
     clearEnemySupports: 1,
+    breakTier: 1,
     turns: 3,
-    desc: "1.0× 金属性伤害，施加【破防】（敌方防御档位 −1 或 DEF 削减）并拆毁 1 个敌方支援",
+    desc: "1.0× 金属性伤害，施加【破防】（敌方防御档位 −1 或 DEF 削减）并拆毁 1 个强度 ≤1 的敌方支援",
   }),
   breaker_rift: S({
     id: "breaker_rift",
@@ -1011,8 +1014,9 @@ export const SKILLS: Record<string, SkillDef> = {
     power: 0.9,
     hits: 1,
     clearEnemySupports: 2,
+    breakTier: 1,
     target: "enemy",
-    desc: "0.9× 音波伤害，一次性驱散/拆毁敌方左侧最多 2 个非锁定支援",
+    desc: "0.9× 音波伤害，一次性驱散/拆毁敌方左侧最多 2 个强度 ≤1 的支援",
   }),
   bard_aura: S({
     id: "bard_aura",

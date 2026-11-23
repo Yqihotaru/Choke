@@ -32,6 +32,16 @@ const CASES: Case[] = [
   { name: "遭遇里支援重复", breakIt: editJson("encounters/vanguard.json", (d) => d.supports.push(d.supports[0])), expect: "重复" },
   { name: "脚本引用不存在的招式", breakIt: editJson("enemies/ghost.json", (d) => d.ai.script.push({ always: "nope" })), expect: "招式 nope 不存在" },
   {
+    name: "非拆支援招式写了 breakTier",
+    breakIt: editJson("enemies/ghost.json", (d) => (d.ai.moves[Object.keys(d.ai.moves)[0]!].breakTier = 2)),
+    expect: "breakTier 只能写在 break_support 招式上",
+  },
+  {
+    name: "敌方支援强度超出 1–3",
+    breakIt: editJson("enemy-supports.json", (d) => (d["enemy-sup-conductor-charge"].tier = 4)),
+    expect: "tier",
+  },
+  {
     name: "条件引用不存在的支援",
     breakIt: editJson("enemies/conductor.json", (d) => (d.ai.script[0].when.supportStacks.support = "x")),
     expect: "敌方支援 x 不存在",
