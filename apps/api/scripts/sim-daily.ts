@@ -3,18 +3,20 @@
 // 不含游客和本体卡。用法：pnpm --filter @choke/api exec tsx scripts/sim-daily.ts [玩家数] [天数]
 //
 // ★ 占位数字（还没定，只是为了跑通；定了以后改这里）：
-//   PACKS_PER_DAY：每天白拿几个普通卡包（任务、签到、挂机的合计）
-//   STAMINA_PER_DAY：每天能花的体力（回复 240 + 其余来源，目前只算自然回复）
-//   玩家活跃度：假设每天都上线、体力全部刷经验本，所以这是"勤快玩家"的上限
+//   卡包按《经济与养成系统 v0.3》§4.1 的"满勤上限"：每天挂机 60 + 日常任务 普通 8 / 黄金 2；
+//   周常 普通 14 / 黄金 5 / 璀璨 1（隔周）；月常 普通 59 / 黄金 15 / 璀璨 4 / 天穹 1 / 棱彩 1（按 28 天平摊到每天）。
+//   任务本身还没做，所以这是"每天全部做完"的上限。
+//   STAMINA_PER_DAY：每天能花的体力（目前只算自然回复 240，不含买药）
+//   玩家活跃度：假设每天都上线、体力全部刷经验本，所以是"勤快玩家"的上限
 import { STAMINA_MAX } from "@choke/shared/stamina"
 import { resolveEncounter } from "@choke/shared/battle/content"
-import { applyExp, feedExpOf } from "@choke/shared/progression"
+import { applyExp, feedExpOf, refundExpOf } from "@choke/shared/progression"
 import { rollSkillRefs, seededRandom, SKILLS } from "@choke/shared/skills"
 import type { Job, Rarity } from "@choke/shared/types"
 
 import { BATTLE_CONTENT } from "../src/content"
 import { PACK_SIZE } from "../src/gacha/packs"
-import { RARITY_ORDER, rollRarity } from "../src/gacha/pools"
+import { RARITY_ORDER, rollRarity, type PoolId } from "../src/gacha/pools"
 import { DECKS, face, inputs, playBot } from "./lib/battle-bot"
 
 const PLAYERS = Number(process.argv[2] ?? 300)
@@ -22,10 +24,16 @@ const DAYS = Number(process.argv[3] ?? 14)
 const SNAPSHOTS = [1, 3, 7, 14].filter((d) => d <= DAYS)
 
 const STARTER_PACKS = 30
-const PACKS_PER_DAY = 3 // 占位
 const STAMINA_PER_DAY = 240 // 占位：只算自然回复（每 6 分钟 1 点）
 const EXP_RUN_COST = 20
 const EXP_RUN_REWARD = 3200
+
+/** 每天固定拿到的包 */
+const DAILY_PACKS: Partial<Record<PoolId, number>> = { idle: 60, normal: 8, golden: 2 }
+/** 每 7 天拿一次的包（周常）；radiant 隔周一个，这里取平均 0.5 */
+const WEEKLY_PACKS: Partial<Record<PoolId, number>> = { normal: 14, golden: 5, radiant: 0.5 }
+/** 月常：28 天总量，平摊到每天 */
+const MONTHLY_PACKS: Partial<Record<PoolId, number>> = { normal: 59, golden: 15, radiant: 4, sky: 1, prism: 1 }
 
 const JOBS: Job[] = ["tank", "warrior", "mage", "support"]
 const NORMAL = ["ghost", "frost-dancer", "rock-drummer", "vine-fiddler", "wind-chime"]
@@ -41,12 +49,29 @@ interface Owned {
 const rankOf = (r: string) => RARITY_ORDER.indexOf(r as (typeof RARITY_ORDER)[number])
 const score = (c: Owned) => rankOf(c.rarity) * 10 + c.skills.filter((id) => !SKILLS[id]!.passive).length
 
-function openPacks(pool: "starter" | "normal", count: number, random: () => number): Owned[] {
+function openPacks(pool: PoolId, count: number, random: () => number): Owned[] {
   const out: Owned[] = []
   for (let i = 0; i < count * PACK_SIZE; i += 1) {
     const rarity = rollRarity(pool, random) as Rarity
     const job = JOBS[Math.floor(random() * 4)]!
     out.push({ job, rarity, skills: rollSkillRefs(job, rarity, random).map((r) => r.skillId) })
+  }
+  return out
+}
+
+/** 当天各包型的个数（小数用随机进位） */
+function packsOfDay(day: number, random: () => number): Partial<Record<PoolId, number>> {
+  const total: Record<string, number> = {}
+  const add = (src: Partial<Record<PoolId, number>>, scale: number) => {
+    for (const [pool, n] of Object.entries(src)) total[pool] = (total[pool] ?? 0) + n! * scale
+  }
+  add(DAILY_PACKS, 1)
+  if (day % 7 === 0) add(WEEKLY_PACKS, 1)
+  add(MONTHLY_PACKS, 1 / 28)
+  const out: Partial<Record<PoolId, number>> = {}
+  for (const [pool, n] of Object.entries(total)) {
+    const whole = Math.floor(n)
+    out[pool as PoolId] = whole + (random() < n - whole ? 1 : 0)
   }
   return out
 }
@@ -73,6 +98,18 @@ interface Player {
 }
 
 function feedAll(p: Player, extra: number) {
+  // 同职业来了更高稀有度的卡就换上去；旧卡已投入的经验按分解返还，旧卡本身也当材料
+  for (let i = 0; i < p.team.length; i += 1) {
+    const old = p.team[i]!
+    const cand = p.pending.filter((c) => c.job === old.job && rankOf(c.rarity) > rankOf(old.rarity)).sort((a, b) => score(b) - score(a))[0]
+    if (!cand) continue
+    const { level } = applyExp(1, 0, p.exp[i]!, old.rarity, false)
+    extra += refundExpOf(level, 0, old.rarity, false)
+    p.pending.splice(p.pending.indexOf(cand), 1)
+    p.pending.push(old)
+    p.team[i] = cand
+    p.exp[i] = 0
+  }
   const fodder = p.pending.reduce((sum, c) => sum + feedExpOf({ rarity: c.rarity, level: 1, exp: 0 }), 0)
   p.pending = []
   const each = Math.floor((fodder + extra) / p.team.length)
@@ -122,7 +159,9 @@ for (let day = 1; day <= DAYS; day += 1) {
     // 当天收入：第 1 天满体力，之后每天固定体力；每天固定几个卡包
     const stamina = day === 1 ? STAMINA_MAX : STAMINA_PER_DAY
     const expFromRuns = Math.floor(stamina / EXP_RUN_COST) * EXP_RUN_REWARD
-    if (day > 1) p.pending.push(...openPacks("normal", PACKS_PER_DAY, random))
+    if (day > 1) {
+      for (const [pool, count] of Object.entries(packsOfDay(day, random))) p.pending.push(...openPacks(pool as PoolId, count!, random))
+    }
     feedAll(p, expFromRuns)
 
     if (SNAPSHOTS.includes(day)) {
@@ -171,8 +210,9 @@ for (const [name, deck] of Object.entries(DECKS)) {
 
 const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length
 console.log(`\n逐日模拟：${PLAYERS} 人 × ${DAYS} 天，耗时 ${((Date.now() - started) / 1000).toFixed(0)}s`)
-console.log(`占位数字：每天 ${PACKS_PER_DAY} 个普通包、每天 ${STAMINA_PER_DAY} 体力（第 1 天 ${STAMINA_MAX}）全刷经验本（${EXP_RUN_COST} 体力出 ${EXP_RUN_REWARD} 经验）`)
-console.log("玩家：每职业各取最好的一张上场（固定不换），经验平均分给 4 张，所有多余的卡喂掉\n")
+console.log(`占位数字：每天卡包 ${JSON.stringify(DAILY_PACKS)}（挂机 60 是绑定的）+ 周常 ${JSON.stringify(WEEKLY_PACKS)} + 月常平摊 ${JSON.stringify(MONTHLY_PACKS)}（满勤上限，第 2 天起）`)
+console.log(`体力：每天 ${STAMINA_PER_DAY}（第 1 天 ${STAMINA_MAX}）全刷经验本（${EXP_RUN_COST} 体力出 ${EXP_RUN_REWARD} 经验）`)
+console.log("玩家：每职业取最好的一张上场，同职业来了更高稀有度的就换，经验平均分给 4 张，所有多余的卡喂掉\n")
 
 const table: Record<string, Record<string, string>> = {}
 for (const d of SNAPSHOTS) {
