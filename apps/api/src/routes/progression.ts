@@ -471,7 +471,7 @@ export async function progressionRoutes(app: FastifyInstance) {
   /**
    * 通用分解：任意卡 → 4 个同品质碎片（闪卡另给精华）。与「融合升命座」不同，这里不需要同名卡。
    * 升过级的卡另按已投入经验 × 75% 返还经验道具（大/中/小拆分，尾数舍去）。
-   * 仍然保留最后一张，避免把某张卡彻底分解光。
+   * 除本体卡外任何卡都能分解，包括最后一张。
    */
   app.post("/users/:userId/cards/:userCardId/dismantle", async (request, reply) => {
     const params = paramsSchema.parse(request.params)
@@ -498,13 +498,6 @@ export async function progressionRoutes(app: FastifyInstance) {
 
     const dismantled = await runTx(reply, async (tx) => {
       await lockUser(tx, userId)
-      const [{ value: copies }] = await tx
-        .select({ value: count() })
-        .from(userCards)
-        .where(and(eq(userCards.userId, userId), eq(userCards.cardId, target.id)))
-      if (Number(copies) < 2) {
-        throw new TxAbort(400, "last_copy", "这是最后一张，不能分解")
-      }
 
       // 等级和经验在锁内重读，避免和并发的喂养交错
       const [fresh] = await tx

@@ -273,7 +273,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
     )
   }
 
-  /** 通用分解：任意卡 → 碎片（闪卡另给精华），保留最后一张。成功后先给反馈，稍后再关弹窗。 */
+  /** 通用分解：任意卡 → 碎片（闪卡另给精华），本体卡除外。成功后先给反馈，稍后再关弹窗。 */
   const dismantle = async () => {
     if (!userId || busy !== null) return
     setBusy("dismantle")
@@ -514,7 +514,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                 <ConfirmBar
                   danger
                   confirmLabel="确认分解"
-                  message={`分解这张 ${current.name}？获得 ${SHARDS_PER_DISMANTLE} 个 ${current.rarity} 碎片${dismantleRefund.length > 0 ? `，返还 ${describeStacks(dismantleRefund)}` : ""}${dismantleEssence > 0 ? ` + ${dismantleEssence} 精华` : ""}，卡会消失（最后一张不能分解）。`}
+                  message={`分解这张 ${current.name}？获得 ${SHARDS_PER_DISMANTLE} 个 ${current.rarity} 碎片${dismantleRefund.length > 0 ? `，返还 ${describeStacks(dismantleRefund)}` : ""}${dismantleEssence > 0 ? ` + ${dismantleEssence} 精华` : ""}，卡会消失。`}
                   onCancel={() => setPending(null)}
                   onConfirm={confirmPending}
                 />
