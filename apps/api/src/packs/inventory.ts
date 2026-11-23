@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto"
 import { db } from "../db/client"
 import { PACKS, STARTER_PACKS, MYSTERY_PACK, type PackId } from "../gacha/packs"
 import { packTokens, userPacks } from "../db/schema"
+import { recordLedger, type LedgerSource } from "../ledger"
+import type { Tx } from "../tx"
 
 export const PACK_POOLS = [...(Object.keys(PACKS) as PackId[]), MYSTERY_PACK.id] as const
 
@@ -27,10 +29,11 @@ export async function getPackCounts(userId: string): Promise<PackCounts> {
 export async function addPacks(
   userId: string,
   grants: Partial<Record<PackPoolId, number>>,
+  executor: Tx | typeof db = db,
 ): Promise<void> {
   for (const [pool, count] of Object.entries(grants)) {
     if (!count || count <= 0) continue
-    await db
+    await executor
       .insert(userPacks)
       .values({ userId, pool, count })
       .onConflictDoUpdate({
@@ -38,6 +41,23 @@ export async function addPacks(
         set: { count: sql`${userPacks.count} + ${count}` },
       })
   }
+}
+
+/** 发卡包并在同一个事务里写流水 */
+export async function grantPacks(
+  userId: string,
+  grants: Partial<Record<PackPoolId, number>>,
+  origin: LedgerSource,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await addPacks(userId, grants, tx)
+    await recordLedger(
+      tx,
+      userId,
+      Object.entries(grants).map(([pool, count]) => ({ kind: "pack" as const, ref: pool, delta: count ?? 0 })),
+      origin,
+    )
+  })
 }
 
 export async function consumePack(userId: string, pool: PackPoolId): Promise<boolean> {
@@ -51,7 +71,7 @@ export async function consumePack(userId: string, pool: PackPoolId): Promise<boo
 
 /** 新号 OOBE 完成时发放：30 新手包 + 1 神秘卡包 */
 export async function grantStarterPacks(userId: string): Promise<void> {
-  await addPacks(userId, STARTER_PACKS)
+  await grantPacks(userId, STARTER_PACKS, { source: "starter" })
 }
 
 /** 把背包里的一个卡包“拿到桌面”：先扣库存，生成一次性 token。 */

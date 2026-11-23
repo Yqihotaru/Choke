@@ -7,6 +7,7 @@ import { MARKET_UNLOCK_LEVEL } from "../shared/tutorial"
 import { requireSelf } from "../auth/guard"
 import { db } from "../db/client"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
+import { recordLedger } from "../ledger"
 import { TxAbort, runTx } from "../tx"
 
 const cardColumns = {
@@ -333,7 +334,7 @@ export async function marketRoutes(app: FastifyInstance) {
         .update(userCards)
         .set({ userId })
         .where(and(eq(userCards.id, listing.userCardId), eq(userCards.userId, listing.sellerId)))
-        .returning({ id: userCards.id })
+        .returning({ id: userCards.id, cardId: userCards.cardId })
       if (moved.length === 0) {
         throw new TxAbort(409, "card_moved", "卖家已经不再持有这张卡")
       }
@@ -343,6 +344,25 @@ export async function marketRoutes(app: FastifyInstance) {
         .set({ coins: sql`${users.coins} + ${listing.price}` })
         .where(eq(users.id, listing.sellerId))
       await tx.delete(deckSlots).where(eq(deckSlots.userCardId, listing.userCardId))
+      const origin = { source: "market-buy", sourceRef: String(params.listingId) }
+      await recordLedger(
+        tx,
+        userId,
+        [
+          { kind: "coins", delta: -listing.price },
+          { kind: "card", ref: moved[0]!.cardId, delta: 1, userCardId: listing.userCardId },
+        ],
+        origin,
+      )
+      await recordLedger(
+        tx,
+        listing.sellerId,
+        [
+          { kind: "coins", delta: listing.price },
+          { kind: "card", ref: moved[0]!.cardId, delta: -1, userCardId: listing.userCardId },
+        ],
+        { ...origin, source: "market-sell" },
+      )
       return { coins: buyerWallet.coins, price: listing.price, userCardId: listing.userCardId }
     })
     if (!bought) return

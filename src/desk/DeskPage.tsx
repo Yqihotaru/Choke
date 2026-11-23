@@ -40,6 +40,7 @@ import {
 import { emitDeskData, emitDeskHover, onDeskData } from "./events"
 import { useDeskSession } from "./useDeskSession"
 import { MailBox } from "./MailBox"
+import { LedgerBox } from "./LedgerBox"
 import { InviteLetter } from "./InviteLetter"
 import { INVITE_OPEN_EVENT, readInviteStowed, saveInviteStowed } from "./invite"
 import { OBJECT_META, type DeskObjectId } from "./objects"
@@ -1620,6 +1621,7 @@ export function DeskPage() {
                   emitDeskData("cards")
                 }}
               />
+              <LedgerBox userId={user.id} />
               <button
                 type="button"
                 className="desk-button"

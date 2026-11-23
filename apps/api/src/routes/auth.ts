@@ -27,12 +27,12 @@ import { rateLimit } from "../auth/rate-limit"
 import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
 import { cards, userCards, userPacks, users } from "../db/schema"
-import { grantCard } from "../gacha/open"
+import { grantHeroCard } from "../gacha/open"
 import { loadItems } from "../items"
 import { invalidatePublicCardCache } from "./cards"
 import { heroCardDef } from "../hero"
 import { upsertMirrorCard } from "../mirror"
-import { addPacks, getPackCounts, grantStarterPacks } from "../packs/inventory"
+import { getPackCounts, grantPacks, grantStarterPacks } from "../packs/inventory"
 import { STARTER_PACKS } from "../gacha/packs"
 
 /** 登录时把 /me/osu 写成 hero-{id} 卡定义，并放进该用户的卡册 */
@@ -88,7 +88,7 @@ async function claimHeroCard(
     .limit(1)
 
   if (grant && !owned) {
-    await db.transaction((tx) => grantCard(tx, { userId, cardId: id }))
+    await grantHeroCard(userId, id)
   }
 
 }
@@ -232,7 +232,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     if (!user) throw new Error("游客账号写入失败")
 
-    await addPacks(userId, { starter: STARTER_PACKS.starter })
+    await grantPacks(userId, { starter: STARTER_PACKS.starter }, { source: "starter" })
     request.log.info({ userId }, "guest account created")
 
     setSessionCookie(reply, userId)

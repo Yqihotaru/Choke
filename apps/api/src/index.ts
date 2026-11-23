@@ -14,6 +14,7 @@ import { deckRoutes } from "./routes/decks"
 import { dungeonRoutes } from "./routes/dungeons"
 import { adminRoutes } from "./routes/admin"
 import { mailRoutes } from "./routes/mails"
+import { ledgerRoutes } from "./routes/ledger"
 import { marketRoutes } from "./routes/market"
 import { packRoutes } from "./routes/packs"
 import { progressionRoutes } from "./routes/progression"
@@ -35,6 +36,7 @@ await app.register(cardRoutes)
 await app.register(deckRoutes)
 await app.register(marketRoutes)
 await app.register(mailRoutes)
+await app.register(ledgerRoutes)
 await app.register(adminRoutes)
 await app.register(progressionRoutes)
 await app.register(dungeonRoutes)

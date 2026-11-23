@@ -10,6 +10,7 @@ import { requireSelf } from "../auth/guard"
 import { db } from "../db/client"
 import { dungeonRuns, userPacks, users } from "../db/schema"
 import { grantItems } from "../items"
+import { recordLedger } from "../ledger"
 
 const paramsSchema = z.object({ userId: z.string() })
 const runParamsSchema = z.object({ userId: z.string(), dungeonId: z.string() })
@@ -133,6 +134,18 @@ export async function dungeonRoutes(app: FastifyInstance) {
             })
         }
         if (items.length > 0) await grantItems(tx, userId, items)
+        await recordLedger(
+          tx,
+          userId,
+          [
+            { kind: "stamina", delta: -dungeon.cost },
+            { kind: "essence", delta: essence },
+            { kind: "coins", delta: coins },
+            { kind: "pack", ref: "normal", delta: packs },
+            ...items.map(({ itemId, count }) => ({ kind: "item" as const, ref: itemId, delta: count })),
+          ],
+          { source: "dungeon", sourceRef: dungeon.id },
+        )
 
         await tx.insert(dungeonRuns).values({
           userId,

@@ -7,7 +7,7 @@ import { DECK_SIZE } from "../config"
 import { db } from "../db/client"
 import { cards, userCards, users } from "../db/schema"
 import { invalidatePublicCardRows } from "./cards"
-import { grantCard, openPack } from "../gacha/open"
+import { grantHeroCard, openPack } from "../gacha/open"
 import {
   EVENT_PACKS,
   MYSTERY_PACK,
@@ -216,7 +216,7 @@ export async function packRoutes(app: FastifyInstance) {
       })
     }
 
-    await db.transaction((tx) => grantCard(tx, { userId, cardId: heroId }))
+    await grantHeroCard(userId, heroId, "mystery")
 
     return {
       ok: true,

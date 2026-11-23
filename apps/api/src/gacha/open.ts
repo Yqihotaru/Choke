@@ -7,6 +7,7 @@ import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
 import { cards, packOpenings, packTokens, userCards, userPacks } from "../db/schema"
 import { MIRROR_RATE, pickMirrorCard } from "../mirror"
+import { recordLedger } from "../ledger"
 import { PACK_SIZE, PACKS, STARTER_GUARANTEE } from "./packs"
 import { RARITY_ORDER, mulberry32, rollRarity, type PoolId } from "./pools"
 
@@ -97,6 +98,23 @@ export async function grantCard(
   return { userCardId: inserted.id, serial: counted.pulled, rollBp, skillRefs }
 }
 
+/** 发本体卡并写流水；领取神秘卡包换来的那次，把扣掉的卡包也记进去 */
+export async function grantHeroCard(userId: string, cardId: string, spentPack?: string) {
+  return db.transaction(async (tx) => {
+    const granted = await grantCard(tx, { userId, cardId })
+    await recordLedger(
+      tx,
+      userId,
+      [
+        ...(spentPack ? [{ kind: "pack" as const, ref: spentPack, delta: -1 }] : []),
+        { kind: "card", ref: cardId, delta: 1, userCardId: granted.userCardId },
+      ],
+      { source: "hero-claim" },
+    )
+    return granted
+  })
+}
+
 export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) {
   const seed = Math.floor(Math.random() * 2 ** 32)
   const random = mulberry32(seed)
@@ -184,6 +202,20 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       pityBefore: 0,
       pityAfter: 0,
     })
+    await recordLedger(
+      tx,
+      userId,
+      [
+        { kind: "pack", ref: pool, delta: -1 },
+        ...[...results, ...(bonus ? [bonus] : [])].map((card) => ({
+          kind: "card" as const,
+          ref: card.cardId,
+          delta: 1,
+          userCardId: card.userCardId,
+        })),
+      ],
+      { source: "pack-open", sourceRef: pool },
+    )
 
     return {
       seed,

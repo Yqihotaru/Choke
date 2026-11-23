@@ -27,6 +27,7 @@ import {
 import { db } from "../db/client"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
 import { grantItems, loadItems, mergeStacks, spendItems } from "../items"
+import { recordLedger, type LedgerEntryInput } from "../ledger"
 import { TxAbort, lockUser, runTx, type Tx } from "../tx"
 
 const feedBodySchema = z
@@ -247,6 +248,12 @@ export async function progressionRoutes(app: FastifyInstance) {
         .update(marketListings)
         .set({ status: "cancelled" })
         .where(eq(marketListings.userCardId, duplicate.id))
+      await recordLedger(
+        tx,
+        userId,
+        [{ kind: "card", ref: target.id, delta: -1, userCardId: duplicate.id }],
+        { source: "fuse", sourceRef: String(userCardId) },
+      )
       const upgraded = await tx
         .update(userCards)
         .set({ constellation: sql`${userCards.constellation} + 1` })
@@ -311,7 +318,7 @@ export async function progressionRoutes(app: FastifyInstance) {
 
       let gained = 0
       let essenceGained = 0
-
+      const ledger: LedgerEntryInput[] = []
       if (body.cards.length > 0) {
         const sources = await tx
           .select({
@@ -337,12 +344,16 @@ export async function progressionRoutes(app: FastifyInstance) {
           gained += feedExpOf({ rarity, level: source.level, exp: source.exp })
           essenceGained += essenceOf(rarity, source.foil)
           await removeUserCard(tx, userId, source.id)
+          ledger.push({ kind: "card", ref: source.cardId, delta: -1, userCardId: source.id })
         }
       }
 
       if (stacks.length > 0) {
         await spendItems(tx, userId, stacks)
-        for (const { itemId, count: amount } of stacks) gained += ITEMS[itemId].exp * amount
+        for (const { itemId, count: amount } of stacks) {
+          gained += ITEMS[itemId].exp * amount
+          ledger.push({ kind: "item", ref: itemId, delta: -amount })
+        }
       }
 
       const next = applyExp(target.level, target.exp, gained, target.rarity as Rarity, targetHero)
@@ -360,6 +371,8 @@ export async function progressionRoutes(app: FastifyInstance) {
           .returning({ essence: users.essence })
         essence = wallet?.essence
       }
+      ledger.push({ kind: "essence", delta: essenceGained })
+      await recordLedger(tx, userId, ledger, { source: "feed", sourceRef: String(userCardId) })
 
       return {
         gained,
@@ -440,6 +453,10 @@ export async function progressionRoutes(app: FastifyInstance) {
       if (flipped.length === 0) {
         throw new TxAbort(400, "already_foil", "这张卡已经是闪卡")
       }
+      await recordLedger(tx, userId, [{ kind: "essence", delta: -cost }], {
+        source: "foil",
+        sourceRef: String(userCardId),
+      })
       return wallet
     })
     if (!enhanced) return
@@ -508,6 +525,16 @@ export async function progressionRoutes(app: FastifyInstance) {
         .set({ essence: sql`${users.essence} + ${essenceGained}` })
         .where(eq(users.id, userId))
         .returning({ essence: users.essence })
+      await recordLedger(
+        tx,
+        userId,
+        [
+          { kind: "card", ref: target.id, delta: -1, userCardId },
+          ...itemsGained.map(({ itemId, count }) => ({ kind: "item" as const, ref: itemId, delta: count })),
+          { kind: "essence", delta: essenceGained },
+        ],
+        { source: "dismantle", sourceRef: String(userCardId) },
+      )
       return { essence: wallet?.essence ?? 0, itemsGained, items: await loadItems(userId, tx) }
     })
     if (!dismantled) return

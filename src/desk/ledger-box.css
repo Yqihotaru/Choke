@@ -1,0 +1,92 @@
+/* 流水：沿用邮箱的弹层外壳，只加筛选条和列表 */
+
+.ledger-panel {
+  width: min(760px, 100%);
+}
+.ledger-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--bk-line);
+}
+.ledger-body {
+  flex: 1;
+  min-height: 0;
+  padding: 8px 12px;
+  overflow-y: auto;
+  background: var(--bk-well);
+}
+.ledger-empty {
+  padding: 16px 8px;
+}
+.ledger-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ledger-row {
+  display: grid;
+  grid-template-columns: 112px 64px minmax(0, 1fr) 120px 72px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--bk-line);
+  font-size: 13px;
+}
+.ledger-row__time {
+  color: var(--bk-faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-row__kind {
+  color: var(--bk-dim);
+}
+.ledger-row__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ledger-row__rarity {
+  margin-left: 6px;
+  color: var(--bk-osu-text);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+.ledger-row__source {
+  color: var(--bk-dim);
+  font-size: 12px;
+}
+.ledger-row__delta {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ledger-row__delta.is-gain {
+  color: var(--bk-good, #3fae6a);
+}
+.ledger-row__delta.is-loss {
+  color: var(--bk-bad);
+}
+.ledger-more {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
+}
+
+@media (max-width: 720px) {
+  .ledger-row {
+    grid-template-columns: minmax(0, 1fr) 64px;
+    row-gap: 2px;
+  }
+  .ledger-row__time,
+  .ledger-row__kind,
+  .ledger-row__source {
+    grid-column: 1;
+  }
+  .ledger-row__delta {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+  }
+}

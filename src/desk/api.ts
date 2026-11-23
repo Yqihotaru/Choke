@@ -4,6 +4,7 @@ import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/conte
 import type { DungeonRewards } from "@choke/shared/dungeons"
 import type { ItemId, ItemStack } from "@choke/shared/items"
 import type { MailView } from "@choke/shared/mail"
+import type { LedgerKind, LedgerPage } from "@choke/shared/ledger"
 
 export type ItemWallet = Partial<Record<ItemId, number>>
 /** `/users/:id/cards` 和 `/users/:id/deck` 共用的卡行 */
@@ -675,4 +676,15 @@ export function pinMail(userId: string, mailId: number, pinned: boolean): Promis
 
 export function deleteMail(userId: string, mailId: number): Promise<unknown> {
   return request(`/api/users/${userId}/mails/${mailId}`, { method: "DELETE" })
+}
+
+export function fetchLedger(
+  userId: string,
+  options: { kind?: LedgerKind; before?: number } = {},
+): Promise<LedgerPage> {
+  const query = new URLSearchParams()
+  if (options.kind) query.set("kind", options.kind)
+  if (options.before) query.set("before", String(options.before))
+  const suffix = query.size > 0 ? `?${query}` : ""
+  return request<LedgerPage>(`/api/users/${userId}/ledger${suffix}`)
 }
