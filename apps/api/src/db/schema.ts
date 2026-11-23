@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm"
 import {
   bigint,
+  bigserial,
   boolean,
   index,
   integer,
@@ -13,6 +14,8 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core"
+
+import type { MailAttachment } from "@choke/shared/mail"
 
 export const cards = pgTable(
   "cards",
@@ -224,4 +227,39 @@ export const dungeonRuns = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index("dungeon_runs_user_idx").on(table.userId, table.createdAt.desc())],
+)
+
+export const mails = pgTable(
+  "mails",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    kind: text("kind").notNull().default("system"),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    /** null = 没有附件；格式见 @choke/shared/mail */
+    attachment: jsonb("attachment").$type<MailAttachment | null>(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    pinned: boolean("pinned").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("mails_user_created_idx").on(table.userId, table.createdAt.desc())],
+)
+
+/** 流水：所有货币、道具、卡包、卡牌的增减，正数是得到、负数是失去 */
+export const ledgerEntries = pgTable(
+  "ledger_entries",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    userId: text("user_id").notNull(),
+    kind: text("kind").notNull(),
+    ref: text("ref").notNull().default(""),
+    delta: integer("delta").notNull(),
+    source: text("source").notNull(),
+    sourceRef: text("source_ref"),
+    userCardId: integer("user_card_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("ledger_user_idx").on(table.userId, table.id.desc())],
 )

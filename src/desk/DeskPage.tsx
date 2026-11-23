@@ -39,6 +39,7 @@ import {
 } from "./drag"
 import { emitDeskData, emitDeskHover, onDeskData } from "./events"
 import { useDeskSession } from "./useDeskSession"
+import { MailBox } from "./MailBox"
 import { InviteLetter } from "./InviteLetter"
 import { INVITE_OPEN_EVENT, readInviteStowed, saveInviteStowed } from "./invite"
 import { OBJECT_META, type DeskObjectId } from "./objects"
@@ -1610,6 +1611,15 @@ export function DeskPage() {
             </button>
             {user && (
             <>
+              <MailBox
+                userId={user.id}
+                notify={showToast}
+                onGranted={() => {
+                  refreshUser()
+                  emitDeskData("packs")
+                  emitDeskData("cards")
+                }}
+              />
               <button
                 type="button"
                 className="desk-button"

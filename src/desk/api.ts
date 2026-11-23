@@ -3,6 +3,7 @@ import type { CardFaceData, CardSkillRef, Job, Rarity } from "@/card/types"
 import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
 import type { DungeonRewards } from "@choke/shared/dungeons"
 import type { ItemId, ItemStack } from "@choke/shared/items"
+import type { MailView } from "@choke/shared/mail"
 
 export type ItemWallet = Partial<Record<ItemId, number>>
 /** `/users/:id/cards` 和 `/users/:id/deck` 共用的卡行 */
@@ -627,4 +628,48 @@ export function dismantleCard(
   return request(`/api/users/${userId}/cards/${userCardId}/dismantle`, {
     method: "POST",
   })
+}
+
+export interface MailBoxData {
+  mails: MailView[]
+  summary: MailSummary
+  pinLimit: number
+}
+
+export interface MailSummary {
+  unread: number
+  claimable: number
+  pinned: number
+}
+
+export function fetchMails(userId: string): Promise<MailBoxData> {
+  return request<MailBoxData>(`/api/users/${userId}/mails`)
+}
+
+export function fetchMailSummary(userId: string): Promise<MailSummary> {
+  return request<MailSummary>(`/api/users/${userId}/mails/summary`)
+}
+
+export function readMail(userId: string, mailId: number): Promise<unknown> {
+  return request(`/api/users/${userId}/mails/${mailId}/read`, { method: "POST" })
+}
+
+export function claimMail(userId: string, mailId: number): Promise<unknown> {
+  return request(`/api/users/${userId}/mails/${mailId}/claim`, { method: "POST" })
+}
+
+export function claimAllMails(userId: string): Promise<{ claimed: number }> {
+  return request(`/api/users/${userId}/mails/claim-all`, { method: "POST" })
+}
+
+export function pinMail(userId: string, mailId: number, pinned: boolean): Promise<unknown> {
+  return request(`/api/users/${userId}/mails/${mailId}/pin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pinned }),
+  })
+}
+
+export function deleteMail(userId: string, mailId: number): Promise<unknown> {
+  return request(`/api/users/${userId}/mails/${mailId}`, { method: "DELETE" })
 }

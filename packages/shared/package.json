@@ -18,6 +18,7 @@
     "./pool/rarity": "./src/pool/rarity.ts",
     "./pool/hero": "./src/pool/hero.ts",
     "./stamina": "./src/stamina.ts",
+    "./mail": "./src/mail.ts",
     "./dungeons": "./src/dungeons.ts",
     "./content": "./src/content/index.ts",
     "./content/schema": "./src/content/schema.ts",
