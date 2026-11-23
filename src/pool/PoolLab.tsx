@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
 
+import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
 import { RARITIES, type Rarity } from "@/card/types"
@@ -144,7 +145,9 @@ export function PoolLab() {
       setPage(0)
       setSelected(null)
       setError(null)
+      playSfx("deal")
     } catch (err) {
+      playSfx("error")
       setError(err instanceof Error ? err.message : "解析失败")
     }
   }
@@ -177,7 +180,9 @@ export function PoolLab() {
       if (!user || typeof user !== "object") throw new Error("需要 /me/osu 的 JSON")
       update(claim(selectedCard, user))
       setError(null)
+      playSfx("success")
     } catch (err) {
+      playSfx("error")
       setError(err instanceof Error ? err.message : "认领数据无效")
     }
   }
@@ -284,6 +289,7 @@ export function PoolLab() {
                   data-active={card.osuId === selected || undefined}
                   key={card.osuId}
                   onClick={() => setSelected(card.osuId)}
+                  data-sfx="open"
                 >
                   <GameCardFace card={faceFromPool(card)} />
                   <span className="lab__tag">
@@ -329,7 +335,7 @@ export function PoolLab() {
                 {selectedCard.globalRank ? ` · 全球 #${selectedCard.globalRank}` : " · 无排名"}
               </p>
             </div>
-            <button type="button" className="lab__toggle" onClick={() => setSelected(null)}>
+            <button type="button" className="lab__toggle" onClick={() => setSelected(null)} data-sfx="close">
               关闭
             </button>
           </div>

@@ -272,3 +272,63 @@
     max-height: 78vh;
   }
 }
+
+/* ---------- 手感与动效 ---------- */
+/* 按 seed 重算、翻页后，稀有度占比和卡格重新落一遍，看得出「数变了」 */
+.pool-lab__stat {
+  animation: ui-rise-in var(--ui-slow) var(--ui-ease-out) both;
+}
+.pool-lab__stat:nth-child(2) { animation-delay: 30ms; }
+.pool-lab__stat:nth-child(3) { animation-delay: 60ms; }
+.pool-lab__stat:nth-child(4) { animation-delay: 90ms; }
+.pool-lab__stat:nth-child(5) { animation-delay: 120ms; }
+.pool-lab__stat:nth-child(6) { animation-delay: 150ms; }
+.pool-lab__stat:nth-child(7) { animation-delay: 180ms; }
+
+.pool-lab__slot {
+  animation: ui-rise-in var(--ui-base) var(--ui-ease-out) both;
+}
+.pool-lab__slot:active {
+  transform: translateY(0) scale(0.98);
+}
+.pool-lab__slot:focus-visible,
+.pool-lab__file:focus-within {
+  outline: 2px solid #ff66aa;
+  outline-offset: 4px;
+  border-radius: 14px;
+}
+.pool-lab__slot[data-active] {
+  outline-color: #ff66aa;
+}
+.pool-lab__file:active {
+  translate: 0 1px;
+}
+.pool-lab__toolbar .lab__toggle[disabled],
+.pool-lab__claim .lab__toggle[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.pool-lab__error {
+  animation: ui-shake 0.32s ease-out;
+}
+
+/* 详情从右边滑进来 */
+.pool-lab__detail {
+  animation: ui-slide-in-right var(--ui-slow) var(--ui-ease-out) both;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.18) transparent;
+}
+@media (max-width: 720px) {
+  .pool-lab__detail {
+    animation-name: ui-rise-in;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool-lab__stat,
+  .pool-lab__slot,
+  .pool-lab__error,
+  .pool-lab__detail {
+    animation: none;
+  }
+}
