@@ -61,6 +61,11 @@ const CASES: Case[] = [
     },
     expect: "至少要有一场",
   },
+  // ---- 推荐上阵 ----
+  { name: "推荐技能不存在", breakIt: editJson("encounters/tutorial-ghost.json", (d) => (d.recommend.skills = ["nope_skill"])), expect: "推荐技能 nope_skill 不存在" },
+  { name: "推荐技能重复", breakIt: editJson("encounters/tutorial-ghost.json", (d) => (d.recommend.skills = ["bulwark_quake", "bulwark_quake"])), expect: "重复" },
+  { name: "推荐属性重复", breakIt: editJson("encounters/tutorial-ghost.json", (d) => (d.recommend.elements = ["fire", "fire"])), expect: "推荐属性 fire 重复" },
+  { name: "推荐属性未知", breakIt: editJson("encounters/tutorial-ghost.json", (d) => (d.recommend.elements = ["water"])), expect: "recommend" },
   // ---- 脚本结构 ----
   { name: "otherwise 放在开头", breakIt: editJson("enemies/ghost.json", (d) => d.ai.script.unshift({ otherwise: "claw" })), expect: "otherwise 必须紧跟在 when 后面" },
   { name: "脚本为空", breakIt: editJson("enemies/ghost.json", (d) => (d.ai.script = [])), expect: "ai.script" },

@@ -1,6 +1,7 @@
 import { prettifyError, z } from "zod"
 
 import { ELEMENTS } from "../types"
+import { skillById } from "../skills"
 import { ENEMY_TIERS, ENEMY_TRAITS, INTENT_KINDS, MAX_SUPPORT_SLOTS, STATUS_IDS, SUPPORT_KINDS } from "./types"
 
 /**
@@ -145,6 +146,14 @@ export const starConditionSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("apSpentAtMost"), value: int.min(0) }),
 ])
 
+/** 推荐上阵：这场遭遇建议带什么。一键上阵和选关处的提示都读它 */
+export const recommendSchema = z.strictObject({
+  /** 推荐属性：卡上带这些属性的攻击技能算对口 */
+  elements: z.array(element).default([]),
+  /** 推荐技能（技能 id）：卡上带着算对口，比属性更看重 */
+  skills: z.array(z.string().min(1)).default([]),
+})
+
 export const encounterSchema = z.strictObject({
   enemy: id,
   supports: z.array(id).max(MAX_SUPPORT_SLOTS).default([]),
@@ -160,6 +169,8 @@ export const encounterSchema = z.strictObject({
    * 回得越多越弱，但不会完全不能回；"unlimited" = 不衰减（永动机 BOSS 用）。治疗技能、生生不息、吸血都算进去
    */
   healSoftCap: z.union([z.number().min(0.05).max(3), z.literal("unlimited")]).default(DEFAULT_HEAL_SOFT_CAP),
+  /** 推荐上阵；不写就按敌人的公开弱点推荐（不会泄露隐藏弱点） */
+  recommend: recommendSchema.optional(),
   /** 战斗背景图名，对应 public/battle-bg/<名>.jpg；缺省用遭遇 id */
   background: id.optional(),
 })
@@ -172,6 +183,12 @@ export type EnemyDef = z.infer<typeof enemySchema>
 export type EnemySupportDef = z.infer<typeof enemySupportSchema>
 export type StarCondition = z.infer<typeof starConditionSchema>
 export type EncounterDef = z.infer<typeof encounterSchema>
+export type Recommend = z.infer<typeof recommendSchema>
+
+/** 遭遇的推荐上阵：写了就用写的，没写就取敌人的公开弱点 */
+export function recommendOf(encounter: EncounterDef, enemy: EnemyDef): Recommend {
+  return encounter.recommend ?? { elements: enemy.weaknesses, skills: [] }
+}
 
 export interface BattleContent {
   enemies: Record<string, EnemyDef>
@@ -188,6 +205,8 @@ export interface EncounterSpec {
   background: string
   /** 治疗软上限（最大生命的倍数）；"unlimited" 不衰减 */
   healSoftCap: number | "unlimited"
+  /** 推荐上阵（已展开：没写就是公开弱点） */
+  recommend: Recommend
   stars: StarCondition[]
   enemy: EnemyDef & { id: string }
   supports: (EnemySupportDef & { id: string })[]
@@ -207,6 +226,7 @@ export interface EncounterSummary {
   summary: string
   stars: StarCondition[]
   listed: boolean
+  recommend: Recommend
 }
 
 const battleContentSchema = z
@@ -288,6 +308,13 @@ const battleContentSchema = z
       })
       const types = encounter.stars.map((s) => s.type)
       if (new Set(types).size !== types.length) issue([...base, "stars"], "三星条件类型不能重复")
+      encounter.recommend?.skills.forEach((skillId, i) => {
+        if (!skillById(skillId)) issue([...base, "recommend", "skills", i], `推荐技能 ${skillId} 不存在`)
+        if (encounter.recommend!.skills.indexOf(skillId) !== i) issue([...base, "recommend", "skills", i], `推荐技能 ${skillId} 重复`)
+      })
+      encounter.recommend?.elements.forEach((el, i) => {
+        if (encounter.recommend!.elements.indexOf(el) !== i) issue([...base, "recommend", "elements", i], `推荐属性 ${el} 重复`)
+      })
     }
 
     if (!Object.hasOwn(content.encounters, TUTORIAL_ENCOUNTER_ID)) {
@@ -326,6 +353,7 @@ export function resolveEncounter(content: BattleContent, encounterId: string): E
     intro: encounter.intro,
     background: encounter.background ?? encounterId,
     healSoftCap: encounter.healSoftCap,
+    recommend: recommendOf(encounter, enemy),
     stars: encounter.stars,
     enemy: { id: encounter.enemy, ...enemy },
     supports: encounter.supports.map((supportId) => ({ id: supportId, ...content.supports[supportId]! })),
@@ -348,6 +376,7 @@ export function listEncounters(content: BattleContent): EncounterSummary[] {
         summary: encounter.summary,
         stars: encounter.stars,
         listed: encounter.listed,
+        recommend: recommendOf(encounter, enemy),
       }
     })
     .sort((a, b) => ENEMY_TIERS.indexOf(a.tier) - ENEMY_TIERS.indexOf(b.tier) || a.hp - b.hp)

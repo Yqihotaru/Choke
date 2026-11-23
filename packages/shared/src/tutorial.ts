@@ -19,6 +19,7 @@ export const TUTORIAL_STEPS = [
   "album-view",
   "deck",
   "deck-view",
+  "deck-review",
   "battle-tab",
   "battle-view",
   "battle-result",

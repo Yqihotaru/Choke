@@ -6,9 +6,13 @@ import { RARITY_LABEL, battlePower } from "@/card/data"
 import { RARITIES, type Rarity } from "@/card/types"
 import { emitTutorialEvent } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
+import { TUTORIAL_ENCOUNTER_ID, type Recommend } from "@choke/shared/battle/content"
+import { BASE_SLOTS } from "@choke/shared/expedition-points"
+import { pickReason, recommendText } from "@choke/shared/lineup"
 
 import {
   fetchDeck,
+  fetchEncounter,
   fetchUserCards,
   saveDeck,
   toFace,
@@ -23,6 +27,7 @@ import {
   type CardPointerDrop,
 } from "./drag"
 import { onDeskHover } from "./events"
+import { pickLineup } from "./lineup"
 import { Pages, useBook, usePageCache } from "./BookPages"
 import { ConfirmBar } from "./ConfirmBar"
 import { FitArea } from "./FitArea"
@@ -59,6 +64,7 @@ export const DeckPanel = memo(function DeckPanel({
   const [reload, setReload] = useState(0)
   const [busyHint, setBusyHint] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
+  const [reviewRecommend, setReviewRecommend] = useState<Recommend | null>(null)
   const hoverSlotRef = useRef<number | null>(null)
   const deskIds = useDeskCardIds()
   const config = useGameConfig()
@@ -90,6 +96,19 @@ export const DeckPanel = memo(function DeckPanel({
       })
     return () => controller.abort()
   }, [userId, book.revision, reload])
+
+  useEffect(() => {
+    if (tutorial.tutorialStep !== "deck-review") return
+    let cancelled = false
+    fetchEncounter(TUTORIAL_ENCOUNTER_ID)
+      .then((spec) => {
+        if (!cancelled) setReviewRecommend(spec.recommend)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [tutorial.tutorialStep])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -313,26 +332,42 @@ export const DeckPanel = memo(function DeckPanel({
   const firstEmpty = deck.slots.findIndex((slot) => !slot.card)
   const targetSlot = pickerSlot ?? (firstEmpty >= 0 ? firstEmpty : null)
   const tutorialDeckStep = tutorial.tutorialStep === "deck-view"
-  const pickerRows = currentResult?.rows ?? []
-  const tutorialCanConfirm = filled > 0 || pickerRows.length > 0
+  const tutorialReview = tutorial.tutorialStep === "deck-review"
+  const reviewLineup =
+    tutorialReview && reviewRecommend
+      ? pickLineup(
+          deck.slots.flatMap((slot) => (slot.card ? [slot.card] : [])),
+          reviewRecommend,
+          BASE_SLOTS
+        )
+      : null
+  const reviewNames = new Map(
+    deck.slots.flatMap((slot) =>
+      slot.card ? [[slot.card.userCardId, slot.card.name] as const] : []
+    )
+  )
 
-  /** 教程专用：空卡组用右页前几张卡一键填满；已有卡就直接确认出战 */
+  /** 教程专用：空卡组按推荐挑 4 张存进去；已有卡就不动，教学战开打时再从里面挑 */
   const confirmTutorialDeck = async () => {
     if (!userId || !deck || saving) return
-    if (filled === 0 && pickerRows.length === 0) {
-      setNotice("右页还在加载卡牌，或你还没有卡；先去抽一包再上阵。")
-      return
-    }
-
-    let readyDeck = filled > 0
-    const ids = pickerRows.slice(0, deck.slots.length).map((row) => row.userCardId)
-    if (!readyDeck && ids.length > 0) {
-      const slots = deck.slots.map((_, index) => ids[index] ?? null)
-      setSaving(true)
-      setBusyHint(false)
-      setNotice(null)
-      try {
-        const next = await saveDeck(userId, slots)
+    setSaving(true)
+    setBusyHint(false)
+    setNotice(null)
+    try {
+      if (filled === 0) {
+        const [spec, page] = await Promise.all([
+          fetchEncounter(TUTORIAL_ENCOUNTER_ID),
+          fetchUserCards(userId, { sort: "pp", limit: 200 }),
+        ])
+        const { rows } = pickLineup(page.rows, spec.recommend, BASE_SLOTS)
+        if (rows.length === 0) {
+          setNotice("你还没有能带的卡；先去抽一包再上阵。")
+          return
+        }
+        const next = await saveDeck(
+          userId,
+          deck.slots.map((_, index) => rows[index]?.userCardId ?? null)
+        )
         setDeck(next)
         setSavedAt(
           new Date().toLocaleTimeString("zh-CN", {
@@ -340,22 +375,15 @@ export const DeckPanel = memo(function DeckPanel({
             minute: "2-digit",
           })
         )
-        readyDeck = next.slots.some((slot) => slot.card)
-      } catch (reason) {
-        playSfx("error")
-        setNotice(reason instanceof Error ? reason.message : "保存失败")
-        return
-      } finally {
-        setSaving(false)
       }
+      playSfx("success")
+      emitTutorialEvent("deck-confirmed")
+    } catch (reason) {
+      playSfx("error")
+      setNotice(reason instanceof Error ? reason.message : "上阵失败")
+    } finally {
+      setSaving(false)
     }
-
-    if (!readyDeck) {
-      setNotice("卡组还是空的，请先放入至少 1 张卡。")
-      return
-    }
-    playSfx("success")
-    emitTutorialEvent("deck-confirmed")
   }
 
   const renderPage = (index: number, pickerResult: PickerResult | null) => {
@@ -411,7 +439,7 @@ export const DeckPanel = memo(function DeckPanel({
               </div>
             )}
 
-            <div className="deck-grid">
+            <div className="deck-grid" data-tutorial-id="deck-slots">
               {deck.slots.map((slot, index) => {
                 const isDropTarget = dropSlot === index
                 const onDesk = !!slot.card && deskIds.has(slot.card.userCardId)
@@ -475,6 +503,25 @@ export const DeckPanel = memo(function DeckPanel({
               })}
             </div>
 
+            {reviewLineup && reviewRecommend && (
+              <div className="bk-box deck-review" role="status">
+                <b>{recommendText(reviewRecommend)}</b>
+                <ul>
+                  {reviewLineup.lineup.picks.map((pick) => (
+                    <li key={pick.key}>
+                      <span>{reviewNames.get(pick.key)}</span>
+                      {pickReason(pick)}
+                    </li>
+                  ))}
+                </ul>
+                {reviewLineup.lineup.wanted && !reviewLineup.lineup.hit && (
+                  <p>
+                    这队没有对口的攻击技能，教学战里揭不开幽灵的隐藏弱点，不影响过关。
+                  </p>
+                )}
+              </div>
+            )}
+
             {confirmClear && filled > 0 && (
               <ConfirmBar
                 danger
@@ -500,16 +547,14 @@ export const DeckPanel = memo(function DeckPanel({
                   type="button"
                   className="bk-btn bk-btn--main"
                   data-tutorial-id="deck-tutorial-confirm"
-                  disabled={saving || !tutorialCanConfirm}
+                  disabled={saving}
                   onClick={() => void confirmTutorialDeck()}
                 >
                   {saving
                     ? "上阵中…"
-                    : tutorialCanConfirm
-                      ? "一键上阵，去战斗"
-                      : currentResult
-                        ? "没有可上阵的卡"
-                        : "加载卡牌…"}
+                    : filled > 0
+                      ? "确认阵容，继续"
+                      : "按推荐一键上阵"}
                 </button>
               ) : filled === 0 ? (
                 <button type="button" className="bk-btn bk-btn--main" disabled>

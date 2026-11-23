@@ -12,6 +12,7 @@ import { createPortal } from "react-dom"
 import { playSfx } from "@/audio/sfx"
 import { useGameConfig } from "@/desk/useGameConfig"
 import { useModal } from "@/ui/useModal"
+import { BASE_SLOTS } from "@choke/shared/expedition-points"
 
 import { MARKET_UNLOCK_LEVEL } from "./constants"
 
@@ -157,6 +158,7 @@ function TutorialDialogue({
   const lineText = formatScriptText(line.text, {
     packSize: config?.packSize ?? 5,
     deckSize: config?.deckSize ?? 7,
+    lineupSize: BASE_SLOTS,
     marketUnlockLevel: MARKET_UNLOCK_LEVEL,
   })
   const waitingForTarget = script.advanceOn !== "continue" && targetMissing

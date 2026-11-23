@@ -7,6 +7,7 @@
     "album-view",
     "deck",
     "deck-view",
+    "deck-review",
     "battle-tab",
     "battle-view",
     "battle-result",
@@ -103,11 +104,11 @@
       "lines": [
         {
           "mood": "idle",
-          "text": "点开卡组。右边是你的卡，左边是 {deckSize} 个槽位。"
+          "text": "点开卡组。右边是你的卡，左边是上阵的槽位。"
         },
         {
           "mood": "smug",
-          "text": "新手别追求满编，先凑一套能出战的就行。"
+          "text": "新手别追求满编。教学战最多带 {lineupSize} 张，够用了。"
         }
       ]
     },
@@ -116,14 +117,30 @@
       "target": { "desktop": "deck-entry", "book": "deck-tutorial-confirm" },
       "advanceOn": "event",
       "event": "deck-confirmed",
-      "next": "battle-tab",
+      "next": "deck-review",
       "lines": [
         {
           "mood": "idle",
-          "text": "看到『一键上阵，去战斗』了吗？点它，我帮你把卡塞进槽位。"
+          "text": "看到『按推荐一键上阵』了吗？点它，我按对手的脾气替你挑 {lineupSize} 张。"
         },
         {
           "mood": "happy",
+          "text": "规矩是：每个职业先挑一张最强的，再看谁带着对口的属性。以后出征也是这套思路。"
+        }
+      ]
+    },
+
+    "deck-review": {
+      "target": "deck-slots",
+      "advanceOn": "continue",
+      "next": "battle-tab",
+      "lines": [
+        {
+          "mood": "happy",
+          "text": "挑好了。每张卡为什么上场，我写在下面了，自己看一眼。"
+        },
+        {
+          "mood": "smug",
           "text": "卡组不用完美，先上场挨打，才知道缺什么。"
         }
       ]

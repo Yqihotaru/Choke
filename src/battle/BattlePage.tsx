@@ -11,10 +11,11 @@ import {
   type ApiUserCard,
 } from "@/desk/api"
 import { GuestLoginButton } from "@/desk/GuestLoginButton"
+import { pickLineup } from "@/desk/lineup"
 import { advanceTutorial, useTutorialProgress } from "@/tutorial/store"
 
 import { createBattle } from "@choke/shared/battle/engine"
-import { FREE_ALLOCATION, apMaxOf } from "@choke/shared/expedition-points"
+import { BASE_SLOTS, FREE_ALLOCATION, apMaxOf } from "@choke/shared/expedition-points"
 import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import { TUTORIAL_ENCOUNTER_ID, type EncounterSpec, type EncounterSummary } from "@choke/shared/battle/content"
 import type { BattleState } from "@choke/shared/battle/types"
@@ -159,11 +160,17 @@ export function BattlePage() {
     return <div className="battle-page battle-page--center">加载关卡…</div>
   }
 
-  const cards = deck.slots.flatMap((slot) => (slot.card ? [slot.card] : []))
+  const deckCards = deck.slots.flatMap((slot) => (slot.card ? [slot.card] : []))
+  // 教学战最多 4 张：卡组里多的话按推荐挑，不改动存着的卡组；教学战没有替补
+  const cards = tutorialRun
+    ? pickLineup(deckCards, encounter.recommend, BASE_SLOTS).rows
+    : deckCards
   const deckCardUids = new Set(cards.map((c) => c.userCardId))
-  const benchCards = extraCards.filter((c) => !deckCardUids.has(c.userCardId)).slice(0, 8)
+  const benchCards = tutorialRun
+    ? []
+    : extraCards.filter((c) => !deckCardUids.has(c.userCardId)).slice(0, 8)
 
-  if (cards.length === 0) {
+  if (deckCards.length === 0) {
     return (
       <div className="battle-page battle-page--center">
         <div className="battle-gate">

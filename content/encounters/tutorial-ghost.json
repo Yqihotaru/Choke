@@ -18,5 +18,8 @@
   ],
   "summary": "新手教学：血量与攻防都压低，熟悉出招、Combo 与结束回合。",
   "intro": "教学讨伐战开始！",
-  "listed": false
+  "listed": false,
+  "recommend": {
+    "elements": ["fire"]
+  }
 }

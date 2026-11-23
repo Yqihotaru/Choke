@@ -346,6 +346,7 @@ export function DeskPage() {
       "album-view": "album",
       deck: "deck",
       "deck-view": "deck",
+      "deck-review": "deck",
       "battle-tab": "battle",
       "battle-view": "battle",
     }

@@ -21,6 +21,7 @@
     "./mail": "./src/mail.ts",
     "./ledger": "./src/ledger.ts",
     "./expedition-points": "./src/expedition-points.ts",
+    "./lineup": "./src/lineup.ts",
     "./dungeons": "./src/dungeons.ts",
     "./content": "./src/content/index.ts",
     "./content/schema": "./src/content/schema.ts",

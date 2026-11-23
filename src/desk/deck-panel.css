@@ -238,6 +238,28 @@
   white-space: nowrap;
 }
 
+/* 教程里的上阵理由：每张卡一行 */
+.deck-review {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.deck-review ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.deck-review li span {
+  margin-right: 8px;
+  font-weight: 700;
+}
+.deck-review p {
+  margin: 0;
+  color: var(--bk-faint);
+}
+
 /* 窄屏：左页摘要换行，按钮和筛选不撑破页宽 */
 @media (max-width: 900px) {
   .deck-summary {
