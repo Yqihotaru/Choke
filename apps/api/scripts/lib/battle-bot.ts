@@ -3,6 +3,7 @@
 import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import type { EncounterSpec } from "@choke/shared/battle/content"
 import { createBattle, type BattleInputCard } from "@choke/shared/battle/engine"
+import type { BattleState } from "@choke/shared/battle/types"
 import { makeCard } from "@choke/shared/card-def"
 import { cardSkillsFromRefs } from "@choke/shared/skills"
 import type { Job, Mod, Rarity } from "@choke/shared/types"
@@ -78,7 +79,17 @@ export function playBot(
   deck: BattleInputCard[],
   seed: string,
   bench: BattleInputCard[] = BENCH,
-  extra: { apMax?: number; hpRatio?: number } = {},
+  extra: {
+    apMax?: number
+    hpRatio?: number
+    /** 每个成功的操作之后调用一次（只读统计用，不要改 state） */
+    onAction?: (state: BattleState, action: BattleAction) => void
+    /**
+     * firstFit（默认，所有基准用它）：每张卡从左到右放第一个能放的主动技能。
+     * burst（只给流派分析用）：按 AP 从高到低放；队里有 3 AP 以上的大招而当前 AP 不够时，本回合只放 0 AP 技能，把 AP 攒下来。
+     */
+    policy?: "firstFit" | "burst"
+  } = {},
 ) {
   let state = createBattle(encounter, deck, {
     seed,
@@ -92,6 +103,7 @@ export function playBot(
     if (result.error) return false
     state = result.state
     actions.push(action)
+    extra.onAction?.(state, action)
     return true
   }
   for (let guard = 0; guard < MAX_TURNS && state.phase === "player"; guard += 1) {
@@ -101,10 +113,23 @@ export function playBot(
       if (sub) act({ type: "swap", slot, benchUid: sub.uid })
     })
     if (state.turn % 3 === 0) act({ type: "defend" })
-    for (let i = 0; i < state.cards.length && state.phase === "player"; i += 1) {
-      for (const skill of state.cards[i]!.skills) {
-        if (skill.passive) continue
-        if (act({ type: "skill", card: i, skill: skill.id })) break
+    if (extra.policy === "burst") {
+      const pairs = state.cards.flatMap((card, i) => (card.down ? [] : card.skills.filter((s) => !s.passive).map((s) => ({ i, s }))))
+      pairs.sort((a, b) => b.s.ap - a.s.ap || a.i - b.i)
+      const bigCosts = pairs.map((p) => p.s.ap).filter((ap) => ap >= 3)
+      const hold = bigCosts.length > 0 && state.ap < Math.min(...bigCosts)
+      const acted = new Set<number>()
+      for (const { i, s } of pairs) {
+        if (state.phase !== "player") break
+        if (acted.has(i) || (hold && s.ap > 0)) continue
+        if (act({ type: "skill", card: i, skill: s.id })) acted.add(i)
+      }
+    } else {
+      for (let i = 0; i < state.cards.length && state.phase === "player"; i += 1) {
+        for (const skill of state.cards[i]!.skills) {
+          if (skill.passive) continue
+          if (act({ type: "skill", card: i, skill: skill.id })) break
+        }
       }
     }
     if (state.phase === "player") act({ type: "endTurn" })
