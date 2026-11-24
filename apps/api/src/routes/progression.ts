@@ -3,6 +3,10 @@ import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
 import {
+  NPC_RECYCLE_DAILY_LIMIT,
+  npcRecycleValue,
+} from "@choke/shared/economy"
+import {
   ITEMS,
   SHARDS_PER_DISMANTLE,
   expToItems,
@@ -10,6 +14,10 @@ import {
   shardItemId,
   type ItemStack,
 } from "@choke/shared/items"
+import {
+  applyExpWithBreakthrough,
+  breakthroughCoinCost,
+} from "@choke/shared/progression"
 import {
   RESONANCE_ATTR_CAP,
   RESONANCE_TOTAL_CAP,
@@ -19,12 +27,12 @@ import {
   type ResonanceAttribute,
   type ResonanceRecord,
 } from "@choke/shared/resonance"
+import { resetDayKey } from "@choke/shared/reset"
 import type { Job, Mod } from "@choke/shared/types"
 
 import { requireSelf } from "../auth/guard"
 import {
   FOIL_COST,
-  applyExp,
   constellationCap,
   essenceOf,
   expToNext,
@@ -36,7 +44,7 @@ import {
 } from "../shared/cards"
 import { db } from "../db/client"
 import { EXPEDITION_LOCK_MESSAGE, anyLocked, lockedUserCardIds } from "../expedition/locks"
-import { cards, deckSlots, heroResonance, marketListings, userCards, users } from "../db/schema"
+import { cards, deckSlots, heroResonance, ledgerEntries, marketListings, userCards, users } from "../db/schema"
 import { grantItems, loadItems, mergeStacks, spendItems } from "../items"
 import { recordLedger, type LedgerEntryInput } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
@@ -222,28 +230,61 @@ export async function progressionRoutes(app: FastifyInstance) {
       })
     }
 
-    const [leveled] = await db
-      .update(userCards)
-      .set({ level: sql`${userCards.level} + 1`, exp: sql`${userCards.exp} - ${need}` })
-      .where(
-        and(
-          eq(userCards.id, userCardId),
-          eq(userCards.userId, userId),
-          eq(userCards.level, target.level),
-          gte(userCards.exp, need),
-        ),
-      )
-      .returning({ id: userCards.id })
-    if (!leveled) {
-      return reply.code(409).send({
-        ok: false,
-        error: { code: "conflict", message: "卡牌状态刚刚变化了，请刷新后重试" },
-      })
-    }
+    const coinCost = breakthroughCoinCost(target.level, hero)
+    const result = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+      if (coinCost > 0) {
+        const [wallet] = await tx
+          .update(users)
+          .set({ coins: sql`${users.coins} - ${coinCost}` })
+          .where(and(eq(users.id, userId), gte(users.coins, coinCost)))
+          .returning({ coins: users.coins })
+        if (!wallet) {
+          const [u] = await tx.select({ coins: users.coins }).from(users).where(eq(users.id, userId)).limit(1)
+          const coins = u?.coins ?? 0
+          throw new TxAbort(400, "not_enough_coins", `突破金币不足：${coins} / ${coinCost}`, {
+            need: coinCost,
+            coins,
+          })
+        }
+      }
+
+      const [leveled] = await tx
+        .update(userCards)
+        .set({ level: sql`${userCards.level} + 1`, exp: sql`${userCards.exp} - ${need}` })
+        .where(
+          and(
+            eq(userCards.id, userCardId),
+            eq(userCards.userId, userId),
+            eq(userCards.level, target.level),
+            gte(userCards.exp, need),
+          ),
+        )
+        .returning({ id: userCards.id })
+      if (!leveled) {
+        throw new TxAbort(409, "conflict", "卡牌状态刚刚变化了，请刷新后重试")
+      }
+
+      if (coinCost > 0) {
+        await recordLedger(tx, userId, [{ kind: "coins", delta: -coinCost }], {
+          source: "breakthrough",
+          sourceRef: String(userCardId),
+        })
+      }
+
+      const [u] = await tx.select({ coins: users.coins }).from(users).where(eq(users.id, userId)).limit(1)
+      return { coins: u?.coins ?? 0 }
+    })
+    if (!result) return
 
     return {
       ok: true,
-      data: { card: await loadCard(userId, userCardId), spent: need },
+      data: {
+        card: await loadCard(userId, userCardId),
+        spent: need,
+        coinsSpent: coinCost,
+        coins: result.coins,
+      },
     }
   })
 
@@ -540,11 +581,36 @@ export async function progressionRoutes(app: FastifyInstance) {
         }
       }
 
-      const next = applyExp(target.level, target.exp, gained, target.rarity as Rarity, targetHero)
+      const [userRow] = await tx
+        .select({ coins: users.coins })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1)
+      const availableCoins = userRow?.coins ?? 0
+
+      const next = applyExpWithBreakthrough(
+        target.level,
+        target.exp,
+        gained,
+        target.rarity as Rarity,
+        targetHero,
+        availableCoins,
+      )
       await tx
         .update(userCards)
         .set({ level: next.level, exp: next.exp })
         .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+
+      let coins = availableCoins
+      if (next.coinsSpent > 0) {
+        const [coinWallet] = await tx
+          .update(users)
+          .set({ coins: sql`${users.coins} - ${next.coinsSpent}` })
+          .where(eq(users.id, userId))
+          .returning({ coins: users.coins })
+        coins = coinWallet?.coins ?? availableCoins - next.coinsSpent
+        ledger.push({ kind: "coins", delta: -next.coinsSpent })
+      }
 
       let essence: number | undefined
       if (essenceGained > 0) {
@@ -563,6 +629,9 @@ export async function progressionRoutes(app: FastifyInstance) {
         gained,
         wasted: next.wasted,
         levelsGained: next.level - target.level,
+        coinsSpent: next.coinsSpent,
+        blockedCost: next.blockedCost,
+        coins,
         essenceGained,
         essence,
         items: await loadItems(userId, tx),
@@ -735,5 +804,115 @@ export async function progressionRoutes(app: FastifyInstance) {
         essence: dismantled.essence,
       },
     }
+  })
+
+  async function countRecycledToday(executor: Tx | typeof db, userId: string, dayKey: string): Promise<number> {
+    const [row] = await executor
+      .select({ count: sql<number>`count(*)::int` })
+      .from(ledgerEntries)
+      .where(
+        and(
+          eq(ledgerEntries.userId, userId),
+          eq(ledgerEntries.kind, "card"),
+          eq(ledgerEntries.source, "npc-recycle"),
+          eq(ledgerEntries.sourceRef, dayKey),
+        ),
+      )
+    return row?.count ?? 0
+  }
+
+  /** 查询今日 NPC 回收额度 */
+  app.get("/users/:userId/cards/recycle", async (request, reply) => {
+    const { userId: paramUserId } = z.object({ userId: z.string() }).parse(request.params)
+    const userId = requireSelf(request, reply, paramUserId)
+    if (!userId) return
+
+    const dayKey = resetDayKey(Date.now())
+    const usedToday = await countRecycledToday(db, userId, dayKey)
+    return {
+      ok: true,
+      data: {
+        dailyLimit: NPC_RECYCLE_DAILY_LIMIT,
+        usedToday,
+        remaining: Math.max(0, NPC_RECYCLE_DAILY_LIMIT - usedToday),
+      },
+    }
+  })
+
+  /** NPC 回收：批量把多余卡换金币（每日限 20 张，本体卡和出征锁定卡不可回收） */
+  app.post("/users/:userId/cards/recycle", async (request, reply) => {
+    const { userId: paramUserId } = z.object({ userId: z.string() }).parse(request.params)
+    const userId = requireSelf(request, reply, paramUserId)
+    if (!userId) return
+
+    const body = z
+      .object({
+        userCardIds: z.array(z.number().int().positive()).min(1).max(NPC_RECYCLE_DAILY_LIMIT),
+      })
+      .refine((b) => new Set(b.userCardIds).size === b.userCardIds.length, "卡不能重复")
+      .parse(request.body)
+
+    const dayKey = resetDayKey(Date.now())
+    const recycled = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+      const usedToday = await countRecycledToday(tx, userId, dayKey)
+      const remaining = Math.max(0, NPC_RECYCLE_DAILY_LIMIT - usedToday)
+      if (body.userCardIds.length > remaining) {
+        throw new TxAbort(
+          400,
+          "daily_limit_reached",
+          `今日 NPC 回收剩余额度不足（剩余 ${remaining} / ${NPC_RECYCLE_DAILY_LIMIT} 张）`,
+        )
+      }
+
+      const targets = await tx
+        .select({
+          id: userCards.id,
+          cardId: userCards.cardId,
+          level: userCards.level,
+          exp: userCards.exp,
+          rarity: cards.rarity,
+          cardType: cards.cardType,
+        })
+        .from(userCards)
+        .innerJoin(cards, eq(cards.id, userCards.cardId))
+        .where(and(eq(userCards.userId, userId), inArray(userCards.id, body.userCardIds)))
+
+      if (targets.length !== body.userCardIds.length) {
+        throw new TxAbort(404, "not_found", "有卡不在这个账号的卡册里")
+      }
+      if (targets.some((t) => t.cardType === "hero" || isHeroCardId(t.cardId))) {
+        throw new TxAbort(400, "hero_protected", "本体卡不能回收")
+      }
+
+      let coinsGained = 0
+      const ledger: LedgerEntryInput[] = []
+      for (const target of targets) {
+        await removeUserCard(tx, userId, target.id)
+        coinsGained += npcRecycleValue(target.rarity as Rarity, target.level, target.exp, false)
+        ledger.push({ kind: "card", ref: target.cardId, delta: -1, userCardId: target.id })
+      }
+
+      const [wallet] = await tx
+        .update(users)
+        .set({ coins: sql`${users.coins} + ${coinsGained}` })
+        .where(eq(users.id, userId))
+        .returning({ coins: users.coins })
+
+      ledger.push({ kind: "coins", delta: coinsGained })
+      await recordLedger(tx, userId, ledger, { source: "npc-recycle", sourceRef: dayKey })
+
+      return {
+        recycledCount: targets.length,
+        coinsGained,
+        coins: wallet?.coins ?? 0,
+        usedToday: usedToday + targets.length,
+        remaining: remaining - targets.length,
+        dailyLimit: NPC_RECYCLE_DAILY_LIMIT,
+      }
+    })
+    if (!recycled) return
+
+    return { ok: true, data: recycled }
   })
 }

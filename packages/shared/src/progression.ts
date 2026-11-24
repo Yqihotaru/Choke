@@ -89,3 +89,53 @@ export function applyExp(
   if (nextLevel >= cap) return { level: cap, exp: 0, wasted: nextExp }
   return { level: nextLevel, exp: nextExp, wasted: 0 }
 }
+
+/** 40+ 突破金币消耗（v0.3 §6.2）：40→50: 300, 50→60: 500, 60→70: 500, 70→80: 700，合计 2000 */
+export const BREAKTHROUGH_COIN_COST: Readonly<Record<number, number>> = {
+  40: 300,
+  50: 500,
+  60: 500,
+  70: 700,
+}
+
+export function breakthroughCoinCost(level: number, isHero: boolean): number {
+  if (isHero) return 0
+  return BREAKTHROUGH_COIN_COST[level] ?? 0
+}
+
+/**
+ * 喂养连续升级（含 40+ 突破金币消耗）：
+ * 若经验够升到突破下一级但金币不足，则停在当前突破级，剩余经验保留在 exp 中。
+ */
+export function applyExpWithBreakthrough(
+  level: number,
+  exp: number,
+  gained: number,
+  rarity: Rarity,
+  isHero: boolean,
+  availableCoins: number,
+): { level: number; exp: number; wasted: number; coinsSpent: number; blockedCost: number } {
+  const cap = levelCap(isHero)
+  let nextLevel = level
+  let nextExp = exp + gained
+  let coinsLeft = Math.max(0, availableCoins)
+  let coinsSpent = 0
+  let blockedCost = 0
+
+  while (nextLevel < cap) {
+    const need = expToNext(nextLevel, rarity, isHero)
+    if (nextExp < need) break
+    const coinCost = breakthroughCoinCost(nextLevel, isHero)
+    if (coinCost > coinsLeft) {
+      blockedCost = coinCost
+      break
+    }
+    nextExp -= need
+    coinsLeft -= coinCost
+    coinsSpent += coinCost
+    nextLevel += 1
+  }
+
+  if (nextLevel >= cap) return { level: cap, exp: 0, wasted: nextExp, coinsSpent, blockedCost: 0 }
+  return { level: nextLevel, exp: nextExp, wasted: 0, coinsSpent, blockedCost }
+}

@@ -514,16 +514,16 @@ await test("埋点：分解", async () => {
 await test("埋点：副本通关（体力不够不算）", async () => {
   const poor = await newUser({ stamina: 0 })
   const rich = await newUser()
-  let res = await call(poor, "POST", `/users/${poor}/dungeons/coins/run`)
+  let res = await call(poor, "POST", `/users/${poor}/dungeons/shards/run`)
   assert.equal(res.status, 400)
   assert.equal(await progressNow(poor, "daily-dungeon"), 0)
-  res = await call(rich, "POST", `/users/${rich}/dungeons/coins/run`)
+  res = await call(rich, "POST", `/users/${rich}/dungeons/shards/run`)
   assert.equal(res.status, 200, JSON.stringify(res.body))
   assert.equal(await progressNow(rich, "daily-dungeon"), 1)
 })
 
 await test("埋点：市场买入和卖出（只挂单不算，成交才算双方各一笔）", async () => {
-  const seller = await newUser()
+  const seller = await newUser({ coins: 100 })
   const buyer = await newUser({ coins: 1000 })
   const card = await giveCard(seller)
   const listed = await call(seller, "POST", `/users/${seller}/market/list`, { userCardId: card, price: 100 })

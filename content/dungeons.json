@@ -16,11 +16,16 @@
     "cost": 20,
     "rewards": { "essence": 50 }
   },
-  "coins": {
-    "name": "金币矿脉",
-    "summary": "少量金币，补市场交易的零钱。",
+  "shards": {
+    "name": "碎片矿脉",
+    "summary": "产出基础养成碎片，不产金币。",
     "cost": 20,
-    "rewards": { "coins": 200 }
+    "rewards": {
+      "items": [
+        { "itemId": "shard-C", "count": 4 },
+        { "itemId": "shard-UC", "count": 2 }
+      ]
+    }
   },
   "packs": {
     "name": "卡包补给",

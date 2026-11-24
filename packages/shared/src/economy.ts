@@ -1,4 +1,5 @@
 import { CONTENT } from "./content"
+import { refundExpOf } from "./progression"
 import type { Rarity } from "./types"
 
 /** 数值在 content/economy.json */
@@ -16,3 +17,35 @@ export const FOIL_COST = ECONOMY.foilCost
 
 /** 市场单卡价格上限（金币） */
 export const MARKET_MAX_PRICE = ECONOMY.marketMaxPrice
+
+/** NPC 回收单价（v0.3 §8.3） */
+export const NPC_RECYCLE_PRICES: Record<Rarity, number> = {
+  C: 2,
+  UC: 5,
+  R: 12,
+  E: 30,
+  L: 75,
+  Mythic: 180,
+  Prismatic: 450,
+}
+
+export const NPC_RECYCLE_DAILY_LIMIT = 20
+export const NPC_RECYCLE_EXP_DIVISOR = 1000
+
+export function npcRecyclePrice(rarity: Rarity): number {
+  return NPC_RECYCLE_PRICES[rarity]
+}
+
+/** 培养过的卡按返还经验每 1,000 点额外 +1 金币（克制系数，防套利） */
+export function npcRecycleValue(rarity: Rarity, level: number, exp: number, isHero: boolean): number {
+  const base = NPC_RECYCLE_PRICES[rarity]
+  const expBonus = Math.floor(refundExpOf(level, exp, rarity, isHero) / NPC_RECYCLE_EXP_DIVISOR)
+  return base + expBonus
+}
+
+/** 市场税率与规则（v0.3 §8.4 + 押金防乱挂） */
+export const MARKET_LIST_TAX_RATE = 0.02
+export const MARKET_DEPOSIT_RATE = 0.05
+export const MARKET_TRADE_TAX_RATE = 0.05
+export const MARKET_LISTING_TTL_MS = 7 * 24 * 60 * 60 * 1000
+export const MARKET_PRICE_BAND_RATIO = 0.4

@@ -1,6 +1,14 @@
-import { and, desc, eq, getTableColumns, gte, sql } from "drizzle-orm"
+import { and, desc, eq, getTableColumns, gt, gte, lte, sql } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
+
+import {
+  MARKET_DEPOSIT_RATE,
+  MARKET_LISTING_TTL_MS,
+  MARKET_LIST_TAX_RATE,
+  MARKET_PRICE_BAND_RATIO,
+  MARKET_TRADE_TAX_RATE,
+} from "@choke/shared/economy"
 
 import { MARKET_MAX_PRICE } from "../shared/cards"
 import { MARKET_UNLOCK_LEVEL } from "../shared/tutorial"
@@ -55,8 +63,80 @@ async function loadCard(userId: string, userCardId: number) {
   return row ?? null
 }
 
+async function expireStaleListings() {
+  const expireBefore = new Date(Date.now() - MARKET_LISTING_TTL_MS)
+  await db.transaction(async (tx) => {
+    const expired = await tx
+      .update(marketListings)
+      .set({ status: "expired" })
+      .where(and(eq(marketListings.status, "active"), lte(marketListings.createdAt, expireBefore)))
+      .returning({
+        id: marketListings.id,
+        sellerId: marketListings.sellerId,
+        deposit: marketListings.deposit,
+      })
+    for (const row of expired) {
+      if (row.deposit > 0) {
+        await tx
+          .update(users)
+          .set({ coins: sql`${users.coins} + ${row.deposit}` })
+          .where(eq(users.id, row.sellerId))
+        await recordLedger(tx, row.sellerId, [{ kind: "coins", delta: row.deposit }], {
+          source: "market-deposit-refund",
+          sourceRef: String(row.id),
+        })
+      }
+    }
+  })
+}
+
+async function priceBandOf(cardId: string) {
+  const sold = await db
+    .select({ price: marketListings.price })
+    .from(marketListings)
+    .innerJoin(userCards, eq(userCards.id, marketListings.userCardId))
+    .where(and(eq(userCards.cardId, cardId), eq(marketListings.status, "sold")))
+    .orderBy(desc(marketListings.id))
+    .limit(20)
+  if (sold.length === 0) return null
+  const avgPrice = Math.round(sold.reduce((s, r) => s + r.price, 0) / sold.length)
+  return {
+    avgPrice,
+    minPrice: Math.max(1, Math.floor(avgPrice * (1 - MARKET_PRICE_BAND_RATIO))),
+    maxPrice: Math.min(MARKET_MAX_PRICE, Math.ceil(avgPrice * (1 + MARKET_PRICE_BAND_RATIO))),
+    sampleCount: sold.length,
+  }
+}
+
 export async function marketRoutes(app: FastifyInstance) {
+  app.get("/market/history", async (request) => {
+    const query = z.object({ cardId: z.string().optional() }).parse(request.query)
+    const whereClause = query.cardId
+      ? and(eq(marketListings.status, "sold"), eq(userCards.cardId, query.cardId))
+      : eq(marketListings.status, "sold")
+    const rows = await db
+      .select({
+        id: marketListings.id,
+        price: marketListings.price,
+        cardId: userCards.cardId,
+        cardName: cards.name,
+        rarity: cards.rarity,
+        createdAt: marketListings.createdAt,
+      })
+      .from(marketListings)
+      .innerJoin(userCards, eq(userCards.id, marketListings.userCardId))
+      .innerJoin(cards, eq(cards.id, userCards.cardId))
+      .where(whereClause)
+      .orderBy(desc(marketListings.id))
+      .limit(30)
+
+    const band = query.cardId ? await priceBandOf(query.cardId) : null
+    return { ok: true, data: { sales: rows, priceBand: band } }
+  })
+
   app.get("/market/listings", async () => {
+    await expireStaleListings()
+    const expireBefore = new Date(Date.now() - MARKET_LISTING_TTL_MS)
     const rows = await db
       .select({
         listingId: marketListings.id,
@@ -64,13 +144,14 @@ export async function marketRoutes(app: FastifyInstance) {
         sellerId: marketListings.sellerId,
         sellerName: users.username,
         sellerPublicId: users.publicId,
+        createdAt: marketListings.createdAt,
         ...cardColumns,
       })
       .from(marketListings)
       .innerJoin(userCards, eq(userCards.id, marketListings.userCardId))
       .innerJoin(cards, eq(cards.id, userCards.cardId))
       .innerJoin(users, eq(users.id, marketListings.sellerId))
-      .where(eq(marketListings.status, "active"))
+      .where(and(eq(marketListings.status, "active"), gt(marketListings.createdAt, expireBefore)))
       .orderBy(desc(marketListings.id))
       .limit(80)
 
@@ -115,6 +196,7 @@ export async function marketRoutes(app: FastifyInstance) {
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
 
+    await expireStaleListings()
     const rows = await db
       .select({
         listingId: marketListings.id,
@@ -239,20 +321,74 @@ export async function marketRoutes(app: FastifyInstance) {
       })
     }
 
-    const [created] = await db
-      .insert(marketListings)
-      .values({
-        sellerId: userId,
-        userCardId: body.data.userCardId,
-        price: body.data.price,
+    const band = await priceBandOf(card.id)
+    if (band && (body.data.price < band.minPrice || body.data.price > band.maxPrice)) {
+      return reply.code(400).send({
+        ok: false,
+        error: {
+          code: "price_out_of_band",
+          message: `定价需在近期均价（${band.avgPrice}）的 ±40% 范围内（${band.minPrice}–${band.maxPrice}）`,
+          ...band,
+        },
       })
-      .returning()
+    }
+
+    const listTax = Math.max(1, Math.floor(body.data.price * MARKET_LIST_TAX_RATE))
+    const deposit = Math.max(1, Math.floor(body.data.price * MARKET_DEPOSIT_RATE))
+    const upfrontTotal = listTax + deposit
+    const listedResult = await runTx(reply, async (tx) => {
+      const [wallet] = await tx
+        .update(users)
+        .set({ coins: sql`${users.coins} - ${upfrontTotal}` })
+        .where(and(eq(users.id, userId), gte(users.coins, upfrontTotal)))
+        .returning({ coins: users.coins })
+      if (!wallet) {
+        const [u] = await tx.select({ coins: users.coins }).from(users).where(eq(users.id, userId)).limit(1)
+        const coins = u?.coins ?? 0
+        throw new TxAbort(
+          400,
+          "not_enough_coins",
+          `上架税与押金不足：需要 ${upfrontTotal} 金币（税 ${listTax} + 押金 ${deposit}），当前 ${coins}`,
+          {
+            need: upfrontTotal,
+            listTax,
+            deposit,
+            coins,
+          },
+        )
+      }
+
+      const [created] = await tx
+        .insert(marketListings)
+        .values({
+          sellerId: userId,
+          userCardId: body.data.userCardId,
+          price: body.data.price,
+          deposit,
+        })
+        .returning()
+
+      await recordLedger(tx, userId, [{ kind: "coins", delta: -listTax }], {
+        source: "market-tax",
+        sourceRef: String(created!.id),
+      })
+      await recordLedger(tx, userId, [{ kind: "coins", delta: -deposit }], {
+        source: "market-deposit",
+        sourceRef: String(created!.id),
+      })
+
+      return { created: created!, coins: wallet.coins }
+    })
+    if (!listedResult) return
 
     return {
       ok: true,
       data: {
-        id: created!.id,
-        price: created!.price,
+        id: listedResult.created.id,
+        price: listedResult.created.price,
+        listTax,
+        deposit,
+        coins: listedResult.coins,
         card,
       },
     }
@@ -263,24 +399,38 @@ export async function marketRoutes(app: FastifyInstance) {
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
 
-    const removed = await db
-      .delete(marketListings)
-      .where(
-        and(
-          eq(marketListings.id, params.listingId),
-          eq(marketListings.sellerId, userId),
-          eq(marketListings.status, "active"),
-        ),
-      )
-      .returning({ id: marketListings.id })
-
-    if (removed.length === 0) {
-      return reply.code(404).send({
-        ok: false,
-        error: { code: "not_found", message: "没有这条上架记录" },
-      })
-    }
-    return { ok: true, data: { id: removed[0]!.id } }
+    const removed = await runTx(reply, async (tx) => {
+      const [cancelled] = await tx
+        .update(marketListings)
+        .set({ status: "cancelled" })
+        .where(
+          and(
+            eq(marketListings.id, params.listingId),
+            eq(marketListings.sellerId, userId),
+            eq(marketListings.status, "active"),
+          ),
+        )
+        .returning({ id: marketListings.id, deposit: marketListings.deposit })
+      if (!cancelled) {
+        throw new TxAbort(404, "not_found", "没有这条上架记录")
+      }
+      let coins: number | undefined
+      if (cancelled.deposit > 0) {
+        const [wallet] = await tx
+          .update(users)
+          .set({ coins: sql`${users.coins} + ${cancelled.deposit}` })
+          .where(eq(users.id, userId))
+          .returning({ coins: users.coins })
+        coins = wallet?.coins
+        await recordLedger(tx, userId, [{ kind: "coins", delta: cancelled.deposit }], {
+          source: "market-deposit-refund",
+          sourceRef: String(cancelled.id),
+        })
+      }
+      return { id: cancelled.id, depositRefunded: cancelled.deposit, coins }
+    })
+    if (!removed) return
+    return { ok: true, data: removed }
   })
 
   app.post("/users/:userId/market/buy/:listingId", async (request, reply) => {
@@ -301,6 +451,9 @@ export async function marketRoutes(app: FastifyInstance) {
       })
     }
 
+    // 若已过 7 天有效期，先把超期挂单自动取消并退还押金（上架税不退）
+    await expireStaleListings()
+
     // 先在事务里把上架从 active 抢成 sold，再扣款、过户；任何一步失败都整体回滚，
     // 并发购买只有一个能抢到这条上架，金币也不会被扣成负数。
     const bought = await runTx(reply, async (tx) => {
@@ -312,9 +465,22 @@ export async function marketRoutes(app: FastifyInstance) {
           sellerId: marketListings.sellerId,
           userCardId: marketListings.userCardId,
           price: marketListings.price,
+          deposit: marketListings.deposit,
+          createdAt: marketListings.createdAt,
         })
       if (!listing) {
+        const [stale] = await tx
+          .select({ status: marketListings.status })
+          .from(marketListings)
+          .where(eq(marketListings.id, params.listingId))
+          .limit(1)
+        if (stale?.status === "expired") {
+          throw new TxAbort(400, "listing_expired", "这条上架已超过 7 天，已自动取消")
+        }
         throw new TxAbort(404, "not_found", "这条上架已经不存在")
+      }
+      if (Date.now() - listing.createdAt.getTime() > MARKET_LISTING_TTL_MS) {
+        throw new TxAbort(400, "listing_expired", "这条上架已超过 7 天，已自动取消")
       }
       if (listing.sellerId === userId) {
         throw new TxAbort(400, "own_listing", "不能买自己的卡")
@@ -347,9 +513,13 @@ export async function marketRoutes(app: FastifyInstance) {
         throw new TxAbort(409, "card_moved", "卖家已经不再持有这张卡")
       }
 
+      const tradeTax = Math.floor(listing.price * MARKET_TRADE_TAX_RATE)
+      const sellerProceeds = Math.max(0, listing.price - tradeTax)
+      const sellerTotalCredit = sellerProceeds + listing.deposit
+
       await tx
         .update(users)
-        .set({ coins: sql`${users.coins} + ${listing.price}` })
+        .set({ coins: sql`${users.coins} + ${sellerTotalCredit}` })
         .where(eq(users.id, listing.sellerId))
       await tx.delete(deckSlots).where(eq(deckSlots.userCardId, listing.userCardId))
       const origin = { source: "market-buy", sourceRef: String(params.listingId) }
@@ -366,14 +536,26 @@ export async function marketRoutes(app: FastifyInstance) {
         tx,
         listing.sellerId,
         [
-          { kind: "coins", delta: listing.price },
+          { kind: "coins", delta: sellerProceeds },
           { kind: "card", ref: moved[0]!.cardId, delta: -1, userCardId: listing.userCardId },
         ],
         { ...origin, source: "market-sell" },
       )
+      if (listing.deposit > 0) {
+        await recordLedger(tx, listing.sellerId, [{ kind: "coins", delta: listing.deposit }], {
+          source: "market-deposit-refund",
+          sourceRef: String(params.listingId),
+        })
+      }
       await recordQuestEvent(tx, userId, "market-buy")
       await recordQuestEvent(tx, listing.sellerId, "market-sell")
-      return { coins: buyerWallet.coins, price: listing.price, userCardId: listing.userCardId }
+      return {
+        coins: buyerWallet.coins,
+        price: listing.price,
+        tradeTax,
+        sellerProceeds,
+        userCardId: listing.userCardId,
+      }
     })
     if (!bought) return
 
@@ -382,6 +564,7 @@ export async function marketRoutes(app: FastifyInstance) {
       data: {
         card: await loadCard(userId, bought.userCardId),
         price: bought.price,
+        tradeTax: bought.tradeTax,
         coins: bought.coins,
       },
     }

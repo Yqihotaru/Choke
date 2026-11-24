@@ -1,11 +1,15 @@
-import { and, eq, getTableColumns } from "drizzle-orm"
+import { and, eq, getTableColumns, sql } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
+
+import { resetDayKey } from "@choke/shared/reset"
 
 import { requireSelf, requireSession } from "../auth/guard"
 import { DECK_SIZE } from "../config"
 import { db } from "../db/client"
-import { cards, userCards, users } from "../db/schema"
+import { cards, ledgerEntries, userCards, users } from "../db/schema"
+import { recordLedger } from "../ledger"
+import { TxAbort, lockUser, runTx, type Tx } from "../tx"
 import { invalidatePublicCardRows } from "./cards"
 import { grantHeroCard, openPack } from "../gacha/open"
 import {
@@ -28,6 +32,27 @@ import {
 } from "../packs/inventory"
 
 const poolIds = Object.keys(PACKS) as [PackId, ...PackId[]]
+const IDLE_PACKS_DAILY_LIMIT = 60
+
+async function countIdlePacksClaimedToday(
+  executor: Tx | typeof db,
+  userId: string,
+  dayKey: string,
+): Promise<number> {
+  const [row] = await executor
+    .select({ total: sql<number>`coalesce(sum(${ledgerEntries.delta}), 0)::int` })
+    .from(ledgerEntries)
+    .where(
+      and(
+        eq(ledgerEntries.userId, userId),
+        eq(ledgerEntries.kind, "pack"),
+        eq(ledgerEntries.ref, "idle"),
+        eq(ledgerEntries.source, "idle-pack"),
+        eq(ledgerEntries.sourceRef, dayKey),
+      ),
+    )
+  return row?.total ?? 0
+}
 
 async function loadHero(userId: string, heroId: string) {
   const [row] = await db
@@ -93,6 +118,75 @@ export async function packRoutes(app: FastifyInstance) {
     }
 
     return { ok: true, data: { packs, heroClaimed } }
+  })
+
+  app.get("/users/:userId/packs/idle", async (request, reply) => {
+    const params = z.object({ userId: z.string() }).parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+
+    const dayKey = resetDayKey(Date.now())
+    const claimedToday = await countIdlePacksClaimedToday(db, userId, dayKey)
+    const remaining = Math.max(0, IDLE_PACKS_DAILY_LIMIT - claimedToday)
+    const packs = await getPackCounts(userId)
+
+    return {
+      ok: true,
+      data: {
+        dailyLimit: IDLE_PACKS_DAILY_LIMIT,
+        claimedToday,
+        remaining,
+        count: packs.idle,
+      },
+    }
+  })
+
+  app.post("/users/:userId/packs/idle/claim", async (request, reply) => {
+    const params = z.object({ userId: z.string() }).parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+
+    const body = z
+      .object({
+        count: z.number().int().positive().max(IDLE_PACKS_DAILY_LIMIT).optional(),
+      })
+      .optional()
+      .parse(request.body)
+
+    const dayKey = resetDayKey(Date.now())
+    const result = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+      const claimedToday = await countIdlePacksClaimedToday(tx, userId, dayKey)
+      const remaining = Math.max(0, IDLE_PACKS_DAILY_LIMIT - claimedToday)
+      if (remaining <= 0) {
+        throw new TxAbort(400, "daily_limit_reached", `今日挂机包已领完（${IDLE_PACKS_DAILY_LIMIT} 包）`)
+      }
+
+      const grantCount = Math.min(remaining, body?.count ?? remaining)
+      await addPacks(userId, { idle: grantCount }, tx)
+      await recordLedger(tx, userId, [{ kind: "pack", ref: "idle", delta: grantCount }], {
+        source: "idle-pack",
+        sourceRef: dayKey,
+      })
+
+      return {
+        claimed: grantCount,
+        claimedToday: claimedToday + grantCount,
+        remaining: remaining - grantCount,
+        dailyLimit: IDLE_PACKS_DAILY_LIMIT,
+      }
+    })
+    if (!result) return
+
+    const packs = await getPackCounts(userId)
+    return {
+      ok: true,
+      data: {
+        ...result,
+        count: packs.idle,
+        packs,
+      },
+    }
   })
 
   app.post("/users/:userId/packs/:pool/take", async (request, reply) => {

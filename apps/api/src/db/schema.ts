@@ -219,6 +219,7 @@ export const marketListings = pgTable(
     sellerId: text("seller_id").notNull(),
     userCardId: integer("user_card_id").notNull(),
     price: integer("price").notNull(),
+    deposit: integer("deposit").notNull().default(0),
     status: text("status").notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },

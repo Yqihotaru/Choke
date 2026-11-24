@@ -96,25 +96,27 @@ const userOf = async (userId: string) => (await db.select().from(users).where(eq
 
 console.log("ledger tests")
 
-await test("副本：体力、金币、精华、卡包、道具都记账，且与余额对得上", async () => {
+await test("副本：体力、精华、卡包、道具都记账，且与余额对得上（副本不产金币）", async () => {
   const userId = await newUser({ coins: 0, essence: 0, stamina: 200 })
-  for (const dungeon of ["coins", "essence", "packs", "exp"]) {
+  for (const dungeon of ["shards", "essence", "packs", "exp"]) {
     const res = await call(userId, "POST", `/users/${userId}/dungeons/${dungeon}/run`)
     assert.equal(res.status, 200, JSON.stringify(res.body))
   }
   const user = await userOf(userId)
-  assert.equal(await sumOf(userId, "coins"), user.coins)
+  assert.equal(user.coins, 0)
+  assert.equal(await sumOf(userId, "coins"), 0)
   assert.equal(await sumOf(userId, "essence"), user.essence)
   assert.equal(await sumOf(userId, "stamina"), -(20 + 20 + 60 + 20))
   assert.equal(await sumOf(userId, "pack", "normal"), 1)
   assert.equal(await sumOf(userId, "item", "exp-medium"), 3)
+  assert.equal(await sumOf(userId, "item", "shard-C"), 4)
   const dungeonSources = new Set((await entriesOf(userId)).map((e) => e.source))
   assert.deepEqual([...dungeonSources], ["dungeon"])
 })
 
 await test("体力不够时副本不记账", async () => {
   const userId = await newUser({ stamina: 0 })
-  const res = await call(userId, "POST", `/users/${userId}/dungeons/coins/run`)
+  const res = await call(userId, "POST", `/users/${userId}/dungeons/shards/run`)
   assert.equal(res.status, 400)
   assert.equal((await entriesOf(userId)).length, 0)
 })
@@ -185,33 +187,37 @@ await test("闪卡强化：精华 −n", async () => {
   assert.equal(await sumOf(userId, "essence"), -res.body.data.cost)
 })
 
-await test("市场：买家扣金币得卡，卖家得金币失卡，两边都记，金币总量守恒", async () => {
-  const seller = await newUser({ coins: 0 })
+await test("市场：买家扣金币得卡，卖家扣 2% 上架税 + 5% 押金，成交后退押金并收 95% 货款", async () => {
+  const seller = await newUser({ coins: 100 })
   const buyer = await newUser({ coins: 1000 })
   const card = await give(seller, "lt-UC")
   const listed = await call(seller, "POST", `/users/${seller}/market/list`, { userCardId: card, price: 300 })
   assert.equal(listed.status, 200, JSON.stringify(listed.body))
+  assert.equal(listed.body.data.listTax, 6)
+  assert.equal(listed.body.data.deposit, 15)
   const bought = await call(buyer, "POST", `/users/${buyer}/market/buy/${listed.body.data.id}`)
   assert.equal(bought.status, 200, JSON.stringify(bought.body))
+  assert.equal(bought.body.data.tradeTax, 15)
 
   assert.equal(await sumOf(buyer, "coins"), -300)
   assert.equal(await sumOf(buyer, "card", "lt-UC"), 1)
-  assert.equal(await sumOf(seller, "coins"), 300)
+  assert.equal(await sumOf(seller, "coins"), 285 - 6)
   assert.equal(await sumOf(seller, "card", "lt-UC"), -1)
-  assert.equal((await userOf(buyer)).coins + (await userOf(seller)).coins, 1000)
+  assert.equal((await userOf(buyer)).coins + (await userOf(seller)).coins, 1100 - 6 - 15)
   assert.equal((await entriesOf(buyer))[0]!.source, "market-buy")
-  assert.equal((await entriesOf(seller))[0]!.source, "market-sell")
+  const sellerSources = new Set((await entriesOf(seller)).map((e) => e.source))
+  assert.ok(sellerSources.has("market-tax") && sellerSources.has("market-deposit") && sellerSources.has("market-deposit-refund") && sellerSources.has("market-sell"))
 })
 
-await test("买不起时市场不记账", async () => {
-  const seller = await newUser()
+await test("买不起时市场购买不记账", async () => {
+  const seller = await newUser({ coins: 100 })
   const buyer = await newUser({ coins: 5 })
   const card = await give(seller, "lt-UC")
   const listed = await call(seller, "POST", `/users/${seller}/market/list`, { userCardId: card, price: 300 })
   const bought = await call(buyer, "POST", `/users/${buyer}/market/buy/${listed.body.data.id}`)
   assert.equal(bought.status, 400)
   assert.equal((await entriesOf(buyer)).length, 0)
-  assert.equal((await entriesOf(seller)).length, 0)
+  assert.equal((await entriesOf(seller)).filter((e) => e.source === "market-sell").length, 0)
 })
 
 await test("发新手包写流水", async () => {
