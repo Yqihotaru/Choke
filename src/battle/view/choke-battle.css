@@ -8,7 +8,7 @@
   min-height: 100dvh;
   display: grid;
   place-items: center;
-  background: #050507;
+  background: var(--bk-well);
   overflow: hidden;
   user-select: none;
   font-family:
@@ -31,8 +31,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #0d0b0e;
-  color: #f4efe3;
+  background: var(--bk-well);
+  color: var(--bk-ink);
   box-shadow: 0 0 40px rgb(0 0 0 / 0.85);
 }
 
@@ -42,8 +42,8 @@
   flex: 1 1 0;
   overflow: hidden;
   background:
-    radial-gradient(52% 85% at 50% 42%, rgb(175 42 30 / 0.45), transparent 72%),
-    radial-gradient(90% 95% at 50% 60%, rgb(45 14 14 / 0.85), #0b080c);
+    radial-gradient(52% 85% at 50% 42%, rgb(155 32 58 / 0.42), transparent 72%),
+    radial-gradient(90% 95% at 50% 60%, rgb(46 20 30 / 0.88), var(--bk-well));
 }
 
 /* 谱面背景：铺满战区，上下压暗保证血条和意图栏可读；图缺失时退回上面的纯色渐变 */
@@ -117,22 +117,22 @@
 }
 .choke-boss-core {
   position: relative;
-  width: 9.5cqw;
-  height: 9.5cqw;
+  width: 8.6cqw;
+  height: 8.6cqw;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  border: 0.14cqw solid color-mix(in srgb, var(--el, #fff) 65%, #d6b265);
-  background: radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--el) 45%, #1d1016), #0b070a 78%);
+  border: 0.28cqw solid rgb(255 242 246 / 0.9);
+  background: radial-gradient(circle at 36% 30%, color-mix(in srgb, var(--el) 72%, #fff), color-mix(in srgb, var(--el) 58%, #1c1216) 74%);
   box-shadow:
-    0 0 2.6cqw color-mix(in srgb, var(--el) 55%, transparent),
-    inset 0 0 1.4cqw rgb(0 0 0 / 0.75);
+    0 0 2.4cqw color-mix(in srgb, var(--el) 55%, transparent),
+    inset 0 0 1.2cqw rgb(0 0 0 / 0.45);
   color: #fff;
 }
 .choke-boss-core svg {
-  width: 4.8cqw;
-  height: 4.8cqw;
-  filter: drop-shadow(0 0 0.5cqw var(--el));
+  width: 3.9cqw;
+  height: 3.9cqw;
+  filter: drop-shadow(0 0.12cqw 0.3cqw rgb(0 0 0 / 0.6));
 }
 
 .choke-slash-fx {
@@ -191,134 +191,255 @@
 }
 
 .choke-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32cqw;
+  height: 2.35cqw;
+  padding: 0 0.8cqw;
+  border: 0;
+  border-radius: 0.42cqw;
+  background: rgb(61 46 53 / 0.92);
+  color: var(--bk-ink);
+  font: inherit;
+  font-size: 0.76cqw;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    0 0.16cqw 0 var(--bk-edge),
+    0 0.3cqw 0.7cqw rgb(0 0 0 / 0.55);
+}
+.choke-tool-btn svg {
+  width: 1cqw;
+  height: 1cqw;
+  color: var(--bk-osu-text);
+}
+
+/* 准备横幅左侧：巨幅衬线 VS + 跨过 VS 向右上延伸的深红敌名斜带（对齐参考图） */
+.choke-vs-giant {
+  position: absolute;
+  top: 0.2cqw;
+  left: 1.5cqw;
+  z-index: 3;
+  font-family: Georgia, "Times New Roman", "Songti SC", serif;
+  font-size: 13.6cqw;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.8;
+  color: #b51226;
+  text-shadow:
+    0 0.3cqw 0.85cqw rgb(0 0 0 / 0.88),
+    0 0 2.2cqw rgb(181 18 38 / 0.38);
+  pointer-events: none;
+}
+
+.choke-prep-ribbon {
+  position: absolute;
+  left: -3.5cqw;
+  top: 17.8cqw;
+  width: 47cqw;
+  z-index: 4;
+  display: flex;
+  align-items: baseline;
+  gap: 0.9cqw;
+  padding: 0.56cqw 2cqw 0.56cqw 8.8cqw;
+  background: linear-gradient(
+    90deg,
+    rgb(138 16 34 / 0.92) 0%,
+    rgb(176 22 44 / 0.88) 56%,
+    rgb(138 16 34 / 0.72) 84%,
+    transparent 100%
+  );
+  border-top: 0.12cqw solid rgb(255 150 168 / 0.68);
+  border-bottom: 0.12cqw solid rgb(255 120 144 / 0.52);
+  box-shadow: 0 0.35cqw 1.1cqw rgb(0 0 0 / 0.6);
+  transform-origin: left center;
+  transform: rotate(-28deg);
+  pointer-events: none;
+}
+.choke-prep-ribbon__name {
+  font-size: 2.35cqw;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: #20060b;
+  -webkit-text-stroke: 0.05cqw rgb(255 186 198 / 0.48);
+  paint-order: stroke fill;
+  text-shadow: 0 0.06cqw 0 rgb(255 190 202 / 0.32);
+  white-space: nowrap;
+}
+.choke-prep-ribbon__sub {
+  font-size: 0.68cqw;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: rgb(255 224 232 / 0.86);
+  white-space: nowrap;
+}
+
+/* 准备横幅右侧：两条平行斜向 WARNING 警戒带夹着中空红边「准备战斗」 */
+.choke-prep-warn {
+  position: absolute;
+  right: -5.5cqw;
+  top: 2.2cqw;
+  width: 44cqw;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-width: 2.9cqw;
-  padding: 0.35cqw 0.65cqw;
-  border: 0.14cqw solid #a68546;
-  border-radius: 0.35cqw;
-  background: linear-gradient(180deg, #42331f, #1c150c);
-  color: #f5dea0;
-  font-size: 0.68cqw;
-  font-weight: 800;
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: 0 0.2cqw 0.5cqw rgb(0 0 0 / 0.7);
+  gap: 0.38cqw;
+  transform: rotate(28deg);
+  pointer-events: none;
 }
-.choke-tool-btn b {
-  font-size: 1.15cqw;
-  line-height: 1;
-}
-
-/* 准备战斗 WARNING 警戒带 */
-.choke-tapes { position: absolute; top: 0; width: 38cqw; height: 18cqw; pointer-events: none; z-index: 3; }
-.choke-tapes--left { left: -3cqw; }
-.choke-tapes--right { right: -3cqw; }
-.choke-tape {
-  position: absolute;
-  left: -6cqw;
-  right: -6cqw;
-  padding: 0.24cqw 0;
-  border-top: 0.1cqw solid rgb(217 43 43 / 0.7);
-  border-bottom: 0.1cqw solid rgb(217 43 43 / 0.7);
-  background: rgb(36 6 8 / 0.72);
-  color: rgb(255 82 82 / 0.55);
-  font-size: 0.75cqw;
+.choke-prep-warn__tape {
+  width: 100%;
+  padding: 0.2cqw 0;
+  border-top: 0.1cqw solid rgb(224 44 64 / 0.72);
+  border-bottom: 0.1cqw solid rgb(224 44 64 / 0.72);
+  background: rgb(32 8 14 / 0.74);
+  color: rgb(235 68 86 / 0.76);
+  font-size: 0.74cqw;
   font-weight: 800;
   letter-spacing: 0.24em;
   text-align: center;
   white-space: nowrap;
 }
-.choke-tapes--left .choke-tape { top: 2.8cqw; transform: rotate(-26deg); }
-.choke-tapes--left .choke-tape--sub { top: 7.4cqw; transform: rotate(-14deg); }
-.choke-tapes--right .choke-tape { top: 2.8cqw; transform: rotate(26deg); }
-.choke-tapes--right .choke-tape--sub { top: 7.4cqw; transform: rotate(14deg); }
-
-.choke-vs-giant {
-  position: absolute;
-  top: 0.2cqw;
-  left: 1.6cqw;
-  z-index: 4;
-  font-size: 8.2cqw;
+.choke-prep-warn__stamp {
+  padding: 0.15cqw 0;
+  font-size: 3.45cqw;
   font-weight: 900;
-  color: #a6131a;
-  text-shadow: 0 0.25cqw 0.7cqw rgb(0 0 0 / 0.9);
-  line-height: 0.9;
+  letter-spacing: 0.18em;
+  margin-right: -0.18em;
+  line-height: 1.04;
+  color: rgb(32 6 12 / 0.55);
+  -webkit-text-stroke: 0.13cqw #e83248;
+  paint-order: stroke fill;
+  text-shadow: 0 0 1.1cqw rgb(232 50 72 / 0.48);
+  white-space: nowrap;
 }
 
-.choke-prep-title {
-  position: absolute;
-  top: 7.2cqw;
-  left: 2cqw;
-  z-index: 5;
-  padding: 0.2cqw 1cqw 0.2cqw 0.6cqw;
-  font-size: 2.2cqw;
-  font-weight: 900;
-  color: #ffeae0;
-  text-shadow: 0 0.18cqw 0.45cqw #000, 0 0 0.8cqw rgb(180 20 20 / 0.85);
-  background: linear-gradient(90deg, rgb(24 6 8 / 0.85), transparent);
-  border-left: 0.3cqw solid #e03636;
-  transform: rotate(-8deg);
-}
-.choke-prep-title small {
-  display: block;
-  font-size: 0.7cqw;
-  letter-spacing: 0.16em;
-  color: #ffb899;
-  font-weight: 700;
-}
-
-.choke-prep-badge {
-  position: absolute;
-  top: 5.2cqw;
-  right: 6.2cqw;
-  z-index: 5;
-  font-size: 2.6cqw;
-  font-weight: 900;
-  color: #e03838;
-  text-shadow: 0 0.2cqw 0.55cqw #000;
-  transform: rotate(15deg);
-}
-
+/* 讨伐目标选择：默认收在左下角一条桌面胶囊条，不遮挡上方的 VS 与敌名斜带；点开向上展开抽屉 */
 .choke-stage-selector {
   position: absolute;
-  left: 1.8cqw;
+  left: 1.4cqw;
   bottom: 7.8cqw;
   z-index: 6;
-  width: 28cqw;
-  padding: 0.5cqw 0.7cqw;
-  border: 0.12cqw solid rgb(210 155 82 / 0.65);
-  border-radius: 0.35cqw;
-  background: linear-gradient(90deg, rgb(14 11 15 / 0.92), rgb(24 16 18 / 0.78));
-  box-shadow: 0 0.4cqw 1.2cqw rgb(0 0 0 / 0.7);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.4cqw;
 }
-.choke-stage-selector__label {
+.choke-stage-selector__bar {
   display: flex;
   align-items: center;
-  gap: 0.35cqw;
-  font-size: 0.74cqw;
+  gap: 0.4cqw;
+}
+.choke-stage-selector__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45cqw;
+  height: 2.4cqw;
+  padding: 0 0.85cqw;
+  border: 0;
+  border-radius: 0.45cqw;
+  background: rgb(43 33 38 / 0.94);
+  color: var(--bk-ink);
+  font: inherit;
+  font-size: 0.76cqw;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    inset 0 0 0 1px var(--bk-line),
+    0 0.16cqw 0 var(--bk-edge),
+    0 0.35cqw 0.9cqw rgb(0 0 0 / 0.55);
+}
+.choke-stage-selector__trigger svg {
+  width: 0.95cqw;
+  height: 0.95cqw;
+  color: var(--bk-osu);
+}
+.choke-stage-selector__trigger > span {
+  color: var(--bk-dim);
+  font-size: 0.68cqw;
   font-weight: 800;
-  color: #ffd984;
-  margin-bottom: 0.35cqw;
+  letter-spacing: 0.08em;
+}
+.choke-stage-selector__trigger > b {
+  font-size: 0.84cqw;
+  font-weight: 800;
+  color: var(--bk-ink);
+}
+.choke-stage-selector__trigger > small {
+  font-family: "JetBrains Mono Variable", "JetBrains Mono", monospace;
+  font-size: 0.66cqw;
+  color: var(--bk-osu-text);
+}
+.choke-stage-selector__trigger > em {
+  margin-left: 0.2cqw;
+  padding: 0.1cqw 0.42cqw;
+  border-radius: 999px;
+  background: var(--bk-osu-soft);
+  color: var(--bk-osu-text);
+  font-style: normal;
+  font-size: 0.64cqw;
+  font-weight: 800;
+}
+.choke-test-toggle {
+  height: 2.4cqw;
+  padding: 0 0.7cqw;
+  border: 0;
+  border-radius: 0.45cqw;
+  background: rgb(43 33 38 / 0.9);
+  color: var(--bk-dim);
+  font: inherit;
+  font-size: 0.68cqw;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow:
+    inset 0 0 0 1px var(--bk-line),
+    0 0.16cqw 0 var(--bk-edge);
+}
+.choke-test-toggle[data-active="true"] {
+  background: var(--bk-osu);
+  color: var(--bk-well);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    0 0.16cqw 0 #b03a72;
+}
+.choke-stage-selector__body {
+  width: 40cqw;
+  padding: 0.65cqw 0.75cqw;
+  border-radius: 0.55cqw;
+  background: rgb(43 33 38 / 0.96);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    inset 0 0 0 1px var(--bk-line),
+    0 0.6cqw 1.8cqw rgb(0 0 0 / 0.72);
+  animation: choke-result-rise 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .choke-stage-selector__btns {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.35cqw;
+  max-height: 9.8cqw;
+  overflow-y: auto;
+  padding-right: 0.2cqw;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bk-raised) transparent;
 }
 .choke-stage-pill {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 0.3cqw 0.42cqw;
-  border: 0.1cqw solid #6b5332;
-  border-radius: 0.25cqw;
-  background: rgb(26 20 16 / 0.9);
-  color: #e9dec7;
+  padding: 0.3cqw 0.45cqw;
+  border: 0;
+  border-radius: 0.35cqw;
+  background: var(--bk-well);
+  color: var(--bk-ink);
+  font: inherit;
   cursor: pointer;
   text-align: left;
+  box-shadow: inset 0 0 0 1px var(--bk-line);
 }
 .choke-stage-pill b {
   font-size: 0.72cqw;
@@ -329,206 +450,142 @@
 }
 .choke-stage-pill small {
   font-size: 0.56cqw;
-  color: #b7a689;
+  color: var(--bk-dim);
 }
 .choke-stage-pill[data-active="true"] {
-  border-color: #ffd86b;
-  background: linear-gradient(180deg, #5c2716, #2d110a);
-  box-shadow: 0 0 0.6cqw rgb(255 190 70 / 0.45);
+  background: var(--bk-osu-soft);
+  box-shadow: inset 0 0 0 0.1cqw var(--bk-osu);
+}
+.choke-stage-pill[data-active="true"] b {
+  color: var(--bk-osu-text);
 }
 .choke-stage-selector__desc {
-  margin: 0.35cqw 0 0;
-  font-size: 0.66cqw;
-  line-height: 1.35;
-  color: #cfc2aa;
-}
-.choke-test-toggle {
-  margin-left: auto;
-  padding: 0.1cqw 0.45cqw;
-  border: 0.1cqw dashed #6b5332;
-  border-radius: 0.25cqw;
-  background: transparent;
-  color: #b7a689;
-  font-size: 0.62cqw;
-  cursor: pointer;
-}
-.choke-test-toggle[data-active="true"] {
-  border-style: solid;
-  border-color: #7fd6ff;
-  color: #bfeaff;
-  background: rgb(40 90 120 / 0.45);
+  margin: 0.42cqw 0 0;
+  padding-top: 0.38cqw;
+  border-top: 1px solid var(--bk-line);
+  font-size: 0.68cqw;
+  line-height: 1.4;
+  color: var(--bk-dim);
 }
 .choke-test-picker__search {
   width: 100%;
   box-sizing: border-box;
-  margin-bottom: 0.35cqw;
-  padding: 0.25cqw 0.4cqw;
-  border: 0.1cqw solid #6b5332;
-  border-radius: 0.25cqw;
-  background: rgb(26 20 16 / 0.9);
-  color: #e9dec7;
+  margin-bottom: 0.38cqw;
+  padding: 0.28cqw 0.5cqw;
+  border: 0;
+  border-radius: 0.35cqw;
+  background: var(--bk-well);
+  color: var(--bk-ink);
+  font: inherit;
   font-size: 0.68cqw;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.55), inset 0 0 0 1px var(--bk-line);
 }
 .choke-test-picker__list {
-  max-height: 11cqw;
+  max-height: 10.5cqw;
   overflow-y: auto;
   padding-right: 0.25cqw;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bk-raised) transparent;
+}
+.choke-test-picker__list .choke-stage-selector__btns {
+  max-height: none;
+  overflow: visible;
 }
 .choke-test-picker__list h4 {
   margin: 0.3cqw 0 0.2cqw;
   font-size: 0.64cqw;
-  color: #ffd984;
+  color: var(--bk-osu-text);
 }
 .choke-test-picker__list h4 small {
-  color: #b7a689;
+  color: var(--bk-dim);
 }
 .choke-test-picker__empty {
   margin: 0.4cqw 0;
   font-size: 0.64cqw;
-  color: #b7a689;
+  color: var(--bk-dim);
 }
 
+/* 右下评价与路线条件：保留参考图红渐变横条结构，融合桌面梅子暗底 */
 .choke-outcome-box {
   position: absolute;
   right: 0;
   bottom: 7.8cqw;
   z-index: 4;
-  width: 21cqw;
-  border-top: 0.14cqw solid #aa3333;
-  border-bottom: 0.14cqw solid #705532;
-  background: linear-gradient(90deg, transparent, rgb(14 10 12 / 0.9) 22%);
+  width: 22.5cqw;
+  border-top: 0.12cqw solid #c82842;
+  border-bottom: 0.1cqw solid var(--bk-line);
+  background: linear-gradient(90deg, transparent, rgb(28 18 22 / 0.92) 20%);
 }
-.choke-outcome-head { padding: 0.4cqw 1cqw; background: linear-gradient(90deg, transparent, #9e1818 30%); text-align: right; font-size: 0.92cqw; font-weight: 800; }
-.choke-outcome-row { display: flex; justify-content: space-between; padding: 0.38cqw 1.1cqw 0.38cqw 4cqw; font-size: 0.85cqw; border-top: 0.06cqw solid rgb(255 255 255 / 0.1); }
-.choke-outcome-row span { color: #d89a9a; }
-
+.choke-outcome-head {
+  padding: 0.38cqw 1cqw;
+  background: linear-gradient(90deg, transparent, #9e1b32 32%);
+  text-align: right;
+  font-size: 0.86cqw;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff2f5;
+}
+.choke-outcome-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.36cqw 1.05cqw 0.36cqw 3.8cqw;
+  font-size: 0.8cqw;
+  border-top: 1px solid rgb(255 228 240 / 0.09);
+}
+.choke-outcome-row span {
+  color: #e2b4c4;
+}
+.choke-outcome-row b {
+  color: var(--bk-ink);
+}
 /* 兰斯10 梯形侧面支援铭牌（对应截图左侧「知性覚醒(1/4)」，紧贴部队剪影上方叠放，无空表格） */
-.choke-rance-supports {
+.choke-classic-readouts {
   position: absolute;
-  bottom: 6.8cqw;
-  z-index: 7;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 0.3cqw;
-}
-.choke-rance-supports--enemy {
-  left: 0.9cqw;
-}
-.choke-rance-supports--party {
-  right: 0.9cqw;
-  align-items: flex-end;
-}
-
-.choke-rance-support-plate {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.45cqw;
-  min-width: 12.8cqw;
-  max-width: 16cqw;
-  padding: 0.22cqw 1cqw 0.22cqw 0.32cqw;
-  color: #fff;
-  filter: drop-shadow(0 0.2cqw 0.45cqw rgb(0 0 0 / 0.8));
-  transition: transform 0.18s ease;
-}
-.choke-rance-support-plate--enemy {
-  background: linear-gradient(90deg, #b83814, #eb5e1a 75%, #ff8838);
-  border-left: 0.24cqw solid #ffd970;
-  clip-path: polygon(0 0, 100% 0, 91% 100%, 0 100%);
-}
-.choke-rance-support-plate--party {
-  padding: 0.22cqw 0.35cqw 0.22cqw 1cqw;
-  background: linear-gradient(270deg, #12407a, #1f6bc4 75%, #44a4ff);
-  border-right: 0.24cqw solid #9ce8ff;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 9% 100%);
-}
-.choke-rance-support-plate--party[data-kind="defense"],
-.choke-rance-support-plate--party[data-kind="armor"] {
-  background: linear-gradient(270deg, #1b4d8a, #2c7be0 70%, #68c6ff);
-  border-right-color: #ffe278;
-}
-.choke-rance-support-plate--party[data-active="true"] {
-  transform: translateX(-0.5cqw);
-}
-
-.choke-plate-icon {
-  position: relative;
-  flex: 0 0 1.9cqw;
-  height: 1.9cqw;
-  display: grid;
-  place-items: center;
-  border-radius: 0.22cqw;
-  border: 0.1cqw solid #ffe184;
-  background: #1a120d;
-  color: #ffe49c;
-}
-.choke-plate-icon svg {
-  width: 1.25cqw;
-  height: 1.25cqw;
-}
-.choke-plate-icon i {
-  position: absolute;
-  right: -0.28cqw;
-  bottom: -0.22cqw;
-  width: 0.92cqw;
-  height: 0.92cqw;
-  border-radius: 50%;
-  background: #14100c;
-  border: 0.08cqw solid #ffd86b;
-  color: #ffd86b;
-  font-style: normal;
-  font-size: 0.58cqw;
-  font-weight: 900;
-  display: grid;
-  place-items: center;
-}
-.choke-plate-text {
+  inset: .85cqw auto 7.2cqw .9cqw;
+  width: 23cqw;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  line-height: 1.12;
-}
-.choke-plate-text b {
-  font-size: 0.78cqw;
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 0.08cqw 0.22cqw #000;
-  white-space: nowrap;
-}
-.choke-plate-text small {
-  font-size: 0.58cqw;
-  color: #ffefd2;
-  opacity: 0.92;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* 支援强度：强度 1 不显示；2、3 在铭牌最底层衬一个大号斜体数字 */
-.choke-plate-icon,
-.choke-plate-text {
-  z-index: 1;
-}
-.choke-plate-tier {
-  position: absolute;
-  z-index: 0;
-  top: 50%;
-  right: 1.2cqw;
-  transform: translateY(-50%);
-  font-size: 3cqw;
-  font-style: italic;
-  font-weight: 900;
-  line-height: 1;
-  color: rgb(255 255 255 / 0.2);
+  gap: .5cqw;
   pointer-events: none;
+  z-index: 7;
 }
-.choke-rance-support-plate--party .choke-plate-tier {
-  right: auto;
-  left: 1.5cqw;
+.choke-classic-readouts .battle-readout-log {
+  flex: 0 1 auto;
+  max-height: min(9.6cqw, 52%);
+  pointer-events: auto;
 }
-.choke-rance-support-plate[data-tier="3"] .choke-plate-tier {
-  color: rgb(255 226 120 / 0.38);
-  text-shadow: 0 0 0.5cqw rgb(255 190 60 / 0.6);
+.choke-rance-supports {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: .3cqw;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  width: 17cqw;
+  pointer-events: auto;
 }
+.choke-rance-supports--enemy { margin-top: auto; }
+.choke-rance-supports--party {
+  position: absolute;
+  right: .9cqw;
+  bottom: 7.2cqw;
+  max-height: calc(100% - 11.4cqw);
+  z-index: 7;
+}
+.choke-rance-supports .battle-support[data-side="enemy"] {
+  background: #472430;
+  clip-path: polygon(0 0, 100% 0, 94% 100%, 0 100%);
+  padding-right: 1.2cqw;
+}
+.choke-rance-supports .battle-support[data-side="party"] {
+  background: #223b5e;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 6% 100%);
+  padding-left: 1.2cqw;
+}
+.choke-rance-supports .battle-support { color: #fff; }
+.choke-rance-supports .battle-support-copy :is(em, small) { color: #e2dce0; }
+.choke-rance-supports .battle-support-icon { background: #211a22; }
 .choke-card-slot[data-bursting="true"] {
   z-index: 28;
 }
@@ -565,9 +622,9 @@
   align-items: center;
   gap: 0.5cqw;
   padding: 0.38cqw 3cqw;
-  background: linear-gradient(90deg, transparent, rgb(10 10 14 / 0.9) 18%, rgb(10 10 14 / 0.9) 82%, transparent);
-  border-top: 0.1cqw solid rgb(225 185 105 / 0.7);
-  border-bottom: 0.1cqw solid rgb(225 185 105 / 0.7);
+  background: linear-gradient(90deg, transparent, rgb(28 18 22 / 0.94) 18%, rgb(28 18 22 / 0.94) 82%, transparent);
+  border-top: 0.1cqw solid var(--bk-osu);
+  border-bottom: 0.1cqw solid var(--bk-osu);
   font-size: 1.15cqw;
   white-space: nowrap;
   pointer-events: none;
@@ -580,10 +637,10 @@
   color: #bfe5ff;
 }
 .choke-banner-tag {
-  padding: 0.08cqw 0.42cqw;
-  border-radius: 0.2cqw;
-  background: #c78b2a;
-  color: #140e04;
+  padding: 0.08cqw 0.44cqw;
+  border-radius: 0.22cqw;
+  background: var(--bk-osu);
+  color: var(--bk-well);
   font-size: 0.72cqw;
   font-weight: 900;
 }
@@ -621,7 +678,7 @@
   position: relative;
   z-index: 6;
   margin-top: -7.2cqw;
-  padding: 0 0.8cqw 2.1cqw;
+  padding: 0 0.8cqw 2.95cqw;
   pointer-events: none;
 }
 
@@ -682,7 +739,7 @@
 
 .choke-side-info {
   position: relative;
-  padding: 0.35cqw 0.9cqw 1.35cqw;
+  padding: 0.35cqw 0.9cqw 1.8cqw;
 }
 /* 名称 / HP 后面垫一层薄板：向内渐隐，底边一道阵营色细线 */
 .choke-side-info::before {
@@ -832,52 +889,59 @@
 
 .choke-intent-box {
   position: relative;
-  width: 2.35cqw;
-  height: 2.35cqw;
+  width: 2.38cqw;
+  height: 2.38cqw;
   display: grid;
   place-items: center;
-  border: 0.14cqw solid #ffe066;
-  border-radius: 0.22cqw;
-  background: linear-gradient(180deg, #f5c842, #b87b14);
-  color: #1f1204;
-  box-shadow: 0 0.2cqw 0.5cqw rgb(0 0 0 / 0.8);
-  cursor: help;
+  border: 0;
+  border-radius: 0.34cqw;
+  background: var(--bk-raised);
+  color: var(--bk-ink);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    inset 0 0 0 0.09cqw color-mix(in srgb, var(--el, var(--bk-osu)) 75%, #fff),
+    0 0.16cqw 0 var(--bk-edge),
+    0 0.25cqw 0.6cqw rgb(0 0 0 / 0.65);
+  cursor: default;
   transition: transform 0.14s ease;
 }
 .choke-intent-box:hover {
   transform: translateY(-0.18cqw) scale(1.05);
 }
 .choke-intent-box[data-hard-to-interrupt="true"] {
-  border-color: #ff4242;
+  box-shadow:
+    inset 0 0 0 0.12cqw #ff5268,
+    0 0.16cqw 0 var(--bk-edge);
 }
 .choke-intent-box[data-interrupted="true"],
 .choke-intent-box[data-cc="true"] {
   filter: grayscale(0.95) brightness(0.5);
 }
 .choke-intent-box__icon svg {
-  width: 1.38cqw;
-  height: 1.38cqw;
+  width: 1.32cqw;
+  height: 1.32cqw;
+  color: color-mix(in srgb, var(--el, #ffb3d4) 65%, #fff);
 }
 .choke-intent-box__order {
   position: absolute;
-  left: 0.1cqw;
-  top: 0.02cqw;
+  left: 0.14cqw;
+  top: 0.06cqw;
   font-style: normal;
-  font-size: 0.56cqw;
+  font-size: 0.54cqw;
   font-weight: 900;
-  color: #2b1600;
+  color: var(--bk-dim);
 }
 .choke-intent-box__tier {
   position: absolute;
   right: 0.08cqw;
-  bottom: 0.04cqw;
+  bottom: 0.06cqw;
   font-style: normal;
   font-size: 0.52cqw;
   font-weight: 900;
-  padding: 0 0.14cqw;
-  border-radius: 0.12cqw;
-  background: rgb(20 12 4 / 0.82);
-  color: #ffe694;
+  padding: 0 0.16cqw;
+  border-radius: 0.14cqw;
+  background: var(--bk-well);
+  color: var(--bk-osu-text);
 }
 .choke-intent-box__lock {
   position: absolute;
@@ -886,7 +950,7 @@
   width: 0.85cqw;
   height: 0.85cqw;
   border-radius: 50%;
-  background: #d91b1b;
+  background: #e0324c;
   border: 0.08cqw solid #fff;
   color: #fff;
   font-size: 0.58cqw;
@@ -901,7 +965,7 @@
   place-items: center;
   font-size: 1.7cqw;
   font-weight: 900;
-  color: #ff2626;
+  color: #ff4258;
   text-shadow: 0 0 0.25cqw #000;
 }
 
@@ -909,14 +973,16 @@
   display: flex;
   align-items: center;
   gap: 0.35cqw;
-  padding: 0.14cqw 0.55cqw;
-  border-radius: 0.2cqw;
-  background: linear-gradient(90deg, rgb(12 32 68 / 0.92), rgb(22 58 112 / 0.92));
-  border: 0.08cqw solid #63adff;
-  font-size: 0.7cqw;
+  padding: 0.16cqw 0.55cqw;
+  border-radius: 0.3cqw;
+  background: rgb(43 33 38 / 0.92);
+  border: 0;
+  box-shadow:
+    inset 0 0 0 1px var(--bk-line),
+    0 0.15cqw 0.4cqw rgb(0 0 0 / 0.65);
+  font-size: 0.68cqw;
   font-weight: 800;
-  color: #bfe0ff;
-  box-shadow: 0 0.15cqw 0.4cqw rgb(0 0 0 / 0.7);
+  color: var(--bk-dim);
 }
 .choke-weakness-icons {
   display: flex;
@@ -1081,54 +1147,64 @@
   position: relative;
   z-index: 5;
   flex: 0 0 auto;
-  width: 5.4cqw;
-  height: 5.4cqw;
+  width: 4.8cqw;
+  height: 4.8cqw;
   margin-top: -1.2cqw;
   border-radius: 50%;
-  border: 0.26cqw solid #d4ac58;
+  border: 0.22cqw solid #6e4b5b;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #fff6df;
-  background: radial-gradient(circle at 35% 30%, #4b3822, #15100a 74%);
+  color: var(--bk-ink);
+  background: var(--bk-paper);
   box-shadow:
-    inset 0 0 0 0.16cqw rgb(0 0 0 / 0.75),
-    0 0.35cqw 0.9cqw rgb(0 0 0 / 0.9);
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    0 0.25cqw 0 var(--bk-edge),
+    0 0.45cqw 1cqw rgb(0 0 0 / 0.85);
 }
 .choke-stage[data-phase="prepare"] .choke-center-orb {
   width: 6.2cqw;
   height: 6.2cqw;
   cursor: pointer;
-  background: radial-gradient(circle at 40% 35%, #e83232, #7a0909 74%);
-  box-shadow: 0 0 1.5cqw rgb(235 55 40 / 0.55), inset 0 0.25cqw 0.5cqw rgb(255 215 160 / 0.4);
+  border-color: #ffb3d4;
+  background: var(--bk-osu);
+  color: var(--bk-well);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 0.24cqw 0 #b03a72,
+    0 0 1.6cqw rgb(255 102 170 / 0.55);
 }
 .choke-orb-start { font-size: 1.12cqw; font-weight: 900; letter-spacing: 0.05em; }
-.choke-orb-round { font-style: normal; font-size: 0.68cqw; font-weight: 800; color: #e8c87d; }
+.choke-orb-round { font-style: normal; font-size: 0.66cqw; font-weight: 800; color: var(--bk-osu-text); letter-spacing: 0.08em; }
 .choke-orb-num { font-size: 1.85cqw; line-height: 0.95; font-weight: 800; font-variant-numeric: tabular-nums; }
-.choke-orb-vs { font-size: 0.82cqw; font-weight: 900; color: #e03a2b; -webkit-text-stroke: 0.04cqw #fff; }
+.choke-orb-vs { font-size: 0.8cqw; font-weight: 900; color: var(--bk-osu); }
 
-/* 折线血条正下方、卡牌上方的凹槽里放 AP 齿轮宝石栏（下移后不再压住卡面与右翼按钮） */
+/* 折线血条正下方、卡牌上方的凹槽里放 AP 宝石栏 */
 .choke-ap-pocket {
   position: absolute;
   left: 50%;
-  bottom: -1.75cqw;
+  bottom: -2.6cqw;
   transform: translateX(-50%);
   z-index: 4;
   display: flex;
   align-items: center;
   gap: 0.38cqw;
-  padding: 0.14cqw 0.65cqw;
-  border-radius: 1.2cqw;
-  background: rgb(10 9 8 / 0.92);
-  border: 0.1cqw solid #6b5631;
-  box-shadow: 0 0.2cqw 0.5cqw rgb(0 0 0 / 0.8);
+  padding: 0.16cqw 0.7cqw;
+  border-radius: 999px;
+  background: var(--bk-well);
+  border: 0;
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.65),
+    inset 0 0 0 1px var(--bk-line),
+    0 0.2cqw 0.5cqw rgb(0 0 0 / 0.75);
 }
 .choke-ap-label {
-  font-size: 0.88cqw;
+  translate: 0 -0.06em;
+  font-size: 0.86cqw;
   font-weight: 800;
   font-family: inherit;
-  color: #e6c473;
+  color: var(--bk-osu-text);
 }
 .choke-ap-gems {
   display: flex;
@@ -1140,22 +1216,25 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 0.76cqw;
+  box-sizing: border-box;
+  line-height: 1;
+  padding-block-start: 0.12em;
+  font-size: 0.74cqw;
   font-weight: 900;
-  color: #635a48;
-  background: radial-gradient(circle at 35% 30%, #2b2720, #12100d);
-  border: 0.1cqw solid #473d2c;
+  color: var(--bk-faint);
+  background: #140c10;
+  border: 0.08cqw solid rgb(255 228 240 / 0.14);
 }
 .choke-ap-gem[data-active="true"] {
-  color: #2b1803;
-  background: radial-gradient(circle at 35% 30%, #fff4b8, #e69d24 75%);
-  border-color: #ffe38a;
-  box-shadow: 0 0 0.5cqw rgb(255 200 72 / 0.7);
+  color: var(--bk-well);
+  background: var(--bk-osu);
+  border-color: #ffc2de;
+  box-shadow: 0 0 0.5cqw rgb(255 102 170 / 0.65);
 }
 .choke-ap-gem[data-preview="true"] {
-  background: radial-gradient(circle at 35% 30%, #ffb5a8, #e03c2b 75%);
-  border-color: #ff9c8a;
-  color: #fff;
+  background: #ff8c52;
+  border-color: #ffd0b5;
+  color: var(--bk-well);
 }
 .choke-ap-gem[data-locked="true"] {
   opacity: 0.25;
@@ -1166,11 +1245,14 @@
   position: absolute;
   z-index: 30;
   width: 16.5cqw;
-  padding: 0.55cqw 0.75cqw;
-  border: 0.12cqw solid #b69452;
-  border-radius: 0.3cqw;
-  background: rgb(14 13 18 / 0.96);
-  box-shadow: 0 0.5cqw 1.4cqw rgb(0 0 0 / 0.88);
+  padding: 0.6cqw 0.8cqw;
+  border: 0;
+  border-radius: 0.5cqw;
+  background: rgb(43 33 38 / 0.98);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    inset 0 0 0 1px var(--bk-line),
+    0 0.6cqw 1.6cqw rgb(0 0 0 / 0.85);
   pointer-events: none;
   text-align: left;
 }
@@ -1179,32 +1261,9 @@
   left: 50%;
   transform: translateX(-50%);
 }
-.choke-tooltip--skill {
-  bottom: calc(100% + 0.45cqw);
-  left: 50%;
-  transform: translateX(-50%);
-}
-.choke-tooltip-title { font-size: 0.92cqw; font-weight: 800; color: #ffe28a; margin-bottom: 0.18cqw; }
-.choke-tooltip-sub { font-size: 0.72cqw; color: #93c4ff; margin-bottom: 0.22cqw; }
-.choke-tooltip-desc { font-size: 0.74cqw; color: #ddd5c3; line-height: 1.35; }
-.choke-tooltip-badge {
-  margin-left: 0.4cqw;
-  padding: 0.06cqw 0.35cqw;
-  border-radius: 0.18cqw;
-  background: #8f2d14;
-  color: #ffd9c2;
-  font-size: 0.62cqw;
-}
-.choke-tooltip-badge--passive {
-  background: #234b6e;
-  color: #bfe4ff;
-}
-.choke-tooltip-warn {
-  margin-top: 0.22cqw;
-  color: #ff8b78;
-  font-size: 0.68cqw;
-  font-weight: 700;
-}
+.choke-tooltip-title { font-size: 0.9cqw; font-weight: 800; color: var(--bk-osu-text); margin-bottom: 0.18cqw; }
+.choke-tooltip-sub { font-size: 0.7cqw; color: #9ad2ff; margin-bottom: 0.22cqw; }
+.choke-tooltip-desc { font-size: 0.74cqw; color: var(--bk-ink); line-height: 1.38; }
 
 /* ---------- 3. 下半区：7 卡指令台（1:1 兰斯10 布局） ---------- */
 .choke-deck {
@@ -1213,10 +1272,8 @@
   align-items: stretch;
   gap: 0.65cqw;
   padding: 0.6cqw 0.85cqw 0.45cqw;
-  border-top: 0.22cqw solid #8b6f3b;
-  background:
-    radial-gradient(60% 90% at 50% 0%, rgb(32 68 54 / 0.32), transparent 70%),
-    linear-gradient(180deg, #0d1614, #07090a);
+  border-top: 1px solid var(--bk-line);
+  background: var(--bk-paper);
 }
 
 .choke-wing {
@@ -1225,16 +1282,18 @@
   flex-direction: column;
   gap: 0.42cqw;
 }
+.choke-wing :is(button, a, .choke-btn-panel) {
+  border-radius: 0.45cqw;
+}
 .choke-wing button,
 .choke-wing a {
   cursor: pointer;
-  color: #f0e4ca;
+  color: var(--bk-ink);
   font-family: inherit;
-  border-radius: 0.35cqw;
   text-decoration: none;
 }
 
-/* 左翼按钮：居中排版 + 兰斯10 胶囊底槽 */
+/* 左翼按钮：桌面平涂凸起块 + 2px 底边厚度 */
 .choke-btn-panel {
   flex: 1 1 0;
   display: flex;
@@ -1243,32 +1302,35 @@
   justify-content: center;
   gap: 0.35cqw;
   padding: 0.4cqw;
-  border: 0.14cqw solid #6b7d94;
-  background: linear-gradient(180deg, #273242, #141a24);
-  box-shadow: inset 0 0.1cqw 0.25cqw rgb(255 255 255 / 0.12);
+  border: 0;
+  background: var(--bk-raised);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 0.18cqw 0 var(--bk-edge);
 }
 .choke-btn-panel__top {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.28cqw;
-  font-size: 0.92cqw;
+  font-size: 0.88cqw;
   font-weight: 800;
-  color: #fff;
+  color: var(--bk-ink);
 }
 .choke-btn-panel__top svg {
   width: 1.05cqw;
   height: 1.05cqw;
+  color: var(--bk-osu-text);
 }
 .choke-btn-panel__pill {
   width: 90%;
   padding: 0.16cqw 0.3cqw;
-  border-radius: 0.8cqw;
-  background: rgb(6 8 12 / 0.78);
-  border: 0.08cqw solid rgb(255 255 255 / 0.15);
-  font-size: 0.7cqw;
+  border-radius: 999px;
+  background: var(--bk-well);
+  box-shadow: inset 0 0 0 1px var(--bk-line);
+  font-size: 0.68cqw;
   font-weight: 700;
-  color: #c2d4e8;
+  color: var(--bk-dim);
   text-align: center;
 }
 .choke-btn-panel:disabled {
@@ -1284,36 +1346,42 @@
 .choke-btn-mini {
   flex: 1 1 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.18cqw;
-  border: 0.12cqw solid #8c7040;
-  background: linear-gradient(180deg, #382c1c, #1a140c);
-  font-size: 0.68cqw;
+  gap: 0.24cqw;
+  line-height: 1;
+  border: 0;
+  background: var(--bk-raised);
+  font-size: 0.66cqw;
   font-weight: 800;
-  color: #f3dfb4;
+  color: var(--bk-ink);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 0.16cqw 0 var(--bk-edge);
 }
 .choke-btn-mini svg {
-  width: 1.05cqw;
-  height: 1.05cqw;
-  color: #ffd984;
+  width: 1.02cqw;
+  height: 1.02cqw;
+  color: var(--bk-osu-text);
 }
 
 .choke-btn-menu {
   height: 3.3cqw;
   display: grid;
   place-items: center;
-  border: 0.14cqw solid #9b7d46;
-  background: linear-gradient(180deg, #42331e, #1b140b);
-  font-size: 1cqw;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  color: #f5e2b8;
+  border: 0;
+  background: var(--bk-raised);
+  font-size: 0.94cqw;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--bk-ink);
   text-align: center;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 0.16cqw 0 var(--bk-edge);
 }
 
-/* 右翼：单个兰斯10深蓝高光【防御 / 1 Ap】大按键 */
+/* 右翼：平涂战术蓝【防御 / 1 Ap】+ 品牌粉【战斗开始 / 结束该轮】 */
 .choke-btn-defend {
   flex: 1 1 0;
   display: flex;
@@ -1321,40 +1389,33 @@
   align-items: center;
   justify-content: center;
   gap: 0.38cqw;
-  border: 0.16cqw solid #78a6e0;
-  background:
-    radial-gradient(80% 60% at 50% 15%, rgb(85 160 255 / 0.35), transparent),
-    linear-gradient(180deg, #1b3864, #0d1c36 65%, #091326);
+  border: 0;
+  background: #234772;
   box-shadow:
-    inset 0 0 0.8cqw rgb(70 150 255 / 0.35),
-    0 0.25cqw 0.6cqw rgb(0 0 0 / 0.75);
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 0.2cqw 0 #122742;
 }
 .choke-defend-top {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.28cqw;
-  padding: 0.2cqw 0.65cqw;
-  border-radius: 0.22cqw;
-  background: rgb(10 20 38 / 0.78);
-  border: 0.08cqw solid rgb(160 210 255 / 0.45);
   color: #fff;
 }
 .choke-defend-top svg {
-  width: 1.1cqw;
-  height: 1.1cqw;
-  color: #ffd866;
+  width: 1.15cqw;
+  height: 1.15cqw;
+  color: #9ce0ff;
 }
 .choke-defend-top b {
   font-size: 0.95cqw;
   font-weight: 900;
 }
 .choke-defend-ap {
-  padding: 0.14cqw 0.75cqw;
-  border-radius: 0.22cqw;
-  background: rgb(6 12 24 / 0.85);
-  border: 0.08cqw solid rgb(140 190 255 / 0.35);
-  font-size: 0.82cqw;
+  padding: 0.12cqw 0.72cqw;
+  border-radius: 999px;
+  background: rgb(12 24 44 / 0.72);
+  font-size: 0.78cqw;
   font-weight: 800;
   color: #d6ecff;
 }
@@ -1368,12 +1429,15 @@
   height: 3.9cqw;
   display: grid;
   place-items: center;
-  border: 0.16cqw solid #d47652;
-  background: linear-gradient(180deg, #8a291b, #421009);
-  font-size: 1.02cqw;
+  border: 0;
+  background: var(--bk-osu);
+  font-size: 1cqw;
   font-weight: 900;
   letter-spacing: 0.06em;
-  color: #ffe8d6;
+  color: var(--bk-well);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    0 0.18cqw 0 #b03a72;
 }
 
 /* 7 卡网格与卡槽状态 */
@@ -1390,10 +1454,6 @@
   flex-direction: column;
   align-items: center;
   transition: transform 0.15s ease;
-}
-.choke-card-slot[data-hovered="true"]:not([data-acted="true"]):not([data-down="true"]) {
-  transform: translateY(-0.45cqw);
-  z-index: 6;
 }
 .choke-card-slot[data-guarding="true"] {
   transform: translateY(-1cqw);
@@ -1426,33 +1486,37 @@
     0 0 1.3cqw rgb(74 232 255 / 0.85);
 }
 
-/* 兰斯10 风格：覆盖在未行动卡片上部（横幅与头像上沿，避开下方的名字与 BP）的触发标签 */
+/* 触发牌的顶部留给徽标，排名水印落在右下方。 */
+.choke-card-frame:has(> .choke-center-trigger) .cfb2__watermark {
+  bottom: 9cqw;
+  font-size: 9cqw;
+}
 .choke-center-trigger {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 19%;
-  z-index: 7;
+  inset-inline: 0;
+  top: 14.35%; /* 稀有度下沿与头像上沿的中点 */
   transform: translateY(-50%);
+  container-type: inline-size;
+  z-index: 7;
   display: flex;
   justify-content: center;
   pointer-events: none;
 }
 .choke-center-trigger span {
-  padding: 0.14cqw 0.55cqw;
-  border-radius: 0.24cqw;
+  padding: 0.05em 0.5em;
+  border-radius: 0.2em;
   border: 0.1cqw solid #ffe6a8;
   background: linear-gradient(180deg, rgb(196 84 12 / 0.94), rgb(108 28 4 / 0.94));
   color: #fff;
-  font-size: 1.2cqw;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  line-height: 1.15;
+  font-size: 11.5cqw;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
   white-space: nowrap;
   text-shadow: 0 0.08cqw 0.18cqw rgb(0 0 0 / 0.9);
-  box-shadow:
-    0 0 0.6cqw rgb(255 150 40 / 0.55),
-    0 0.16cqw 0.34cqw rgb(0 0 0 / 0.75);
+  box-shadow: 0 0 0.6cqw rgb(255 150 40 / 0.55), 0 0.16cqw 0.34cqw rgb(0 0 0 / 0.75);
+  pointer-events: auto;
+  cursor: default;
 }
 .choke-center-trigger[data-trigger="critical_art"] span {
   border-color: #ffc2cd;
@@ -1561,91 +1625,6 @@
   font-weight: 800;
 }
 
-/* 卡面底部技能指令行（与卡面技能区三行位置对齐，不遮挡上方的名字、也不漏出半截卡面技能行） */
-.choke-card-overlay-skills {
-  position: absolute;
-  left: 0.9cqw;
-  right: 0.35cqw;
-  top: 57%;
-  bottom: 7.2%;
-  z-index: 8;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 0.2cqw;
-  padding: 0.24cqw;
-  border-radius: 0.28cqw;
-  border: 0.1cqw solid #d8aa50;
-  background: rgb(14 12 10 / 0.96);
-  box-shadow: 0 -0.2cqw 0.7cqw rgb(0 0 0 / 0.85);
-}
-.choke-overlay-skill-btn {
-  flex: 1 1 0;
-  max-height: 1.95cqw;
-  display: flex;
-  align-items: center;
-  gap: 0.32cqw;
-  padding: 0.18cqw 0.36cqw;
-  border: 0.08cqw solid #786035;
-  border-radius: 0.2cqw;
-  background: linear-gradient(180deg, #322819, #1b150c);
-  color: #fff4d2;
-  font-size: 0.72cqw;
-  font-weight: 700;
-  cursor: pointer;
-  text-align: left;
-}
-.choke-overlay-skill-btn:hover:not(:disabled):not([data-passive="true"]) {
-  border-color: #ffd872;
-  background: linear-gradient(180deg, #523e21, #2c1f0e);
-}
-/* 被动技能与主动技能保持完全一致的条形外观，鼠标指上去可看详情，但点击无动作 */
-.choke-overlay-skill-btn[data-passive="true"] {
-  cursor: help;
-  border-color: #5c6c7d;
-  background: linear-gradient(180deg, #232830, #14171c);
-  color: #d4dde8;
-}
-.choke-overlay-skill-btn[data-passive="true"]:hover {
-  border-color: #8ab8e6;
-}
-.choke-overlay-skill-btn:disabled {
-  opacity: 0.42;
-  cursor: not-allowed;
-}
-.choke-overlay-skill-btn i {
-  flex: 0 0 1.15cqw;
-  height: 1.15cqw;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--el, #d98a12) 75%, #2b1804);
-  border: 0.07cqw solid #ffe299;
-  color: #fff;
-  font-style: normal;
-  font-size: 0.68cqw;
-  font-weight: 900;
-}
-.choke-overlay-skill-btn[data-passive="true"] i {
-  background: #2b394a;
-  border-color: #9ab8d8;
-  color: #cfe4ff;
-}
-.choke-overlay-skill-btn[data-surcharged="true"] {
-  border-color: #e0523c;
-  color: #ffb8ad;
-}
-.choke-overlay-skill-btn[data-surcharged="true"] i {
-  background: #d9381e;
-  border-color: #ffb4a2;
-  box-shadow: 0 0 0.35cqw #ff6a4d;
-}
-.choke-overlay-skill-btn span {
-  flex: 1 1 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 /* ---------- 4. 战中换人抽屉 ---------- */
 .choke-swap-drawer {
@@ -1658,22 +1637,36 @@
   display: flex;
   flex-direction: column;
   padding: 1cqw 1.2cqw;
-  border: 0.16cqw solid #8b7141;
-  border-radius: 0.45cqw;
-  background: rgb(12 14 18 / 0.96);
-  box-shadow: 0 0.8cqw 2.4cqw rgb(0 0 0 / 0.88);
+  border: 0;
+  border-radius: 0.6cqw;
+  background: rgb(43 33 38 / 0.98);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    inset 0 0 0 1px var(--bk-line),
+    0 0.8cqw 2.4cqw rgb(0 0 0 / 0.88);
 }
 .choke-swap-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-bottom: 0.7cqw;
-  border-bottom: 0.08cqw solid rgb(255 255 255 / 0.12);
+  border-bottom: 1px solid var(--bk-line);
   margin-bottom: 0.7cqw;
 }
-.choke-swap-head b { font-size: 1.2cqw; color: #ffe28a; margin-right: 0.8cqw; }
-.choke-swap-head span { font-size: 0.86cqw; color: #a8cbe8; }
-.choke-swap-close { padding: 0.32cqw 0.85cqw; border: 0.1cqw solid #9b7f48; border-radius: 0.28cqw; background: #292014; color: #ffe8b0; font-size: 0.82cqw; cursor: pointer; }
+.choke-swap-head b { font-size: 1.15cqw; color: var(--bk-osu-text); margin-right: 0.8cqw; }
+.choke-swap-head span { font-size: 0.84cqw; color: var(--bk-dim); }
+.choke-swap-close {
+  padding: 0.34cqw 0.9cqw;
+  border: 0;
+  border-radius: 0.4cqw;
+  background: var(--bk-raised);
+  color: var(--bk-ink);
+  font: inherit;
+  font-size: 0.8cqw;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 0.14cqw 0 var(--bk-edge);
+}
 .choke-swap-targets {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -1685,17 +1678,19 @@
   flex-direction: column;
   align-items: center;
   padding: 0.28cqw 0.38cqw;
-  border: 0.1cqw solid #5c6c82;
-  border-radius: 0.26cqw;
-  background: #18202c;
-  color: #dce6f2;
+  border: 0;
+  border-radius: 0.35cqw;
+  background: var(--bk-well);
+  color: var(--bk-ink);
   cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--bk-line);
 }
-.choke-swap-slot-pill span { font-size: 0.6cqw; color: #8ea8c8; }
+.choke-swap-slot-pill span { font-size: 0.6cqw; color: var(--bk-faint); }
 .choke-swap-slot-pill b { font-size: 0.74cqw; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.choke-swap-slot-pill small { font-size: 0.58cqw; color: #ffd88a; }
-.choke-swap-slot-pill[data-active="true"] { border-color: #ffd86b; background: #2e2415; box-shadow: 0 0 0.6cqw rgb(255 210 90 / 0.45); }
-.choke-swap-slot-pill[data-down="true"] { border-color: #e04848; }
+.choke-swap-slot-pill small { font-size: 0.58cqw; color: var(--bk-dim); }
+.choke-swap-slot-pill[data-active="true"] { background: var(--bk-osu-soft); box-shadow: inset 0 0 0 0.1cqw var(--bk-osu); }
+.choke-swap-slot-pill[data-active="true"] small { color: var(--bk-osu-text); }
+.choke-swap-slot-pill[data-down="true"] { box-shadow: inset 0 0 0 0.1cqw #e04848; }
 
 .choke-swap-grid {
   flex: 1 1 0;
@@ -1704,6 +1699,8 @@
   gap: 0.85cqw;
   overflow-y: auto;
   align-content: start;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bk-raised) transparent;
 }
 .choke-bench-item {
   display: flex;
@@ -1712,17 +1709,17 @@
   gap: 0.28cqw;
   background: none;
   border: none;
-  color: #e8e0cf;
+  color: var(--bk-ink);
   cursor: pointer;
   padding: 0;
 }
 .choke-bench-item:hover:not(:disabled) .choke-bench-card {
   transform: translateY(-0.22cqw);
-  box-shadow: 0 0 0 0.16cqw #ffd46b;
+  box-shadow: 0 0 0 0.16cqw var(--bk-osu);
 }
 .choke-bench-item:disabled { opacity: 0.42; cursor: not-allowed; }
 .choke-bench-card { position: relative; width: 100%; border-radius: 4.5% / 3%; transition: transform 0.15s ease; }
-.choke-bench-meta { font-size: 0.74cqw; color: #cfc3ab; }
+.choke-bench-meta { font-size: 0.72cqw; color: var(--bk-dim); }
 
 /* ---------- 5. 底栏与 LOG ---------- */
 .choke-footer {
@@ -1731,42 +1728,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 1cqw;
-  border-top: 0.1cqw solid #473b24;
-  background: #0b0a0c;
-  font-size: 0.84cqw;
+  border-top: 1px solid var(--bk-line);
+  background: var(--bk-well);
+  font-size: 0.82cqw;
 }
-.choke-ticker { color: #d7ccb5; }
-.choke-log-toggle { padding: 0.18cqw 0.95cqw; border: 0.1cqw solid #7a643b; border-radius: 0.25cqw; background: #211b13; color: #e6d19f; font-size: 0.75cqw; cursor: pointer; }
-.choke-log-drawer {
-  position: absolute;
-  right: 1cqw;
-  bottom: 2.6cqw;
-  z-index: 25;
-  width: 36cqw;
-  max-height: 16cqw;
-  overflow-y: auto;
-  padding: 0.7cqw 1cqw;
-  border: 0.14cqw solid #8b7141;
-  border-radius: 0.35cqw;
-  background: rgb(12 11 14 / 0.95);
-  font-size: 0.8cqw;
-  line-height: 1.5;
-}
-.choke-log-line { padding: 0.16cqw 0; border-bottom: 0.05cqw solid rgb(255 255 255 / 0.08); }
-
-/* ---------- 6. 命中反馈：白闪、兰斯10粉白红边大号伤害数字、回合扫屏 ---------- */
-.choke-hit-flash {
-  position: absolute;
-  inset: 0;
-  z-index: 35;
-  background: #fff;
-  pointer-events: none;
-  animation: choke-hit-flash 0.15s ease-out forwards;
-}
-@keyframes choke-hit-flash {
-  0% { opacity: 0.42; }
-  100% { opacity: 0; }
-}
+.choke-ticker { color: var(--bk-dim); }
+/* ---------- 6. 命中反馈：伤害数字与局部特效，不做整屏白闪 ---------- */
 
 /* 受击爆光：属性色光团 + 放射线 + 斩痕，tier 越高越大 */
 .choke-burst {
@@ -2018,11 +1985,15 @@
 }
 .choke-result-card {
   width: 34cqw;
-  padding: 1.4cqw 1.8cqw;
-  border: 0.16cqw solid #b08a45;
-  border-radius: 0.5cqw;
-  background: linear-gradient(180deg, #1b1712, #0d0b09);
-  box-shadow: 0 1cqw 3cqw rgb(0 0 0 / 0.85);
+  padding: 1.5cqw 1.8cqw;
+  border: 0;
+  border-radius: 0.7cqw;
+  background: var(--bk-paper);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    inset 0 0 0 1px var(--bk-line),
+    0 0.3cqw 0 var(--bk-edge),
+    0 1.2cqw 3cqw rgb(0 0 0 / 0.85);
   text-align: center;
 }
 .choke-result-badge {
@@ -2030,15 +2001,15 @@
   place-items: center;
   width: 3.6cqw;
   height: 3.6cqw;
-  margin: 0 auto 0.4cqw;
+  margin: 0 auto 0.45cqw;
   border-radius: 50%;
-  background: radial-gradient(circle, #5e4314, #1e1508);
-  border: 0.14cqw solid #ffd86b;
-  color: #ffe27a;
+  background: var(--bk-osu-soft);
+  border: 0.14cqw solid var(--bk-osu);
+  color: var(--bk-osu-text);
 }
 .choke-result-badge svg { width: 2cqw; height: 2cqw; }
-.choke-result-card b { display: block; font-size: 2.1cqw; color: #ffe6a8; margin-bottom: 0.45cqw; }
-.choke-result-card p { font-size: 0.88cqw; color: #c9bda7; margin-bottom: 1cqw; }
+.choke-result-card b { display: block; font-size: 2.05cqw; color: var(--bk-ink); margin-bottom: 0.45cqw; }
+.choke-result-card p { font-size: 0.86cqw; color: var(--bk-dim); margin-bottom: 1cqw; }
 .choke-stars-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2051,34 +2022,38 @@
   align-items: center;
   gap: 0.18cqw;
   padding: 0.55cqw 0.4cqw;
-  border: 0.1cqw solid rgb(255 255 255 / 0.14);
-  border-radius: 0.32cqw;
-  background: rgb(255 255 255 / 0.03);
-  color: #7c7568;
+  border: 0;
+  border-radius: 0.45cqw;
+  background: var(--bk-well);
+  box-shadow: inset 0 0 0 1px var(--bk-line);
+  color: var(--bk-faint);
 }
 .choke-star-item svg { width: 1.5cqw; height: 1.5cqw; }
-.choke-star-item b { font-size: 0.85cqw !important; margin: 0 !important; color: inherit !important; }
-.choke-star-item small { font-size: 0.66cqw; color: #9e9585; }
+.choke-star-item b { font-size: 0.84cqw !important; margin: 0 !important; color: inherit !important; }
+.choke-star-item small { font-size: 0.65cqw; color: var(--bk-dim); }
 .choke-star-item[data-achieved="true"] {
-  border-color: #e5b852;
-  background: linear-gradient(180deg, rgb(92 68 18 / 0.45), rgb(32 24 10 / 0.65));
-  color: #ffe074;
+  background: var(--bk-osu-soft);
+  box-shadow: inset 0 0 0 0.1cqw var(--bk-osu);
+  color: var(--bk-osu-text);
 }
-.choke-star-item[data-achieved="true"] small { color: #f0e2c4; }
+.choke-star-item[data-achieved="true"] small { color: var(--bk-ink); }
 .choke-result-actions { display: flex; gap: 0.6cqw; justify-content: center; }
 .choke-result-actions button,
 .choke-result-actions a {
-  padding: 0.45cqw 1.1cqw;
-  border: 0.12cqw solid #8b7141;
-  border-radius: 0.3cqw;
-  background: linear-gradient(180deg, #352b1c, #17120c);
-  color: #ffe7b0;
-  font-size: 0.9cqw;
+  padding: 0.48cqw 1.25cqw;
+  border: 0;
+  border-radius: 0.45cqw;
+  background: var(--bk-raised);
+  color: var(--bk-ink);
+  font: inherit;
+  font-size: 0.88cqw;
   font-weight: 800;
   cursor: pointer;
   text-decoration: none;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 0.16cqw 0 var(--bk-edge);
 }
-
 /* 结算：先压暗，卡片落下，然后徽章、标题、说明、三星、按钮依次出现；
    三星盖下去的时刻（--star-at）和 BattleStage 里播 star 音效的时刻是同一组数 */
 @keyframes choke-result-dim {
@@ -2140,22 +2115,13 @@
 }
 
 /* ---------- 8. 我方挨打、濒危 ---------- */
-/* 挨打：四边闪一圈红。只动 opacity，一次画好 */
 .choke-hurt-vignette {
   position: absolute;
-  inset: 0;
+  inset: 50% 0 0;
   z-index: 33;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 55%, transparent 52%, rgb(220 30 40 / 0.55) 100%);
-  animation: choke-hurt 0.42s ease-out both;
-}
-.choke-hurt-vignette[data-heavy="true"] {
-  background: radial-gradient(ellipse at 50% 55%, transparent 38%, rgb(230 24 36 / 0.78) 100%);
-}
-@keyframes choke-hurt {
-  0% { opacity: 0; }
-  18% { opacity: 1; }
-  100% { opacity: 0; }
+  background: linear-gradient(to bottom, transparent 25%, rgb(148 42 54 / 0.16));
+  opacity: 0;
 }
 /* 队伍血量不到四分之一：指令台四边常驻一圈暗红，慢慢呼吸。伪元素只动 opacity */
 .choke-stage[data-danger="true"] .choke-deck {
@@ -2181,42 +2147,14 @@
 }
 
 /* ---------- 9. 选中、悬停、按下、键盘焦点 ---------- */
-.choke-card-slot {
-  cursor: pointer;
-}
-.choke-card-slot[data-selected="true"]:not([data-acted="true"]):not([data-down="true"]) {
-  transform: translateY(-0.9cqw);
-  z-index: 7;
-}
-.choke-card-slot[data-selected="true"]:not([data-acted="true"]):not([data-down="true"]) .choke-card-frame {
-  box-shadow:
-    0 0 0 0.2cqw #ffd86b,
-    0 0.6cqw 1.2cqw rgb(0 0 0 / 0.6);
-}
 .choke-card-frame {
   transition: filter 0.22s ease, box-shadow 0.16s ease;
-}
-/* 技能条：一条条从下面顶上来 */
-.choke-card-overlay-skills {
-  animation: choke-skills-in 0.14s ease-out both;
-  transform-origin: 50% 100%;
-}
-@keyframes choke-skills-in {
-  from { opacity: 0; transform: translateY(0.5cqw) scaleY(0.9); }
-}
-.choke-overlay-skill-btn {
-  transition: transform 0.08s ease, border-color 0.1s ease, background 0.1s ease;
-}
-.choke-overlay-skill-btn:hover:not(:disabled):not([data-passive="true"]) {
-  transform: translateX(0.18cqw);
-}
-.choke-overlay-skill-btn:active:not(:disabled):not([data-passive="true"]) {
-  transform: translateX(0.18cqw) scale(0.97);
 }
 
 /* 舞台上所有按钮共用的手感：悬停亮一档，按下沉一点，Tab 到时有一圈金线 */
 :is(
     .choke-tool-btn,
+    .choke-stage-selector__trigger,
     .choke-stage-pill,
     .choke-test-toggle,
     .choke-btn-panel,
@@ -2226,13 +2164,13 @@
     .choke-btn-end,
     .choke-swap-close,
     .choke-swap-slot-pill,
-    .choke-log-toggle,
     .choke-result-actions > *
   ) {
-  transition: transform 0.08s ease, filter 0.12s ease, border-color 0.12s ease;
+  transition: transform 0.08s ease, filter 0.12s ease, background 0.14s ease;
 }
 :is(
     .choke-tool-btn,
+    .choke-stage-selector__trigger,
     .choke-stage-pill,
     .choke-test-toggle,
     .choke-btn-panel,
@@ -2242,13 +2180,13 @@
     .choke-btn-end,
     .choke-swap-close,
     .choke-swap-slot-pill,
-    .choke-log-toggle,
     .choke-result-actions > *
   ):hover:not(:disabled) {
-  filter: brightness(1.22);
+  filter: brightness(1.14);
 }
 :is(
     .choke-tool-btn,
+    .choke-stage-selector__trigger,
     .choke-stage-pill,
     .choke-test-toggle,
     .choke-btn-panel,
@@ -2258,25 +2196,23 @@
     .choke-btn-end,
     .choke-swap-close,
     .choke-swap-slot-pill,
-    .choke-log-toggle,
     .choke-result-actions > *
   ):active:not(:disabled) {
-  transform: translateY(0.12cqw) scale(0.98);
-  filter: brightness(0.94);
-}
-.choke-stage :is(button, a):focus-visible {
-  outline: 0.16cqw solid #ffe38a;
-  outline-offset: 0.14cqw;
+  transform: translateY(0.1cqw);
+  filter: brightness(0.95);
 }
 .choke-btn-mini[aria-pressed="true"] {
-  border-color: #ffd86b;
-  color: #fff3c9;
+  background: var(--bk-osu-soft);
+  color: var(--bk-osu-text);
+  box-shadow: inset 0 0 0 0.1cqw var(--bk-osu), 0 0.16cqw 0 var(--bk-edge);
 }
-/* 结算的主按钮（再来一场）用实心金色，和「返回桌面」分出主次 */
+/* 结算的主按钮（再来一场）用品牌粉，和「返回桌面」分出主次 */
 .choke-result-actions button {
-  border-color: #ffd86b;
-  background: linear-gradient(180deg, #e9b44a, #a8741c);
-  color: #1c1204;
+  background: var(--bk-osu);
+  color: var(--bk-well);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    0 0.16cqw 0 #b03a72;
 }
 
 /* 「战斗开始」：慢慢呼吸，告诉玩家下一步点这里；只动 transform */
@@ -2350,18 +2286,6 @@
 .choke-weak-el {
   animation: choke-trigger-in 0.24s cubic-bezier(0.3, 1.4, 0.5, 1) both;
 }
-.choke-rance-support-plate--enemy {
-  animation: choke-plate-in-left 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.choke-rance-support-plate--party {
-  animation: choke-plate-in-right 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-@keyframes choke-plate-in-left {
-  from { opacity: 0; transform: translateX(-3cqw); }
-}
-@keyframes choke-plate-in-right {
-  from { opacity: 0; transform: translateX(3cqw); }
-}
 /* 硬控横幅本身用 translateX(-50%) 居中，入场只改透明度，不碰位移 */
 .choke-boss-cc-banner {
   animation: choke-result-dim 0.24s ease-out both;
@@ -2381,15 +2305,6 @@
 .choke-bench-item:nth-child(3) { animation-delay: 60ms; }
 .choke-bench-item:nth-child(4) { animation-delay: 90ms; }
 .choke-bench-item:nth-child(n + 5) { animation-delay: 120ms; }
-.choke-log-drawer {
-  transform-origin: 100% 100%;
-  animation: choke-log-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  scrollbar-width: thin;
-  scrollbar-color: #7a643b transparent;
-}
-@keyframes choke-log-in {
-  from { opacity: 0; transform: translateY(0.8cqw) scale(0.97); }
-}
 /* 底栏的一句话战况：换了就从下面顶上来（文字节点带 key） */
 .choke-ticker {
   display: inline-block;
@@ -2407,183 +2322,54 @@
   80% { transform: translateX(0.12cqw); }
 }
 
-/* ---------- 10. 准备画面的入场：警戒带扫进来 → VS 砸下 → 标题、目标、评价 → 卡一张张发下来 ---------- */
-.choke-stage[data-phase="prepare"] .choke-tapes--left {
-  animation: choke-tape-left 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.choke-stage[data-phase="prepare"] .choke-tapes--right {
-  animation: choke-tape-right 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-@keyframes choke-tape-left {
-  from { opacity: 0; transform: translateX(-30cqw); }
-}
-@keyframes choke-tape-right {
-  from { opacity: 0; transform: translateX(30cqw); }
-}
+/* ---------- 10. 准备画面的入场：VS 砸下 → 敌名斜带扫入 → 右侧警戒章落下 → 目标与评价 → 卡一张张发下来 ---------- */
 .choke-vs-giant {
-  animation: choke-vs-slam 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s both;
+  animation: choke-vs-slam 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) 0.06s both;
 }
 @keyframes choke-vs-slam {
-  0% { opacity: 0; transform: scale(2.4) rotate(-10deg); }
-  70% { opacity: 1; transform: scale(0.94) rotate(1deg); }
+  0% { opacity: 0; transform: scale(2.2) rotate(-8deg); }
+  70% { opacity: 1; transform: scale(0.95) rotate(1deg); }
 }
-.choke-prep-badge {
-  animation: choke-prep-badge 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
+.choke-prep-ribbon {
+  animation: choke-ribbon-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) 0.16s both;
 }
-@keyframes choke-prep-badge {
-  from { opacity: 0; transform: rotate(15deg) scale(1.9); }
+@keyframes choke-ribbon-in {
+  from { opacity: 0; transform: rotate(-28deg) translateX(-14cqw); }
 }
-.choke-prep-title {
-  animation: choke-prep-title 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.24s both;
+.choke-prep-warn {
+  animation: choke-warn-in 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) 0.22s both;
 }
-@keyframes choke-prep-title {
-  from { opacity: 0; transform: rotate(-8deg) translateX(-4cqw); }
+@keyframes choke-warn-in {
+  from { opacity: 0; transform: rotate(28deg) translateX(14cqw) scale(1.12); }
 }
-/* 换一个讨伐目标：名字重新滑进来（标题节点带 key） */
+@keyframes choke-plate-in-left {
+  from { opacity: 0; transform: translateX(-3cqw); }
+}
+@keyframes choke-plate-in-right {
+  from { opacity: 0; transform: translateX(3cqw); }
+}
 .choke-stage-selector {
-  animation: choke-plate-in-left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
+  animation: choke-plate-in-left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.28s both;
 }
 .choke-stage-selector__desc {
   animation: choke-result-dim 0.2s ease-out both;
 }
 .choke-outcome-box {
-  animation: choke-plate-in-right 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.34s both;
+  animation: choke-plate-in-right 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) 0.32s both;
 }
 .choke-stage[data-phase="prepare"] .choke-hud-band {
   animation: choke-result-rise 0.3s ease-out 0.2s both;
 }
 .choke-stage[data-phase="prepare"] .choke-card-slot {
   animation: choke-card-deal 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(0.36s + var(--slot, 0) * 55ms);
+  animation-delay: calc(0.34s + var(--slot, 0) * 55ms);
 }
 @keyframes choke-card-deal {
   0% { opacity: 0; transform: translateY(6cqw) rotate(-5deg); }
   75% { opacity: 1; transform: translateY(-0.3cqw) rotate(0.6deg); }
 }
-/* ---------- 11. 登录 / 没卡 / 出错 / 加载：和战斗舞台同一套暗金配色（BattlePage 用） ---------- */
-.choke-gate-page {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background:
-    radial-gradient(52% 60% at 50% 38%, rgb(175 42 30 / 0.32), transparent 72%),
-    #0b080c;
-  color: #f4efe3;
-  font-family: "Outfit Variable", "Outfit", "PingFang SC", "Microsoft YaHei", sans-serif;
-}
-.choke-gate {
-  width: min(460px, 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 30px 30px 26px;
-  border: 2px solid #8b6f3b;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #1b1712, #0d0b09);
-  box-shadow: 0 18px 50px rgb(0 0 0 / 0.75);
-  text-align: center;
-  animation: ui-pop-in var(--ui-slow) var(--ui-ease-out) both;
-}
-.choke-gate > small {
-  color: #e6c473;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.28em;
-}
-.choke-gate > h1 {
-  margin: 0;
-  color: #ffe6a8;
-  font-size: 28px;
-  font-weight: 900;
-  line-height: 1.2;
-}
-.choke-gate > p {
-  margin: 0;
-  color: #c9bda7;
-  font-size: 14px;
-  line-height: 1.7;
-}
-.choke-gate__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 10px;
-}
-.choke-gate__actions > * {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-  padding: 0 20px;
-  border: 2px solid #8b7141;
-  border-radius: 6px;
-  background: linear-gradient(180deg, #352b1c, #17120c);
-  color: #ffe7b0;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 800;
-  text-decoration: none;
-  cursor: pointer;
-  transition: transform 0.08s ease, filter 0.12s ease;
-}
-.choke-gate__actions > :first-child {
-  border-color: #ffd86b;
-  background: linear-gradient(180deg, #e9b44a, #a8741c);
-  color: #1c1204;
-}
-.choke-gate__actions > :hover {
-  filter: brightness(1.15);
-}
-.choke-gate__actions > :active {
-  transform: translateY(1px);
-}
-.choke-gate__actions > :focus-visible {
-  outline: 2px solid #ffe38a;
-  outline-offset: 2px;
-}
-.choke-gate__spin {
-  width: 26px;
-  height: 26px;
-  border: 3px solid rgb(255 255 255 / 0.12);
-  border-top-color: #e6c473;
-  border-radius: 50%;
-  animation: choke-gate-spin 0.8s linear infinite;
-}
-@keyframes choke-gate-spin {
-  to { rotate: 1turn; }
-}
 
-/* ---------- 11b. 版面修正 ---------- */
-/* 讨伐目标有十几个时，三列的面板会一路长上去盖住 VS 和敌人名字：改成五列、封顶，多了就在面板里滚 */
-.choke-stage-selector {
-  width: 41cqw;
-}
-.choke-stage-selector__btns {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  max-height: 9.4cqw;
-  overflow-y: auto;
-  padding-right: 0.2cqw;
-  scrollbar-width: thin;
-  scrollbar-color: #6b5332 transparent;
-}
-.choke-stage-selector[data-test="true"] .choke-stage-selector__btns {
-  max-height: none;
-  overflow: visible;
-}
-.choke-stage-pill[data-active="true"] b {
-  color: #ffe9a8;
-}
-.choke-stage-pill {
-  padding: 0.2cqw 0.42cqw;
-}
-/* 敌人名字往上让一点，给下面的目标面板腾地方 */
-.choke-prep-title {
-  top: 5.7cqw;
-}
+/* ---------- 11. 版面细节修正 ---------- */
 /* 我方挨打的数字：来源（招式名）缩成数字下面的一行小字，不再和数字一样大、盖住卡面 */
 .choke-popup--card em {
   display: block;
@@ -2615,8 +2401,7 @@
 @media (prefers-reduced-motion: reduce) {
   .choke-stage *,
   .choke-stage *::before,
-  .choke-stage *::after,
-  .choke-gate {
+  .choke-stage *::after {
     animation-duration: 0.01ms !important;
     animation-delay: 0s !important;
     animation-iteration-count: 1 !important;

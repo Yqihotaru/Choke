@@ -1,0 +1,62 @@
+.battle-readout-log {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: .45cqw .65cqw;
+  background: color-mix(in srgb, var(--bk-paper) 88%, transparent);
+  color: var(--bk-ink);
+  border: 1px solid var(--bk-line);
+  border-radius: .38cqw;
+  font-size: clamp(10px, .76cqw, 16px);
+  line-height: 1.4;
+}
+.battle-readout-log h3 { font-size: inherit; margin: 0; color: var(--bk-dim); }
+.battle-log-lines {
+  --log-thumb: color-mix(in srgb, var(--bk-dim) 48%, transparent);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--log-thumb) transparent;
+}
+.battle-readout-log:is(:hover, :focus-within) .battle-log-lines {
+  --log-thumb: color-mix(in srgb, var(--bk-dim) 70%, var(--bk-osu));
+}
+@supports selector(::-webkit-scrollbar) {
+  /* Chromium ignores the pseudo-elements when the standard properties aren't auto. */
+  .battle-log-lines { scrollbar-width: auto; scrollbar-color: auto; }
+  .battle-log-lines::-webkit-scrollbar { width: 6px; background: transparent; }
+  .battle-log-lines::-webkit-scrollbar-track { background: transparent; }
+  .battle-log-lines::-webkit-scrollbar-thumb { background: var(--log-thumb); border-radius: 9px; }
+  .battle-log-lines::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+}
+.battle-readout-log .battle-log-lines p { margin: 0; padding: .18cqw 0; border-top: 1px solid var(--bk-line); }
+.battle-support {
+  display: flex; align-items: center; gap: .4cqw; flex: none; min-width: 0;
+  padding: .26cqw .48cqw; border-inline-start: .22cqw solid #ff758d;
+  background: var(--bk-paper); color: var(--bk-ink); border-radius: .24cqw; cursor: default;
+}
+.battle-support[data-side="party"] {
+  flex-direction: row-reverse; text-align: right; border-inline-start: 0; border-inline-end: .22cqw solid #6ec2ff;
+}
+.battle-support[data-active="true"] { background: color-mix(in srgb, #58c8ff 20%, var(--bk-paper)); }
+.battle-support-icon { flex: none; display: grid; place-items: center; width: 1.65cqw; height: 1.65cqw; border-radius: .2cqw; background: var(--bk-well); }
+.battle-support-icon svg { width: 1.15cqw; height: 1.15cqw; }
+.battle-support-copy { min-width: 0; line-height: 1.25; }
+.battle-support-copy b, .battle-support-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.battle-support-copy b { font-size: .78cqw; }
+.battle-support-copy em, .battle-support-copy small { color: var(--bk-dim); font-size: .66cqw; font-style: normal; }
+.battle-readout-tip {
+  position: fixed; z-index: 100; pointer-events: none; width: max-content; max-width: min(30ch, calc(100vw - 12px));
+  display: grid; gap: .22em; padding: .55em .8em; border: 1px solid var(--bk-line); border-radius: 6px;
+  background: var(--bk-paper); color: var(--bk-ink); box-shadow: 0 3px 14px #0005;
+  font-size: clamp(12px, .86vw, 16px); line-height: 1.4;
+  animation: battle-tip-in .1s .18s both;
+}
+.battle-readout-tip > span { white-space: pre-line; }
+.battle-readout-tip strong { color: var(--bk-osu-text); }
+.battle-readout-tip small { color: var(--bk-dim); }
+.battle-readout-effect { padding-top: .18em; border-top: 1px solid var(--bk-line); }
+.battle-readout-effect > b { color: var(--bk-osu-text); }
+@keyframes battle-tip-in { from { opacity: 0 } to { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .battle-readout-tip { animation: none; } }
