@@ -72,6 +72,23 @@
         "hits": 0,
         "status": "fear",
         "desc": "施加【恐惧】（每回合 AP 恢复 −1）"
+      },
+      "replate": {
+        "kind": "add_support",
+        "label": "重铸装甲",
+        "element": "metal",
+        "power": 0,
+        "hits": 0,
+        "supportId": "enemy-sup-vg-armor",
+        "desc": "重新部署【重装甲 II】到左侧支援栏"
+      },
+      "rally": {
+        "kind": "buff",
+        "label": "战意充能",
+        "element": "thunder",
+        "power": 0,
+        "hits": 0,
+        "desc": "提升自身攻击力 20%"
       }
     },
     "script": [
@@ -83,6 +100,24 @@
       },
       {
         "always": "execute"
+      },
+      {
+        "when": {
+          "all": [
+            { "hpBelow": 0.65 },
+            { "enemySupportsBelow": 2 }
+          ]
+        },
+        "use": "replate"
+      },
+      {
+        "when": {
+          "all": [
+            { "hpBelow": 0.5 },
+            { "turnMod": [3, 0] }
+          ]
+        },
+        "use": "rally"
       },
       {
         "when": {

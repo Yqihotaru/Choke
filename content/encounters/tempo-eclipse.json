@@ -1,0 +1,22 @@
+{
+  "enemy": "tempo-eclipse",
+  "background": "conductor",
+  "supports": [
+    "enemy-sup-eclipse-charge",
+    "enemy-sup-eclipse-minion"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 10
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 24
+    }
+  ],
+  "summary": "光属性 BOSS：常规无弱点，蓄力达到 2 层时露出暗/雷弱点；70% 血以下进入二阶段，会自愈与禁疗。"
+}

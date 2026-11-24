@@ -1,0 +1,75 @@
+{
+  "name": "静默司书",
+  "title": "沉默禁咒 · 拆援叠攻",
+  "tier": "elite",
+  "element": "dark",
+  "weaknesses": [
+    "light",
+    "physical"
+  ],
+  "stats": {
+    "hp": 54000,
+    "atk": 800,
+    "int": 940,
+    "def": 2100
+  },
+  "ai": {
+    "moves": {
+      "hush": {
+        "kind": "magic",
+        "label": "噤声暗波",
+        "element": "dark",
+        "power": 1.05,
+        "hits": 1,
+        "status": "silence",
+        "desc": "暗属性魔法，附加 2 回合【沉默】（1+ AP 技能受阻）"
+      },
+      "fear": {
+        "kind": "debuff",
+        "label": "死寂威压",
+        "element": "dark",
+        "power": 0,
+        "hits": 0,
+        "status": "fear",
+        "desc": "施加【恐惧】（每回合 AP 恢复 −1）"
+      },
+      "purge": {
+        "kind": "break_support",
+        "label": "禁书焚毁",
+        "element": "dark",
+        "power": 0.45,
+        "hits": 1,
+        "breakTier": 2,
+        "desc": "拆毁我方右侧最多 2 个强度 ≤2 的支援"
+      },
+      "empower": {
+        "kind": "buff",
+        "label": "暗典咏唱",
+        "element": "dark",
+        "power": 0,
+        "hits": 0,
+        "desc": "提升自身攻击力 20%"
+      }
+    },
+    "script": [
+      {
+        "always": "hush"
+      },
+      {
+        "when": {
+          "playerSupportsAtLeast": 2
+        },
+        "use": "purge"
+      },
+      {
+        "otherwise": "empower"
+      },
+      {
+        "when": {
+          "turnMod": [2, 0]
+        },
+        "use": "fear"
+      }
+    ]
+  }
+}

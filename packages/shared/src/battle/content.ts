@@ -2,7 +2,7 @@ import { prettifyError, z } from "zod"
 
 import { ELEMENTS } from "../types"
 import { skillById } from "../skills"
-import { ENEMY_TIERS, ENEMY_TRAITS, INTENT_KINDS, MAX_SUPPORT_SLOTS, STATUS_IDS, SUPPORT_KINDS } from "./types"
+import { ENEMY_TIERS, ENEMY_TRAITS, INTENT_KINDS, MAX_SUPPORT_SLOTS, STATUS_IDS, SUPPORT_KINDS, type SideSupportUnit } from "./types"
 
 /**
  * 战斗内容：敌人（enemies/*.json）、敌方支援（enemy-supports.json）、遭遇（encounters/*.json）。
@@ -25,6 +25,8 @@ export type Condition =
   | { turnAtLeast: number }
   | { supportStacks: { support: string; gte?: number; lte?: number } }
   | { hpBelow: number }
+  | { playerSupportsAtLeast: number }
+  | { enemySupportsBelow: number }
   | { all: Condition[] }
   | { any: Condition[] }
   | { not: Condition }
@@ -46,6 +48,10 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
     }),
     /** 敌人血量比例低于该值（0–1） */
     z.strictObject({ hpBelow: z.number().gt(0).max(1) }),
+    /** 玩家右侧非防御支援数量不少于该值 */
+    z.strictObject({ playerSupportsAtLeast: int.min(0) }),
+    /** 敌方左侧支援数量少于该值 */
+    z.strictObject({ enemySupportsBelow: int.min(1) }),
     z.strictObject({ all: z.array(conditionSchema).min(1) }),
     z.strictObject({ any: z.array(conditionSchema).min(1) }),
     z.strictObject({ not: conditionSchema }),
@@ -66,6 +72,10 @@ const moveFields = {
   hardToInterrupt: z.boolean(),
   /** 拆除强度 1~3（只对 break_support 有意义，默认 1）：拆得动强度不超过它的我方支援 */
   breakTier: int.min(1).max(3),
+  /** 回血招式（heal）回复最大生命比例 */
+  healPct: z.number().gt(0).max(0.5),
+  /** 召唤招式（add_support）引用的敌方支援 id */
+  supportId: id,
   /** 蓄力满槽的大招：释放后清空蓄力支援 */
   chargedUltimate: z.boolean(),
   status: z.enum(STATUS_IDS),
@@ -78,6 +88,8 @@ const moveSchema = z.strictObject({
   causesDown: moveFields.causesDown.optional(),
   hardToInterrupt: moveFields.hardToInterrupt.optional(),
   breakTier: moveFields.breakTier.optional(),
+  healPct: moveFields.healPct.optional(),
+  supportId: moveFields.supportId.optional(),
   chargedUltimate: moveFields.chargedUltimate.optional(),
   status: moveFields.status.optional(),
   /** 按条件覆盖字段，依次套用（例如「偶数回合附带 DOWN」） */
@@ -208,7 +220,7 @@ export interface EncounterSpec {
   /** 推荐上阵（已展开：没写就是公开弱点） */
   recommend: Recommend
   stars: StarCondition[]
-  enemy: EnemyDef & { id: string }
+  enemy: EnemyDef & { id: string; supportCatalog?: Record<string, SideSupportUnit> }
   supports: (EnemySupportDef & { id: string })[]
 }
 
@@ -271,6 +283,14 @@ const battleContentSchema = z
         if (writesBreakTier && move.kind !== "break_support") {
           issue([...base, "moves", moveId, "breakTier"], "breakTier 只能写在 break_support 招式上")
         }
+        if (move.supportId !== undefined && !Object.hasOwn(content.supports, move.supportId)) {
+          issue([...base, "moves", moveId, "supportId"], `敌方支援 ${move.supportId} 不存在`)
+        }
+        move.variants?.forEach((v, i) => {
+          if (v.supportId !== undefined && !Object.hasOwn(content.supports, v.supportId)) {
+            issue([...base, "moves", moveId, "variants", i, "supportId"], `敌方支援 ${v.supportId} 不存在`)
+          }
+        })
       }
       script.forEach((entry, i) => {
         const path = [...base, "script", i]
@@ -347,6 +367,17 @@ export function resolveEncounter(content: BattleContent, encounterId: string): E
   const encounter = content.encounters[encounterId]
   if (!encounter) return null
   const enemy = content.enemies[encounter.enemy]!
+  const supportCatalog: Record<string, SideSupportUnit> = {}
+  for (const move of Object.values(enemy.ai.moves)) {
+    if (move.supportId && content.supports[move.supportId]) {
+      supportCatalog[move.supportId] = { id: move.supportId, ...content.supports[move.supportId]! }
+    }
+    for (const v of move.variants ?? []) {
+      if (v.supportId && content.supports[v.supportId]) {
+        supportCatalog[v.supportId] = { id: v.supportId, ...content.supports[v.supportId]! }
+      }
+    }
+  }
   return {
     id: encounterId,
     summary: encounter.summary,
@@ -355,7 +386,11 @@ export function resolveEncounter(content: BattleContent, encounterId: string): E
     healSoftCap: encounter.healSoftCap,
     recommend: recommendOf(encounter, enemy),
     stars: encounter.stars,
-    enemy: { id: encounter.enemy, ...enemy },
+    enemy: {
+      id: encounter.enemy,
+      ...enemy,
+      ...(Object.keys(supportCatalog).length > 0 ? { supportCatalog } : {}),
+    },
     supports: encounter.supports.map((supportId) => ({ id: supportId, ...content.supports[supportId]! })),
   }
 }

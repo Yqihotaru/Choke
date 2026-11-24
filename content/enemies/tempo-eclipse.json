@@ -1,0 +1,108 @@
+{
+  "name": "蚀拍日蚀",
+  "title": "双阶段节奏型 · BOSS",
+  "tier": "boss",
+  "element": "light",
+  "weaknesses": [],
+  "weaknessWindows": [
+    {
+      "when": {
+        "supportStacks": {
+          "support": "enemy-sup-eclipse-charge",
+          "gte": 2
+        }
+      },
+      "elements": [
+        "dark",
+        "thunder"
+      ]
+    }
+  ],
+  "stats": {
+    "hp": 105000,
+    "atk": 940,
+    "int": 1020,
+    "def": 2350
+  },
+  "ai": {
+    "moves": {
+      "ray": {
+        "kind": "magic",
+        "label": "光蚀射线",
+        "element": "light",
+        "power": 0.9,
+        "hits": 1,
+        "desc": "光属性稳定输出"
+      },
+      "callMinion": {
+        "kind": "add_support",
+        "label": "召唤光蚀乐手",
+        "element": "light",
+        "power": 0,
+        "hits": 0,
+        "supportId": "enemy-sup-eclipse-minion",
+        "desc": "召唤【光蚀乐手】进入左侧支援栏"
+      },
+      "banHeal": {
+        "kind": "debuff",
+        "label": "蚀月禁疗",
+        "element": "dark",
+        "power": 0.65,
+        "hits": 1,
+        "status": "heal_block",
+        "desc": "暗属性攻击并施加【治疗阻断】"
+      },
+      "eclipseMend": {
+        "kind": "heal",
+        "label": "日蚀回响",
+        "element": "light",
+        "power": 0,
+        "hits": 0,
+        "healPct": 0.08,
+        "desc": "回复 8% 最大生命值"
+      },
+      "verdict": {
+        "kind": "heavy_magic",
+        "label": "日蚀裁决",
+        "element": "light",
+        "power": 1.85,
+        "hits": 1,
+        "causesDown": true,
+        "chargedUltimate": true,
+        "desc": "蓄力满槽释放的终极裁决（附带 DOWN 威胁，可打断）"
+      }
+    },
+    "script": [
+      {
+        "when": {
+          "supportStacks": {
+            "support": "enemy-sup-eclipse-charge",
+            "gte": 3
+          }
+        },
+        "use": "verdict"
+      },
+      {
+        "otherwise": "ray"
+      },
+      {
+        "when": {
+          "enemySupportsBelow": 2
+        },
+        "use": "callMinion"
+      },
+      {
+        "otherwise": "banHeal"
+      },
+      {
+        "when": {
+          "all": [
+            { "hpBelow": 0.7 },
+            { "turnMod": [3, 0] }
+          ]
+        },
+        "use": "eclipseMend"
+      }
+    ]
+  }
+}

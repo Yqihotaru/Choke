@@ -1,8 +1,10 @@
 import type { Condition, EnemyAi, EnemyMove } from "./content"
 import type { BattleState, EnemyIntent } from "./types"
 
-/** 条件求值只读这几样：回合、敌人血量、敌方支援 */
-type AiContext = Pick<BattleState, "turn" | "enemySupports"> & { enemy: Pick<BattleState["enemy"], "hp" | "hpMax"> }
+/** 条件求值只读这几样：回合、敌人血量、双方支援 */
+type AiContext = Pick<BattleState, "turn" | "enemySupports" | "playerSupports"> & {
+  enemy: Pick<BattleState["enemy"], "hp" | "hpMax">
+}
 
 export function evalCondition(cond: Condition, ctx: AiContext): boolean {
   if ("turnMod" in cond) return ctx.turn % cond.turnMod[0] === cond.turnMod[1]
@@ -13,6 +15,13 @@ export function evalCondition(cond: Condition, ctx: AiContext): boolean {
     return (gte === undefined || stacks >= gte) && (lte === undefined || stacks <= lte)
   }
   if ("hpBelow" in cond) return ctx.enemy.hp / ctx.enemy.hpMax < cond.hpBelow
+  if ("playerSupportsAtLeast" in cond) {
+    const nonDefenseCount = ctx.playerSupports.filter((s) => s.kind !== "defense").length
+    return nonDefenseCount >= cond.playerSupportsAtLeast
+  }
+  if ("enemySupportsBelow" in cond) {
+    return ctx.enemySupports.length < cond.enemySupportsBelow
+  }
   if ("all" in cond) return cond.all.every((c) => evalCondition(c, ctx))
   if ("any" in cond) return cond.any.some((c) => evalCondition(c, ctx))
   return !evalCondition(cond.not, ctx)
@@ -35,6 +44,8 @@ function buildIntent(moveId: string, move: EnemyMove, ctx: AiContext, index: num
   if (fields.causesDown) intent.causesDown = true
   if (fields.hardToInterrupt) intent.hardToInterrupt = true
   if (fields.breakTier) intent.breakTier = fields.breakTier
+  if (fields.healPct !== undefined) intent.healPct = fields.healPct
+  if (fields.supportId) intent.supportId = fields.supportId
   if (fields.chargedUltimate) intent.isChargedUltimate = true
   if (fields.status) intent.statusId = fields.status
   return intent

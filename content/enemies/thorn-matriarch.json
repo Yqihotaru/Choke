@@ -65,6 +65,24 @@
         "causesDown": true,
         "hardToInterrupt": true,
         "desc": "【难以打断】高额物理重压（附带 DOWN 击倒威胁）；这一回合树冠绽开，露出破绽"
+      },
+      "regrow": {
+        "kind": "add_support",
+        "label": "荆冠再生",
+        "element": "wood",
+        "power": 0,
+        "hits": 0,
+        "supportId": "enemy-sup-matriarch-thorns",
+        "desc": "重新在左侧支援栏展开【荆冠】反伤"
+      },
+      "sapHeal": {
+        "kind": "heal",
+        "label": "地脉汲取",
+        "element": "wood",
+        "power": 0,
+        "hits": 0,
+        "healPct": 0.08,
+        "desc": "汲取生机回复 8% 最大生命"
       }
     },
     "script": [
@@ -91,6 +109,24 @@
           ]
         },
         "use": "bloom"
+      },
+      {
+        "when": {
+          "all": [
+            { "enemySupportsBelow": 2 },
+            { "turnMod": [2, 0] }
+          ]
+        },
+        "use": "regrow"
+      },
+      {
+        "when": {
+          "all": [
+            { "hpBelow": 0.4 },
+            { "turnMod": [3, 0] }
+          ]
+        },
+        "use": "sapHeal"
       }
     ]
   }

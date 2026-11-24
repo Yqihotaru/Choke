@@ -1,0 +1,78 @@
+{
+  "name": "镜面哨兵",
+  "title": "反伤硬壳 · 克制多段连击",
+  "tier": "elite",
+  "element": "metal",
+  "weaknesses": [
+    "fire",
+    "thunder"
+  ],
+  "stats": {
+    "hp": 50000,
+    "atk": 780,
+    "int": 720,
+    "def": 2200
+  },
+  "ai": {
+    "moves": {
+      "lance": {
+        "kind": "attack",
+        "label": "锐金穿刺",
+        "element": "metal",
+        "power": 0.95,
+        "hits": 1,
+        "desc": "金属性穿刺攻击"
+      },
+      "shatter": {
+        "kind": "heavy_phys",
+        "label": "镜碎重斩",
+        "element": "metal",
+        "power": 1.5,
+        "hits": 1,
+        "causesDown": true,
+        "desc": "高额金属性重击（附带 DOWN 威胁）"
+      },
+      "recoat": {
+        "kind": "add_support",
+        "label": "镜刺重镀",
+        "element": "metal",
+        "power": 0,
+        "hits": 0,
+        "supportId": "enemy-sup-mirror-thorns",
+        "desc": "重新在左侧展开【棱镜反刺】"
+      },
+      "repair": {
+        "kind": "heal",
+        "label": "熔金自愈",
+        "element": "metal",
+        "power": 0,
+        "hits": 0,
+        "healPct": 0.1,
+        "desc": "回复 10% 最大生命"
+      }
+    },
+    "script": [
+      {
+        "always": "lance"
+      },
+      {
+        "when": {
+          "enemySupportsBelow": 2
+        },
+        "use": "recoat"
+      },
+      {
+        "otherwise": "shatter"
+      },
+      {
+        "when": {
+          "all": [
+            { "hpBelow": 0.45 },
+            { "turnMod": [2, 0] }
+          ]
+        },
+        "use": "repair"
+      }
+    ]
+  }
+}

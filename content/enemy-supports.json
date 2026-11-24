@@ -17,11 +17,11 @@
     "roleText": "敌方支援 · 回合末追击"
   },
   "enemy-sup-vg-armor": {
-    "name": "重装甲 II",
+    "name": "重装甲 I",
     "kind": "armor",
     "element": "metal",
-    "defenseTier": 2,
-    "roleText": "常驻防御 II 档 (−40%) · 可破防拆解"
+    "defenseTier": 1,
+    "roleText": "常驻防御 I 档 (−20%) · 可破防拆解"
   },
   "enemy-sup-vg-thorns": {
     "name": "荆棘栅栏",
@@ -107,7 +107,7 @@
     "element": "light",
     "stacks": 0,
     "maxStacks": 3,
-    "tier": 2,
+    "tier": 1,
     "roleText": "每回合+1层增伤 · 满层放终焉圣咏"
   },
   "enemy-sup-chorister-veil": {
@@ -196,5 +196,46 @@
     "hits": 1,
     "procRate": 0.5,
     "roleText": "敌方支援 · 回合末追击"
+  },
+  "enemy-sup-mirror-thorns": {
+    "name": "棱镜反刺",
+    "kind": "thorns",
+    "element": "metal",
+    "atk": 300,
+    "power": 1,
+    "roleText": "反伤支援 · 每受 1 段反伤 300"
+  },
+  "enemy-sup-mirror-shell": {
+    "name": "镜面硬壳",
+    "kind": "shell",
+    "element": "metal",
+    "threshold": 600,
+    "roleText": "单段伤害低于 600 只算 100 · 无法拆除"
+  },
+  "enemy-sup-silence-aura": {
+    "name": "静默结界",
+    "kind": "armor",
+    "element": "dark",
+    "defenseTier": 1,
+    "roleText": "敌方防御 I 档 (−20%)"
+  },
+  "enemy-sup-eclipse-charge": {
+    "name": "蚀拍蓄力",
+    "kind": "charge",
+    "element": "light",
+    "stacks": 0,
+    "maxStacks": 3,
+    "tier": 1,
+    "roleText": "每回合+1层增伤 · 满层放日蚀裁决"
+  },
+  "enemy-sup-eclipse-minion": {
+    "name": "光蚀乐手",
+    "kind": "attack",
+    "element": "light",
+    "atk": 650,
+    "power": 0.55,
+    "hits": 1,
+    "procRate": 0.6,
+    "roleText": "60% 概率协同攻击"
   }
 }

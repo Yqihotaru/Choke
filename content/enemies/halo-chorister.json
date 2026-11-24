@@ -52,6 +52,24 @@
         "causesDown": true,
         "chargedUltimate": true,
         "desc": "蓄力满槽释放的圣咏！伤害极高且附带 DOWN 威胁（可打断蓄力）"
+      },
+      "mend": {
+        "kind": "heal",
+        "label": "圣咏自愈",
+        "element": "light",
+        "power": 0,
+        "hits": 0,
+        "healPct": 0.08,
+        "desc": "回复 8% 最大生命值"
+      },
+      "dispel": {
+        "kind": "break_support",
+        "label": "圣光驱散",
+        "element": "light",
+        "power": 0.45,
+        "hits": 1,
+        "breakTier": 1,
+        "desc": "拆毁我方右侧最多 2 个强度 ≤1 的侧面支援"
       }
     },
     "script": [
@@ -68,7 +86,25 @@
         "otherwise": "hymn"
       },
       {
-        "always": "halo"
+        "when": {
+          "all": [
+            { "hpBelow": 0.45 },
+            { "turnMod": [3, 0] }
+          ]
+        },
+        "use": "mend"
+      },
+      {
+        "otherwise": "halo"
+      },
+      {
+        "when": {
+          "all": [
+            { "playerSupportsAtLeast": 2 },
+            { "turnMod": [2, 0] }
+          ]
+        },
+        "use": "dispel"
       }
     ]
   }

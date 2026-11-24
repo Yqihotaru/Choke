@@ -1,0 +1,22 @@
+{
+  "enemy": "mirror-warden",
+  "background": "vanguard",
+  "supports": [
+    "enemy-sup-mirror-thorns",
+    "enemy-sup-mirror-shell"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 6
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 14
+    }
+  ],
+  "summary": "金属性精英：开局自带反伤与硬壳，反伤被拆后会重新镀层，半血以下会自愈。"
+}

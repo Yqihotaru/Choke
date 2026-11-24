@@ -1,0 +1,21 @@
+{
+  "enemy": "silence-curator",
+  "background": "ember-scribe",
+  "supports": [
+    "enemy-sup-silence-aura"
+  ],
+  "stars": [
+    {
+      "type": "turnsAtMost",
+      "value": 6
+    },
+    {
+      "type": "noDown"
+    },
+    {
+      "type": "apSpentAtMost",
+      "value": 13
+    }
+  ],
+  "summary": "暗属性精英：频繁施加沉默与恐惧并叠加攻击力，我方支援较多时会焚毁支援。"
+}

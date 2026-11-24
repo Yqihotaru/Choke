@@ -292,6 +292,7 @@ function makeEnemyAndSupports(spec: EncounterSpec): { enemy: Enemy; enemySupport
     int: def.stats.int,
     def: def.stats.def,
     ai: structuredClone(def.ai),
+    ...(def.supportCatalog ? { supportCatalog: structuredClone(def.supportCatalog) } : {}),
     intents: [],
     statuses: [],
     hardControl: null,
@@ -1270,8 +1271,32 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
     return
   }
 
+  if (intent.kind === "heal") {
+    const blocked = state.enemy.statuses.some((s) => s.id === "heal_block")
+    if (blocked) {
+      log(state, `敌方尝试【${intent.label}】，但受【治疗阻断】影响未能回复！`)
+      return
+    }
+    const raw = Math.round(state.enemy.hpMax * (intent.healPct ?? 0.1))
+    const prev = state.enemy.hp
+    state.enemy.hp = Math.min(state.enemy.hpMax, state.enemy.hp + raw)
+    const gained = state.enemy.hp - prev
+    log(state, `💚 敌方施放【${intent.label}】，回复了 ${gained.toLocaleString()} 点生命！`)
+    return
+  }
+
   if (intent.kind === "add_support") {
     if (state.enemySupports.length < MAX_SUPPORT_SLOTS) {
+      const tpl = intent.supportId ? state.enemy.supportCatalog?.[intent.supportId] : undefined
+      if (tpl) {
+        if (state.enemySupports.some((s) => s.id === tpl.id)) {
+          log(state, `敌方施放【${intent.label}】，场上已存在【${tpl.name}】`)
+          return
+        }
+        state.enemySupports.push({ ...tpl })
+        log(state, `敌方发动【${intent.label}】，左侧支援栏展开【${tpl.name}】！`)
+        return
+      }
       state.enemySupports.push({
         id: `enemy-add-${state.turn}-${state.enemySupports.length}`,
         name: "魔物援军",

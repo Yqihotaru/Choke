@@ -25,8 +25,8 @@ const outFile = writeAt >= 0 ? args[writeAt + 1] : undefined
 const seedsPerTeam = Math.max(1, Number(args.find((a, i) => !a.startsWith("--") && i !== writeAt + 1)) || 10)
 
 const SETTLE = "(回合结算)"
-type Policy = "firstFit" | "burst"
-const POLICIES: Policy[] = ["firstFit", "burst"]
+type Policy = "firstFit" | "burst" | "smart"
+const POLICIES: Policy[] = ["firstFit", "burst", "smart"]
 
 interface SkillAgg {
   uses: number
@@ -120,7 +120,7 @@ if (!isMainThread) {
 }
 
 async function runAll(ids: string[], workers: number): Promise<Record<Policy, Map<string, EncounterResult>>> {
-  const outputs: Record<Policy, Map<string, EncounterResult>> = { firstFit: new Map(), burst: new Map() }
+  const outputs: Record<Policy, Map<string, EncounterResult>> = { firstFit: new Map(), burst: new Map(), smart: new Map() }
   const queue = POLICIES.flatMap((policy) => ids.map((id) => ({ id, policy })))
   const total = queue.length
   let done = 0
@@ -153,7 +153,7 @@ const label = (key: string) => PROBE_LABEL[key] ?? key
 type SkillInfo = { name: string; job?: string; ap?: number; passive?: boolean }
 const SK = SKILLS as Record<string, SkillInfo>
 const skillName = (id: string) => (id === SETTLE ? SETTLE : (SK[id]?.name ?? id))
-const POLICY_NAME: Record<Policy, string> = { firstFit: "常规", burst: "攒大招" }
+const POLICY_NAME: Record<Policy, string> = { firstFit: "常规", burst: "攒大招", smart: "聪明" }
 
 function sumAgg(parts: Agg[]): Agg {
   const t = emptyAgg()
@@ -185,7 +185,7 @@ async function main() {
   const out = (text = "") => lines.push(text)
 
   const runsPerPackagePerEncounter = Object.keys(FRONT).length * Object.keys(SUPPORT).length * seedsPerTeam
-  const total: Record<Policy, Record<string, Agg>> = { firstFit: {}, burst: {} }
+  const total: Record<Policy, Record<string, Agg>> = { firstFit: {}, burst: {}, smart: {} }
   for (const policy of POLICIES) {
     for (const d of damages) total[policy][d] = sumAgg(ids.map((id) => outputs[policy].get(id)!.byDamage[d]!))
   }
@@ -197,10 +197,11 @@ async function main() {
   out("## 0. 这份数据是什么")
   out()
   out("- **队伍**：前排 3 种 × 输出包 7 种 × 辅助 3 种 = 63 支，每队 4 张卡，统一 **L 品质、60 级、3 命座**，每张卡 2 个技能（构成见 `scripts/lib/archetypes.ts`）。")
-  out(`- **对手**：\`content/encounters\` 里全部 ${ids.length} 场遭遇。每支队每场遭遇每种策略打 ${seedsPerTeam} 个固定种子，共 ${63 * ids.length * seedsPerTeam * 2} 局。`)
-  out("- **两种机器人策略**（都不会选目标、不看敌人意图、不会打断、不会换位，所以反映的是技能的稳定输出，不是高手玩法）：")
+  out(`- **对手**：\`content/encounters\` 里全部 ${ids.length} 场遭遇。每支队每场遭遇每种策略打 ${seedsPerTeam} 个固定种子，共 ${63 * ids.length * seedsPerTeam * POLICIES.length} 局。`)
+  out("- **三种机器人策略**：")
   out("  - **常规**（firstFit）：倒下的换替补；每 3 回合升 1 档防御；每张卡从左到右放第一个能放的主动技能。所有战斗基准都用它。**缺点**：AP 每回合只 +2，前排和辅助的 1 AP 技能先把 AP 花掉，3 AP 以上的大招几乎放不出来。")
-  out("  - **攒大招**（burst）：同上，但按 AP 从高到低放；队里有 3 AP 以上的大招而当前 AP 不够时，本回合只放 0 AP 技能，把 AP 攒下来。它更接近会管理 AP 的玩家，但会放弃 1 AP 的增益和治疗。")
+  out("  - **攒大招**（burst）：同上，但按 AP 从高到低放；队里有 3 AP 以上的大招而当前 AP 不够时，本回合只放 0 AP 技能，把 AP 攒下来。它会放弃 1 AP 的增益和治疗。")
+  out("  - **聪明**（smart）：看敌方高威胁意图按需防御或打断；队伍血线低于 75% 才放治疗；敌方有支援优先拆；已有控场/增益时不空放；0 AP 技能先垫 Combo，优先用打中弱点的高伤技能。")
   out("- **注意**：队伍是 L 品质 60 级，**不代表新手一周内的真实卡组**（一周内很难集齐满技能 L 卡）。用途是同一强度下横向比较流派，不是评估新手期难度。")
   out("- 表里每个包的成员里还带着替补（战斗基准固定的 2 张替补：乱砍初阶/次阶、薄霜），所以「快砍」「薄霜」出现在所有包里，是倒下换人造成的。")
   out("- 伤害 = 战斗事件里打在敌人身上的 damage 总和；回合结束时发生的（抢攻、持续伤害、支援连击）记到「回合结算」。")
@@ -231,23 +232,35 @@ async function main() {
     out()
     out(`卡：${a.skills.map((s) => skillName(s.id)).join("+")}｜${b.skills.map((s) => skillName(s.id)).join("+")}`)
     out()
-    out("| 技能 | 职业 | AP | 每局使用（常规/攒） | 每局伤害（常规/攒） | 占队伍伤害（常规/攒） | 每次平均伤害（常规） | 每 AP 伤害（常规） |")
+    out("| 技能 | 职业 | AP | 每局使用（常规/攒/聪明） | 每局伤害（常规/攒/聪明） | 占队伍伤害（常规/攒/聪明） | 每次平均伤害（常规） | 每 AP 伤害（常规） |")
     out("|---|---|---:|---:|---:|---:|---:|---:|")
     const ff = total.firstFit[d]!
     const bu = total.burst[d]!
-    const keys = [...new Set([...Object.keys(ff.skills), ...Object.keys(bu.skills)])]
-    const score = (k: string) => (ff.skills[k]?.damage ?? 0) / ff.runs + (bu.skills[k]?.damage ?? 0) / bu.runs
+    const sm = total.smart[d]!
+    const keys = [...new Set([...Object.keys(ff.skills), ...Object.keys(bu.skills), ...Object.keys(sm.skills)])]
+    const score = (k: string) =>
+      (ff.skills[k]?.damage ?? 0) / ff.runs +
+      (bu.skills[k]?.damage ?? 0) / bu.runs +
+      (sm.skills[k]?.damage ?? 0) / sm.runs
     keys.sort((x, y) => score(y) - score(x))
     for (const id of keys) {
       const sf = ff.skills[id] ?? { uses: 0, damage: 0 }
       const sb = bu.skills[id] ?? { uses: 0, damage: 0 }
+      const ss = sm.skills[id] ?? { uses: 0, damage: 0 }
       const def = SK[id]
       const settle = id === SETTLE
       const ap = settle ? "—" : def?.passive ? "被动" : String(def?.ap ?? "?")
-      const perUse = sf.uses > 0 ? sf.damage / sf.uses : sb.uses > 0 ? sb.damage / sb.uses : 0
+      const perUse =
+        sf.uses > 0
+          ? sf.damage / sf.uses
+          : ss.uses > 0
+            ? ss.damage / ss.uses
+            : sb.uses > 0
+              ? sb.damage / sb.uses
+              : 0
       const perAp = settle || !def?.ap || perUse === 0 ? "—" : int(perUse / def.ap)
       out(
-        `| ${skillName(id)} | ${settle ? "—" : (def?.job ?? "?")} | ${ap} | ${settle ? "—" : `${(sf.uses / ff.runs).toFixed(2)} / ${(sb.uses / bu.runs).toFixed(2)}`} | ${int(sf.damage / ff.runs)} / ${int(sb.damage / bu.runs)} | ${pct(sf.damage, ff.damage)} / ${pct(sb.damage, bu.damage)} | ${settle ? "—" : int(perUse)} | ${perAp} |`,
+        `| ${skillName(id)} | ${settle ? "—" : (def?.job ?? "?")} | ${ap} | ${settle ? "—" : `${(sf.uses / ff.runs).toFixed(2)} / ${(sb.uses / bu.runs).toFixed(2)} / ${(ss.uses / sm.runs).toFixed(2)}`} | ${int(sf.damage / ff.runs)} / ${int(sb.damage / bu.runs)} / ${int(ss.damage / sm.runs)} | ${pct(sf.damage, ff.damage)} / ${pct(sb.damage, bu.damage)} / ${pct(ss.damage, sm.damage)} | ${settle ? "—" : int(perUse)} | ${perAp} |`,
       )
     }
     out()
@@ -255,7 +268,7 @@ async function main() {
   out("读法：被动技能不出现在表里（不直接打伤害）；前排和辅助的主动伤害技能也会出现，因为每个包要配前排与辅助一起算。「每次平均伤害」是该技能单次施放打在敌人身上的平均伤害（含暴击、Combo、克制、状态加成）。")
   out()
 
-  out("## 3. 前排与辅助积木的胜率（对全部输出包取平均，常规 / 攒大招）")
+  out("## 3. 前排与辅助积木的胜率（对全部输出包取平均，常规 / 攒大招 / 聪明）")
   out()
   out("| 积木 | 胜率 |")
   out("|---|---:|")
@@ -270,12 +283,12 @@ async function main() {
     return pct(wins, runs)
   }
   for (const f of Object.keys(FRONT))
-    out(`| 前排·${f}（${FRONT[f]!.skills.map((s) => skillName(s.id)).join("+")}） | ${sumRate("firstFit", (r) => r.byFront, f)} / ${sumRate("burst", (r) => r.byFront, f)} |`)
+    out(`| 前排·${f}（${FRONT[f]!.skills.map((s) => skillName(s.id)).join("+")}） | ${sumRate("firstFit", (r) => r.byFront, f)} / ${sumRate("burst", (r) => r.byFront, f)} / ${sumRate("smart", (r) => r.byFront, f)} |`)
   for (const s of Object.keys(SUPPORT))
-    out(`| 辅助·${s}（${SUPPORT[s]!.skills.map((x) => skillName(x.id)).join("+")}） | ${sumRate("firstFit", (r) => r.bySupport, s)} / ${sumRate("burst", (r) => r.bySupport, s)} |`)
+    out(`| 辅助·${s}（${SUPPORT[s]!.skills.map((x) => skillName(x.id)).join("+")}） | ${sumRate("firstFit", (r) => r.bySupport, s)} / ${sumRate("burst", (r) => r.bySupport, s)} / ${sumRate("smart", (r) => r.bySupport, s)} |`)
   out()
 
-  out("## 4. 遭遇面板与各包胜率（每格：常规 / 攒大招）")
+  out("## 4. 遭遇面板与各包胜率（每格：常规 / 攒大招 / 聪明）")
   out()
   out(`| 遭遇 | 档位 | 属性 | 弱点 | 生命 | 攻击 | 防御 | ${damages.map(label).join(" | ")} |`)
   out(`|---|---|---|---|---:|---:|---:|${damages.map(() => "---:").join("|")}|`)
@@ -284,7 +297,8 @@ async function main() {
     const cells = damages.map((d) => {
       const a = outputs.firstFit.get(id)!.byDamage[d]!
       const b = outputs.burst.get(id)!.byDamage[d]!
-      return `${pct(a.wins, a.runs)} / ${pct(b.wins, b.runs)}`
+      const c = outputs.smart.get(id)!.byDamage[d]!
+      return `${pct(a.wins, a.runs)} / ${pct(b.wins, b.runs)} / ${pct(c.wins, c.runs)}`
     })
     out(`| ${id} | ${r.info.tier} | ${r.info.element} | ${r.info.weaknesses.join("/") || "—"} | ${int(r.info.hpMax)} | ${int(r.info.atk)} | ${int(r.info.def)} | ${cells.join(" | ")} |`)
   }

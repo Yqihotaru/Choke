@@ -95,6 +95,7 @@ export const INTENT_KINDS = [
   "magic",
   "buff",
   "debuff",
+  "heal",
   "heavy_phys",
   "heavy_magic",
   "add_support",
@@ -116,6 +117,10 @@ export interface EnemyIntent {
   hardToInterrupt?: boolean
   /** 拆支援招式（break_support）的拆除强度，默认 1 */
   breakTier?: number
+  /** 回血招式（heal）回复敌方最大生命的比例（0–0.5） */
+  healPct?: number
+  /** 召唤支援招式（add_support）引用的敌方支援 id */
+  supportId?: string
   /** 是否已被打断取消 */
   interrupted?: boolean
   /** 是否为蓄力满槽释放的大招 */
@@ -189,6 +194,8 @@ export interface Enemy {
   enrageOnInterrupt?: boolean
   /** 招式表 + 行为脚本；放在状态里，战斗自带全部规则，重放不依赖外部内容 */
   ai: EnemyAi
+  /** 动态召唤招式引用的支援模板 */
+  supportCatalog?: Record<string, SideSupportUnit>
   intents: EnemyIntent[]
   statuses: StatusEffect[]
   /** 硬控状态：sleep / stun（受到任何命中立即打醒解除！） */
