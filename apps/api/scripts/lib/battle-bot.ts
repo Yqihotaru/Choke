@@ -31,18 +31,18 @@ export function inputs(faces: ReturnType<typeof face>[], uidBase: number): Battl
 export const DECKS: Record<string, BattleInputCard[]> = {
   normal: inputs(
     [
-      face("t-tank", "tank", "R", 20, 1, ["bulwark_quake", "bulwark_taunt", "bulwark_thorns"]),
-      face("t-war", "warrior", "E", 25, 0, ["paladin_judgment", "paladin_smite", "paladin_aura"], ["HR"]),
+      face("t-tank", "tank", "R", 20, 1, ["bulwark_quake_mid", "bulwark_taunt_mid", "bulwark_thorns_mid"]),
+      face("t-war", "warrior", "E", 25, 0, ["paladin_judgment_mid", "paladin_smite_mid", "paladin_aura_mid"], ["HR"]),
       face("t-mage", "mage", "L", 18, 2, ["binder_charm", "binder_bind", "binder_focus"], ["DT", "HD"]),
-      face("t-sup", "support", "UC", 30, 3, ["healer_heal", "healer_cleanse", "healer_plus"]),
+      face("t-sup", "support", "UC", 30, 3, ["healer_heal_low", "healer_cleanse_low", "healer_plus_low"]),
     ],
     100,
   ),
   mid: inputs(
     [
-      face("m-tank", "tank", "R", 40, 3, ["warden_armor", "bulwark_taunt", "bulwark_thorns"]),
-      face("m-war", "warrior", "E", 45, 2, ["breaker_rift", "breaker_counter", "breaker_swift"], ["HR"]),
-      face("m-mage", "mage", "E", 45, 2, ["warlock_meteor", "warlock_frost", "binder_focus"], ["DT"]),
+      face("m-tank", "tank", "R", 40, 3, ["warden_armor", "bulwark_taunt_mid", "bulwark_thorns_mid"]),
+      face("m-war", "warrior", "E", 45, 2, ["breaker_rift_mid", "breaker_counter", "breaker_swift_mid"], ["HR"]),
+      face("m-mage", "mage", "E", 45, 2, ["warlock_meteor", "warlock_frost_mid", "binder_focus_mid"], ["DT"]),
       face("m-sup", "support", "L", 30, 1, ["healer_heal", "healer_cleanse", "healer_plus"]),
     ],
     400,
@@ -59,8 +59,8 @@ export const DECKS: Record<string, BattleInputCard[]> = {
 }
 export const BENCH = inputs(
   [
-    face("b-war", "warrior", "R", 15, 0, ["berserker_zero", "berserker_cleave", "berserker_blood"]),
-    face("b-mage", "mage", "UC", 22, 1, ["warlock_meteor", "warlock_frost", "warlock_lowhp"]),
+    face("b-war", "warrior", "R", 15, 0, ["berserker_zero_mid", "berserker_cleave_mid", "berserker_blood_mid"]),
+    face("b-mage", "mage", "UC", 22, 1, ["warlock_meteor", "warlock_frost_low", "warlock_lowhp_low"]),
   ],
   200,
 )

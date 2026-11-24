@@ -127,6 +127,11 @@ function hasSwift(card: BattleCard): boolean {
   return passivesOf(card).some((skill) => skill.swift)
 }
 
+/** 抢攻率倍率：带多个迅捷取最高的那个 */
+function swiftRateOf(card: BattleCard): number {
+  return Math.max(...passivesOf(card).filter((skill) => skill.swift).map((skill) => skill.swiftRate ?? 1))
+}
+
 /**
  * 计算技能在当前回合的实际 AP 费用（§6.5 常态 / 疲惫（所有主动技能通用）/ 远征累积 / 单次）
  */
@@ -1191,7 +1196,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
       if (card.down || !hasSwift(card)) continue
       if (card.statuses.some((s) => s.id === "slow" || s.id === "stun")) continue
       // 迅捷卡抢攻率（默认 12% 让战中能稳定体验到抢攻垫刀，文档基础 4%+迅捷专精）
-      if (roll(state, "player") > PREEMPTIVE_RATE) continue
+      if (roll(state, "player") > PREEMPTIVE_RATE * swiftRateOf(card)) continue
 
       checkEnemyWakeUp(state)
       state.combo += 1
@@ -1588,7 +1593,7 @@ export function endTurn(state: BattleState): string | null {
   // 上限按"算完治疗量加成之后"的数值卡 4%，叠多张生命脉动也钻不了空子
   const regenPct = Math.min(teamEffectSum(state.cards, "regenPct"), REGEN_TEAM_CAP / (1 + teamEffectSum(state.cards, "healBonus")))
   if (regenPct > 0) {
-    healParty(state, Math.round(state.teamHpMax * regenPct), "生生不息")
+    healParty(state, Math.round(state.teamHpMax * regenPct), "生息")
   }
 
   // 5. 推进到下一回合（Round + 1）

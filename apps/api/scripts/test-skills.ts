@@ -137,7 +137,7 @@ const down = (state: BattleState) => {
 // ---------- 0c. 发牌按稀有度范围过滤 ----------
 {
   const random = seededRandom("range-test")
-  const fake = (extra: Partial<(typeof SKILLS)[string]>) => ({ ...SKILLS.warden_hold!, ...extra })
+  const fake = (extra: Partial<(typeof SKILLS)[string]>) => ({ ...SKILLS.bulwark_guard!, ...extra })
   check("范围：不写范围的技能，所有稀有度都能抽", ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"].every((r) => skillDealtTo(fake({}), r as never)))
   check("范围：minRarity=Mythic 的，C 到 L 抽不到", !skillDealtTo(fake({ minRarity: "Mythic" }), "L") && skillDealtTo(fake({ minRarity: "Mythic" }), "Mythic"))
   check("范围：maxRarity=E 的，L 起抽不到", skillDealtTo(fake({ maxRarity: "E" }), "E") && !skillDealtTo(fake({ maxRarity: "E" }), "L"))
@@ -915,7 +915,7 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("全队回血上限：三张卡叠满（含治疗量加成）也不超过 4%", Math.abs(stacked.gain / stacked.max - 0.04) < 0.003, `${stacked.gain}/${stacked.max}`)
   const bloomOnly = hpGain([["life_bloom", "warlock_frost"], ["warlock_frost"]])
   check("全队回血上限：只有生命脉动回约 2.9%（2.5% × 治疗量 +15%）", Math.abs(bloomOnly.gain / bloomOnly.max - 0.02875) < 0.003, `${bloomOnly.gain}/${bloomOnly.max}`)
-  check("全队回血：被动回血来源只有生命脉动和生生不息", Object.values(SKILLS).filter((s) => s.regenPct).map((s) => s.id).sort().join() === "life_bloom,life_regen")
+  check("全队回血：被动回血来源只有生命脉动和生生不息（含生息的下位版）", Object.values(SKILLS).filter((s) => s.regenPct).map((s) => s.id).sort().join() === "life_bloom,life_regen,life_regen_low,life_regen_mid")
 
   // 辉光礼赞：救醒 1 人
   const hymn = (() => {
@@ -1117,6 +1117,77 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   }
   check("震慑乱拍：衰弱几率约 80%", Math.abs(weakened / SEEDS - 0.8) < 0.1, String(weakened / SEEDS))
   check("技能池扩充第三批：2 个技能都在表里", Boolean(SKILLS.warden_stagger && SKILLS.warden_daze))
+}
+
+// ---------- 9n. 下位技能：初阶（C–UC）、次阶（R–E）----------
+{
+  const RARITY_LIST = ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"] as const
+  const lows = Object.values(SKILLS).filter((s) => s.id.endsWith("_low"))
+  const mids = Object.values(SKILLS).filter((s) => s.id.endsWith("_mid"))
+  const baseOf = (id: string) => SKILLS[id.replace(/_(low|mid)$/, "")]
+  const lowerIds = new Set([...lows, ...mids].map((s) => s.id))
+
+  check("下位技能：每个都有对应的原版", [...lows, ...mids].every((s) => baseOf(s.id) !== undefined))
+  check("下位技能：数量 43 个初阶 + 49 个次阶", lows.length === 43 && mids.length === 49, `${lows.length}/${mids.length}`)
+  check("下位技能：初阶只到 UC，次阶只在 R–E", lows.every((s) => s.maxRarity === "UC" && !s.minRarity) && mids.every((s) => s.minRarity === "R" && s.maxRarity === "E"))
+  check(
+    "下位技能：有下位版的原版只发给 L 起（铁壁架势除外，它没有下位版）",
+    Object.values(SKILLS)
+      .filter((s) => !lowerIds.has(s.id) && (SKILLS[`${s.id}_mid`] !== undefined))
+      .every((s) => skillDealtTo(s, "L") && !skillDealtTo(s, "E")),
+  )
+  check("下位技能：AP 费用、类型、段数和原版一致", [...lows, ...mids].every((s) => {
+    const base = baseOf(s.id)!
+    return s.ap === base.ap && s.kind === base.kind && s.hits === base.hits && s.element === base.element && Boolean(s.passive) === Boolean(base.passive)
+  }))
+  check("下位技能：威力 初阶 ≤ 次阶 ≤ 原版", mids.every((mid) => {
+    const base = baseOf(mid.id)!
+    const low = SKILLS[mid.id.replace(/_mid$/, "_low")]
+    if (base.power === undefined || mid.power === undefined) return true
+    return mid.power <= base.power && (low?.power === undefined || low.power <= mid.power)
+  }))
+  check("下位技能：初阶不拆支援、不带净化、不带 BOOST 点亮", lows.every((s) => !s.clearEnemySupports && !s.breakTier && !s.cleanse && !s.boostAllies))
+  check("下位技能：名字不重复（全表）", new Set(Object.values(SKILLS).map((s) => s.name)).size === Object.keys(SKILLS).length)
+  check("下位技能：技能表整体校验通过", checkSkillTable().length === 0, checkSkillTable().join("；"))
+
+  // 发牌：低品质拿不到原版，高品质拿不到下位版；每个职业每个稀有度的池子都不空
+  const dealt = (job: Job, rarity: (typeof RARITY_LIST)[number], n = 300) => {
+    const ids = new Set<string>()
+    for (let i = 0; i < n; i += 1) for (const ref of rollSkillRefs(job, rarity, seededRandom(`low-${job}-${rarity}-${i}`))) ids.add(ref.skillId)
+    return ids
+  }
+  let leak = ""
+  for (const job of JOB_ORDER) {
+    for (const rarity of RARITY_LIST) {
+      const ids = dealt(job, rarity)
+      for (const id of ids) {
+        const lower = lowerIds.has(id)
+        const hasLower = !lower && SKILLS[`${id}_mid`] !== undefined
+        if ((rarity === "C" || rarity === "UC") && (id.endsWith("_mid") || hasLower)) leak ||= `${rarity} 拿到了 ${id}`
+        if ((rarity === "R" || rarity === "E") && (id.endsWith("_low") || hasLower)) leak ||= `${rarity} 拿到了 ${id}`
+        if (RARITY_LIST.indexOf(rarity) >= 4 && lower) leak ||= `${rarity} 拿到了 ${id}`
+      }
+      if (ids.size === 0) leak ||= `${job}/${rarity} 池子是空的`
+    }
+  }
+  check("下位技能发牌：C/UC 只拿初阶、R/E 只拿次阶、L 起只拿原版", leak === "", leak)
+
+  // 迅捷抢攻率：初阶 ×0.5、次阶 ×0.75
+  const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
+  const preemptive = (swiftId: string) => {
+    let n = 0
+    for (const seed of seedsOf("swiftrate")) n += logHas(start("warrior", ["berserker_cleave", swiftId], seed, ghost), "抢攻") ? 1 : 0
+    return n
+  }
+  const full = preemptive("breaker_swift")
+  const mid = preemptive("breaker_swift_mid")
+  const low = preemptive("breaker_swift_low")
+  check("迅捷抢攻率：初阶 < 次阶 < 原版", low < mid && mid < full, `${low}/${mid}/${full}`)
+  check("迅捷抢攻率：初阶约为原版一半", Math.abs(low / Math.max(1, full) - 0.5) < 0.2, `${low}/${full}`)
+
+  // 本体卡技能池按 Prismatic：只有原版、3 个槽
+  const heroRefs = JOB_ORDER.flatMap((job) => Array.from({ length: 100 }, (_, i) => rollSkillRefs(job, "Prismatic", seededRandom(`hero-${job}-${i}`))))
+  check("本体卡：3 个槽，抽不到下位版", heroRefs.every((refs) => refs.length === 3 && refs.every((r) => !lowerIds.has(r.skillId))))
 }
 
 // ---------- 10. 坦克只看大职业 ----------

@@ -79,6 +79,7 @@ const skillSchema = z
     lifesteal: ratio.optional(),
     spellCrit: z.number().positive().max(50).optional(),
     swift: z.boolean().optional(),
+    swiftRate: z.number().min(0.25).max(1).optional(),
     critVsVulnerable: z.number().positive().max(50).optional(),
     regenPct: ratio.optional(),
     controlBonus: ratio.optional(),
@@ -103,7 +104,7 @@ const skillSchema = z
     const fail = (message: string) => ctx.addIssue({ code: "custom", message })
     const has = (key: keyof typeof def) => def[key] !== undefined
     const PASSIVE_KEYS = [
-      "openingStatus", "defMul", "lowHpMul", "lifesteal", "spellCrit", "swift", "critVsVulnerable", "regenPct",
+      "openingStatus", "defMul", "lowHpMul", "lifesteal", "spellCrit", "swift", "swiftRate", "critVsVulnerable", "regenPct",
       "controlBonus", "supportProcBonus", "apRegenBonus", "healBonus", "triggerBonus", "supportShield", "teamDamageReduce",
     ] as const
 
@@ -218,7 +219,7 @@ export function autoDescribeSkill(def: SkillDef): string {
     if (def.lowHpMul) parts.push(`队伍血量低于 30% 时自身 ATK/INT +${pct(def.lowHpMul - 1)}`)
     if (def.lifesteal) parts.push(`造成伤害的 ${pct(def.lifesteal)} 回复给队伍`)
     if (def.spellCrit) parts.push(`队伍血量低于 30% 时法术暴击率 +${def.spellCrit}%`)
-    if (def.swift) parts.push("命中 +5%，可在敌方行动前抢攻")
+    if (def.swift) parts.push(def.swiftRate && def.swiftRate < 1 ? `命中 +5%，可在敌方行动前抢攻（抢攻率为标准的 ${pct(def.swiftRate)}）` : "命中 +5%，可在敌方行动前抢攻")
     if (def.critVsVulnerable) parts.push(`对脆弱目标暴击率 +${def.critVsVulnerable}%`)
     if (def.regenPct) parts.push(`每回合队伍回复 ${pct(def.regenPct)} 最大生命`)
     if (def.controlBonus) parts.push(`硬控成功率 +${pct(def.controlBonus)}`)

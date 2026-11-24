@@ -3,7 +3,7 @@ import { and, eq, sql } from "drizzle-orm"
 import { rollSkillRefs } from "@choke/shared/skills"
 import type { CardSkillRef, Job, Rarity } from "@choke/shared/types"
 
-import { CARD_TYPES } from "../card-types"
+import { CARD_TYPES, isHeroId } from "../card-types"
 import { db } from "../db/client"
 import { cards, packOpenings, packTokens, userCards, userPacks } from "../db/schema"
 import { MIRROR_RATE, pickMirrorCard } from "../mirror"
@@ -89,8 +89,9 @@ export async function grantCard(
   // 个体值：970–1030（±3%），抽到时掷一次
   const rollBp = 970 + Math.floor(Math.random() * 61)
   // 技能同样每张卡各掷各的，同名卡互不相同；掷出来就固定在这个实例上
-  // 本体卡槽数沿用旧行为（按稀有度），等本体卡返工时再定
-  const skillRefs = rollSkillRefs(counted.job as Job, counted.rarity as Rarity, Math.random)
+  // 本体卡的技能池按 Prismatic 算（拿不到下位技能）；槽数规则等本体卡返工时再定
+  const skillRarity = isHeroId(values.cardId) ? "Prismatic" : (counted.rarity as Rarity)
+  const skillRefs = rollSkillRefs(counted.job as Job, skillRarity, Math.random)
   const [inserted] = await tx
     .insert(userCards)
     .values({ ...values, serial: counted.pulled, rollBp, skillRefs })
