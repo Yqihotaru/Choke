@@ -86,8 +86,8 @@ export const ARMOR_RESIST_PER_TIER = 0.2
 export const TOTAL_DEFENSE_REDUCTION_CAP = 0.9
 /** 全队被动回血（生生不息、生命脉动等）每回合合计上限：最大生命的 4% */
 export const REGEN_TEAM_CAP = 0.04
-/** 全队被动减伤（滞拍格挡、稳拍护盾）合计上限：20%；之后仍计入总减伤 90% 上限 */
-export const TEAM_DAMAGE_REDUCE_CAP = 0.2
+/** 全队被动减伤（滞拍格挡、稳拍护盾）合计上限：10%（约半档手动防御）；之后仍计入总减伤 90% 上限 */
+export const TEAM_DAMAGE_REDUCE_CAP = 0.1
 /** 异常计数增伤最多计几种负面状态 */
 export const DEBUFF_SCALE_MAX_KINDS = 3
 

@@ -150,7 +150,7 @@ export interface SkillDef {
   triggerBonus?: number
   /** 敌方拆我方支援时，每个目标免拆概率 */
   supportShield?: number
-  /** 全队受到的伤害额外减免比例（多张叠加，合计封顶 20%） */
+  /** 全队受到的伤害额外减免比例（多张叠加，合计封顶 10%） */
   teamDamageReduce?: number
 
   /* ---- 主动技能效果字段 ---- */
@@ -401,6 +401,39 @@ export const SKILLS: Record<string, SkillDef> = {
     minRarity: "L",
     desc: "1.45× 土属性伤害，附带 3 回合【破防】，并拆毁 1 个强度 ≤2 的敌方支援",
   }),
+  warden_stagger: S({
+    id: "warden_stagger",
+    job: "tank",
+    name: "断拍震击",
+    element: "physical",
+    ap: 1,
+    kind: "damage",
+    costTag: "normal",
+    power: 0.95,
+    hits: 1,
+    target: "enemy",
+    clearEnemySupports: 1,
+    breakTier: 1,
+    minRarity: "R",
+    desc: "0.95× 物理伤害，并拆毁 1 个强度 ≤1 的敌方支援",
+  }),
+  warden_daze: S({
+    id: "warden_daze",
+    job: "tank",
+    name: "震慑乱拍",
+    element: "dark",
+    ap: 2,
+    kind: "damage",
+    costTag: "normal",
+    power: 1.35,
+    hits: 1,
+    target: "enemy",
+    statusId: "weaken",
+    statusChance: 0.8,
+    turns: 2,
+    minRarity: "E",
+    desc: "1.35× 暗属性伤害，附带 2 回合【衰弱】",
+  }),
   bulwark_slam: S({
     id: "bulwark_slam",
     job: "tank",
@@ -470,14 +503,14 @@ export const SKILLS: Record<string, SkillDef> = {
   warden_parry: S({
     id: "warden_parry",
     job: "tank",
-    teamDamageReduce: 0.1,
+    teamDamageReduce: 0.06,
     name: "滞拍格挡",
     element: "metal",
     ap: 0,
     kind: "passive",
     passive: true,
     minRarity: "Mythic",
-    desc: "被动：全队受到的伤害 −10%（多张叠加，合计最多 −20%）",
+    desc: "被动：全队受到的伤害 −6%（多张叠加，合计最多 −10%）",
   }),
   bulwark_resolve: S({
     id: "bulwark_resolve",
@@ -1534,14 +1567,14 @@ export const SKILLS: Record<string, SkillDef> = {
   bard_shelter: S({
     id: "bard_shelter",
     job: "support",
-    teamDamageReduce: 0.08,
+    teamDamageReduce: 0.04,
     name: "稳拍护盾",
     element: "earth",
     ap: 0,
     kind: "passive",
     passive: true,
     minRarity: "Mythic",
-    desc: "被动：全队受到的伤害 −8%（多张叠加，合计最多 −20%）",
+    desc: "被动：全队受到的伤害 −4%（多张叠加，合计最多 −10%）",
   }),
   healer_barrier: S({
     id: "healer_barrier",

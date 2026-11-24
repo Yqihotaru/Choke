@@ -1023,18 +1023,18 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
   const RESIST = 1000
 
-  // 全队减伤（滞拍格挡 10%、稳拍护盾 8%）：多张叠加，合计 20% 封顶，仍受总减伤 90% 上限约束
+  // 全队减伤（滞拍格挡 6%、稳拍护盾 4%）：多张叠加，合计 10% 封顶，仍受总减伤 90% 上限约束
   const factorWith = (decks: Array<[Job, string[]]>) => {
     const cards = inputs(decks.map(([job, ids], i) => face(`t${i}`, job, "Mythic", 40, 0, ids)), 10)
     return { s: createBattle(spec, cards, { apMax: 7, seed: "team-reduce" }) }
   }
   const none = incomingDamageFactor(factorWith([["tank", ["bulwark_quake"]], ["tank", ["bulwark_quake"]]]).s, RESIST)
   const parry = factorWith([["tank", ["warden_parry"]], ["tank", ["bulwark_quake"]]]).s
-  check("滞拍格挡：全队受到的伤害 −10%", Math.abs(incomingDamageFactor(parry, RESIST) / none - 0.9) < 0.002)
+  check("滞拍格挡：全队受到的伤害 −6%", Math.abs(incomingDamageFactor(parry, RESIST) / none - 0.94) < 0.002)
   const both = factorWith([["tank", ["warden_parry"]], ["support", ["bard_shelter"]]]).s
-  check("滞拍格挡 + 稳拍护盾：叠加 −18%", Math.abs(incomingDamageFactor(both, RESIST) / none - 0.82) < 0.002)
+  check("滞拍格挡 + 稳拍护盾：叠加 −10%", Math.abs(incomingDamageFactor(both, RESIST) / none - 0.9) < 0.002)
   const many = factorWith([["tank", ["warden_parry"]], ["tank", ["warden_parry"]], ["tank", ["warden_parry"]]]).s
-  check("全队减伤：叠到 30% 也只算 20%", Math.abs(incomingDamageFactor(many, RESIST) / none - 0.8) < 0.002)
+  check("全队减伤：叠到 18% 也只算 10%", Math.abs(incomingDamageFactor(many, RESIST) / none - 0.9) < 0.002)
   const downed = factorWith([["tank", ["warden_parry"]], ["tank", ["bulwark_quake"]]]).s
   downed.cards[0]!.down = true
   check("滞拍格挡：带它的卡被 Down 就失效", Math.abs(incomingDamageFactor(downed, RESIST) - none) < 1e-9)
@@ -1095,6 +1095,28 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("技能池扩充第二批：6 个技能都在表里", second.every((id) => SKILLS[id]))
   check("技能池扩充第二批：两个全队减伤被动 Mythic 起", SKILLS.warden_parry!.minRarity === "Mythic" && SKILLS.bard_shelter!.minRarity === "Mythic")
   check("技能池扩充第二批：只有这两个技能带全队减伤", Object.values(SKILLS).filter((s) => s.teamDamageReduce).map((s) => s.id).sort().join() === "bard_shelter,warden_parry")
+}
+
+// ---------- 9m. 技能池扩充第三批：断拍震击、震慑乱拍 ----------
+{
+  const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
+  const aura = (id: string, tier: number) => ({ id, name: id, kind: "aura" as const, element: "light" as const, stat: "def" as const, amount: 0.1, tier, roleText: "测试" })
+  const s = start("tank", ["warden_stagger"], "stagger-1", ghost)
+  s.enemy.hp = s.enemy.hpMax = 1e9
+  s.ap = 6
+  s.enemySupports = [aura("t1", 1), aura("t1b", 1), aura("t2", 2)]
+  const after = apply(s, { type: "skill", card: 0, skill: "warden_stagger" })
+  check("断拍震击：只拆 1 个强度 ≤1 的支援，强度 2 不动", after.enemySupports.length === 2 && after.enemySupports.some((u) => u.id === "t2"), after.enemySupports.map((u) => u.id).join())
+
+  let weakened = 0
+  for (const seed of seedsOf("daze")) {
+    const d = start("tank", ["warden_daze"], seed, ghost)
+    d.enemy.hp = d.enemy.hpMax = 1e9
+    d.ap = 6
+    if (apply(d, { type: "skill", card: 0, skill: "warden_daze" }).enemy.statuses.some((st) => st.id === "weaken")) weakened += 1
+  }
+  check("震慑乱拍：衰弱几率约 80%", Math.abs(weakened / SEEDS - 0.8) < 0.1, String(weakened / SEEDS))
+  check("技能池扩充第三批：2 个技能都在表里", Boolean(SKILLS.warden_stagger && SKILLS.warden_daze))
 }
 
 // ---------- 10. 坦克只看大职业 ----------
