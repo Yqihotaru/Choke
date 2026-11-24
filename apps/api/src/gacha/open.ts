@@ -97,6 +97,7 @@ export async function grantCard(
     .values({ ...values, serial: counted.pulled, rollBp, skillRefs })
     .returning({ id: userCards.id })
   if (!inserted) throw new Error("卡实例写入失败")
+  await recordQuestEvent(tx, values.userId, "card-obtain", { rarity: counted.rarity })
   return { userCardId: inserted.id, serial: counted.pulled, rollBp, skillRefs }
 }
 

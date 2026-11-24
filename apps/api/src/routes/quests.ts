@@ -1,12 +1,19 @@
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
+import { QUEST_PERIODS } from "@choke/shared/quests"
+
 import { requireSelf } from "../auth/guard"
-import { claimAllQuests, claimQuest, getQuests, signIn } from "../quests"
+import { claimAllQuests, claimChest, claimQuest, getQuests, signIn } from "../quests"
 import { guardAbort } from "../tx"
 
 const paramsSchema = z.object({ userId: z.string() })
 const questParamsSchema = z.object({ userId: z.string(), questId: z.string().min(1).max(64) })
+const chestParamsSchema = z.object({
+  userId: z.string(),
+  period: z.enum(QUEST_PERIODS),
+  at: z.coerce.number().int().min(1).max(1000),
+})
 
 export async function questRoutes(app: FastifyInstance) {
   app.get("/users/:userId/quests", async (request, reply) => {
@@ -21,6 +28,15 @@ export async function questRoutes(app: FastifyInstance) {
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
     const result = await guardAbort(reply, () => claimAllQuests(userId))
+    if (!result) return
+    return { ok: true, data: result }
+  })
+
+  app.post("/users/:userId/quests/chests/:period/:at/claim", async (request, reply) => {
+    const params = chestParamsSchema.parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+    const result = await guardAbort(reply, () => claimChest(userId, params.period, params.at))
     if (!result) return
     return { ok: true, data: result }
   })

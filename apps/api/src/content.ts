@@ -110,7 +110,7 @@ export function loadContentDir(root: string): {
     },
     battle,
   )
-  const quests = parseQuestContent(readJson(root, QUESTS_FILE))
+  const quests = parseQuestContent(readJson(root, QUESTS_FILE), world)
   return { version: hashContent(root, files), battle, world, quests }
 }
 

@@ -273,6 +273,7 @@ export async function progressionRoutes(app: FastifyInstance) {
       }
 
       const [u] = await tx.select({ coins: users.coins }).from(users).where(eq(users.id, userId)).limit(1)
+      await recordQuestEvent(tx, userId, "card-level", { value: target.level + 1 })
       return { coins: u?.coins ?? 0 }
     })
     if (!result) return
@@ -403,6 +404,7 @@ export async function progressionRoutes(app: FastifyInstance) {
           { source: "resonance", sourceRef: String(userCardId) },
         )
         await recordQuestEvent(tx, userId, "fuse")
+        await recordQuestEvent(tx, userId, "constellation", { value: upgraded.constellation })
 
         const resonance = await loadResonance(tx, userId)
         return {
@@ -488,11 +490,12 @@ export async function progressionRoutes(app: FastifyInstance) {
             lt(userCards.constellation, cap),
           ),
         )
-        .returning({ id: userCards.id })
+        .returning({ id: userCards.id, constellation: userCards.constellation })
       if (upgraded.length === 0) {
         throw new TxAbort(400, "max_constellation", "已经满命座")
       }
       await recordQuestEvent(tx, userId, "fuse")
+      await recordQuestEvent(tx, userId, "constellation", { value: upgraded[0]!.constellation })
       return true
     })
     if (!result) return
@@ -624,6 +627,7 @@ export async function progressionRoutes(app: FastifyInstance) {
       ledger.push({ kind: "essence", delta: essenceGained })
       await recordLedger(tx, userId, ledger, { source: "feed", sourceRef: String(userCardId) })
       await recordQuestEvent(tx, userId, "feed")
+      await recordQuestEvent(tx, userId, "card-level", { value: next.level })
 
       return {
         gained,

@@ -600,7 +600,7 @@ export async function appendActions(
       if (won) {
         const stars = evaluateStars(state).count
         patch.stars = stars
-        await recordQuestEvent(tx, userId, "expedition-win", { mapKind: exp.map.kind, now })
+        await recordQuestEvent(tx, userId, "expedition-win", { mapKind: exp.map.kind, mapId: exp.mapId, now })
         const node = exp.map.nodes[exp.position]
         const table = isFightNode(node) ? rewardTable(node.rewards) : undefined
         const reward = table
@@ -731,7 +731,11 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
   }
 
   if (cleared) {
-    await recordQuestEvent(tx, exp.userId, "expedition-clear", { mapKind: exp.map.kind, now })
+    const questContext = { mapKind: exp.map.kind, mapId: exp.mapId, now }
+    await recordQuestEvent(tx, exp.userId, "expedition-clear", questContext)
+    await recordQuestEvent(tx, exp.userId, "expedition-tier", { ...questContext, value: status.tier })
+    const fullTier = exp.map.objectives?.length ?? 3
+    if (clearTier >= fullTier) await recordQuestEvent(tx, exp.userId, "expedition-perfect", questContext)
     const date = new Date(now)
     const [row] = await tx
       .select()
