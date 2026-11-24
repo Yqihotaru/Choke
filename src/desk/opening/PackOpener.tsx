@@ -74,7 +74,6 @@ const PACK_W = 240
 const TEAR_MS = 1000
 
 type Stage = "seal" | "torn" | "stack"
-/** hold 与 show 共用亮相画面，但只在手动翻牌时等待确认。 */
 type CardPhase = "stack" | "charge" | "show" | "hold" | "slot"
 
 const keyOf = (card: CardData) => String(card.userCardId ?? `${card.cardId}:${card.name}`)
@@ -166,7 +165,6 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
   })
   const spotlightPhase = spotlight && phaseOf(spotlight)
   const waitingForFlip = !auto && spotlightPhase === "show"
-  const waitingForContinue = spotlightPhase === "hold"
   const allOpen = stage === "stack" && unrevealed.length === 0 && !spotlight
   const pendingHigh = sorted.filter((card) => {
     const phase = phaseOf(card)
@@ -414,13 +412,15 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
       ? "拖住右上角的撕条往左撕开，也可以直接点一下"
       : stage === "torn"
         ? ""
-        : spotlight
-          ? waitingForContinue || waitingForFlip ? "" : "点击或按空格跳过"
-          : next
-            ? `点最上面那张翻开 · 还剩 ${unrevealed.length} 张`
-            : allOpen
-              ? "把卡拖到下面的框里单张放到桌面，或者一次处理全部"
-              : ""
+        : spotlightPhase === "hold"
+          ? "点击卡面或按空格收起"
+          : spotlight
+            ? waitingForFlip ? "" : "点击或按空格跳过"
+            : next
+              ? `点最上面那张翻开 · 还剩 ${unrevealed.length} 张`
+              : allOpen
+                ? "把卡拖到下面的框里单张放到桌面，或者一次处理全部"
+                : ""
   const announce = stage === "stack" && !allOpen && said ? said : hint
   const dim = !!spotlight && BIG[spotlight.rarity]
 
@@ -578,7 +578,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
             {hint}
           </p>
         )}
-        {stage === "stack" && !allOpen && (
+        {stage === "stack" && !allOpen && (spotlightPhase === "hold" ? null : (
           <button
             type="button"
             className="op__btn op__btn--main"
@@ -593,9 +593,9 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
             }}
             disabled={waitingForFlip || (!spotlight && auto)}
           >
-            {waitingForContinue || waitingForFlip ? "继续" : spotlight ? "跳过" : "全部翻开"}
+            {spotlight ? "跳过" : "全部翻开"}
           </button>
-        )}
+        ))}
         {allOpen && (
           <div className="op__actions">
             <button
