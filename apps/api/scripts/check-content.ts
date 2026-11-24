@@ -16,6 +16,7 @@ console.log(
     `地图 ${Object.keys(WORLD_CONTENT.maps).length}`,
     `掉落表 ${Object.keys(WORLD_CONTENT.rewards).length}`,
     `剧情 ${Object.keys(WORLD_CONTENT.stories).length}`,
+    `事件 ${Object.keys(WORLD_CONTENT.events).length}`,
     `任务 ${Object.keys(QUEST_CONTENT.quests).length}`,
   ].join(" · "),
 )

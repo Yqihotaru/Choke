@@ -2,7 +2,8 @@ import type { BattleAction } from "../battle/actions"
 import type { EncounterSpec } from "../battle/content"
 import type { ExpeditionAllocation } from "../expedition-points"
 import type { CardFaceData } from "../types"
-import type { MapDef, Reward, StoryLine } from "./content"
+import type { EventOption, MapDef, Reward, StoryLine } from "./content"
+import type { DifficultyStatus } from "./difficulty"
 
 /** 接口返回的出征视图：前端只靠它画界面，规则全在服务端 */
 
@@ -44,12 +45,30 @@ export interface ExpeditionStoryView {
   lines: StoryLine[]
 }
 
+/** 事件节点：选项的效果公开给玩家看（事件不是靠蒙的） */
+export interface ExpeditionEventView {
+  nodeId: string
+  title: string
+  text: string
+  options: EventOption[]
+}
+
+/** 通关目标在结算时的达成情况 */
+export interface ObjectiveResult {
+  text: string
+  met: boolean
+}
+
 export interface ExpeditionSettlement {
   end: ExpeditionEnd
   /** 实际发到账上的奖励（到期结算时附件走邮件，playerExp 直接加） */
   rewards: Reward
   stars: number
   maxStars: number
+  /** 通关时的档位（没通关也记，方便统计） */
+  tier: number
+  /** 地图写了通关目标时才有；达成几个就是几颗通关星 */
+  objectives: ObjectiveResult[]
   /** 这次出征体力是不是扣掉了（拿到东西才扣） */
   staminaSpent: number
   staminaRefunded: number
@@ -85,5 +104,8 @@ export interface ExpeditionView {
   expiresAt: string
   battle: ExpeditionBattleView | null
   story: ExpeditionStoryView | null
+  event: ExpeditionEventView | null
+  /** 当前难度：威胁值、档位、这一档的血量和掉落倍率、下一档要多少威胁值；前端直接展示，不用自己算 */
+  difficulty: DifficultyStatus
   settlement: ExpeditionSettlement | null
 }

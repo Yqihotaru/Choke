@@ -1,5 +1,6 @@
 import { deriveStream, nextRandom } from "../rng"
 import type { Reward, RewardTable } from "./content"
+import { scaleReward } from "./difficulty"
 
 /**
  * 掉落计算：纯函数，只吃种子。同一个远征种子、同一个名字，永远掷出同样的结果，
@@ -69,21 +70,26 @@ export interface RollOptions {
   stars?: number
   /** 是否首通；只有地图级掉落表才会传 true */
   firstClear?: boolean
+  /** 档位掉落倍率：只放大固定和随机部分（主产），星级加成和首通奖励不放大 */
+  lootMult?: number
 }
 
 /**
  * 发放顺序：固定 → 随机 → 星级加成（累加：3 星同时拿 1、2、3 档）→ 首通奖励。
+ * 倍率只乘前两项，所以刷高档位能多拿主产，但一次性的星级和首通奖励不会被刷。
  */
 export function rollRewardTable(table: RewardTable, options: RollOptions): Reward {
   let stream = deriveStream(options.seed, options.stream)
-  const parts: (Reward | undefined)[] = [table.fixed]
+  const lootMult = options.lootMult ?? 1
+  const parts: (Reward | undefined)[] = [table.fixed && scaleReward(table.fixed, lootMult)]
 
   if (table.random) {
     const weights = table.random.entries.map((entry) => entry.weight)
     for (let i = 0; i < table.random.rolls; i += 1) {
       const [next, roll] = nextRandom(stream)
       stream = next
-      parts.push(table.random.entries[pickWeighted(weights, roll)]!.reward)
+      const picked = table.random.entries[pickWeighted(weights, roll)]!.reward
+      parts.push(picked && scaleReward(picked, lootMult))
     }
   }
 

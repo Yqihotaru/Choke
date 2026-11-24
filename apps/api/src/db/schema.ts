@@ -316,6 +316,8 @@ export const expeditions = pgTable(
     nodeDone: boolean("node_done").notNull().default(false),
     flags: jsonb("flags").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     hpRatio: doublePrecision("hp_ratio").notNull().default(1),
+    /** 威胁值：只在走进带威胁的格子、做事件选择时变；档位由它和地图的阈值算出，战斗中不变 */
+    threat: integer("threat").notNull().default(0),
     drops: jsonb("drops").$type<{ node: string; reward: Reward }[]>().notNull().default(sql`'[]'::jsonb`),
     staminaCost: integer("stamina_cost").notNull().default(0),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
@@ -361,6 +363,8 @@ export const mapClears = pgTable(
     userId: text("user_id").notNull(),
     mapId: text("map_id").notNull(),
     bestStars: integer("best_stars").notNull().default(0),
+    /** 通关目标最多一次达成几个（地图没写目标就一直是 0） */
+    bestObjectives: integer("best_objectives").notNull().default(0),
     clears: integer("clears").notNull().default(0),
     firstClearedAt: timestamp("first_cleared_at", { withTimezone: true }).defaultNow().notNull(),
     lastClearedAt: timestamp("last_cleared_at", { withTimezone: true }).defaultNow().notNull(),

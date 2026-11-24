@@ -3,6 +3,7 @@ import { prettifyError, z } from "zod"
 import { CONTENT, MYSTERY_PACK_ID } from "../content"
 import { mailAttachmentSchema } from "../mail"
 import type { BattleContent } from "../battle/content"
+import { DEFAULT_HP_MULT, DEFAULT_LOOT_MULT, DEFAULT_THRESHOLDS, MAX_THREAT, TIER_COUNT } from "./difficulty"
 
 /**
  * 出征内容：地图（maps/*.json）、掉落表（rewards/*.json）、剧情（stories/*.json）。
@@ -61,6 +62,32 @@ export const storySchema = z.strictObject({
 export type Story = z.infer<typeof storySchema>
 export type StoryLine = z.infer<typeof storyLineSchema>
 
+// ---------- 事件 ----------
+
+/** 威胁值一次最多加减多少；事件选项和格子共用 */
+const threatDelta = int.min(-20).max(20)
+
+/**
+ * 事件的一个选项。只允许这四件事（白名单，写别的字段会被拒绝）：
+ * 加减威胁值、按比例扣队伍血、给奖励、设标记。
+ */
+export const eventOptionSchema = z.strictObject({
+  text: z.string().min(1),
+  threat: threatDelta.optional(),
+  /** 扣队伍最大生命的比例；最多扣到剩 5%，不会直接打死 */
+  hpLossPct: z.number().min(0).max(0.5).optional(),
+  reward: rewardSchema.optional(),
+  set: z.array(flag).default([]),
+})
+export type EventOption = z.infer<typeof eventOptionSchema>
+
+export const mapEventSchema = z.strictObject({
+  title: z.string().min(1),
+  text: z.string().min(1),
+  options: z.array(eventOptionSchema).min(2).max(4),
+})
+export type MapEvent = z.infer<typeof mapEventSchema>
+
 // ---------- 地图 ----------
 
 export const MAP_KINDS = ["main", "season", "weekly", "daily"] as const
@@ -73,6 +100,8 @@ const nodeBase = {
   next: z.array(id).max(6).default([]),
   /** 进这个节点需要先设置过的标记 */
   requires: z.strictObject({ flag }).optional(),
+  /** 走进这个格子时威胁值加减多少（可正可负）；只有大地图格子才改难度，普通战斗打赢不涨 */
+  threat: threatDelta.optional(),
 }
 
 export const mapNodeSchema = z.discriminatedUnion("type", [
@@ -83,7 +112,7 @@ export const mapNodeSchema = z.discriminatedUnion("type", [
   /** 休息：队伍血量回满 */
   z.strictObject({ type: z.literal("rest"), ...nodeBase }),
   z.strictObject({ type: z.literal("branch"), prompt: z.string().optional(), ...nodeBase }),
-  /** 事件：格式先占位，还没有运行时支持 */
+  /** 事件：弹出选项，玩家选一个（效果见 mapEventSchema） */
   z.strictObject({ type: z.literal("event"), event: id, ...nodeBase }),
   /** 槽位：由地图生成器在开始出征前换成具体节点，见 4B */
   z.strictObject({ type: z.literal("slot"), pool: id, ...nodeBase }),
@@ -91,10 +120,10 @@ export const mapNodeSchema = z.discriminatedUnion("type", [
 
 /** 槽位池里的候选节点：只决定「这个格子是什么」，位置、下一跳、前置条件都沿用槽位本身 */
 export const slotNodeSchema = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("battle"), encounter: id, rewards: id.optional(), title: z.string().optional() }),
-  z.strictObject({ type: z.literal("boss"), encounter: id, rewards: id.optional(), title: z.string().optional() }),
-  z.strictObject({ type: z.literal("treasure"), rewards: id, title: z.string().optional() }),
-  z.strictObject({ type: z.literal("rest"), title: z.string().optional() }),
+  z.strictObject({ type: z.literal("battle"), encounter: id, rewards: id.optional(), title: z.string().optional(), threat: threatDelta.optional() }),
+  z.strictObject({ type: z.literal("boss"), encounter: id, rewards: id.optional(), title: z.string().optional(), threat: threatDelta.optional() }),
+  z.strictObject({ type: z.literal("treasure"), rewards: id, title: z.string().optional(), threat: threatDelta.optional() }),
+  z.strictObject({ type: z.literal("rest"), title: z.string().optional(), threat: threatDelta.optional() }),
 ])
 export type SlotNode = z.infer<typeof slotNodeSchema>
 
@@ -141,8 +170,47 @@ export const mapGeneratorSchema = z.strictObject({
   battles: z.array(weightedEncounterSchema).min(1).max(50),
   bosses: z.array(weightedEncounterSchema).min(1).max(30),
   chests: z.array(weightedRewardSchema).max(30).default([]),
+  /**
+   * 危险路线：中间层并排两个节点时，下面那个有 rate 的概率变成一场「危险路线」战斗，
+   * 走进去威胁值 +threat（之后的战斗都更硬、掉落也更多）；可以额外配一张掉落表。不写就没有。
+   */
+  danger: z
+    .strictObject({
+      rate: z.number().min(0).max(1),
+      threat: int.min(1).max(10),
+      rewards: id.optional(),
+    })
+    .optional(),
 })
 export type MapGeneratorTemplate = z.infer<typeof mapGeneratorSchema>
+
+/**
+ * 难度配置：不写就用 difficulty.ts 里的默认值。
+ * thresholds 是 4 个递增的威胁值，达到第 i 个升到 i+2 档；hpMult / lootMult 各 5 个数，对应 1–5 档。
+ * lootMult 全写 1 就是这张图不按档位放大掉落。
+ */
+export const difficultySchema = z
+  .strictObject({
+    startThreat: int.min(0).max(MAX_THREAT).default(0),
+    thresholds: z.array(int.min(1).max(MAX_THREAT)).length(TIER_COUNT - 1).default([...DEFAULT_THRESHOLDS]),
+    hpMult: z.array(z.number().min(1).max(10)).length(TIER_COUNT).default([...DEFAULT_HP_MULT]),
+    lootMult: z.array(z.number().min(0.1).max(10)).length(TIER_COUNT).default([...DEFAULT_LOOT_MULT]),
+  })
+  .superRefine((d, ctx) => {
+    if (d.thresholds.some((at, i) => i > 0 && at <= d.thresholds[i - 1]!)) {
+      ctx.addIssue({ code: "custom", path: ["thresholds"], message: "档位阈值必须严格递增" })
+    }
+    if (d.hpMult.some((m, i) => i > 0 && m < d.hpMult[i - 1]!)) {
+      ctx.addIssue({ code: "custom", path: ["hpMult"], message: "血量倍率不能随档位下降" })
+    }
+  })
+
+/** 通关目标（最多 3 个，每个算 1 颗星）：通关时档位 ≥ N，或者拿到某个标记 */
+export const objectiveSchema = z.union([
+  z.strictObject({ label: z.string().min(1).optional(), tierAtLeast: int.min(2).max(TIER_COUNT) }),
+  z.strictObject({ label: z.string().min(1).optional(), flag }),
+])
+export type MapObjective = z.infer<typeof objectiveSchema>
 
 export const mapSchema = z.strictObject({
   kind: z.enum(MAP_KINDS),
@@ -161,6 +229,9 @@ export const mapSchema = z.strictObject({
   generate: mapGeneratorSchema.optional(),
   /** 通关奖励：整张图走到终点时发，掉落表 id */
   rewards: id.optional(),
+  difficulty: difficultySchema.optional(),
+  /** 写了通关目标：通关星数 = 达成的目标数（决定星级加成档位）；不写还是按战斗星数折算 */
+  objectives: z.array(objectiveSchema).max(3).optional(),
 })
 export type MapDef = z.infer<typeof mapSchema>
 export type MapNode = z.infer<typeof mapNodeSchema>
@@ -169,12 +240,14 @@ export interface WorldContent {
   maps: Record<string, MapDef>
   rewards: Record<string, RewardTable>
   stories: Record<string, Story>
+  events: Record<string, MapEvent>
 }
 
 const worldSchema = z.strictObject({
   maps: z.record(id, mapSchema),
   rewards: z.record(id, rewardTableSchema),
   stories: z.record(id, storySchema),
+  events: z.record(id, mapEventSchema),
 })
 
 /** 卡包 id：配置里的卡包加神秘包 */
@@ -218,13 +291,16 @@ function reachable(nodes: MapDef["nodes"], start: string): Set<string> {
   return seen
 }
 
-/** 一张图里所有 story 节点设置得出来的标记 */
-function settableFlags(map: MapDef, stories: Record<string, Story>): Set<string> {
+/** 一张图里所有 story 节点、event 节点设置得出来的标记 */
+function settableFlags(map: MapDef, stories: Record<string, Story>, events: Record<string, MapEvent>): Set<string> {
   const flags = new Set<string>()
   for (const node of Object.values(map.nodes)) {
-    if (node.type !== "story") continue
-    for (const line of stories[node.story]?.lines ?? []) {
-      if ("choice" in line) for (const choice of line.choice) choice.set.forEach((f) => flags.add(f))
+    if (node.type === "story") {
+      for (const line of stories[node.story]?.lines ?? []) {
+        if ("choice" in line) for (const choice of line.choice) choice.set.forEach((f) => flags.add(f))
+      }
+    } else if (node.type === "event") {
+      for (const option of events[node.event]?.options ?? []) option.set.forEach((f) => flags.add(f))
     }
   }
   return flags
@@ -232,21 +308,30 @@ function settableFlags(map: MapDef, stories: Record<string, Story>): Set<string>
 
 /** 校验整份出征内容；失败直接抛错（服务端因此拒绝启动） */
 export function parseWorldContent(
-  raw: { maps: Record<string, unknown>; rewards: Record<string, unknown>; stories: Record<string, unknown> },
+  raw: { maps: Record<string, unknown>; rewards: Record<string, unknown>; stories: Record<string, unknown>; events?: Record<string, unknown> },
   battle: BattleContent,
 ): WorldContent {
-  const badIds = (["maps", "rewards", "stories"] as const).flatMap((dir) =>
-    Object.keys(raw[dir]).filter((key) => !id.safeParse(key).success).map((key) => `${dir}/${key}.json`),
+  const input = { ...raw, events: raw.events ?? {} }
+  const badIds = (["maps", "rewards", "stories", "events"] as const).flatMap((dir) =>
+    Object.keys(input[dir]).filter((key) => !id.safeParse(key).success).map((key) => `${dir}/${key}.json`),
   )
   if (badIds.length > 0) {
     throw new Error(`出征内容校验失败：文件名就是 id，只能用字母、数字和连字符：${badIds.join(", ")}`)
   }
-  const result = worldSchema.safeParse(raw)
+  const result = worldSchema.safeParse(input)
   if (!result.success) throw new Error(`出征内容校验失败：\n${prettifyError(result.error)}`)
   const world = result.data
 
   const problems: string[] = []
   const issue = (path: (string | number)[], message: string) => problems.push(`✖ ${message}\n  → at ${path.join(".")}`)
+
+  for (const [eventId, event] of Object.entries(world.events)) {
+    event.options.forEach((option, i) => {
+      const path = ["events", eventId, "options", i]
+      checkRewardPacks(option.reward, [...path, "reward"], issue)
+      if (option.set.some((f, k) => option.set.indexOf(f) !== k)) issue([...path, "set"], "同一个选项里标记重复")
+    })
+  }
 
   for (const [tableId, table] of Object.entries(world.rewards)) {
     const base = ["rewards", tableId]
@@ -299,6 +384,12 @@ export function parseWorldContent(
       if (gen.bossRewards && !world.rewards[gen.bossRewards]) {
         issue([...genBase, "bossRewards"], `掉落表 ${gen.bossRewards} 不存在`)
       }
+      if (gen.danger?.rewards && !world.rewards[gen.danger.rewards]) {
+        issue([...genBase, "danger", "rewards"], `掉落表 ${gen.danger.rewards} 不存在`)
+      }
+      if (map.objectives?.some((o) => "flag" in o)) {
+        issue([...base, "objectives"], "日常随机生成的地图没有剧情和事件，通关目标只能写档位，不能写标记")
+      }
       gen.battles.forEach((entry, i) => {
         if (!battle.encounters[entry.encounter]) issue([...genBase, "battles", i, "encounter"], `遭遇 ${entry.encounter} 不存在`)
         if (entry.rewards && !world.rewards[entry.rewards]) issue([...genBase, "battles", i, "rewards"], `掉落表 ${entry.rewards} 不存在`)
@@ -335,6 +426,7 @@ export function parseWorldContent(
         issue([...path, "rewards"], `掉落表 ${node.rewards} 不存在`)
       }
       if (node.type === "story" && !world.stories[node.story]) issue([...path, "story"], `剧情 ${node.story} 不存在`)
+      if (node.type === "event" && !world.events[node.event]) issue([...path, "event"], `事件 ${node.event} 不存在`)
       if (node.type === "slot" && !map.pools?.[node.pool]) {
         issue([...path, "pool"], `槽位池 ${node.pool} 不存在`)
       }
@@ -350,12 +442,17 @@ export function parseWorldContent(
     }
     if (![...seen].some((nodeId) => map.nodes[nodeId]!.next.length === 0)) issue([...base, "nodes"], "地图没有终点（next 为空的节点）")
 
-    const settable = settableFlags(map, world.stories)
+    const settable = settableFlags(map, world.stories, world.events)
     for (const [nodeId, node] of Object.entries(map.nodes)) {
       if (node.requires && !settable.has(node.requires.flag)) {
-        issue([...base, "nodes", nodeId, "requires"], `标记 ${node.requires.flag} 没有任何剧情能设置`)
+        issue([...base, "nodes", nodeId, "requires"], `标记 ${node.requires.flag} 没有任何剧情或事件能设置`)
       }
     }
+    map.objectives?.forEach((objective, i) => {
+      if ("flag" in objective && !settable.has(objective.flag)) {
+        issue([...base, "objectives", i, "flag"], `标记 ${objective.flag} 没有任何剧情或事件能设置`)
+      }
+    })
   }
 
   if (problems.length > 0) throw new Error(`出征内容校验失败：\n${problems.join("\n")}`)
@@ -404,16 +501,11 @@ export function maxMapStars(map: MapDef): number {
   return countMapFights(map) * 3
 }
 
-/** 地图里有没有运行时还不支持的节点（槽位在开始出征时由生成器展开；只有 event 暂不支持） */
+/** 地图里有没有运行时还不支持的节点（槽位在开始出征时由生成器展开，没展开的不能跑） */
 export function unsupportedNode(map: MapDef): string | null {
   for (const [nodeId, node] of Object.entries(map.nodes)) {
     if (node.type === "slot") return `节点 ${nodeId} 是槽位，要先由生成器展开`
-    if (node.type === "event") return `节点 ${nodeId} 是事件，事件节点还没有运行时支持`
   }
   return null
 }
 
-/** 这张地图配置现在能不能开始出征（slot 和 generate 都会在开始时由生成器展开，只有含 event 的不能开） */
-export function isMapStartable(map: MapDef): boolean {
-  return !Object.values(map.nodes).some((node) => node.type === "event")
-}

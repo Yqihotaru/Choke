@@ -14,7 +14,7 @@ export const CONTENT_DIR = path.resolve(import.meta.dirname, "../../../content")
 /** 由服务端从磁盘读的内容：单文件 + 「一个文件一个 id」的目录 */
 const BATTLE_FILE = "enemy-supports.json"
 const QUESTS_FILE = "quests.json"
-const BATTLE_DIRS = ["enemies", "encounters", "maps", "rewards", "stories"] as const
+const BATTLE_DIRS = ["enemies", "encounters", "maps", "rewards", "stories", "events"] as const
 
 function isDirEntry(file: string): boolean {
   return BATTLE_DIRS.some(
@@ -106,6 +106,7 @@ export function loadContentDir(root: string): {
       maps: readDir(root, files, "maps"),
       rewards: readDir(root, files, "rewards"),
       stories: readDir(root, files, "stories"),
+      events: readDir(root, files, "events"),
     },
     battle,
   )

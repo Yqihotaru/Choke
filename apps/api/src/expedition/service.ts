@@ -20,22 +20,31 @@ import {
   availableNext,
   countMapFights,
   isFightNode,
-  isMapStartable,
   isTerminal,
   maxMapStars,
   unsupportedNode,
   type MapDef,
   type Reward,
 } from "@choke/shared/expedition/content"
+import {
+  clampThreat,
+  difficultyOf,
+  difficultyStatus,
+  objectiveMet,
+  objectiveText,
+  scaleEncounterHp,
+} from "@choke/shared/expedition/difficulty"
 import { dailyMapSeed, materializeMap } from "@choke/shared/expedition/generator"
 import { isRewardEmpty, mapStarTier, mergeRewards, rollRewardTable } from "@choke/shared/expedition/loot"
 import type {
   ExpeditionBattleView,
   ExpeditionEnd,
+  ExpeditionEventView,
   ExpeditionPoolCard,
   ExpeditionSettlement,
   ExpeditionStoryView,
   ExpeditionView,
+  ObjectiveResult,
 } from "@choke/shared/expedition/view"
 import { isAttachmentEmpty } from "@choke/shared/mail"
 import { addPlayerExp } from "@choke/shared/player"
@@ -84,6 +93,14 @@ export function expiryOf(map: MapDef, now: number): number {
 function rewardTable(id: string | undefined) {
   return id ? WORLD_CONTENT.rewards[id] : undefined
 }
+
+/** 这条出征当前档位的掉落倍率 */
+function lootMultOf(exp: Pick<ExpRow, "map" | "threat">): number {
+  return difficultyStatus(exp.map, exp.threat).lootMult
+}
+
+/** 事件选项扣血最多扣到剩这么多（不会直接打死），已经更低的不再扣 */
+const EVENT_HP_FLOOR = 0.05
 
 async function loadOpen(exec: Exec, userId: string, lock = false): Promise<ExpRow | null> {
   const query = exec
@@ -138,6 +155,12 @@ async function buildView(exec: Exec, exp: ExpRow): Promise<ExpeditionView> {
     if (def) story = { nodeId: exp.position, title: def.title, lines: def.lines }
   }
 
+  let event: ExpeditionEventView | null = null
+  if (node?.type === "event" && !exp.nodeDone) {
+    const def = WORLD_CONTENT.events[node.event]
+    if (def) event = { nodeId: exp.position, title: def.title, text: def.text, options: def.options }
+  }
+
   return {
     id: exp.id,
     status: exp.status,
@@ -160,6 +183,8 @@ async function buildView(exec: Exec, exp: ExpRow): Promise<ExpeditionView> {
     expiresAt: exp.expiresAt.toISOString(),
     battle: current && isFightNode(node) ? battleView(current) : null,
     story,
+    event,
+    difficulty: difficultyStatus(exp.map, exp.threat),
     settlement: exp.settlement ?? null,
   }
 }
@@ -216,9 +241,6 @@ export async function startExpedition(userId: string, input: StartInput, now = D
 
   const rawMap = WORLD_CONTENT.maps[input.mapId]
   if (!rawMap) throw new TxAbort(404, "unknown_map", "没有这张地图")
-  if (!isMapStartable(rawMap)) {
-    throw new TxAbort(400, "map_unavailable", `这张地图暂时不能出征：${unsupportedNode(rawMap) ?? "存在未支持的节点"}`)
-  }
 
   return db.transaction(async (tx) => {
     await lockUser(tx, userId)
@@ -323,6 +345,7 @@ export async function startExpedition(userId: string, input: StartInput, now = D
         pool,
         allocation,
         position: map.start,
+        threat: difficultyOf(map).startThreat,
         staminaCost: cost,
         startedAt: new Date(now),
         expiresAt: new Date(expiryOf(map, now)),
@@ -343,10 +366,15 @@ export async function startExpedition(userId: string, input: StartInput, now = D
 
 // ---------- 节点 ----------
 
-/** 走进一个节点：战斗节点存遭遇快照，宝箱当场掷好，休息回满血 */
+/**
+ * 走进一个节点：先结算这个格子的威胁加减（档位随之变），再按新档位处理——
+ * 战斗节点存遭遇快照（敌人血量按档位放大，之后重放和重试都用这份），宝箱当场掷好，休息回满血。
+ */
 async function enterNode(tx: Tx, exp: ExpRow, nodeId: string): Promise<void> {
   const node = exp.map.nodes[nodeId]!
-  const set: Partial<typeof expeditions.$inferInsert> = { position: nodeId, nodeDone: false, updatedAt: new Date() }
+  const threat = clampThreat(exp.threat + (node.threat ?? 0))
+  const status = difficultyStatus(exp.map, threat)
+  const set: Partial<typeof expeditions.$inferInsert> = { position: nodeId, nodeDone: false, threat, updatedAt: new Date() }
 
   switch (node.type) {
     case "battle":
@@ -356,7 +384,7 @@ async function enterNode(tx: Tx, exp: ExpRow, nodeId: string): Promise<void> {
       await tx.insert(expeditionBattles).values({
         expeditionId: exp.id,
         nodeId,
-        encounter,
+        encounter: scaleEncounterHp(encounter, status.hpMult),
         seed: `${exp.seed}/battle-${nodeId}`,
         apMax: apMaxOf(exp.allocation),
         hpRatioStart: exp.hpRatio,
@@ -366,10 +394,13 @@ async function enterNode(tx: Tx, exp: ExpRow, nodeId: string): Promise<void> {
     case "story":
       if (!WORLD_CONTENT.stories[node.story]) set.nodeDone = true
       break
+    case "event":
+      if (!WORLD_CONTENT.events[node.event]) set.nodeDone = true
+      break
     case "treasure": {
       const table = rewardTable(node.rewards)
       if (table) {
-        const reward = rollRewardTable(table, { seed: exp.seed, stream: `treasure-${nodeId}` })
+        const reward = rollRewardTable(table, { seed: exp.seed, stream: `treasure-${nodeId}`, lootMult: status.lootMult })
         if (!isRewardEmpty(reward)) set.drops = [...exp.drops, { node: nodeId, reward }]
       }
       set.nodeDone = true
@@ -425,6 +456,33 @@ export async function playStory(userId: string, choices: number[], now = Date.no
       .update(expeditions)
       .set({ flags: [...flags], nodeDone: true, updatedAt: new Date() })
       .where(eq(expeditions.id, exp.id))
+    return viewById(tx, exp.id)
+  })
+}
+
+// ---------- 战斗 ----------
+
+/** 事件：玩家选一个选项，服务端只执行白名单里的四种效果（威胁、扣血比例、奖励、标记） */
+export async function playEvent(userId: string, choice: number, now = Date.now()): Promise<ExpeditionView> {
+  await expireDue(userId, now)
+  return db.transaction(async (tx) => {
+    const exp = await requireOpen(tx, userId, now)
+    requireActive(exp)
+    const node = exp.map.nodes[exp.position]
+    if (node?.type !== "event" || exp.nodeDone) throw new TxAbort(400, "no_event", "现在没有要处理的事件")
+    const option = WORLD_CONTENT.events[node.event]?.options[choice]
+    if (!option) throw new TxAbort(400, "bad_choice", "选项不存在")
+
+    const set: Partial<typeof expeditions.$inferInsert> = { nodeDone: true, updatedAt: new Date() }
+    if (option.threat) set.threat = clampThreat(exp.threat + option.threat)
+    if (option.hpLossPct) {
+      set.hpRatio = Math.min(exp.hpRatio, Math.max(EVENT_HP_FLOOR, exp.hpRatio - option.hpLossPct))
+    }
+    if (option.set.length > 0) set.flags = [...new Set([...exp.flags, ...option.set])]
+    if (option.reward && !isRewardEmpty(option.reward)) {
+      set.drops = [...exp.drops, { node: exp.position, reward: option.reward }]
+    }
+    await tx.update(expeditions).set(set).where(eq(expeditions.id, exp.id))
     return viewById(tx, exp.id)
   })
 }
@@ -546,7 +604,7 @@ export async function appendActions(
         const node = exp.map.nodes[exp.position]
         const table = isFightNode(node) ? rewardTable(node.rewards) : undefined
         const reward = table
-          ? rollRewardTable(table, { seed: exp.seed, stream: `loot-${exp.position}`, stars })
+          ? rollRewardTable(table, { seed: exp.seed, stream: `loot-${exp.position}`, stars, lootMult: lootMultOf(exp) })
           : undefined
         await tx
           .update(expeditions)
@@ -615,7 +673,14 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
   const stars = totalStars(battles)
   const maxStars = maxMapStars(exp.map)
   const cleared = end === "cleared" || (end === "expired" && atEnd(exp))
-
+  const status = difficultyStatus(exp.map, exp.threat)
+  const objectives: ObjectiveResult[] = (exp.map.objectives ?? []).map((objective) => ({
+    text: objectiveText(objective),
+    met: cleared && objectiveMet(objective, { tier: status.tier, flags: exp.flags }),
+  }))
+  const objectivesMet = objectives.filter((o) => o.met).length
+  /** 写了通关目标的图，通关星数 = 达成的目标数；没写的还按战斗星数折算 */
+  const clearTier = exp.map.objectives?.length ? objectivesMet : mapStarTier(stars, maxStars)
   let rewards: Reward = {}
   if (end !== "abandoned") {
     const parts: Reward[] = exp.drops.map((drop) => drop.reward)
@@ -631,8 +696,9 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
           rollRewardTable(table, {
             seed: exp.seed,
             stream: "clear",
-            stars: mapStarTier(stars, maxStars),
+            stars: clearTier,
             firstClear: !before || before.clears === 0,
+            lootMult: status.lootMult,
           }),
         )
       }
@@ -675,12 +741,23 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
     if (row) {
       await tx
         .update(mapClears)
-        .set({ bestStars: Math.max(row.bestStars, stars), clears: row.clears + 1, lastClearedAt: date })
+        .set({
+          bestStars: Math.max(row.bestStars, stars),
+          bestObjectives: Math.max(row.bestObjectives, objectivesMet),
+          clears: row.clears + 1,
+          lastClearedAt: date,
+        })
         .where(and(eq(mapClears.userId, exp.userId), eq(mapClears.mapId, exp.mapId)))
     } else {
-      await tx
-        .insert(mapClears)
-        .values({ userId: exp.userId, mapId: exp.mapId, bestStars: stars, clears: 1, firstClearedAt: date, lastClearedAt: date })
+      await tx.insert(mapClears).values({
+        userId: exp.userId,
+        mapId: exp.mapId,
+        bestStars: stars,
+        bestObjectives: objectivesMet,
+        clears: 1,
+        firstClearedAt: date,
+        lastClearedAt: date,
+      })
     }
   }
 
@@ -689,6 +766,8 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
     rewards,
     stars,
     maxStars,
+    tier: status.tier,
+    objectives,
     staminaSpent: exp.staminaCost - refund,
     staminaRefunded: refund,
     viaMail,
@@ -791,6 +870,9 @@ export interface MapListing {
   startable: boolean
   clears: number
   bestStars: number
+  /** 这张图有几个通关目标、历史最多达成几个（没写目标是 0 / 0） */
+  objectiveCount: number
+  bestObjectives: number
 }
 
 export async function listMaps(userId: string, now = Date.now()): Promise<MapListing[]> {
@@ -806,8 +888,10 @@ export async function listMaps(userId: string, now = Date.now()): Promise<MapLis
     fights: countMapFights(map),
     maxStars: maxMapStars(map),
     endsAt: new Date(expiryOf(map, now)).toISOString(),
-    startable: isMapStartable(map),
+    startable: true,
     clears: byMap.get(id)?.clears ?? 0,
     bestStars: byMap.get(id)?.bestStars ?? 0,
+    objectiveCount: map.objectives?.length ?? 0,
+    bestObjectives: byMap.get(id)?.bestObjectives ?? 0,
   }))
 }

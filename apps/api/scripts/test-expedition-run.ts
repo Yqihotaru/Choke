@@ -23,7 +23,7 @@ const { progressionRoutes } = await import("../src/routes/progression")
 const { marketRoutes } = await import("../src/routes/market")
 const { expireDue, expiryOf } = await import("../src/expedition/service")
 const { lockedUserCardIds } = await import("../src/expedition/locks")
-const { WORLD_CONTENT } = await import("../src/content")
+const { WORLD_CONTENT, BATTLE_CONTENT } = await import("../src/content")
 const { pickMirrorCard, upsertMirrorCard } = await import("../src/mirror")
 const { heroCardDef } = await import("../src/hero")
 const { mulberry32 } = await import("../src/gacha/pools")
@@ -788,6 +788,132 @@ await test("日常随机地图：按玩家+地图+当天固定种子，放弃重
   const d1 = Date.parse("2026-11-24T10:00:00+08:00")
   const d2 = Date.parse("2026-11-25T04:01:00+08:00")
   assert.notEqual(dailyMapSeed(me.id, "test-daily", d1), dailyMapSeed(me.id, "test-daily", d2))
+})
+
+await test("难度：威胁值只在格子和事件上变，档位放大敌人血量和掉落主产，战败重试不变，通关目标与星级", async () => {
+  const eventCall = (userId: string, choice: number) => call(userId, "POST", `${base(userId)}/current/event`, { choice })
+  const ghostHp = BATTLE_CONTENT.enemies.ghost!.stats.hp
+  const bossHp = BATTLE_CONTENT.enemies["colossus-metronome"]!.stats.hp
+  const dropOf = async (userId: string, node: string) => {
+    const [row] = await db.select().from(expeditions).where(eq(expeditions.userId, userId))
+    return row!.drops.find((drop) => drop.node === node)?.reward
+  }
+
+  const me = await newPlayer()
+  let view = await must(start(me.id, "test-threat", me.ids))
+  assert.equal(view.difficulty.threat, 0)
+  assert.equal(view.difficulty.tier, 1)
+  assert.equal(view.difficulty.nextTierAt, 3)
+  assert.equal(view.battle!.encounter.enemy.stats.hp, ghostHp, "1 档血量原样")
+
+  // 普通战斗打赢不涨威胁
+  view = await fight(me.id, strongIds(me.ids))
+  assert.equal(view.difficulty.threat, 0, "杂鱼战斗不涨威胁")
+  assert.equal((await dropOf(me.id, "n1"))!.playerExp, 30, "1 档掉落不放大")
+  const hpBeforeEvent = view.hpRatio
+
+  // 事件节点
+  view = await must(move(me.id, "n2"))
+  assert.equal(view.event?.options.length, 3)
+  assert.equal(view.battle, null)
+  assert.equal((await move(me.id, "n3a")).status, 400, "事件没处理不能往下走")
+  assert.equal((await eventCall(me.id, 7)).status, 400, "选项不存在")
+  assert.equal((await eventCall(me.id, -1)).status, 400)
+  view = await must(eventCall(me.id, 0))
+  assert.equal(view.event, null)
+  assert.equal(view.nodeDone, true)
+  assert.equal(view.difficulty.threat, 3)
+  assert.equal(view.difficulty.tier, 2)
+  assert.equal((await eventCall(me.id, 0)).status, 400, "事件不能选第二次")
+  assert.equal((await dropOf(me.id, "n2"))!.coins, 100, "事件奖励进待结算，不放大")
+  assert.equal(view.hpRatio, hpBeforeEvent)
+
+  // 危险路线：威胁 +4，进入时就是 3 档，敌人血量 ×1.7
+  view = await must(move(me.id, "n3a"))
+  assert.equal(view.difficulty.threat, 7)
+  assert.equal(view.difficulty.tier, 3)
+  assert.equal(view.difficulty.hpMult, 1.7)
+  const scaledGhost = Math.round(ghostHp * 1.7)
+  assert.equal(view.battle!.encounter.enemy.stats.hp, scaledGhost)
+
+  // 战败后同种子重试：血量、威胁、档位都和进入节点时一样
+  const lost = await loseOn(me.id, weakIds(me.ids))
+  assert.equal(lost.battle!.status, "lost")
+  const seed = lost.battle!.seed
+  view = await must(retry(me.id))
+  assert.equal(view.battle!.retries, 1)
+  assert.equal(view.battle!.seed, seed)
+  assert.equal(view.battle!.encounter.enemy.stats.hp, scaledGhost)
+  assert.equal(view.difficulty.threat, 7)
+
+  await fight(me.id, strongIds(me.ids))
+  const drop = (await dropOf(me.id, "n3a"))!
+  assert.equal(drop.playerExp, 57, "30 × 1.9")
+  assert.ok(drop.coins! >= 95 && drop.coins! <= 95 + 2 * 19, `coins ${drop.coins}`)
+
+  // Boss 在 3 档，血量 ×1.7，固定掉落 ×1.9
+  view = await must(move(me.id, "n4"))
+  assert.equal(view.difficulty.tier, 3)
+  assert.equal(view.battle!.encounter.enemy.stats.hp, Math.round(bossHp * 1.7))
+  view = await fight(me.id, strongIds(me.ids))
+  assert.equal(view.atEnd, true)
+  assert.equal((await dropOf(me.id, "n4"))!.coins, 380)
+
+  const [row] = await db.select().from(expeditions).where(eq(expeditions.userId, me.id))
+  const dropCoins = row!.drops.reduce((sum, d) => sum + (d.reward.coins ?? 0), 0)
+  const res = await settle(me.id)
+  assert.equal(res.status, 200, JSON.stringify(res.body))
+  const result = res.body.data
+  assert.equal(result.tier, 3)
+  assert.deepEqual(
+    result.objectives.map((o: { text: string; met: boolean }) => [o.text, o.met]),
+    [
+      ["3 档及以上通关", true],
+      ["得到祭坛的祝福", false],
+    ],
+  )
+  assert.equal(result.rewards.coins, dropCoins + 500, "首通奖励不放大")
+  const golden = result.rewards.packs.find((p: { pool: string }) => p.pool === "golden")
+  assert.equal(golden.count, 2, "通关固定奖励 1 × 1.9 取整；达成 1 个目标没到 3 星加成")
+  const [clear] = await db.select().from(mapClears).where(eq(mapClears.userId, me.id))
+  assert.equal(clear?.bestObjectives, 1)
+  assert.equal(
+    (await call(me.id, "GET", `/users/${me.id}/expeditions/maps`)).body.data.find((m: { id: string }) => m.id === "test-threat").bestObjectives,
+    1,
+  )
+})
+
+await test("难度：事件的另一个选项扣血设标记，不涨威胁；1 档通关拿到祝福目标", async () => {
+  const eventCall = (userId: string, choice: number) => call(userId, "POST", `${base(userId)}/current/event`, { choice })
+  const me = await newPlayer()
+  await must(start(me.id, "test-threat", me.ids))
+  let view = await fight(me.id, strongIds(me.ids))
+  const hpBefore = view.hpRatio
+  await must(move(me.id, "n2"))
+  view = await must(eventCall(me.id, 1))
+  assert.deepEqual(view.flags, ["blessed"])
+  assert.equal(view.difficulty.threat, 0)
+  assert.ok(Math.abs(view.hpRatio - Math.max(0.05, hpBefore - 0.2)) < 1e-9, `hp ${hpBefore} → ${view.hpRatio}`)
+
+  view = await must(move(me.id, "n3b"))
+  assert.equal(view.hpRatio, 1, "篝火回满")
+  assert.equal(view.difficulty.tier, 1)
+  await must(move(me.id, "n4"))
+  await fight(me.id, strongIds(me.ids))
+  const result = (await settle(me.id)).body.data
+  assert.equal(result.tier, 1)
+  assert.deepEqual(result.objectives.map((o: { met: boolean }) => o.met), [false, true])
+  assert.equal(result.rewards.packs.find((p: { pool: string }) => p.pool === "golden").count, 1, "1 档不放大")
+})
+
+await test("难度：不是事件节点时调事件接口被拒；别人的出征动不了", async () => {
+  const me = await newPlayer()
+  const other = await newPlayer()
+  await must(start(me.id, "test-threat", me.ids))
+  const res = await call(me.id, "POST", `${base(me.id)}/current/event`, { choice: 0 })
+  assert.equal(res.status, 400, "站在战斗节点上")
+  assert.equal((await call(other.id, "POST", `${base(me.id)}/current/event`, { choice: 0 })).status, 403)
+  await abandon(me.id)
 })
 
 await test("镜像卡抽取：不排除自己，且候选池有活跃玩家时能正常抽出对应档位镜像卡", async () => {

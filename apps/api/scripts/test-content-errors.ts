@@ -162,6 +162,20 @@ const CASES: Case[] = [
   { name: "生成模板引用不存在的遭遇", breakIt: editJson("maps/test-daily.json", (d) => (d.generate.battles[0].encounter = "nobody")), expect: "遭遇 nobody 不存在" },
   { name: "生成模板引用不存在的 Boss 遭遇", breakIt: editJson("maps/test-daily.json", (d) => (d.generate.bosses[0].encounter = "nobody")), expect: "遭遇 nobody 不存在" },
   { name: "生成模板开了 treasure 权重但没配 chests", breakIt: editJson("maps/test-daily.json", (d) => (d.generate.chests = [])), expect: "必须配置 chests" },
+  // ---- 难度、事件 ----
+  { name: "事件选项写了白名单以外的字段", breakIt: editJson("events/test-shrine.json", (d) => (d.options[0].damage = 999)), expect: "damage" },
+  { name: "事件选项威胁值超出范围", breakIt: editJson("events/test-shrine.json", (d) => (d.options[0].threat = 50)), expect: "threat" },
+  { name: "事件选项扣血比例过大", breakIt: editJson("events/test-shrine.json", (d) => (d.options[1].hpLossPct = 0.9)), expect: "hpLossPct" },
+  { name: "事件只有一个选项", breakIt: editJson("events/test-shrine.json", (d) => d.options.splice(1)), expect: "options" },
+  { name: "事件选项奖励引用不存在的卡包", breakIt: editJson("events/test-shrine.json", (d) => (d.options[0].reward = { packs: [{ pool: "nope", count: 1 }] })), expect: "nope" },
+  { name: "事件选项标记重复", breakIt: editJson("events/test-shrine.json", (d) => (d.options[1].set = ["x", "x"])), expect: "标记重复" },
+  { name: "事件节点引用不存在的事件", breakIt: editJson("maps/test-threat.json", (d) => (d.nodes.n2.event = "nope")), expect: "事件 nope 不存在" },
+  { name: "难度阈值不递增", breakIt: editJson("maps/test-threat.json", (d) => (d.difficulty = { thresholds: [3, 3, 6, 9] })), expect: "严格递增" },
+  { name: "血量倍率随档位下降", breakIt: editJson("maps/test-threat.json", (d) => (d.difficulty = { hpMult: [1, 2, 1.5, 3, 4] })), expect: "不能随档位下降" },
+  { name: "通关目标超过三个", breakIt: editJson("maps/test-threat.json", (d) => d.objectives.push({ tierAtLeast: 2 }, { tierAtLeast: 4 })), expect: "objectives" },
+  { name: "通关目标的标记没人能设置", breakIt: editJson("maps/test-threat.json", (d) => (d.objectives[1].flag = "never-set")), expect: "never-set" },
+  { name: "日常图通关目标写了标记", breakIt: editJson("maps/test-daily.json", (d) => (d.objectives = [{ flag: "x" }])), expect: "只能写档位" },
+  { name: "格子威胁值超出范围", breakIt: editJson("maps/test-threat.json", (d) => (d.nodes.n3a.threat = 99)), expect: "threat" },
   // ---- 文件层面 ----
   { name: "目录里有非 JSON 文件", breakIt: (root) => fs.writeFileSync(path.join(root, "enemies/notes.txt"), "x"), expect: "没接入：enemies/notes.txt" },
   {

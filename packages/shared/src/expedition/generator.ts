@@ -28,12 +28,17 @@ function pickWeighted<T extends { weight: number }>(items: readonly T[], roll: n
   return items[items.length - 1]!
 }
 
-function slotToMapNode(picked: SlotNode, base: { pos?: [number, number]; title?: string; next: string[]; requires?: { flag: string } }): MapNode {
+function slotToMapNode(
+  picked: SlotNode,
+  base: { pos?: [number, number]; title?: string; next: string[]; requires?: { flag: string }; threat?: number },
+): MapNode {
+  const threat = picked.threat ?? base.threat
   const common = {
     ...(base.pos ? { pos: base.pos } : {}),
     ...(picked.title ?? base.title ? { title: picked.title ?? base.title } : {}),
     next: [...base.next],
     ...(base.requires ? { requires: base.requires } : {}),
+    ...(threat ? { threat } : {}),
   }
   switch (picked.type) {
     case "battle":
@@ -129,6 +134,21 @@ export function generateMapFromTemplate(template: MapGeneratorTemplate, seed: st
         const picked = pickWeighted(template.bosses, rand())
         const rewards = picked.rewards ?? template.bossRewards
         nodes[nodeId] = { type: "boss", encounter: picked.encounter, ...(rewards ? { rewards } : {}), pos, next: [] }
+        return
+      }
+
+      if (template.danger && ids.length === 2 && rowIdx === 1 && rand() < template.danger.rate) {
+        const picked = pickWeighted(template.battles, rand())
+        const rewards = template.danger.rewards ?? picked.rewards ?? template.battleRewards
+        nodes[nodeId] = {
+          type: "battle",
+          encounter: picked.encounter,
+          ...(rewards ? { rewards } : {}),
+          title: "危险路线",
+          threat: template.danger.threat,
+          pos,
+          next,
+        }
         return
       }
 

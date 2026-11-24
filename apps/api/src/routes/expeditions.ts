@@ -11,6 +11,7 @@ import {
   getCurrentExpedition,
   listMaps,
   moveTo,
+  playEvent,
   playStory,
   resumeExpedition,
   retryBattle,
@@ -33,6 +34,7 @@ const startSchema = z.object({
 })
 const moveSchema = z.object({ to: z.string().min(1).max(80) })
 const storySchema = z.object({ choices: z.array(z.int().min(0).max(10)).max(20) })
+const eventSchema = z.object({ choice: z.int().min(0).max(10) })
 const lineupSchema = z.object({ lineup: z.array(z.int().positive()).min(1).max(20) })
 const actionsSchema = z.object({
   /** 客户端以为服务器已经有几条操作；对不上就拒绝，防止重复提交 */
@@ -92,6 +94,15 @@ export async function expeditionRoutes(app: FastifyInstance) {
     if (!userId) return
     const body = storySchema.parse(request.body)
     const view = await guardAbort(reply, () => playStory(userId, body.choices))
+    if (!view) return
+    return { ok: true, data: view }
+  })
+
+  app.post(`${base}/current/event`, async (request, reply) => {
+    const userId = self(request, reply)
+    if (!userId) return
+    const body = eventSchema.parse(request.body)
+    const view = await guardAbort(reply, () => playEvent(userId, body.choice))
     if (!view) return
     return { ok: true, data: view }
   })
