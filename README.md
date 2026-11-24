@@ -82,7 +82,7 @@ pnpm import:cards    # 全量卡池
 
 服务端测试脚本（`pnpm test:*`）会自己起一个临时 PGlite 数据目录（`PG_DATA_DIR`），不碰开发库；PGlite 只是 devDependency，生产安装不会带上。
 
-PGlite 和真 PostgreSQL 有细微差别（例如 Date 参数在 postgres-js 上会报错，PGlite 不会）。大改动后、合并或上线前，跑 `pnpm test:pg`：把需要数据库的测试在真 PostgreSQL 上再跑一遍。它读 `.env` 里的 `DATABASE_URL` 作为服务器，每个测试现建、跑完删掉一个 `choke_test_*` 临时库，不碰开发库里的数据。
+PGlite 和真 PostgreSQL 有细微差别（例如 Date 参数在 postgres-js 上会报错，PGlite 不会）。大改动后、合并或上线前，跑 `pnpm test:pg`：把需要数据库的测试在真 PostgreSQL 上再跑一遍。（日常：`pnpm test:fast` 约 4 秒，`pnpm test` 全部并行约 13 秒；测试清单自动发现，详见 `Design/测试说明 v0.1.md`。）它读 `.env` 里的 `DATABASE_URL` 作为服务器，每个测试现建、跑完删掉一个 `choke_test_*` 临时库，不碰开发库里的数据。
 
 卡牌实例新增永久序号 `serial`，卡定义的 `pulled` 记录累计发行数；熔卡不回收序号，交易保留原号。发号和实例创建在同一事务中完成。
 
