@@ -578,22 +578,17 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
             {hint}
           </p>
         )}
-        {stage === "stack" && !allOpen && (spotlightPhase === "hold" ? null : (
+        {stage === "stack" && !allOpen && (spotlight ? null : (
           <button
             type="button"
             className="op__btn op__btn--main"
             onClick={() => {
-              if (spotlight) {
-                playSfx("tick")
-                skipReveal()
-              } else {
-                playSfx("deal")
-                setAuto(true)
-              }
+              playSfx("deal")
+              setAuto(true)
             }}
-            disabled={waitingForFlip || (!spotlight && auto)}
+            disabled={auto}
           >
-            {spotlight ? "跳过" : "全部翻开"}
+            全部翻开
           </button>
         ))}
         {allOpen && (
