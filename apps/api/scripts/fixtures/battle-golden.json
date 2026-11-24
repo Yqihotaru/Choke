@@ -174,6 +174,41 @@
   "stars": 0,
   "digest": "fa81506568d1d602"
  },
+ "bare-brawler/normal/25": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 15,
+  "stars": 0,
+  "digest": "41fc8c875d357e82"
+ },
+ "bare-brawler/normal/26": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "8a8b06c5b48c43e4"
+ },
+ "bare-brawler/normal/27": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "55362d19f8a69151"
+ },
+ "bare-brawler/normal/28": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 15,
+  "stars": 0,
+  "digest": "b0d3c685b1ea3055"
+ },
+ "bare-brawler/normal/29": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 15,
+  "stars": 0,
+  "digest": "0e1376df0de99969"
+ },
  "bare-brawler/mid/0": {
   "phase": "lost",
   "turn": 7,
@@ -348,6 +383,41 @@
   "actions": 18,
   "stars": 0,
   "digest": "955f43f46d4c17c1"
+ },
+ "bare-brawler/mid/25": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "02ed896685b7dec9"
+ },
+ "bare-brawler/mid/26": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 18,
+  "stars": 0,
+  "digest": "1e9e3492b1926d28"
+ },
+ "bare-brawler/mid/27": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 21,
+  "stars": 0,
+  "digest": "74a2de78446776a8"
+ },
+ "bare-brawler/mid/28": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 18,
+  "stars": 0,
+  "digest": "2f2ab773f56798d1"
+ },
+ "bare-brawler/mid/29": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 22,
+  "stars": 0,
+  "digest": "08b5b54eeca97546"
  },
  "bare-brawler/strong/0": {
   "phase": "won",
@@ -524,6 +594,125 @@
   "stars": 3,
   "digest": "ecb183a182dc56fc"
  },
+ "bare-brawler/strong/25": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 13,
+  "stars": 2,
+  "digest": "11673cdfbea1a7b1"
+ },
+ "bare-brawler/strong/26": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 13,
+  "stars": 2,
+  "digest": "97ab7309de25d494"
+ },
+ "bare-brawler/strong/27": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "021fbdaaf8ff5b02"
+ },
+ "bare-brawler/strong/28": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 13,
+  "stars": 2,
+  "digest": "81a857b8fc5842b6"
+ },
+ "bare-brawler/strong/29": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 13,
+  "stars": 2,
+  "digest": "1f89cf7309791eae"
+ },
+ "bare-brawler/probe-blade/0": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 11,
+  "stars": 3,
+  "digest": "c36d4819dc12a5b1"
+ },
+ "bare-brawler/probe-blade/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 13,
+  "stars": 3,
+  "digest": "213c6bdc9df42278"
+ },
+ "bare-brawler/probe-arcane/0": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 27,
+  "stars": 0,
+  "digest": "c9448d0e0cd6fa48"
+ },
+ "bare-brawler/probe-arcane/1": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 19,
+  "stars": 0,
+  "digest": "1853e1427f6887ce"
+ },
+ "bare-brawler/probe-dot/0": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 14,
+  "stars": 1,
+  "digest": "2c7c7c8b41e8ae6f"
+ },
+ "bare-brawler/probe-dot/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 11,
+  "stars": 3,
+  "digest": "f3e7debd63fa8f77"
+ },
+ "bare-brawler/probe-swift/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 12,
+  "stars": 3,
+  "digest": "37a159a2d19ab260"
+ },
+ "bare-brawler/probe-swift/1": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 16,
+  "stars": 1,
+  "digest": "1f6ad7272114a121"
+ },
+ "bare-brawler/probe-combo/0": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 33,
+  "stars": 0,
+  "digest": "544d15aedf8cc978"
+ },
+ "bare-brawler/probe-combo/1": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 29,
+  "stars": 0,
+  "digest": "f9b7e894a8ef6061"
+ },
+ "bare-brawler/probe-sustain/0": {
+  "phase": "won",
+  "turn": 13,
+  "actions": 39,
+  "stars": 0,
+  "digest": "bea656eec62f8ee9"
+ },
+ "bare-brawler/probe-sustain/1": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 37,
+  "stars": 0,
+  "digest": "16718d9173639fe0"
+ },
  "colossus-metronome/normal/0": {
   "phase": "lost",
   "turn": 10,
@@ -698,6 +887,41 @@
   "actions": 30,
   "stars": 0,
   "digest": "58b8ba2fe88ab03b"
+ },
+ "colossus-metronome/normal/25": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 34,
+  "stars": 0,
+  "digest": "aade6e421621b0b8"
+ },
+ "colossus-metronome/normal/26": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 35,
+  "stars": 0,
+  "digest": "95751c2d59f512d4"
+ },
+ "colossus-metronome/normal/27": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 31,
+  "stars": 0,
+  "digest": "94c8d2aa226096c8"
+ },
+ "colossus-metronome/normal/28": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 36,
+  "stars": 0,
+  "digest": "e8102499cc7db640"
+ },
+ "colossus-metronome/normal/29": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 31,
+  "stars": 0,
+  "digest": "075291ec71604fac"
  },
  "colossus-metronome/mid/0": {
   "phase": "lost",
@@ -874,6 +1098,41 @@
   "stars": 0,
   "digest": "76b8c2c197f563da"
  },
+ "colossus-metronome/mid/25": {
+  "phase": "won",
+  "turn": 18,
+  "actions": 54,
+  "stars": 0,
+  "digest": "0f479d03d03f6189"
+ },
+ "colossus-metronome/mid/26": {
+  "phase": "lost",
+  "turn": 15,
+  "actions": 45,
+  "stars": 0,
+  "digest": "844b7b465446d953"
+ },
+ "colossus-metronome/mid/27": {
+  "phase": "lost",
+  "turn": 19,
+  "actions": 57,
+  "stars": 0,
+  "digest": "871ed1a5fbfca60b"
+ },
+ "colossus-metronome/mid/28": {
+  "phase": "lost",
+  "turn": 21,
+  "actions": 62,
+  "stars": 0,
+  "digest": "e7fbcd90295c7fa6"
+ },
+ "colossus-metronome/mid/29": {
+  "phase": "lost",
+  "turn": 20,
+  "actions": 60,
+  "stars": 0,
+  "digest": "e5f49d6ce2fad2f5"
+ },
  "colossus-metronome/strong/0": {
   "phase": "won",
   "turn": 7,
@@ -1048,6 +1307,125 @@
   "actions": 24,
   "stars": 2,
   "digest": "98542a4726e7db4c"
+ },
+ "colossus-metronome/strong/25": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 25,
+  "stars": 1,
+  "digest": "8fbe37d3149525ae"
+ },
+ "colossus-metronome/strong/26": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 25,
+  "stars": 2,
+  "digest": "09918b034d5955de"
+ },
+ "colossus-metronome/strong/27": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 26,
+  "stars": 1,
+  "digest": "c90ce0c22bcb078a"
+ },
+ "colossus-metronome/strong/28": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 21,
+  "stars": 3,
+  "digest": "dfa384e852aecbe8"
+ },
+ "colossus-metronome/strong/29": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 25,
+  "stars": 1,
+  "digest": "0b057eeb187ab423"
+ },
+ "colossus-metronome/probe-blade/0": {
+  "phase": "won",
+  "turn": 12,
+  "actions": 47,
+  "stars": 1,
+  "digest": "04657ca57fc0a319"
+ },
+ "colossus-metronome/probe-blade/1": {
+  "phase": "won",
+  "turn": 16,
+  "actions": 64,
+  "stars": 0,
+  "digest": "8dd9d7b47056773e"
+ },
+ "colossus-metronome/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 28,
+  "actions": 80,
+  "stars": 0,
+  "digest": "4a1ebc9cb07742d4"
+ },
+ "colossus-metronome/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 29,
+  "actions": 82,
+  "stars": 0,
+  "digest": "e0e8dac35467e4b7"
+ },
+ "colossus-metronome/probe-dot/0": {
+  "phase": "won",
+  "turn": 14,
+  "actions": 43,
+  "stars": 0,
+  "digest": "2b0ec973a310bda1"
+ },
+ "colossus-metronome/probe-dot/1": {
+  "phase": "won",
+  "turn": 11,
+  "actions": 33,
+  "stars": 0,
+  "digest": "08ad8a325b8d797c"
+ },
+ "colossus-metronome/probe-swift/0": {
+  "phase": "won",
+  "turn": 19,
+  "actions": 60,
+  "stars": 0,
+  "digest": "1009b81bb0115619"
+ },
+ "colossus-metronome/probe-swift/1": {
+  "phase": "won",
+  "turn": 25,
+  "actions": 77,
+  "stars": 0,
+  "digest": "aebd328ef59fb2b9"
+ },
+ "colossus-metronome/probe-combo/0": {
+  "phase": "lost",
+  "turn": 21,
+  "actions": 67,
+  "stars": 0,
+  "digest": "b4300ecff1ef2fb2"
+ },
+ "colossus-metronome/probe-combo/1": {
+  "phase": "won",
+  "turn": 29,
+  "actions": 98,
+  "stars": 0,
+  "digest": "ac8ca256b728f243"
+ },
+ "colossus-metronome/probe-sustain/0": {
+  "phase": "lost",
+  "turn": 36,
+  "actions": 105,
+  "stars": 0,
+  "digest": "696f1ce2fd248d16"
+ },
+ "colossus-metronome/probe-sustain/1": {
+  "phase": "lost",
+  "turn": 45,
+  "actions": 139,
+  "stars": 0,
+  "digest": "3911b90f7a4efa3b"
  },
  "conductor/normal/0": {
   "phase": "lost",
@@ -1224,6 +1602,41 @@
   "stars": 0,
   "digest": "46add717f7e4f20f"
  },
+ "conductor/normal/25": {
+  "phase": "lost",
+  "turn": 2,
+  "actions": 4,
+  "stars": 0,
+  "digest": "d481cb69085b8624"
+ },
+ "conductor/normal/26": {
+  "phase": "lost",
+  "turn": 3,
+  "actions": 9,
+  "stars": 0,
+  "digest": "094a0b918118ada9"
+ },
+ "conductor/normal/27": {
+  "phase": "lost",
+  "turn": 2,
+  "actions": 4,
+  "stars": 0,
+  "digest": "507aad330d8befe0"
+ },
+ "conductor/normal/28": {
+  "phase": "lost",
+  "turn": 3,
+  "actions": 8,
+  "stars": 0,
+  "digest": "8bca1eb8bc85e880"
+ },
+ "conductor/normal/29": {
+  "phase": "lost",
+  "turn": 2,
+  "actions": 4,
+  "stars": 0,
+  "digest": "252c2705a0b4a040"
+ },
  "conductor/mid/0": {
   "phase": "lost",
   "turn": 4,
@@ -1398,6 +1811,41 @@
   "actions": 13,
   "stars": 0,
   "digest": "8abd389d8ca1e587"
+ },
+ "conductor/mid/25": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "e2cf86801f3b5ba9"
+ },
+ "conductor/mid/26": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "40f9ab89380e28b9"
+ },
+ "conductor/mid/27": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "a6f9da198897b043"
+ },
+ "conductor/mid/28": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 13,
+  "stars": 0,
+  "digest": "ccea72759d1cf068"
+ },
+ "conductor/mid/29": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "b8829b2d7bacab8b"
  },
  "conductor/strong/0": {
   "phase": "lost",
@@ -1574,6 +2022,125 @@
   "stars": 0,
   "digest": "d24d9a41d881ec45"
  },
+ "conductor/strong/25": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 24,
+  "stars": 0,
+  "digest": "6f3cd278b88729d2"
+ },
+ "conductor/strong/26": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 25,
+  "stars": 0,
+  "digest": "ce5a6cc0339342b3"
+ },
+ "conductor/strong/27": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 23,
+  "stars": 0,
+  "digest": "d42293a53c7f6e5a"
+ },
+ "conductor/strong/28": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 25,
+  "stars": 0,
+  "digest": "8862f5af681dab36"
+ },
+ "conductor/strong/29": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 24,
+  "stars": 1,
+  "digest": "2abf6941a2d96144"
+ },
+ "conductor/probe-blade/0": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 21,
+  "stars": 0,
+  "digest": "03804e94c9b6edeb"
+ },
+ "conductor/probe-blade/1": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 25,
+  "stars": 0,
+  "digest": "15de210b1cda515a"
+ },
+ "conductor/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 16,
+  "stars": 0,
+  "digest": "dcb6bd93fa95e7e3"
+ },
+ "conductor/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "950cb12b33fa6b7c"
+ },
+ "conductor/probe-dot/0": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 21,
+  "stars": 0,
+  "digest": "5a61253008ec2675"
+ },
+ "conductor/probe-dot/1": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 19,
+  "stars": 0,
+  "digest": "396d03a5c4a18868"
+ },
+ "conductor/probe-swift/0": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 18,
+  "stars": 0,
+  "digest": "cc93a03ba2c5b2df"
+ },
+ "conductor/probe-swift/1": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 18,
+  "stars": 0,
+  "digest": "28d8db6d6d38a1ad"
+ },
+ "conductor/probe-combo/0": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 22,
+  "stars": 0,
+  "digest": "b7519eda712543f8"
+ },
+ "conductor/probe-combo/1": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 19,
+  "stars": 0,
+  "digest": "b37e69a039562cd3"
+ },
+ "conductor/probe-sustain/0": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 24,
+  "stars": 0,
+  "digest": "a13c4b2ab6c9fd31"
+ },
+ "conductor/probe-sustain/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 23,
+  "stars": 0,
+  "digest": "e11d870e35230138"
+ },
  "dusk-warden/normal/0": {
   "phase": "lost",
   "turn": 7,
@@ -1748,6 +2315,41 @@
   "actions": 26,
   "stars": 0,
   "digest": "181e0985319ca548"
+ },
+ "dusk-warden/normal/25": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 25,
+  "stars": 0,
+  "digest": "01cfdae6fc607112"
+ },
+ "dusk-warden/normal/26": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 22,
+  "stars": 0,
+  "digest": "ff3c7edf45c51825"
+ },
+ "dusk-warden/normal/27": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 22,
+  "stars": 0,
+  "digest": "25884c0f69671d56"
+ },
+ "dusk-warden/normal/28": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 25,
+  "stars": 0,
+  "digest": "ea7bc80e19f99097"
+ },
+ "dusk-warden/normal/29": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 25,
+  "stars": 0,
+  "digest": "d87f2ea87769cf4a"
  },
  "dusk-warden/mid/0": {
   "phase": "lost",
@@ -1924,6 +2526,41 @@
   "stars": 0,
   "digest": "e408d5a728cbc29a"
  },
+ "dusk-warden/mid/25": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 37,
+  "stars": 0,
+  "digest": "28396a13f8904753"
+ },
+ "dusk-warden/mid/26": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 31,
+  "stars": 0,
+  "digest": "74576f8ec95b079f"
+ },
+ "dusk-warden/mid/27": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 35,
+  "stars": 0,
+  "digest": "98de75c18a4e718b"
+ },
+ "dusk-warden/mid/28": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 35,
+  "stars": 0,
+  "digest": "eeb1aaf5adb6f00a"
+ },
+ "dusk-warden/mid/29": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 35,
+  "stars": 0,
+  "digest": "385eb8c3dfd57705"
+ },
  "dusk-warden/strong/0": {
   "phase": "won",
   "turn": 4,
@@ -2098,6 +2735,125 @@
   "actions": 13,
   "stars": 3,
   "digest": "159c929719a8c8d8"
+ },
+ "dusk-warden/strong/25": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 14,
+  "stars": 2,
+  "digest": "c57c061207b4968b"
+ },
+ "dusk-warden/strong/26": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 14,
+  "stars": 2,
+  "digest": "d0dd752f520cb841"
+ },
+ "dusk-warden/strong/27": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 13,
+  "stars": 3,
+  "digest": "f8c1cba717237a5a"
+ },
+ "dusk-warden/strong/28": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 14,
+  "stars": 2,
+  "digest": "280f609ff6b419b6"
+ },
+ "dusk-warden/strong/29": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 14,
+  "stars": 2,
+  "digest": "b4651543d6f9997f"
+ },
+ "dusk-warden/probe-blade/0": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 30,
+  "stars": 0,
+  "digest": "b172e7b07c5950ff"
+ },
+ "dusk-warden/probe-blade/1": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 23,
+  "stars": 2,
+  "digest": "240f35bd2bfd51e6"
+ },
+ "dusk-warden/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 20,
+  "actions": 53,
+  "stars": 0,
+  "digest": "0548393255e06db1"
+ },
+ "dusk-warden/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 16,
+  "actions": 49,
+  "stars": 0,
+  "digest": "533c7c2294794bca"
+ },
+ "dusk-warden/probe-dot/0": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 21,
+  "stars": 1,
+  "digest": "590e2b4775ed73d0"
+ },
+ "dusk-warden/probe-dot/1": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 21,
+  "stars": 0,
+  "digest": "95dded16514523a4"
+ },
+ "dusk-warden/probe-swift/0": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 23,
+  "stars": 0,
+  "digest": "6be7f5d9e94b8ede"
+ },
+ "dusk-warden/probe-swift/1": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 15,
+  "stars": 3,
+  "digest": "90acd18956c7a66f"
+ },
+ "dusk-warden/probe-combo/0": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 36,
+  "stars": 0,
+  "digest": "c116f1cbfdf0f8c4"
+ },
+ "dusk-warden/probe-combo/1": {
+  "phase": "won",
+  "turn": 11,
+  "actions": 40,
+  "stars": 0,
+  "digest": "54c994ef744fe336"
+ },
+ "dusk-warden/probe-sustain/0": {
+  "phase": "lost",
+  "turn": 19,
+  "actions": 58,
+  "stars": 0,
+  "digest": "c77348d7b4d7906d"
+ },
+ "dusk-warden/probe-sustain/1": {
+  "phase": "lost",
+  "turn": 19,
+  "actions": 57,
+  "stars": 0,
+  "digest": "a5d5666b6b9cc2f7"
  },
  "ember-scribe/normal/0": {
   "phase": "lost",
@@ -2274,6 +3030,41 @@
   "stars": 0,
   "digest": "8fa0d21fbcdbb911"
  },
+ "ember-scribe/normal/25": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "ff630761fb6d6ada"
+ },
+ "ember-scribe/normal/26": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "c7964b4592506392"
+ },
+ "ember-scribe/normal/27": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "d90240d62d9ae169"
+ },
+ "ember-scribe/normal/28": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "f27febce8230e137"
+ },
+ "ember-scribe/normal/29": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "9255e4f8af8547a6"
+ },
  "ember-scribe/mid/0": {
   "phase": "lost",
   "turn": 6,
@@ -2448,6 +3239,41 @@
   "actions": 17,
   "stars": 0,
   "digest": "00435dba761d9bcf"
+ },
+ "ember-scribe/mid/25": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 17,
+  "stars": 0,
+  "digest": "367f602b80877792"
+ },
+ "ember-scribe/mid/26": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 17,
+  "stars": 0,
+  "digest": "6570622ec8e081a3"
+ },
+ "ember-scribe/mid/27": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 17,
+  "stars": 0,
+  "digest": "b5968280fd55c3f5"
+ },
+ "ember-scribe/mid/28": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 17,
+  "stars": 0,
+  "digest": "3044de6723e70f2c"
+ },
+ "ember-scribe/mid/29": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "9d4faf042ec261ba"
  },
  "ember-scribe/strong/0": {
   "phase": "won",
@@ -2624,6 +3450,125 @@
   "stars": 2,
   "digest": "d3a6f3cf8ebeb4b5"
  },
+ "ember-scribe/strong/25": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 13,
+  "stars": 2,
+  "digest": "d66f25bca3602d20"
+ },
+ "ember-scribe/strong/26": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 13,
+  "stars": 2,
+  "digest": "e3926c87845ec81d"
+ },
+ "ember-scribe/strong/27": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "a1d0aa417894b15b"
+ },
+ "ember-scribe/strong/28": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 9,
+  "stars": 3,
+  "digest": "aa04b88f61ac8fc8"
+ },
+ "ember-scribe/strong/29": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 12,
+  "stars": 3,
+  "digest": "0ef101978b51d964"
+ },
+ "ember-scribe/probe-blade/0": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 19,
+  "stars": 2,
+  "digest": "5e34083ba24dc55b"
+ },
+ "ember-scribe/probe-blade/1": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 11,
+  "stars": 3,
+  "digest": "1a05d97b02dd2efe"
+ },
+ "ember-scribe/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 27,
+  "stars": 0,
+  "digest": "3521d18d5157df5d"
+ },
+ "ember-scribe/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 27,
+  "stars": 0,
+  "digest": "040fa560016bad1f"
+ },
+ "ember-scribe/probe-dot/0": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 19,
+  "stars": 1,
+  "digest": "03443a1eccbd60c8"
+ },
+ "ember-scribe/probe-dot/1": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 20,
+  "stars": 1,
+  "digest": "565d658e0f0263c7"
+ },
+ "ember-scribe/probe-swift/0": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 15,
+  "stars": 3,
+  "digest": "45937606d0ae376c"
+ },
+ "ember-scribe/probe-swift/1": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 15,
+  "stars": 3,
+  "digest": "81011223bd011392"
+ },
+ "ember-scribe/probe-combo/0": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 24,
+  "stars": 1,
+  "digest": "a275e60da60e8f80"
+ },
+ "ember-scribe/probe-combo/1": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 23,
+  "stars": 1,
+  "digest": "dd336abea2bb5c70"
+ },
+ "ember-scribe/probe-sustain/0": {
+  "phase": "won",
+  "turn": 15,
+  "actions": 45,
+  "stars": 1,
+  "digest": "de0aca9cd1ea773b"
+ },
+ "ember-scribe/probe-sustain/1": {
+  "phase": "won",
+  "turn": 15,
+  "actions": 45,
+  "stars": 1,
+  "digest": "0897f7c6858e3e59"
+ },
  "frost-dancer/normal/0": {
   "phase": "won",
   "turn": 10,
@@ -2798,6 +3743,41 @@
   "actions": 29,
   "stars": 0,
   "digest": "32dd0180bbe6351e"
+ },
+ "frost-dancer/normal/25": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 31,
+  "stars": 0,
+  "digest": "8e993d7dd7dd9118"
+ },
+ "frost-dancer/normal/26": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 31,
+  "stars": 0,
+  "digest": "879f821dc4357681"
+ },
+ "frost-dancer/normal/27": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 31,
+  "stars": 0,
+  "digest": "095ae339dc6d9a45"
+ },
+ "frost-dancer/normal/28": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 25,
+  "stars": 1,
+  "digest": "9dba430ba7a40023"
+ },
+ "frost-dancer/normal/29": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 31,
+  "stars": 0,
+  "digest": "cd4a49eb264f7e09"
  },
  "frost-dancer/mid/0": {
   "phase": "won",
@@ -2974,6 +3954,41 @@
   "stars": 1,
   "digest": "a4a7e98956f13c05"
  },
+ "frost-dancer/mid/25": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 17,
+  "stars": 1,
+  "digest": "292a972e4372a4e0"
+ },
+ "frost-dancer/mid/26": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 28,
+  "stars": 1,
+  "digest": "dd7202af350d0aba"
+ },
+ "frost-dancer/mid/27": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 20,
+  "stars": 1,
+  "digest": "465668e358a61717"
+ },
+ "frost-dancer/mid/28": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 19,
+  "stars": 1,
+  "digest": "e152075d81efe5a4"
+ },
+ "frost-dancer/mid/29": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 23,
+  "stars": 1,
+  "digest": "179eb59c9b2a1332"
+ },
  "frost-dancer/strong/0": {
   "phase": "won",
   "turn": 1,
@@ -3148,6 +4163,125 @@
   "actions": 8,
   "stars": 3,
   "digest": "01fb94e6a3a24a3f"
+ },
+ "frost-dancer/strong/25": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 3,
+  "digest": "3f8428739ca3c63c"
+ },
+ "frost-dancer/strong/26": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "028afdc8c16cc5c5"
+ },
+ "frost-dancer/strong/27": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 3,
+  "digest": "b1d949db2ec9f0b9"
+ },
+ "frost-dancer/strong/28": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "8862924d004ced65"
+ },
+ "frost-dancer/strong/29": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "99605f879bf4bb8b"
+ },
+ "frost-dancer/probe-blade/0": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 6,
+  "stars": 3,
+  "digest": "54986b528899be98"
+ },
+ "frost-dancer/probe-blade/1": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 11,
+  "stars": 3,
+  "digest": "fac986fa5ee504e6"
+ },
+ "frost-dancer/probe-arcane/0": {
+  "phase": "won",
+  "turn": 14,
+  "actions": 37,
+  "stars": 1,
+  "digest": "839eefee6ac75fce"
+ },
+ "frost-dancer/probe-arcane/1": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 27,
+  "stars": 1,
+  "digest": "1c5d58a751625da0"
+ },
+ "frost-dancer/probe-dot/0": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "1fd9aad7c11f4eb0"
+ },
+ "frost-dancer/probe-dot/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 11,
+  "stars": 2,
+  "digest": "1a36642494dacb3f"
+ },
+ "frost-dancer/probe-swift/0": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 5,
+  "stars": 3,
+  "digest": "703afe3cf0be7ba8"
+ },
+ "frost-dancer/probe-swift/1": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 9,
+  "stars": 3,
+  "digest": "b2b99cb20f638457"
+ },
+ "frost-dancer/probe-combo/0": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 16,
+  "stars": 2,
+  "digest": "e714911a5615efe2"
+ },
+ "frost-dancer/probe-combo/1": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 20,
+  "stars": 1,
+  "digest": "0553f484b18c7843"
+ },
+ "frost-dancer/probe-sustain/0": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 30,
+  "stars": 1,
+  "digest": "324b53ece06b2f75"
+ },
+ "frost-dancer/probe-sustain/1": {
+  "phase": "won",
+  "turn": 12,
+  "actions": 36,
+  "stars": 1,
+  "digest": "c51c236fa230eea8"
  },
  "ghost/normal/0": {
   "phase": "lost",
@@ -3324,6 +4458,41 @@
   "stars": 0,
   "digest": "b84554296ddb5ed9"
  },
+ "ghost/normal/25": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 19,
+  "stars": 0,
+  "digest": "f047357028155a09"
+ },
+ "ghost/normal/26": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "7b049220be5c56d4"
+ },
+ "ghost/normal/27": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 19,
+  "stars": 0,
+  "digest": "3d46ce7879fab5ad"
+ },
+ "ghost/normal/28": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 19,
+  "stars": 0,
+  "digest": "ff4b946bd16f12fa"
+ },
+ "ghost/normal/29": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 19,
+  "stars": 0,
+  "digest": "bee605eaecd45064"
+ },
  "ghost/mid/0": {
   "phase": "won",
   "turn": 6,
@@ -3498,6 +4667,41 @@
   "actions": 19,
   "stars": 1,
   "digest": "f6adb3f58d7bf6e3"
+ },
+ "ghost/mid/25": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 13,
+  "stars": 1,
+  "digest": "adb686d8fb92c008"
+ },
+ "ghost/mid/26": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 24,
+  "stars": 0,
+  "digest": "29c5a41c3cc0865c"
+ },
+ "ghost/mid/27": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "0e52d4f88d74644a"
+ },
+ "ghost/mid/28": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "d76fe2d7a0961826"
+ },
+ "ghost/mid/29": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 17,
+  "stars": 0,
+  "digest": "6e7a7f3707b03893"
  },
  "ghost/strong/0": {
   "phase": "won",
@@ -3674,6 +4878,125 @@
   "stars": 3,
   "digest": "d68ef20c3cff8fa5"
  },
+ "ghost/strong/25": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 3,
+  "digest": "526a16c6d4ab22a2"
+ },
+ "ghost/strong/26": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "89cbaab502b2dddd"
+ },
+ "ghost/strong/27": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 3,
+  "digest": "ffdd62b4b864aafc"
+ },
+ "ghost/strong/28": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "243752ca0c799685"
+ },
+ "ghost/strong/29": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "61e4f275d0995fd3"
+ },
+ "ghost/probe-blade/0": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "2a19a04e9005812c"
+ },
+ "ghost/probe-blade/1": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 6,
+  "stars": 3,
+  "digest": "a15d37ab38256668"
+ },
+ "ghost/probe-arcane/0": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 29,
+  "stars": 0,
+  "digest": "fe37cc29240fea67"
+ },
+ "ghost/probe-arcane/1": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 27,
+  "stars": 0,
+  "digest": "10dcf323935d9b8e"
+ },
+ "ghost/probe-dot/0": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 10,
+  "stars": 2,
+  "digest": "37edbfb088e30e4b"
+ },
+ "ghost/probe-dot/1": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 10,
+  "stars": 2,
+  "digest": "60eb772075c6451b"
+ },
+ "ghost/probe-swift/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 13,
+  "stars": 0,
+  "digest": "f92315fba19e7c47"
+ },
+ "ghost/probe-swift/1": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 2,
+  "digest": "9dfad0dc032eb6ca"
+ },
+ "ghost/probe-combo/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 14,
+  "stars": 0,
+  "digest": "8263256c33aec172"
+ },
+ "ghost/probe-combo/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 14,
+  "stars": 0,
+  "digest": "72d53d083ecbff28"
+ },
+ "ghost/probe-sustain/0": {
+  "phase": "won",
+  "turn": 11,
+  "actions": 33,
+  "stars": 0,
+  "digest": "048a9edd2d09f7a1"
+ },
+ "ghost/probe-sustain/1": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 31,
+  "stars": 0,
+  "digest": "6142dacca9ba55e5"
+ },
  "glacier-requiem/normal/0": {
   "phase": "lost",
   "turn": 5,
@@ -3848,6 +5171,41 @@
   "actions": 11,
   "stars": 0,
   "digest": "84134c557a0c583d"
+ },
+ "glacier-requiem/normal/25": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 14,
+  "stars": 0,
+  "digest": "f14bb91d1bb2f43c"
+ },
+ "glacier-requiem/normal/26": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 18,
+  "stars": 0,
+  "digest": "e17509829d5617aa"
+ },
+ "glacier-requiem/normal/27": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 14,
+  "stars": 0,
+  "digest": "932babdf8ac43328"
+ },
+ "glacier-requiem/normal/28": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 15,
+  "stars": 0,
+  "digest": "c5b1306bba8cbb67"
+ },
+ "glacier-requiem/normal/29": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 14,
+  "stars": 0,
+  "digest": "c9235521ee8e9489"
  },
  "glacier-requiem/mid/0": {
   "phase": "lost",
@@ -4024,6 +5382,41 @@
   "stars": 0,
   "digest": "300c965c84e1c20f"
  },
+ "glacier-requiem/mid/25": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 19,
+  "stars": 0,
+  "digest": "5e4c793e90151c5e"
+ },
+ "glacier-requiem/mid/26": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 28,
+  "stars": 0,
+  "digest": "69a491d6764a1931"
+ },
+ "glacier-requiem/mid/27": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 23,
+  "stars": 0,
+  "digest": "6c82342b672bb86f"
+ },
+ "glacier-requiem/mid/28": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 24,
+  "stars": 0,
+  "digest": "fca5f59f1a0b69d5"
+ },
+ "glacier-requiem/mid/29": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 21,
+  "stars": 0,
+  "digest": "3f384ee5d5d29816"
+ },
  "glacier-requiem/strong/0": {
   "phase": "won",
   "turn": 8,
@@ -4198,6 +5591,125 @@
   "actions": 24,
   "stars": 3,
   "digest": "f5c06616eb6ea622"
+ },
+ "glacier-requiem/strong/25": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 31,
+  "stars": 0,
+  "digest": "16235ab1ca3350cd"
+ },
+ "glacier-requiem/strong/26": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 31,
+  "stars": 1,
+  "digest": "a9792fa3e8bba29c"
+ },
+ "glacier-requiem/strong/27": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 23,
+  "stars": 2,
+  "digest": "31abdd803d81f405"
+ },
+ "glacier-requiem/strong/28": {
+  "phase": "won",
+  "turn": 11,
+  "actions": 33,
+  "stars": 0,
+  "digest": "91abce96a29c0ca7"
+ },
+ "glacier-requiem/strong/29": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 22,
+  "stars": 2,
+  "digest": "257f57d3b763ac2f"
+ },
+ "glacier-requiem/probe-blade/0": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 45,
+  "stars": 0,
+  "digest": "2b1c835db6e03cbb"
+ },
+ "glacier-requiem/probe-blade/1": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 40,
+  "stars": 0,
+  "digest": "fe85a3f30ff2ccf8"
+ },
+ "glacier-requiem/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 32,
+  "stars": 0,
+  "digest": "42678a411e49e31d"
+ },
+ "glacier-requiem/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 33,
+  "stars": 0,
+  "digest": "9d64eb988e1eb28a"
+ },
+ "glacier-requiem/probe-dot/0": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 31,
+  "stars": 0,
+  "digest": "e1c7a7f02e2280b5"
+ },
+ "glacier-requiem/probe-dot/1": {
+  "phase": "lost",
+  "turn": 14,
+  "actions": 40,
+  "stars": 0,
+  "digest": "29b0154320c9f6d1"
+ },
+ "glacier-requiem/probe-swift/0": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 31,
+  "stars": 0,
+  "digest": "3f87c6298171fe97"
+ },
+ "glacier-requiem/probe-swift/1": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 38,
+  "stars": 0,
+  "digest": "9ae55589e549cc46"
+ },
+ "glacier-requiem/probe-combo/0": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 38,
+  "stars": 0,
+  "digest": "0f7283bb6d2a4a1e"
+ },
+ "glacier-requiem/probe-combo/1": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 41,
+  "stars": 0,
+  "digest": "6255f55ee5e51e85"
+ },
+ "glacier-requiem/probe-sustain/0": {
+  "phase": "lost",
+  "turn": 16,
+  "actions": 45,
+  "stars": 0,
+  "digest": "d830f773c0e20048"
+ },
+ "glacier-requiem/probe-sustain/1": {
+  "phase": "lost",
+  "turn": 16,
+  "actions": 45,
+  "stars": 0,
+  "digest": "b820ede02428928d"
  },
  "halo-chorister/normal/0": {
   "phase": "lost",
@@ -4374,6 +5886,41 @@
   "stars": 0,
   "digest": "38e747625856a296"
  },
+ "halo-chorister/normal/25": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "f759cddeef57baba"
+ },
+ "halo-chorister/normal/26": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 15,
+  "stars": 0,
+  "digest": "96e6c08a5c9e5ae8"
+ },
+ "halo-chorister/normal/27": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 15,
+  "stars": 0,
+  "digest": "4b6f2ae1dce1881d"
+ },
+ "halo-chorister/normal/28": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "0fbf1b021137bad4"
+ },
+ "halo-chorister/normal/29": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "e378be4f81bdc97c"
+ },
  "halo-chorister/mid/0": {
   "phase": "lost",
   "turn": 7,
@@ -4548,6 +6095,41 @@
   "actions": 20,
   "stars": 0,
   "digest": "2e1e040c5a3672f2"
+ },
+ "halo-chorister/mid/25": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "4958fdf0872a5062"
+ },
+ "halo-chorister/mid/26": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "bd76c2f308092efc"
+ },
+ "halo-chorister/mid/27": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "940a0ac9cc493a5f"
+ },
+ "halo-chorister/mid/28": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "4b4e45f9fc5847f4"
+ },
+ "halo-chorister/mid/29": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "6c35f740722b19cb"
  },
  "halo-chorister/strong/0": {
   "phase": "won",
@@ -4724,6 +6306,125 @@
   "stars": 3,
   "digest": "4eaefcc36f815134"
  },
+ "halo-chorister/strong/25": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "81de69e4b0c4372a"
+ },
+ "halo-chorister/strong/26": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "7a1f6ab7b2b580f5"
+ },
+ "halo-chorister/strong/27": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 13,
+  "stars": 3,
+  "digest": "6685112346f47c74"
+ },
+ "halo-chorister/strong/28": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "31eed1c3cf37baac"
+ },
+ "halo-chorister/strong/29": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "f7208cd49219feb0"
+ },
+ "halo-chorister/probe-blade/0": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 23,
+  "stars": 2,
+  "digest": "f65499e8f9f832e3"
+ },
+ "halo-chorister/probe-blade/1": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 19,
+  "stars": 2,
+  "digest": "a823e8e75a8e769c"
+ },
+ "halo-chorister/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 31,
+  "stars": 0,
+  "digest": "19748059aa213d40"
+ },
+ "halo-chorister/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 31,
+  "stars": 0,
+  "digest": "3f11e0f2949786de"
+ },
+ "halo-chorister/probe-dot/0": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 20,
+  "stars": 1,
+  "digest": "0aef43e224cc7349"
+ },
+ "halo-chorister/probe-dot/1": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 24,
+  "stars": 0,
+  "digest": "0865dd73dac5ab79"
+ },
+ "halo-chorister/probe-swift/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 12,
+  "stars": 3,
+  "digest": "da833c06043a258c"
+ },
+ "halo-chorister/probe-swift/1": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 15,
+  "stars": 3,
+  "digest": "612f4953aa87188e"
+ },
+ "halo-chorister/probe-combo/0": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 35,
+  "stars": 1,
+  "digest": "da5af27947dc3338"
+ },
+ "halo-chorister/probe-combo/1": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 39,
+  "stars": 0,
+  "digest": "086ad44a922dd673"
+ },
+ "halo-chorister/probe-sustain/0": {
+  "phase": "lost",
+  "turn": 16,
+  "actions": 50,
+  "stars": 0,
+  "digest": "741bb74b98ecd0fd"
+ },
+ "halo-chorister/probe-sustain/1": {
+  "phase": "lost",
+  "turn": 13,
+  "actions": 41,
+  "stars": 0,
+  "digest": "8df95ef0bcc62114"
+ },
  "rock-drummer/normal/0": {
   "phase": "won",
   "turn": 7,
@@ -4898,6 +6599,41 @@
   "actions": 32,
   "stars": 0,
   "digest": "4de3e57d80b183b8"
+ },
+ "rock-drummer/normal/25": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 27,
+  "stars": 0,
+  "digest": "fc785acd47cb40ba"
+ },
+ "rock-drummer/normal/26": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 26,
+  "stars": 1,
+  "digest": "b9115db20cfe6be7"
+ },
+ "rock-drummer/normal/27": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 26,
+  "stars": 0,
+  "digest": "a3b23a4545281306"
+ },
+ "rock-drummer/normal/28": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 26,
+  "stars": 0,
+  "digest": "2a4cc4d03756eb7f"
+ },
+ "rock-drummer/normal/29": {
+  "phase": "won",
+  "turn": 11,
+  "actions": 32,
+  "stars": 0,
+  "digest": "cb66d0aa263b1fcf"
  },
  "rock-drummer/mid/0": {
   "phase": "won",
@@ -5074,6 +6810,41 @@
   "stars": 1,
   "digest": "ab1b3c6f004a502e"
  },
+ "rock-drummer/mid/25": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 14,
+  "stars": 2,
+  "digest": "f9482a62a24df6a2"
+ },
+ "rock-drummer/mid/26": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 21,
+  "stars": 0,
+  "digest": "81c4796a5aed34d4"
+ },
+ "rock-drummer/mid/27": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "2f04b9edc3241b05"
+ },
+ "rock-drummer/mid/28": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 29,
+  "stars": 0,
+  "digest": "012c98770dddaca4"
+ },
+ "rock-drummer/mid/29": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 19,
+  "stars": 1,
+  "digest": "6b6b703c480165e0"
+ },
  "rock-drummer/strong/0": {
   "phase": "won",
   "turn": 1,
@@ -5248,6 +7019,125 @@
   "actions": 2,
   "stars": 3,
   "digest": "eae31dbbbce23cd4"
+ },
+ "rock-drummer/strong/25": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 5,
+  "stars": 3,
+  "digest": "2a02a32e042e160d"
+ },
+ "rock-drummer/strong/26": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "1381f34618577fc7"
+ },
+ "rock-drummer/strong/27": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 5,
+  "stars": 3,
+  "digest": "ef3224955c0e7704"
+ },
+ "rock-drummer/strong/28": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "77e50b3d6f088a91"
+ },
+ "rock-drummer/strong/29": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "03df8f492ba15ad9"
+ },
+ "rock-drummer/probe-blade/0": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 6,
+  "stars": 3,
+  "digest": "ad38a9cbb470d4f2"
+ },
+ "rock-drummer/probe-blade/1": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 5,
+  "stars": 3,
+  "digest": "8b9bb1231421974b"
+ },
+ "rock-drummer/probe-arcane/0": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 24,
+  "stars": 0,
+  "digest": "4ec65485f18bcdc2"
+ },
+ "rock-drummer/probe-arcane/1": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 19,
+  "stars": 0,
+  "digest": "12e38f38f9826b16"
+ },
+ "rock-drummer/probe-dot/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 11,
+  "stars": 2,
+  "digest": "0698f9c2348933a9"
+ },
+ "rock-drummer/probe-dot/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 12,
+  "stars": 1,
+  "digest": "f437c2128c7d39f0"
+ },
+ "rock-drummer/probe-swift/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 12,
+  "stars": 3,
+  "digest": "1e99775187e31a3e"
+ },
+ "rock-drummer/probe-swift/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 10,
+  "stars": 2,
+  "digest": "3337d7c042fd8a0a"
+ },
+ "rock-drummer/probe-combo/0": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 18,
+  "stars": 1,
+  "digest": "21a75464113aaf65"
+ },
+ "rock-drummer/probe-combo/1": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 18,
+  "stars": 1,
+  "digest": "57c9158ef9e89b50"
+ },
+ "rock-drummer/probe-sustain/0": {
+  "phase": "won",
+  "turn": 13,
+  "actions": 39,
+  "stars": 0,
+  "digest": "182449df35cebb25"
+ },
+ "rock-drummer/probe-sustain/1": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 27,
+  "stars": 0,
+  "digest": "34cdb3e6d215dab1"
  },
  "storm-maestro/normal/0": {
   "phase": "lost",
@@ -5424,6 +7314,41 @@
   "stars": 0,
   "digest": "aa4b76d9312107ec"
  },
+ "storm-maestro/normal/25": {
+  "phase": "lost",
+  "turn": 3,
+  "actions": 8,
+  "stars": 0,
+  "digest": "75a8d0426a3749ac"
+ },
+ "storm-maestro/normal/26": {
+  "phase": "lost",
+  "turn": 3,
+  "actions": 8,
+  "stars": 0,
+  "digest": "82439024ee1c5e58"
+ },
+ "storm-maestro/normal/27": {
+  "phase": "lost",
+  "turn": 3,
+  "actions": 8,
+  "stars": 0,
+  "digest": "b2f99cdb31797ab4"
+ },
+ "storm-maestro/normal/28": {
+  "phase": "lost",
+  "turn": 3,
+  "actions": 8,
+  "stars": 0,
+  "digest": "a0fff16b7a16b653"
+ },
+ "storm-maestro/normal/29": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "2dcf853a4a0c4e4b"
+ },
  "storm-maestro/mid/0": {
   "phase": "lost",
   "turn": 4,
@@ -5598,6 +7523,41 @@
   "actions": 11,
   "stars": 0,
   "digest": "834be03a332c4a9c"
+ },
+ "storm-maestro/mid/25": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "19b7ebe066eb1586"
+ },
+ "storm-maestro/mid/26": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "4ccf7baa2e3e9e42"
+ },
+ "storm-maestro/mid/27": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "6239b926f943652b"
+ },
+ "storm-maestro/mid/28": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "70cfcee15d8e5c10"
+ },
+ "storm-maestro/mid/29": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "4a7b204796557c99"
  },
  "storm-maestro/strong/0": {
   "phase": "won",
@@ -5774,6 +7734,125 @@
   "stars": 3,
   "digest": "5388d2645e6ea462"
  },
+ "storm-maestro/strong/25": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 30,
+  "stars": 0,
+  "digest": "c1f70f1165de5a4b"
+ },
+ "storm-maestro/strong/26": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 24,
+  "stars": 2,
+  "digest": "3bd9cb7facc5575a"
+ },
+ "storm-maestro/strong/27": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 29,
+  "stars": 0,
+  "digest": "ae59f572d2203933"
+ },
+ "storm-maestro/strong/28": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 23,
+  "stars": 2,
+  "digest": "f452d33efb0bd94b"
+ },
+ "storm-maestro/strong/29": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 14,
+  "stars": 3,
+  "digest": "83f3a1a5fd8eadc8"
+ },
+ "storm-maestro/probe-blade/0": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 28,
+  "stars": 0,
+  "digest": "378a63ee1715418f"
+ },
+ "storm-maestro/probe-blade/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 28,
+  "stars": 0,
+  "digest": "28dcf2494713b009"
+ },
+ "storm-maestro/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 19,
+  "stars": 0,
+  "digest": "e68f3fb0940f2270"
+ },
+ "storm-maestro/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 21,
+  "stars": 0,
+  "digest": "ac4e4a536f0eab65"
+ },
+ "storm-maestro/probe-dot/0": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 27,
+  "stars": 0,
+  "digest": "4a3722c2e5fef805"
+ },
+ "storm-maestro/probe-dot/1": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 27,
+  "stars": 0,
+  "digest": "9ef966f5a595344c"
+ },
+ "storm-maestro/probe-swift/0": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 24,
+  "stars": 0,
+  "digest": "c528cd46cd22c9b1"
+ },
+ "storm-maestro/probe-swift/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 24,
+  "stars": 0,
+  "digest": "4a4782ab17da5abc"
+ },
+ "storm-maestro/probe-combo/0": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 30,
+  "stars": 0,
+  "digest": "db599301a77c832c"
+ },
+ "storm-maestro/probe-combo/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 26,
+  "stars": 0,
+  "digest": "f228184a72c3c8c2"
+ },
+ "storm-maestro/probe-sustain/0": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 27,
+  "stars": 0,
+  "digest": "5de60066ec32371f"
+ },
+ "storm-maestro/probe-sustain/1": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 26,
+  "stars": 0,
+  "digest": "1f29b7380f922842"
+ },
  "thorn-matriarch/normal/0": {
   "phase": "lost",
   "turn": 4,
@@ -5948,6 +8027,41 @@
   "actions": 7,
   "stars": 0,
   "digest": "d314d8e4da282a77"
+ },
+ "thorn-matriarch/normal/25": {
+  "phase": "lost",
+  "turn": 3,
+  "actions": 7,
+  "stars": 0,
+  "digest": "c771ac6cd209a110"
+ },
+ "thorn-matriarch/normal/26": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 10,
+  "stars": 0,
+  "digest": "9d24682601cd1df6"
+ },
+ "thorn-matriarch/normal/27": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 9,
+  "stars": 0,
+  "digest": "d6de680a09cadb20"
+ },
+ "thorn-matriarch/normal/28": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 10,
+  "stars": 0,
+  "digest": "b046a78fb5895a74"
+ },
+ "thorn-matriarch/normal/29": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 10,
+  "stars": 0,
+  "digest": "52b0ea5c319adec9"
  },
  "thorn-matriarch/mid/0": {
   "phase": "lost",
@@ -6124,6 +8238,41 @@
   "stars": 0,
   "digest": "c8c59d105bed3415"
  },
+ "thorn-matriarch/mid/25": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "c09f6748d9817c7a"
+ },
+ "thorn-matriarch/mid/26": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "46fdeb34812d90cd"
+ },
+ "thorn-matriarch/mid/27": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 13,
+  "stars": 0,
+  "digest": "0c6706fb475b3be6"
+ },
+ "thorn-matriarch/mid/28": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "b381c915ff30dd07"
+ },
+ "thorn-matriarch/mid/29": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 11,
+  "stars": 0,
+  "digest": "3c3788ce2425d9be"
+ },
  "thorn-matriarch/strong/0": {
   "phase": "lost",
   "turn": 12,
@@ -6298,6 +8447,125 @@
   "actions": 40,
   "stars": 0,
   "digest": "faac7fb183a5fcdc"
+ },
+ "thorn-matriarch/strong/25": {
+  "phase": "won",
+  "turn": 11,
+  "actions": 32,
+  "stars": 1,
+  "digest": "447444d087b57233"
+ },
+ "thorn-matriarch/strong/26": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 32,
+  "stars": 0,
+  "digest": "89b64c947be996ea"
+ },
+ "thorn-matriarch/strong/27": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 32,
+  "stars": 0,
+  "digest": "0f0a31610a3c43e2"
+ },
+ "thorn-matriarch/strong/28": {
+  "phase": "won",
+  "turn": 14,
+  "actions": 40,
+  "stars": 0,
+  "digest": "880eef8d48a03712"
+ },
+ "thorn-matriarch/strong/29": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 30,
+  "stars": 0,
+  "digest": "ab112ada0b500d94"
+ },
+ "thorn-matriarch/probe-blade/0": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 28,
+  "stars": 0,
+  "digest": "c4accdcbb842ae2b"
+ },
+ "thorn-matriarch/probe-blade/1": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 28,
+  "stars": 0,
+  "digest": "e8ec1aba3747dbef"
+ },
+ "thorn-matriarch/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 20,
+  "stars": 0,
+  "digest": "8e235ad2839041f4"
+ },
+ "thorn-matriarch/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 21,
+  "stars": 0,
+  "digest": "2a909895faeed207"
+ },
+ "thorn-matriarch/probe-dot/0": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 23,
+  "stars": 0,
+  "digest": "7eb7bcb0c286a678"
+ },
+ "thorn-matriarch/probe-dot/1": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 25,
+  "stars": 0,
+  "digest": "4bed76ec00ae9321"
+ },
+ "thorn-matriarch/probe-swift/0": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 23,
+  "stars": 0,
+  "digest": "7435d7002760d253"
+ },
+ "thorn-matriarch/probe-swift/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 21,
+  "stars": 0,
+  "digest": "df81948d9446b236"
+ },
+ "thorn-matriarch/probe-combo/0": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 24,
+  "stars": 0,
+  "digest": "dee111c089e2d2fc"
+ },
+ "thorn-matriarch/probe-combo/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 24,
+  "stars": 0,
+  "digest": "90a92111a0353f9d"
+ },
+ "thorn-matriarch/probe-sustain/0": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 33,
+  "stars": 0,
+  "digest": "fb2f43e21a3e7c44"
+ },
+ "thorn-matriarch/probe-sustain/1": {
+  "phase": "lost",
+  "turn": 11,
+  "actions": 31,
+  "stars": 0,
+  "digest": "413f8bec4c9faccb"
  },
  "tutorial-ghost/normal/0": {
   "phase": "won",
@@ -6474,6 +8742,41 @@
   "stars": 2,
   "digest": "f8c5433eeacbeece"
  },
+ "tutorial-ghost/normal/25": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 2,
+  "digest": "61616712cbc11a2e"
+ },
+ "tutorial-ghost/normal/26": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 2,
+  "digest": "6d93494b657ca93f"
+ },
+ "tutorial-ghost/normal/27": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 2,
+  "digest": "ed18f1ac12ddc37c"
+ },
+ "tutorial-ghost/normal/28": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 2,
+  "digest": "832f9259e18c9aaa"
+ },
+ "tutorial-ghost/normal/29": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 2,
+  "digest": "c5e93d2fd53ee342"
+ },
  "tutorial-ghost/mid/0": {
   "phase": "won",
   "turn": 1,
@@ -6648,6 +8951,41 @@
   "actions": 4,
   "stars": 3,
   "digest": "c6ef6d5133fc7fb8"
+ },
+ "tutorial-ghost/mid/25": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 4,
+  "stars": 3,
+  "digest": "ed5e01e4f0db00b7"
+ },
+ "tutorial-ghost/mid/26": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 4,
+  "stars": 3,
+  "digest": "88beec6f05285b0a"
+ },
+ "tutorial-ghost/mid/27": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 4,
+  "stars": 3,
+  "digest": "278536816de35356"
+ },
+ "tutorial-ghost/mid/28": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 4,
+  "stars": 3,
+  "digest": "2a0425de336301aa"
+ },
+ "tutorial-ghost/mid/29": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 4,
+  "stars": 3,
+  "digest": "1b7a5e972ffdfbbd"
  },
  "tutorial-ghost/strong/0": {
   "phase": "won",
@@ -6824,6 +9162,125 @@
   "stars": 3,
   "digest": "3aedee98aaca80c7"
  },
+ "tutorial-ghost/strong/25": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 1,
+  "stars": 3,
+  "digest": "9087191dbae91ee5"
+ },
+ "tutorial-ghost/strong/26": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "397a7f940e211147"
+ },
+ "tutorial-ghost/strong/27": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "87b744db0531c3cd"
+ },
+ "tutorial-ghost/strong/28": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 0,
+  "stars": 3,
+  "digest": "97e792d2c68eeac0"
+ },
+ "tutorial-ghost/strong/29": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 1,
+  "stars": 3,
+  "digest": "ca3e005725af70df"
+ },
+ "tutorial-ghost/probe-blade/0": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "b9992609c91945a3"
+ },
+ "tutorial-ghost/probe-blade/1": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "3506217b91234264"
+ },
+ "tutorial-ghost/probe-arcane/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 11,
+  "stars": 1,
+  "digest": "0990975424cd2b78"
+ },
+ "tutorial-ghost/probe-arcane/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 11,
+  "stars": 1,
+  "digest": "ba23a80131b3ab40"
+ },
+ "tutorial-ghost/probe-dot/0": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "e35c3f6cebb3f56a"
+ },
+ "tutorial-ghost/probe-dot/1": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "df4e187761f296e1"
+ },
+ "tutorial-ghost/probe-swift/0": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "b84ea112854acd8a"
+ },
+ "tutorial-ghost/probe-swift/1": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "7020f33b2f002ed8"
+ },
+ "tutorial-ghost/probe-combo/0": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "0d2c48a931f8b11a"
+ },
+ "tutorial-ghost/probe-combo/1": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "67a18dd40655de11"
+ },
+ "tutorial-ghost/probe-sustain/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 12,
+  "stars": 1,
+  "digest": "06c5244dc530cb34"
+ },
+ "tutorial-ghost/probe-sustain/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 12,
+  "stars": 1,
+  "digest": "f449ebf71b13577d"
+ },
  "vanguard/normal/0": {
   "phase": "lost",
   "turn": 4,
@@ -6998,6 +9455,41 @@
   "actions": 9,
   "stars": 0,
   "digest": "a0489cf4d16d4775"
+ },
+ "vanguard/normal/25": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 10,
+  "stars": 0,
+  "digest": "c71500f91628f13a"
+ },
+ "vanguard/normal/26": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 8,
+  "stars": 0,
+  "digest": "78fc4ccc428b93be"
+ },
+ "vanguard/normal/27": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 9,
+  "stars": 0,
+  "digest": "27ec21498444beec"
+ },
+ "vanguard/normal/28": {
+  "phase": "lost",
+  "turn": 3,
+  "actions": 8,
+  "stars": 0,
+  "digest": "87c0ca8d22f95d31"
+ },
+ "vanguard/normal/29": {
+  "phase": "lost",
+  "turn": 3,
+  "actions": 8,
+  "stars": 0,
+  "digest": "c94ddcdbef108b58"
  },
  "vanguard/mid/0": {
   "phase": "lost",
@@ -7174,6 +9666,41 @@
   "stars": 0,
   "digest": "b9d75fe3cf05121c"
  },
+ "vanguard/mid/25": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 15,
+  "stars": 0,
+  "digest": "6f6669d340493a96"
+ },
+ "vanguard/mid/26": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 15,
+  "stars": 0,
+  "digest": "33bb456f3810966a"
+ },
+ "vanguard/mid/27": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 14,
+  "stars": 0,
+  "digest": "5d6ea8a3ffebb28d"
+ },
+ "vanguard/mid/28": {
+  "phase": "lost",
+  "turn": 5,
+  "actions": 15,
+  "stars": 0,
+  "digest": "2449aa15d65456c7"
+ },
+ "vanguard/mid/29": {
+  "phase": "lost",
+  "turn": 4,
+  "actions": 12,
+  "stars": 0,
+  "digest": "8569a182b211ba38"
+ },
  "vanguard/strong/0": {
   "phase": "won",
   "turn": 5,
@@ -7348,6 +9875,125 @@
   "actions": 28,
   "stars": 0,
   "digest": "412498b63e1a6de3"
+ },
+ "vanguard/strong/25": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 21,
+  "stars": 0,
+  "digest": "baf53a6602bcb29f"
+ },
+ "vanguard/strong/26": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 13,
+  "stars": 2,
+  "digest": "c51f8576c4e44c62"
+ },
+ "vanguard/strong/27": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 21,
+  "stars": 0,
+  "digest": "eee9990caa934084"
+ },
+ "vanguard/strong/28": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 28,
+  "stars": 0,
+  "digest": "96334c16ecd2e2e4"
+ },
+ "vanguard/strong/29": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 29,
+  "stars": 0,
+  "digest": "02df0faf53499da2"
+ },
+ "vanguard/probe-blade/0": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 27,
+  "stars": 0,
+  "digest": "ab59ee0305a3440c"
+ },
+ "vanguard/probe-blade/1": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 29,
+  "stars": 0,
+  "digest": "941fda12e3f9c435"
+ },
+ "vanguard/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 22,
+  "stars": 0,
+  "digest": "b47455abf84fb7db"
+ },
+ "vanguard/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 6,
+  "actions": 18,
+  "stars": 0,
+  "digest": "6f08e424f73576b7"
+ },
+ "vanguard/probe-dot/0": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 21,
+  "stars": 0,
+  "digest": "647ad6244360f7dd"
+ },
+ "vanguard/probe-dot/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 22,
+  "stars": 0,
+  "digest": "1044327e0849d234"
+ },
+ "vanguard/probe-swift/0": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 23,
+  "stars": 0,
+  "digest": "85a406f72ec5af71"
+ },
+ "vanguard/probe-swift/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 22,
+  "stars": 0,
+  "digest": "e321c8e073c50bcc"
+ },
+ "vanguard/probe-combo/0": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 23,
+  "stars": 0,
+  "digest": "27cd52b735c5571c"
+ },
+ "vanguard/probe-combo/1": {
+  "phase": "lost",
+  "turn": 7,
+  "actions": 25,
+  "stars": 0,
+  "digest": "45f59e38539614c2"
+ },
+ "vanguard/probe-sustain/0": {
+  "phase": "lost",
+  "turn": 12,
+  "actions": 37,
+  "stars": 0,
+  "digest": "e833d1b44fe28a4b"
+ },
+ "vanguard/probe-sustain/1": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 29,
+  "stars": 0,
+  "digest": "26c4fc4934e64e38"
  },
  "vine-fiddler/normal/0": {
   "phase": "lost",
@@ -7524,6 +10170,41 @@
   "stars": 0,
   "digest": "873c4e1778319fac"
  },
+ "vine-fiddler/normal/25": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 26,
+  "stars": 0,
+  "digest": "3c424b6b3d9b8dba"
+ },
+ "vine-fiddler/normal/26": {
+  "phase": "lost",
+  "turn": 8,
+  "actions": 22,
+  "stars": 0,
+  "digest": "edf59ebfa0419c72"
+ },
+ "vine-fiddler/normal/27": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 25,
+  "stars": 0,
+  "digest": "a93aa2faf7a24020"
+ },
+ "vine-fiddler/normal/28": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 25,
+  "stars": 0,
+  "digest": "87e6097ca48a6351"
+ },
+ "vine-fiddler/normal/29": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 25,
+  "stars": 0,
+  "digest": "86c5475f4d100f05"
+ },
  "vine-fiddler/mid/0": {
   "phase": "won",
   "turn": 8,
@@ -7698,6 +10379,41 @@
   "actions": 19,
   "stars": 1,
   "digest": "63c8b5755f79c5a2"
+ },
+ "vine-fiddler/mid/25": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 20,
+  "stars": 1,
+  "digest": "23a7fc0c90a4750d"
+ },
+ "vine-fiddler/mid/26": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 19,
+  "stars": 1,
+  "digest": "a1317e14566fa1e0"
+ },
+ "vine-fiddler/mid/27": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 19,
+  "stars": 1,
+  "digest": "3f72505b5866d68f"
+ },
+ "vine-fiddler/mid/28": {
+  "phase": "won",
+  "turn": 10,
+  "actions": 26,
+  "stars": 1,
+  "digest": "761104c5f5508967"
+ },
+ "vine-fiddler/mid/29": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 23,
+  "stars": 1,
+  "digest": "40974770b51df0bb"
  },
  "vine-fiddler/strong/0": {
   "phase": "won",
@@ -7874,6 +10590,125 @@
   "stars": 3,
   "digest": "8e6ddd75f80a023b"
  },
+ "vine-fiddler/strong/25": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "82e3738c4b58c646"
+ },
+ "vine-fiddler/strong/26": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "1819eae1329ea17d"
+ },
+ "vine-fiddler/strong/27": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "a98ec8f367820490"
+ },
+ "vine-fiddler/strong/28": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "b01607c26a5ee7a5"
+ },
+ "vine-fiddler/strong/29": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 8,
+  "stars": 3,
+  "digest": "72006b35885abacd"
+ },
+ "vine-fiddler/probe-blade/0": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 6,
+  "stars": 3,
+  "digest": "326f39af41b66be1"
+ },
+ "vine-fiddler/probe-blade/1": {
+  "phase": "won",
+  "turn": 2,
+  "actions": 6,
+  "stars": 3,
+  "digest": "f8c00940fa1675af"
+ },
+ "vine-fiddler/probe-arcane/0": {
+  "phase": "lost",
+  "turn": 18,
+  "actions": 48,
+  "stars": 0,
+  "digest": "7017262bae96ca93"
+ },
+ "vine-fiddler/probe-arcane/1": {
+  "phase": "lost",
+  "turn": 18,
+  "actions": 48,
+  "stars": 0,
+  "digest": "b0d21c3bed6ca354"
+ },
+ "vine-fiddler/probe-dot/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 10,
+  "stars": 2,
+  "digest": "f3bb832fd8ce50f3"
+ },
+ "vine-fiddler/probe-dot/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 11,
+  "stars": 2,
+  "digest": "3514be3fecae01b9"
+ },
+ "vine-fiddler/probe-swift/0": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 9,
+  "stars": 3,
+  "digest": "5e4086d5f69727d6"
+ },
+ "vine-fiddler/probe-swift/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 12,
+  "stars": 2,
+  "digest": "9bc538abf64b1dfd"
+ },
+ "vine-fiddler/probe-combo/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 13,
+  "stars": 3,
+  "digest": "da26bfd26972f9de"
+ },
+ "vine-fiddler/probe-combo/1": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 10,
+  "stars": 3,
+  "digest": "4a38188c180cc470"
+ },
+ "vine-fiddler/probe-sustain/0": {
+  "phase": "won",
+  "turn": 18,
+  "actions": 54,
+  "stars": 1,
+  "digest": "157b74e89e3df7f8"
+ },
+ "vine-fiddler/probe-sustain/1": {
+  "phase": "won",
+  "turn": 18,
+  "actions": 54,
+  "stars": 1,
+  "digest": "705f6bab77b540e2"
+ },
  "wind-chime/normal/0": {
   "phase": "lost",
   "turn": 10,
@@ -8048,6 +10883,41 @@
   "actions": 25,
   "stars": 1,
   "digest": "30f797cc11d7906d"
+ },
+ "wind-chime/normal/25": {
+  "phase": "lost",
+  "turn": 10,
+  "actions": 29,
+  "stars": 0,
+  "digest": "25be06fc5ba17fa6"
+ },
+ "wind-chime/normal/26": {
+  "phase": "lost",
+  "turn": 9,
+  "actions": 26,
+  "stars": 0,
+  "digest": "a0d8a9e8cab2f371"
+ },
+ "wind-chime/normal/27": {
+  "phase": "won",
+  "turn": 8,
+  "actions": 21,
+  "stars": 1,
+  "digest": "8ea15ec7a2103792"
+ },
+ "wind-chime/normal/28": {
+  "phase": "won",
+  "turn": 9,
+  "actions": 25,
+  "stars": 1,
+  "digest": "ea1bba5fed20fa66"
+ },
+ "wind-chime/normal/29": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 16,
+  "stars": 1,
+  "digest": "8759c1225256d7a2"
  },
  "wind-chime/mid/0": {
   "phase": "won",
@@ -8224,6 +11094,41 @@
   "stars": 1,
   "digest": "0751bd476fc590a7"
  },
+ "wind-chime/mid/25": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 14,
+  "stars": 1,
+  "digest": "4f770686a3a3f222"
+ },
+ "wind-chime/mid/26": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 13,
+  "stars": 1,
+  "digest": "de2f618d2343d0bf"
+ },
+ "wind-chime/mid/27": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 19,
+  "stars": 1,
+  "digest": "a275eaee1be49f00"
+ },
+ "wind-chime/mid/28": {
+  "phase": "won",
+  "turn": 5,
+  "actions": 14,
+  "stars": 1,
+  "digest": "c2f81b1e0434c896"
+ },
+ "wind-chime/mid/29": {
+  "phase": "won",
+  "turn": 7,
+  "actions": 17,
+  "stars": 1,
+  "digest": "28ea8e73a4029753"
+ },
  "wind-chime/strong/0": {
   "phase": "won",
   "turn": 3,
@@ -8398,5 +11303,124 @@
   "actions": 8,
   "stars": 3,
   "digest": "60f5d279d0c55588"
+ },
+ "wind-chime/strong/25": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "21e063da568bbe22"
+ },
+ "wind-chime/strong/26": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 5,
+  "stars": 3,
+  "digest": "29d0e5868f2dcdb6"
+ },
+ "wind-chime/strong/27": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "286526d9e7c77eca"
+ },
+ "wind-chime/strong/28": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 5,
+  "stars": 3,
+  "digest": "7a30ac4fff71edd3"
+ },
+ "wind-chime/strong/29": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 7,
+  "stars": 3,
+  "digest": "ef716ed93cd8dc52"
+ },
+ "wind-chime/probe-blade/0": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 3,
+  "stars": 3,
+  "digest": "1d178c187697b2fb"
+ },
+ "wind-chime/probe-blade/1": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "8e1decdd97d74f15"
+ },
+ "wind-chime/probe-arcane/0": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 16,
+  "stars": 1,
+  "digest": "7726aa6389ee6b87"
+ },
+ "wind-chime/probe-arcane/1": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 16,
+  "stars": 1,
+  "digest": "4d2f1f6efc240dbe"
+ },
+ "wind-chime/probe-dot/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 11,
+  "stars": 2,
+  "digest": "91babbb6df7dfd76"
+ },
+ "wind-chime/probe-dot/1": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 10,
+  "stars": 2,
+  "digest": "25f5f45594fb62d2"
+ },
+ "wind-chime/probe-swift/0": {
+  "phase": "won",
+  "turn": 1,
+  "actions": 2,
+  "stars": 3,
+  "digest": "4eaedd760ce57db8"
+ },
+ "wind-chime/probe-swift/1": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 9,
+  "stars": 3,
+  "digest": "9b3b02c4557877a9"
+ },
+ "wind-chime/probe-combo/0": {
+  "phase": "won",
+  "turn": 4,
+  "actions": 13,
+  "stars": 3,
+  "digest": "ee5d023b0d5d4f51"
+ },
+ "wind-chime/probe-combo/1": {
+  "phase": "won",
+  "turn": 3,
+  "actions": 9,
+  "stars": 3,
+  "digest": "426910b188634253"
+ },
+ "wind-chime/probe-sustain/0": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 18,
+  "stars": 1,
+  "digest": "ff8076d19f80d4e4"
+ },
+ "wind-chime/probe-sustain/1": {
+  "phase": "won",
+  "turn": 6,
+  "actions": 18,
+  "stars": 1,
+  "digest": "bdd0db7a1943c817"
  }
 }

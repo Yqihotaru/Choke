@@ -1,6 +1,7 @@
 // pnpm test:battle [--update]
 //
-// 战斗回归测试：content/encounters 里的每场遭遇 × 两套卡组 × 固定种子，用固定策略的机器人打完，检查
+// 战斗回归测试：content/encounters 里的每场遭遇 × 三套通用卡组（每套 30 个固定种子）
+// ＋ 6 支流派队（lib/archetypes.ts，每队 2 个种子，约占总局数 12%），用固定策略的机器人打完，检查
 //   1. 确定性：同种子同操作打两遍，状态逐位相同
 //   2. 可重放：replayBattle 复算的终局与实打相同（服务端校验靠的就是这个）
 //   3. 回归：每局的回合数、步数、终局摘要与 fixtures/battle-golden.json 一致
@@ -23,10 +24,13 @@ import { evaluateStars } from "@choke/shared/battle/stars"
 import type { BattleState } from "@choke/shared/battle/types"
 
 import { BATTLE_CONTENT } from "../src/content"
+import { PROBE_DECKS, PROBE_LABEL } from "./lib/archetypes"
 import { BENCH, DECKS, MAX_TURNS, playBot, testApMax } from "./lib/battle-bot"
 
 const GOLDEN = path.resolve(import.meta.dirname, "fixtures/battle-golden.json")
-const SEEDS_PER_DECK = 25
+const SEEDS_PER_DECK = 30
+/** 流派队每队每场遭遇打几局：6 队 × 2 局，约占总局数的 12% */
+const SEEDS_PER_PROBE = 2
 const update = process.argv.includes("--update")
 
 const digest = (state: BattleState) => createHash("sha256").update(JSON.stringify(state)).digest("hex").slice(0, 16)
@@ -50,18 +54,24 @@ interface EncounterOutput {
   problems: string[]
   stalled: string[]
   table: Record<string, TableRow>
+  /** 这场遭遇里每支流派队的胜场，如 "1/2" */
+  probeRow: Record<string, string>
 }
 
 // ---------- 跑一场遭遇 ----------
 
 function runEncounter(encounterId: string): EncounterOutput {
-  const out: EncounterOutput = { results: {}, problems: [], stalled: [], table: {} }
+  const out: EncounterOutput = { results: {}, problems: [], stalled: [], table: {}, probeRow: {} }
   const encounter = resolveEncounter(BATTLE_CONTENT, encounterId)!
-  for (const [deckName, deck] of Object.entries(DECKS)) {
+  const groups = [
+    ...Object.entries(DECKS).map(([name, deck]) => ({ deckName: name, deck, seeds: SEEDS_PER_DECK, probe: false })),
+    ...Object.entries(PROBE_DECKS).map(([name, deck]) => ({ deckName: `probe-${name}`, deck, seeds: SEEDS_PER_PROBE, probe: true })),
+  ]
+  for (const { deckName, deck, seeds, probe } of groups) {
     let won = 0
     let turns = 0
     let stars = 0
-    for (let n = 0; n < SEEDS_PER_DECK; n += 1) {
+    for (let n = 0; n < seeds; n += 1) {
       const key = `${encounterId}/${deckName}/${n}`
       const seed = `test-${key}`
       const a = playBot(encounter, deck, seed)
@@ -81,10 +91,14 @@ function runEncounter(encounterId: string): EncounterOutput {
       turns += a.state.turn
       stars += starCount
     }
+    if (probe) {
+      out.probeRow[PROBE_LABEL[deckName.replace(/^probe-/, "")] ?? deckName] = `${won}/${seeds}`
+      continue
+    }
     out.table[`${encounterId}/${deckName}`] = {
       胜: won,
-      负: SEEDS_PER_DECK - won,
-      平均回合: (turns / SEEDS_PER_DECK).toFixed(1),
+      负: seeds - won,
+      平均回合: (turns / seeds).toFixed(1),
       平均星数: won ? (stars / won).toFixed(2) : "—",
     }
   }
@@ -141,15 +155,21 @@ async function main() {
   const problems: string[] = []
   const stalled: string[] = []
   const table: Record<string, TableRow> = {}
+  const probeTable: Record<string, Record<string, string>> = {}
   for (const id of ids) {
     const out = outputs.get(id)!
     Object.assign(results, out.results)
     Object.assign(table, out.table)
+    probeTable[id] = out.probeRow
     problems.push(...out.problems)
     stalled.push(...out.stalled)
   }
 
   console.table(table)
+  console.log("\n流派队（每格 = 胜场/局数，样本小只做粗看；要细看跑 probe-matrix.ts）")
+  console.table(probeTable)
+  const probeRuns = Object.keys(results).filter((key) => key.includes("/probe-")).length
+  console.log(`流派队 ${probeRuns} 局，占总 ${Object.keys(results).length} 局的 ${((probeRuns / Object.keys(results).length) * 100).toFixed(1)}%`)
   if (stalled.length > 0) console.log(`提示：${stalled.length} 局拖满 ${MAX_TURNS} 回合仍无胜负（僵局，不算失败）：${stalled.slice(0, 5).join("、")}${stalled.length > 5 ? "…" : ""}`)
   const total = Object.keys(results).length
 
