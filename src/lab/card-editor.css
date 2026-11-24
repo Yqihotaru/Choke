@@ -91,11 +91,6 @@
   background: transparent;
 }
 
-.editor__field input:focus,
-.editor__field select:focus {
-  outline: none;
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-}
 
 .editor__checks {
   display: flex;

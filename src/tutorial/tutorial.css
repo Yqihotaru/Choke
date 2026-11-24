@@ -524,13 +524,6 @@
     inset 0 1px 0 rgb(255 255 255 / 0.3),
     0 1px 0 #a3303f;
 }
-.tut-dialog__skip:focus-visible,
-.tut-dialog__next:focus-visible,
-.tut-skip__yes:focus-visible,
-.tut-skip__no:focus-visible {
-  outline: 2px solid #ff66aa;
-  outline-offset: 2px;
-}
 /* 换到下一句：正文轻轻浮上来（正文节点带 key） */
 .tut-dialog__text {
   animation: ui-rise-in var(--ui-base) var(--ui-ease-out) both;

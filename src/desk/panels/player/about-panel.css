@@ -162,10 +162,6 @@ a.about-person:focus-visible {
   color: inherit;
   text-decoration: none;
 }
-.about-link:focus-visible {
-  outline: 2px solid var(--bk-osu);
-  outline-offset: 2px;
-}
 .about-link__text {
   display: flex;
   flex: 1 1 auto;

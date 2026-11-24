@@ -190,10 +190,6 @@
 .mail-row:active {
   translate: 0 1px;
 }
-.mail-row:focus-visible {
-  outline: 2px solid var(--bk-osu);
-  outline-offset: -2px;
-}
 .mail-row.is-on {
   background: var(--bk-raised-hi);
   box-shadow: inset 3px 0 0 var(--bk-osu);

@@ -163,8 +163,7 @@ button.card__rotator {
   appearance: none;
 }
 
-.card__rotator,
-.card.active .card__rotator:focus {
+.card__rotator {
   transition: box-shadow 0.4s ease, opacity .33s ease-out;
   box-shadow: 
     0 0 3px -1px transparent, 
@@ -175,8 +174,7 @@ button.card__rotator {
     0 0 20px 0px transparent;
 }
 
-.card.active .card__rotator,
-.card__rotator:focus {
+.card.active .card__rotator {
   box-shadow: 
     0 0 3px -1px white, 
     0 0 3px 1px var(--card-edge), 

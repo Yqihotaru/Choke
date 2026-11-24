@@ -16,10 +16,6 @@
   opacity: 0.55;
   cursor: default;
 }
-.gacha-pool:focus-visible {
-  outline: 2px solid var(--bk-osu);
-  outline-offset: -2px;
-}
 .gacha-pool__art {
   position: relative;
   flex: 0 0 auto;

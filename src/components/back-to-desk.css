@@ -43,10 +43,6 @@
     0 1px 0 #1f161a,
     0 4px 10px rgb(0 0 0 / 0.3);
 }
-.back-to-desk:focus-visible {
-  outline: 2px solid #ff66aa;
-  outline-offset: 2px;
-}
 .light .back-to-desk {
   background: #d9d0c6;
   color: #2b231e;

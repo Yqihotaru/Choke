@@ -72,11 +72,6 @@
   resize: vertical;
 }
 
-.pool-lab__field input:focus,
-.pool-lab__field textarea:focus {
-  outline: none;
-  border-color: color-mix(in srgb, var(--lab-ink) 45%, transparent);
-}
 
 .pool-lab__error {
   margin: 12px 0 0;
@@ -290,12 +285,6 @@
 }
 .pool-lab__slot:active {
   transform: translateY(0) scale(0.98);
-}
-.pool-lab__slot:focus-visible,
-.pool-lab__file:focus-within {
-  outline: 2px solid #ff66aa;
-  outline-offset: 4px;
-  border-radius: 14px;
 }
 .pool-lab__slot[data-active] {
   outline-color: #ff66aa;

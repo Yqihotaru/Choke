@@ -125,10 +125,6 @@
   background: var(--op-osu);
   color: #1c1216;
 }
-.op__close:focus-visible {
-  outline: 2px solid var(--op-ink);
-  outline-offset: 3px;
-}
 
 /* 牌桌的原点在视口中间偏上，卡和包都相对它摆 */
 .op__table {
@@ -198,10 +194,6 @@
 }
 .op__pack-tab:active {
   cursor: grabbing;
-}
-.op__pack-tab:focus-visible {
-  outline: 2px solid var(--op-ink);
-  outline-offset: 2px;
 }
 /* 提示往左拉的箭头 */
 .op__pack-tab::after {
@@ -510,10 +502,6 @@
     inset 0 1px 0 rgb(255 255 255 / 0.12),
     0 1px 0 var(--btn-edge),
     0 3px 6px rgb(0 0 0 / 0.4);
-}
-.op__btn:focus-visible {
-  outline: 2px solid var(--op-ink);
-  outline-offset: 3px;
 }
 .op__btn:disabled {
   opacity: 0.45;

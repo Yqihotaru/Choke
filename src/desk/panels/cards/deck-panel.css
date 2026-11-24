@@ -72,7 +72,6 @@
   cursor: grabbing;
 }
 /* 选中要换的槽、拖卡悬在上面的槽：同一道粉色框 */
-.deck-slot__main:focus-visible,
 .deck-slot.is-picked,
 .deck-slot.is-drop-target {
   outline: 2px solid var(--bk-osu);
@@ -135,10 +134,6 @@
 .deck-slot__remove:hover {
   background: var(--bk-bad);
   color: var(--bk-well);
-}
-.deck-slot__remove:focus-visible {
-  outline: 2px solid var(--bk-osu);
-  outline-offset: 2px;
 }
 /* 槽位底部的状态条："在桌面" / "松开放入" */
 .deck-slot__flag {
@@ -210,10 +205,6 @@
 .deck-pick .card-face {
   width: 100%;
   pointer-events: none;
-}
-.deck-pick:focus-visible {
-  outline: 2px solid var(--bk-osu);
-  outline-offset: 3px;
 }
 .deck-pick.is-used {
   cursor: default;
