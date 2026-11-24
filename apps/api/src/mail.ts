@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm"
 
 import { ITEMS } from "@choke/shared/items"
 import {
@@ -189,7 +189,7 @@ function summarize(views: MailView[]) {
 export async function mailSummary(userId: string, now = Date.now()) {
   const alive = and(
     eq(mails.userId, userId),
-    or(eq(mails.pinned, true), sql`${mails.createdAt} >= ${cutoff(now)}`),
+    or(eq(mails.pinned, true), gte(mails.createdAt, cutoff(now))),
   )
   const [row] = await db
     .select({
