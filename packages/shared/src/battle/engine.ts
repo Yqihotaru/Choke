@@ -33,6 +33,7 @@ import {
   INTERRUPT_RATE_MAX,
   INTERRUPT_RATE_MIN,
   PREEMPTIVE_RATE,
+  REGEN_TEAM_CAP,
   ARMOR_RESIST_PER_TIER,
   STATUS_CHANCE_BY_TIER,
   SUPPORT_PROC_RATE,
@@ -1570,7 +1571,8 @@ export function endTurn(state: BattleState): string | null {
     return null
   }
 
-  const regenPct = teamEffectSum(state.cards, "regenPct")
+  // 上限按"算完治疗量加成之后"的数值卡 4%，叠多张生命脉动也钻不了空子
+  const regenPct = Math.min(teamEffectSum(state.cards, "regenPct"), REGEN_TEAM_CAP / (1 + teamEffectSum(state.cards, "healBonus")))
   if (regenPct > 0) {
     healParty(state, Math.round(state.teamHpMax * regenPct), "生生不息")
   }

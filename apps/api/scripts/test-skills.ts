@@ -111,8 +111,7 @@ const down = (state: BattleState) => {
   check("发牌：Mythic 三个槽，不重复", three.length === 3 && new Set(three.map((d) => d.id)).size === 3)
 
   // Mythic / Prismatic / 本体卡：前两槽 55/35/10，第 3 槽主动被动各 50% → 3/0、2/1、1/2、0/3
-  // 坦克目前只有 2 个被动，凑不出 0/3；等技能池扩充补够 3 个被动后，把 TANK_PASSIVE_GAP 去掉
-  const rollJobs: Job[] = ["warrior", "mage", "support"]
+  const rollJobs: Job[] = ["tank", "warrior", "mage", "support"]
   for (const rarity of ["Mythic", "Prismatic"] as const) {
     const byActives = [0, 0, 0, 0]
     let bad = 0
@@ -158,7 +157,7 @@ const down = (state: BattleState) => {
     for (const rarity of ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"] as const) {
       const pool = Object.values(SKILLS).filter((s) => s.job === job && skillDealtTo(s, rarity))
       const passives = pool.filter((s) => s.passive).length
-      const need = job !== "tank" && (rarity === "Mythic" || rarity === "Prismatic") ? 3 : 2
+      const need = rarity === "Mythic" || rarity === "Prismatic" ? 3 : 2
       check(`池子：${job} ${rarity} 主动 ≥ 3、被动 ≥ ${need}`, pool.length - passives >= 3 && passives >= need, `主动 ${pool.length - passives} 被动 ${passives}`)
     }
   }
@@ -891,6 +890,132 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
 
   const baseSupport = BATTLE_CONTENT.supports
   check("硬壳校验：内容里的硬壳都写了 threshold", Object.values(baseSupport).filter((u) => u.kind === "shell").every((u) => u.threshold !== undefined))
+}
+
+// ---------- 9k. 技能池扩充第一批 ----------
+{
+  const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
+
+  // 全队被动回血合计封顶 4%（对照组换成不带回血的卡，扣掉敌人这回合打出的伤害）
+  const hpGain = (decks: string[][]) => {
+    const net = (ids: string[][]) => {
+      const cards = inputs(ids.map((id, i) => face(`m${i}`, "mage", "L", 40, 0, id)), 10)
+      const s = createBattle(spec, cards, { apMax: 7, seed: "regen-cap" })
+      s.teamHp = Math.round(s.teamHpMax * 0.2)
+      const before = s.teamHp
+      return { gain: apply(s, { type: "endTurn" }).teamHp - before, max: s.teamHpMax }
+    }
+    const plain = net(decks.map(() => ["warlock_frost"]))
+    const real = net(decks)
+    return { gain: real.gain - plain.gain, max: real.max }
+  }
+  const one = hpGain([["life_regen", "life_bloom"], ["warlock_frost"]])
+  check("全队回血上限：生生不息 + 生命脉动合计 4%", Math.abs(one.gain / one.max - 0.04) < 0.003, `${one.gain}/${one.max}`)
+  const stacked = hpGain([["life_regen", "life_bloom"], ["life_regen", "life_bloom"], ["life_bloom", "life_regen"]])
+  check("全队回血上限：三张卡叠满（含治疗量加成）也不超过 4%", Math.abs(stacked.gain / stacked.max - 0.04) < 0.003, `${stacked.gain}/${stacked.max}`)
+  const bloomOnly = hpGain([["life_bloom", "warlock_frost"], ["warlock_frost"]])
+  check("全队回血上限：只有生命脉动回约 2.9%（2.5% × 治疗量 +15%）", Math.abs(bloomOnly.gain / bloomOnly.max - 0.02875) < 0.003, `${bloomOnly.gain}/${bloomOnly.max}`)
+  check("全队回血：被动回血来源只有生命脉动和生生不息", Object.values(SKILLS).filter((s) => s.regenPct).map((s) => s.id).sort().join() === "life_bloom,life_regen")
+
+  // 辉光礼赞：救醒 1 人
+  const hymn = (() => {
+    const s = start("support", ["healer_hymn"])
+    s.cards = [...s.cards, { ...s.cards[1]!, name: "filler-2" }]
+    s.cards[1]!.down = true
+    s.cards[2]!.down = true
+    s.ap = 6
+    return apply(s, { type: "skill", card: 0, skill: "healer_hymn" })
+  })()
+  check("辉光礼赞：只救醒 1 人", hymn.cards.filter((c) => c.down).length === 1)
+
+  // 零拍定音：0 AP，单次
+  {
+    const cards = inputs(
+      [face("bard", "support", "L", 40, 0, ["dancer_cue"]), face("a", "tank", "L", 40, 0, ["bulwark_quake"]), face("b", "tank", "L", 40, 0, ["bulwark_quake"])],
+      10,
+    )
+    const s = createBattle(spec, cards, { apMax: 7, seed: "cue-1" })
+    for (const c of s.cards) c.trigger = null
+    const apBefore = s.ap
+    const after = apply(s, { type: "skill", card: 0, skill: "dancer_cue" })
+    check("零拍定音：0 AP", after.ap === apBefore)
+    check("零拍定音：点亮 1 张队友的 BOOST", after.cards.filter((c, i) => i > 0 && c.trigger === "boost").length === 1)
+    check("零拍定音：整场只能用 1 次", withAction(after, { type: "skill", card: 0, skill: "dancer_cue" }).error !== null)
+  }
+
+  // 被动
+  const defOf = (id: string) => {
+    const s = start("tank", [id])
+    return statOf(s, s.cards[0]!, "def")
+  }
+  const baseDef = defOf("bulwark_quake")
+  check("重甲护航：DEF ×1.15", Math.abs(defOf("warden_escort") / baseDef - 1.15) < 0.02)
+  check("战意吸血：DEF ×1.05", Math.abs(defOf("bulwark_resolve") / baseDef - 1.05) < 0.02)
+  check("仁心续命 / 和声壁障：自身 DEF 加成", (() => {
+    const def = (id: string) => { const s = start("support", [id]); return statOf(s, s.cards[0]!, "def") }
+    const base = def("bard_inspire")
+    return Math.abs(def("healer_ward") / base - 1.08) < 0.02 && Math.abs(def("healer_barrier") / base - 1.1) < 0.02
+  })())
+  {
+    const s = lowHp(start("tank", ["bulwark_thornheart"]))
+    const plain = lowHp(start("tank", ["bulwark_quake"]))
+    check("荆心魔甲：低血时 ATK ×1.25", Math.abs(statOf(s, s.cards[0]!, "atk") / statOf(plain, plain.cards[0]!, "atk") - 1.25) < 0.02)
+    check("荆心魔甲：开局自带荆棘", start("tank", ["bulwark_thornheart"]).cards[0]!.statuses.some((st) => st.id === "thorns"))
+  }
+
+  // 召唤
+  {
+    const s = start("tank", ["bulwark_ironwall"], "ironwall-1", ghost)
+    s.ap = 6
+    const after = apply(s, { type: "skill", card: 0, skill: "bulwark_ironwall" })
+    check("铁棘墙：部署强度 2 的荆棘支援", after.playerSupports.some((u) => u.kind === "thorns" && (u.tier ?? 1) === 2))
+  }
+  {
+    const s = start("tank", ["warden_vanguard"], "vanguard-1", ghost)
+    s.ap = 6
+    const after = apply(s, { type: "skill", card: 0, skill: "warden_vanguard" })
+    check("前线号盾：部署强度 2 的攻击型支援", after.playerSupports.some((u) => u.kind === "attack" && (u.tier ?? 1) === 2))
+  }
+
+  // 重压破阵：拆强度 2 的支援
+  {
+    const aura = (id: string, tier: number) => ({ id, name: id, kind: "aura" as const, element: "light" as const, stat: "def" as const, amount: 0.1, tier, roleText: "测试" })
+    const s = start("tank", ["bulwark_crush"], "crush-1", ghost)
+    s.enemy.hp = s.enemy.hpMax = 1e9
+    s.ap = 6
+    s.enemySupports = [aura("t2", 2), aura("t3", 3)]
+    const after = apply(s, { type: "skill", card: 0, skill: "bulwark_crush" })
+    check("重压破阵：拆得动强度 2，拆不动强度 3", after.enemySupports.map((u) => u.id).join() === "t3", after.enemySupports.map((u) => u.id).join())
+  }
+
+  // 终幕盾轰：脆弱时 +45%
+  {
+    const dealtTo = (vulnerable: boolean) => {
+      let total = 0
+      for (const seed of seedsOf("slam")) {
+        const s = start("tank", ["bulwark_slam"], seed, ghost)
+        s.enemy.hp = s.enemy.hpMax = 1e9
+        s.ap = 6
+        if (vulnerable) s.enemy.statuses.push({ id: "vulnerable", name: "脆弱", amount: 0.3, turns: 2, isDebuff: true })
+        total += s.enemy.hp - apply(s, { type: "skill", card: 0, skill: "bulwark_slam" }).enemy.hp
+      }
+      return total
+    }
+    check("终幕盾轰：目标脆弱时伤害明显更高", dealtTo(true) / dealtTo(false) > 1.3 * 1.3, `${dealtTo(true)}/${dealtTo(false)}`)
+  }
+
+  // 穿透棱光：穿甲 50% 且不带状态
+  {
+    const def = SKILLS.warlock_prism!
+    check("穿透棱光：穿甲 50%，不附带状态", def.piercePct === 0.5 && def.statusId === undefined)
+  }
+
+  // 数据口径
+  const added = ["warden_spike", "warden_double", "bulwark_ironwall", "warden_vanguard", "bulwark_crush", "bulwark_slam", "bulwark_intimidate", "bulwark_thornheart", "bulwark_shelter", "warden_escort", "bulwark_resolve", "breaker_keen", "berserker_overdrive", "berserker_frenzy", "warlock_prism", "warlock_overclock", "life_leech", "life_bloom", "life_spring", "summoner_bastion", "bard_vigil", "dancer_cue", "healer_hymn", "healer_patch", "bard_discord", "bard_tempo", "healer_ward", "healer_barrier"]
+  check("技能池扩充第一批：28 个技能都在表里", added.length === 28 && added.every((id) => SKILLS[id]))
+  const newActive0 = Object.values(SKILLS).filter((s) => !s.passive && s.ap === 0 && added.includes(s.id))
+  check("技能池扩充：新增的 0 费主动不超过 2 个", newActive0.length <= 2, newActive0.map((s) => s.id).join())
+  check("技能池扩充：吸血被动都不超过 8%", Object.values(SKILLS).filter((s) => s.lifesteal).every((s) => s.lifesteal! <= 0.08))
 }
 
 // ---------- 10. 坦克只看大职业 ----------

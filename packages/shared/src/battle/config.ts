@@ -84,6 +84,8 @@ export const DEFENSE_REDUCTION_NORMAL = [0, 0.2, 0.35, 0.35, 0.35]
 export const ARMOR_RESIST_PER_TIER = 0.2
 /** 重装甲（DEF 乘区）和手动防御（绝对减免）叠加后的总减伤上限：任何情况至少吃 10% 伤害 */
 export const TOTAL_DEFENSE_REDUCTION_CAP = 0.9
+/** 全队被动回血（生生不息、生命脉动等）每回合合计上限：最大生命的 4% */
+export const REGEN_TEAM_CAP = 0.04
 
 /** 减伤公式的常数项：def / (def + K)，封顶 70% */
 export const MITIGATION_K = 10000
