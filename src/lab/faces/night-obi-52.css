@@ -60,7 +60,7 @@
       transparent 44%,
       rgb(0 0 0 / 0.36)
     ),
-    url("./tex/grain.svg") 0 0 / 220px 220px,
+    url("/card-tex/grain.svg") 0 0 / 220px 220px,
     var(--paper);
   background-blend-mode: normal, multiply, normal;
 }
@@ -122,7 +122,7 @@
       transparent 35%,
       rgb(0 0 0 / 0.32)
     ),
-    url("./tex/grain.svg") 0 0 / 200px 200px,
+    url("/card-tex/grain.svg") 0 0 / 200px 200px,
     var(--obi);
   background-blend-mode: normal, multiply, normal;
   box-shadow:
@@ -894,7 +894,7 @@
       transparent 48%,
       rgb(0 0 0 / 0.06)
     ),
-    url("./tex/grain.svg") 0 0 / 220px 220px,
+    url("/card-tex/grain.svg") 0 0 / 220px 220px,
     var(--paper);
 }
 
@@ -1103,7 +1103,7 @@
   background-size: 300% 300%;
   background-position: calc(var(--my) * 100%) calc(var(--mx) * 100%);
   mask-image:
-    url("./tex/glitter.svg"),
+    url("/card-tex/glitter.svg"),
     radial-gradient(40% 28% at var(--at-light), #000, transparent);
   mask-size:
     220px 220px,
@@ -1116,7 +1116,7 @@
 .cfn2__foil-glitter--b {
   background: #fff;
   mask-image:
-    url("./tex/glitter-b.svg"),
+    url("/card-tex/glitter-b.svg"),
     radial-gradient(30% 22% at var(--at-far), #000, transparent);
   mask-size:
     260px 260px,

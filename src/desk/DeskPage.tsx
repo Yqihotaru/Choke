@@ -9,15 +9,15 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react"
 
-import { DeskObject, type DealButtonState } from "./DeskObject"
-import { DeskDrawer, type DeskDrawerHandle } from "./DeskDrawer"
+import { DeskObject, type DealButtonState } from "@/desk/shell/DeskObject"
+import { DeskDrawer, type DeskDrawerHandle } from "@/desk/shell/DeskDrawer"
 import {
   DeskBook,
   PANEL_IDS,
   type DeskBookHandle,
   type PanelId,
-} from "./DeskBook"
-import { DragGhost } from "./DragGhost"
+} from "@/desk/shell/DeskBook"
+import { DragGhost } from "@/desk/shell/DragGhost"
 import {
   ApiError,
   claimTutorialPack,
@@ -28,7 +28,7 @@ import {
   takePack,
   toFace,
   type OpenPackResult,
-} from "./api"
+} from "@/desk/session/api"
 import {
   DECK_ASSIGN_EVENT,
   GACHA_OPEN_EVENT,
@@ -36,14 +36,14 @@ import {
   type CardPointerDrop,
   type GachaOpenDetail,
   toDeskCard,
-} from "./drag"
-import { emitDeskData, emitDeskHover, onDeskData } from "./events"
-import { useDeskSession } from "./useDeskSession"
-import { MailBox } from "./MailBox"
-import { LedgerBox } from "./LedgerBox"
-import { InviteLetter } from "./InviteLetter"
-import { INVITE_OPEN_EVENT, readInviteStowed, saveInviteStowed } from "./invite"
-import { OBJECT_META, type DeskObjectId } from "./objects"
+} from "@/desk/lib/drag"
+import { emitDeskData, emitDeskHover, onDeskData } from "@/desk/session/events"
+import { useDeskSession } from "@/desk/session/useDeskSession"
+import { MailBox } from "@/desk/panels/mail/MailBox"
+import { LedgerBox } from "@/desk/panels/player/LedgerBox"
+import { InviteLetter } from "@/desk/panels/invite/InviteLetter"
+import { INVITE_OPEN_EVENT, readInviteStowed, saveInviteStowed } from "@/desk/lib/invite"
+import { OBJECT_META, type DeskObjectId } from "@/desk/lib/objects"
 import {
   emitTutorialEvent,
   TUTORIAL_CLOSE_BOOK_EVENT,
@@ -57,16 +57,16 @@ import {
   lockHintOf,
   unlockLevelOf,
 } from "@/tutorial/unlocks"
-import { POOL_META } from "./rarity"
-import { useGameConfig } from "./useGameConfig"
-import { DEFAULT_SKIN } from "./skins"
-import { publishDeskCardIds } from "./presence"
-import { cardsToItems, ITEM_SIZE, newId, sizeOf, useDesk } from "./store"
-import type { CardData, DeskItem, PackPool } from "./types"
-import { DeskCard, DeskPack, LevelMeter } from "./DeskBits"
+import { POOL_META } from "@/desk/lib/rarity"
+import { useGameConfig } from "@/desk/session/useGameConfig"
+import { DEFAULT_SKIN } from "@/desk/lib/skins"
+import { publishDeskCardIds } from "@/desk/session/presence"
+import { cardsToItems, ITEM_SIZE, newId, sizeOf, useDesk } from "@/desk/session/store"
+import type { CardData, DeskItem, PackPool } from "@/desk/lib/types"
+import { DeskCard, DeskPack, LevelMeter } from "@/desk/shell/DeskBits"
 import { getSfxVolume, playSfx, setSfxVolume } from "@/audio/sfx"
 import { useTheme } from "@/components/theme-provider"
-import { UI_SCALE_STEPS, useUiScale } from "./ui-scale"
+import { UI_SCALE_STEPS, useUiScale } from "@/desk/lib/ui-scale"
 import {
   POOL_KEY,
   SERVER_POOL,
@@ -75,11 +75,11 @@ import {
   tiltOf,
   type FlightSlot,
   type FlightSource,
-} from "./desk-page-model"
-import { PackOpener, type OriginRect } from "./opening/PackOpener"
-import { resolvePulledCards } from "./opening/cards"
-import "./desk.css"
-import "./light.css"
+} from "@/desk/lib/desk-page-model"
+import { PackOpener, type OriginRect } from "@/desk/opening/PackOpener"
+import { resolvePulledCards } from "@/desk/opening/cards"
+import "@/desk/desk.css"
+import "@/desk/light.css"
 
 type ToastKind = "info" | "success" | "error"
 

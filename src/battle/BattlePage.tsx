@@ -9,9 +9,9 @@ import {
   toFace,
   type ApiDeck,
   type ApiUserCard,
-} from "@/desk/api"
-import { GuestLoginButton } from "@/desk/GuestLoginButton"
-import { pickLineup } from "@/desk/lineup"
+} from "@/desk/session/api"
+import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
+import { pickLineup } from "@/desk/lib/lineup"
 import { advanceTutorial, useTutorialProgress } from "@/tutorial/store"
 
 import { createBattle } from "@choke/shared/battle/engine"

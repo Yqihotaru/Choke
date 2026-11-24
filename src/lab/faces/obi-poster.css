@@ -76,7 +76,7 @@
       transparent 45%,
       rgb(0 0 0 / 0.05)
     ),
-    url("./tex/grain.svg") 0 0 / 220px 220px,
+    url("/card-tex/grain.svg") 0 0 / 220px 220px,
     var(--paper);
   background-blend-mode: normal, multiply, normal;
 }
@@ -142,7 +142,7 @@
       transparent 35%,
       rgb(0 0 0 / 0.22)
     ),
-    url("./tex/grain.svg") 0 0 / 200px 200px,
+    url("/card-tex/grain.svg") 0 0 / 200px 200px,
     var(--obi);
   background-blend-mode: normal, multiply, normal;
   color: var(--obi-ink);
@@ -197,26 +197,26 @@
   background-image: var(--foil);
   background-size: 260% 260%;
   background-position: var(--foil-pos);
-  mask: url("./tex/emblem-c.svg") center / contain no-repeat;
+  mask: url("/card-tex/emblem-c.svg") center / contain no-repeat;
 }
 
 .cfo[data-rarity="UC"] .cfo__emblem {
-  mask-image: url("./tex/emblem-uc.svg");
+  mask-image: url("/card-tex/emblem-uc.svg");
 }
 .cfo[data-rarity="R"] .cfo__emblem {
-  mask-image: url("./tex/emblem-r.svg");
+  mask-image: url("/card-tex/emblem-r.svg");
 }
 .cfo[data-rarity="E"] .cfo__emblem {
-  mask-image: url("./tex/emblem-e.svg");
+  mask-image: url("/card-tex/emblem-e.svg");
 }
 .cfo[data-rarity="L"] .cfo__emblem {
-  mask-image: url("./tex/emblem-l.svg");
+  mask-image: url("/card-tex/emblem-l.svg");
 }
 .cfo[data-rarity="Mythic"] .cfo__emblem {
-  mask-image: url("./tex/emblem-radiant.svg");
+  mask-image: url("/card-tex/emblem-radiant.svg");
 }
 .cfo[data-rarity="Prismatic"] .cfo__emblem {
-  mask-image: url("./tex/emblem-prismatic.svg");
+  mask-image: url("/card-tex/emblem-prismatic.svg");
 }
 
 .cfo__obi-mid {
@@ -544,11 +544,11 @@
 .cfo__star {
   width: 3.8cqw;
   height: 3.8cqw;
-  mask: url("./tex/star-fill.svg") center / contain no-repeat;
+  mask: url("/card-tex/star-fill.svg") center / contain no-repeat;
 }
 
 .cfo__star[data-state="empty"] {
-  mask-image: url("./tex/star-line.svg");
+  mask-image: url("/card-tex/star-line.svg");
   background: color-mix(in srgb, var(--ink-dim) 42%, transparent);
 }
 
@@ -865,7 +865,7 @@
       transparent 45%,
       rgb(0 0 0 / 0.42)
     ),
-    url("./tex/grain.svg") 0 0 / 220px 220px,
+    url("/card-tex/grain.svg") 0 0 / 220px 220px,
     var(--paper);
   background-blend-mode: normal, screen, normal;
 }
@@ -967,7 +967,7 @@
   background-size: 300% 300%;
   background-position: calc(var(--my) * 100%) calc(var(--mx) * 100%);
   mask-image:
-    url("./tex/glitter.svg"),
+    url("/card-tex/glitter.svg"),
     radial-gradient(40% 28% at var(--at-light), #000, transparent);
   mask-size:
     220px 220px,
@@ -980,7 +980,7 @@
 .cfo__foil-glitter--b {
   background: #fff;
   mask-image:
-    url("./tex/glitter-b.svg"),
+    url("/card-tex/glitter-b.svg"),
     radial-gradient(30% 22% at var(--at-far), #000, transparent);
   mask-size:
     260px 260px,

@@ -93,7 +93,7 @@
   background-size: 300% 300%;
   background-position: calc(var(--my) * 100%) calc(var(--mx) * 100%);
   mask-image:
-    url("./tex/glitter.svg"),
+    url("/card-tex/glitter.svg"),
     radial-gradient(40% 28% at var(--at-light), #000, transparent);
   mask-size:
     220px 220px,
@@ -106,7 +106,7 @@
 .card-foil__glitter--b {
   background: #fff;
   mask-image:
-    url("./tex/glitter-b.svg"),
+    url("/card-tex/glitter-b.svg"),
     radial-gradient(30% 22% at var(--at-far), #000, transparent);
   mask-size:
     260px 260px,

@@ -1,7 +1,7 @@
 import { JOB_ORDER, isCustomBanner } from "@/card/data"
 import type { CardFaceData } from "@/card/types"
 
-import { fetchCardDetail, toFace, type OpenPackResult } from "../api"
+import { fetchCardDetail, toFace, type OpenPackResult } from "@/desk/session/api"
 
 type PulledCard = OpenPackResult["results"][number]
 

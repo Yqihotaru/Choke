@@ -1,6 +1,6 @@
 import type { MailAttachment, MailAudience, MailKind } from "@choke/shared/mail"
 
-import { request } from "@/desk/api"
+import { request } from "@/desk/session/api"
 
 export interface AdminUserRow {
   id: string

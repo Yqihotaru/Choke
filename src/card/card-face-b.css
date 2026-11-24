@@ -127,7 +127,7 @@
   box-shadow:
     inset 0 0 0 0.25cqw rgb(255 255 255 / 0.12),
     0 0.5cqw 1cqw rgb(0 0 0 / 0.3);
-  --emblem: url("./tex/emblem-c.svg");
+  --emblem: url("/card-tex/emblem-c.svg");
 }
 
 .cfb__emblem::after {
@@ -139,12 +139,12 @@
   mask: var(--emblem) center / contain no-repeat;
 }
 
-.cfb[data-rarity="UC"] .cfb__emblem { --emblem: url("./tex/emblem-uc.svg"); }
-.cfb[data-rarity="R"] .cfb__emblem { --emblem: url("./tex/emblem-r.svg"); }
-.cfb[data-rarity="E"] .cfb__emblem { --emblem: url("./tex/emblem-e.svg"); }
-.cfb[data-rarity="L"] .cfb__emblem { --emblem: url("./tex/emblem-l.svg"); }
-.cfb[data-rarity="Mythic"] .cfb__emblem { --emblem: url("./tex/emblem-radiant.svg"); }
-.cfb[data-rarity="Prismatic"] .cfb__emblem { --emblem: url("./tex/emblem-prismatic.svg"); }
+.cfb[data-rarity="UC"] .cfb__emblem { --emblem: url("/card-tex/emblem-uc.svg"); }
+.cfb[data-rarity="R"] .cfb__emblem { --emblem: url("/card-tex/emblem-r.svg"); }
+.cfb[data-rarity="E"] .cfb__emblem { --emblem: url("/card-tex/emblem-e.svg"); }
+.cfb[data-rarity="L"] .cfb__emblem { --emblem: url("/card-tex/emblem-l.svg"); }
+.cfb[data-rarity="Mythic"] .cfb__emblem { --emblem: url("/card-tex/emblem-radiant.svg"); }
+.cfb[data-rarity="Prismatic"] .cfb__emblem { --emblem: url("/card-tex/emblem-prismatic.svg"); }
 
 .cfb__lv {
   /* Lv、命座星沉到侧栏底部 */

@@ -10,7 +10,7 @@ import {
 import { createPortal } from "react-dom"
 
 import { playSfx } from "@/audio/sfx"
-import { useGameConfig } from "@/desk/useGameConfig"
+import { useGameConfig } from "@/desk/session/useGameConfig"
 import { useModal } from "@/ui/useModal"
 import { BASE_SLOTS } from "@choke/shared/expedition-points"
 

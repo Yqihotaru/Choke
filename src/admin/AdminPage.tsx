@@ -11,7 +11,7 @@ import {
   type MailKind,
 } from "@choke/shared/mail"
 
-import { ApiError, fetchMe } from "@/desk/api"
+import { ApiError, fetchMe } from "@/desk/session/api"
 
 import {
   fetchBatches,

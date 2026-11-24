@@ -122,7 +122,7 @@
       transparent 64%,
       var(--lamp-lo)
     ),
-    url("./tex/grain.svg") 0 0 / 240px 240px,
+    url("/card-tex/grain.svg") 0 0 / 240px 240px,
     var(--stock);
   background-blend-mode: normal, var(--grain-blend), normal;
   /* 裁切边：左上露出浅色纸芯，右下是背光的厚度 */
@@ -243,26 +243,26 @@
 .cfcur__emblem {
   width: 6.4cqw;
   height: 6.4cqw;
-  mask: url("./tex/emblem-c.svg") center / contain no-repeat;
+  mask: url("/card-tex/emblem-c.svg") center / contain no-repeat;
 }
 
 .cfcur[data-rarity="UC"] .cfcur__emblem {
-  mask-image: url("./tex/emblem-uc.svg");
+  mask-image: url("/card-tex/emblem-uc.svg");
 }
 .cfcur[data-rarity="R"] .cfcur__emblem {
-  mask-image: url("./tex/emblem-r.svg");
+  mask-image: url("/card-tex/emblem-r.svg");
 }
 .cfcur[data-rarity="E"] .cfcur__emblem {
-  mask-image: url("./tex/emblem-e.svg");
+  mask-image: url("/card-tex/emblem-e.svg");
 }
 .cfcur[data-rarity="L"] .cfcur__emblem {
-  mask-image: url("./tex/emblem-l.svg");
+  mask-image: url("/card-tex/emblem-l.svg");
 }
 .cfcur[data-rarity="Mythic"] .cfcur__emblem {
-  mask-image: url("./tex/emblem-radiant.svg");
+  mask-image: url("/card-tex/emblem-radiant.svg");
 }
 .cfcur[data-rarity="Prismatic"] .cfcur__emblem {
-  mask-image: url("./tex/emblem-prismatic.svg");
+  mask-image: url("/card-tex/emblem-prismatic.svg");
 }
 
 .cfcur__grade {
@@ -430,11 +430,11 @@
 .cfcur__star {
   width: 5.2cqw;
   height: 5.2cqw;
-  mask: url("./tex/star-fill.svg") center / contain no-repeat;
+  mask: url("/card-tex/star-fill.svg") center / contain no-repeat;
 }
 
 .cfcur__star[data-state="empty"] {
-  mask-image: url("./tex/star-line.svg");
+  mask-image: url("/card-tex/star-line.svg");
   background: rgb(255 255 255 / 0.6);
 }
 
@@ -456,7 +456,7 @@
   padding: 1.5cqw;
   border-radius: 1.5cqw;
   background:
-    url("./tex/grain.svg") 0 0 / 240px 240px,
+    url("/card-tex/grain.svg") 0 0 / 240px 240px,
     var(--tile);
   background-blend-mode: var(--grain-blend), normal;
   box-shadow:
@@ -1045,7 +1045,7 @@
   background-size: 300% 300%;
   background-position: calc(var(--my) * 100%) calc(var(--mx) * 100%);
   mask-image:
-    url("./tex/glitter.svg"),
+    url("/card-tex/glitter.svg"),
     radial-gradient(40% 28% at var(--at-light), #000, transparent);
   mask-size:
     220px 220px,
@@ -1058,7 +1058,7 @@
 .cfcur__foil-glitter--b {
   background: #fff;
   mask-image:
-    url("./tex/glitter-b.svg"),
+    url("/card-tex/glitter-b.svg"),
     radial-gradient(30% 22% at var(--at-far), #000, transparent);
   mask-size:
     260px 260px,

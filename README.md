@@ -92,7 +92,13 @@ API 启动会自动补列和旧卡序号：已有号码不变，未编号实例�
 
 ```text
 src/                前端（Vite root）
-  desk/             桌面、卡册、卡组、背包、抽卡、市场、账号
+  desk/             桌面
+    shell/          翻页书本、抽屉、拖拽
+    panels/         书页面板（cards / shop / player / mail / battle / invite）
+    session/        请求、状态、轮询
+    lib/            桌面纯工具
+    login/          登录页
+    opening/        开包动画
   battle/           回合制 PvE 原型
   card/             卡面、卡牌定义、养成
   pool/             卡池构建与实验室

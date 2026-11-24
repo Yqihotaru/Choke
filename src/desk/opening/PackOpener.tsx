@@ -16,13 +16,13 @@ import { GameCardFace } from "@/card/GameCardFace"
 import { RARITIES } from "@/card/types"
 import { useModal } from "@/ui/useModal"
 
-import { cardFromDesk } from "../cardFace"
-import { CARD_POINTER_DROP_EVENT, startCardPointerDrag, type CardPointerDrop } from "../drag"
-import { CardDragLayer } from "../DragGhost"
-import { RARITY_COLOR } from "../rarity"
-import type { CardData, PackPool, Rarity } from "../types"
-import { PackArt } from "./PackArt"
-import "./opener.css"
+import { cardFromDesk } from "@/desk/lib/cardFace"
+import { CARD_POINTER_DROP_EVENT, startCardPointerDrag, type CardPointerDrop } from "@/desk/lib/drag"
+import { CardDragLayer } from "@/desk/shell/DragGhost"
+import { RARITY_COLOR } from "@/desk/lib/rarity"
+import type { CardData, PackPool, Rarity } from "@/desk/lib/types"
+import { PackArt } from "@/desk/opening/PackArt"
+import "@/desk/opening/opener.css"
 
 export interface OriginRect {
   left: number

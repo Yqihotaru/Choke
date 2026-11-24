@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react"
 
-import { POOL_META } from "../rarity"
-import type { PackPool } from "../types"
-import "./pack.css"
+import { POOL_META } from "@/desk/lib/rarity"
+import type { PackPool } from "@/desk/lib/types"
+import "@/desk/opening/pack.css"
 
 /**
  * 卡包：顶部一条卡池色的撕条（中间一个挂孔，撕线右端一个缺口），下面是深色包身。

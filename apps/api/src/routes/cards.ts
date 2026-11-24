@@ -43,6 +43,7 @@ const publicCardsCache = new Map<string, PublicCardsPayload>()
 const publicCountCache = new Map<string, number>()
 const PUBLIC_CACHE_LIMIT = 64
 let publicStats: { total: number; byRarity: Record<string, number> } | null = null
+let publicCountries: { code: string; total: number }[] | null = null
 let publicCardsRevision = 0
 
 /** 图鉴分母（卡池按稀有度 / 国家的总数）与用户无关，进程内缓存即可。 */
@@ -62,6 +63,7 @@ export function invalidatePublicCardCache() {
   invalidatePublicCardRows()
   publicCountCache.clear()
   publicStats = null
+  publicCountries = null
   codexPoolStats = null
 }
 
@@ -178,19 +180,20 @@ export async function cardRoutes(app: FastifyInstance) {
   })
 
   app.get("/cards/countries", async () => {
+    if (publicCountries) return { ok: true, data: publicCountries }
+
     const rows = await db
       .select({ code: cards.country, value: count() })
       .from(cards)
       .where(eq(cards.cardType, CARD_TYPES.pool))
       .groupBy(cards.country)
 
-    return {
-      ok: true,
-      data: rows
-        .filter((row): row is { code: string; value: number } => !!row.code)
-        .map((row) => ({ code: row.code, total: Number(row.value) }))
-        .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code)),
-    }
+    publicCountries = rows
+      .filter((row): row is { code: string; value: number } => !!row.code)
+      .map((row) => ({ code: row.code, total: Number(row.value) }))
+      .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code))
+
+    return { ok: true, data: publicCountries }
   })
 
   app.get("/users/:userId/codex/stats", async (request, reply) => {
@@ -287,29 +290,30 @@ export async function cardRoutes(app: FastifyInstance) {
           ? [asc(cards.name)]
           : [sql`${cards.pp} desc nulls last`]
 
-    const rows = await db
-      .select({
-        ...getTableColumns(cards),
-        owned: sql<boolean>`(${ownedCards.cardId} is not null)`,
-      })
-      .from(cards)
-      .leftJoin(ownedCards, eq(ownedCards.cardId, cards.id))
-      .where(where)
-      .orderBy(...orderBy)
-      .limit(query.limit)
-      .offset(query.offset)
-
-    const [{ value: total }] = await db
-      .select({ value: count() })
-      .from(cards)
-      .leftJoin(ownedCards, eq(ownedCards.cardId, cards.id))
-      .where(where)
-
-    const [{ value: ownedTotal }] = await db
-      .select({ value: count() })
-      .from(cards)
-      .leftJoin(ownedCards, eq(ownedCards.cardId, cards.id))
-      .where(and(...baseFilters, isNotNull(ownedCards.cardId)))
+    // 三条查询互不依赖，一次并发发出去，避免三次串行往返。
+    const [rows, [{ value: total }], [{ value: ownedTotal }]] = await Promise.all([
+      db
+        .select({
+          ...getTableColumns(cards),
+          owned: sql<boolean>`(${ownedCards.cardId} is not null)`,
+        })
+        .from(cards)
+        .leftJoin(ownedCards, eq(ownedCards.cardId, cards.id))
+        .where(where)
+        .orderBy(...orderBy)
+        .limit(query.limit)
+        .offset(query.offset),
+      db
+        .select({ value: count() })
+        .from(cards)
+        .leftJoin(ownedCards, eq(ownedCards.cardId, cards.id))
+        .where(where),
+      db
+        .select({ value: count() })
+        .from(cards)
+        .leftJoin(ownedCards, eq(ownedCards.cardId, cards.id))
+        .where(and(...baseFilters, isNotNull(ownedCards.cardId))),
+    ])
 
     return {
       ok: true,

@@ -6,7 +6,7 @@ import {
   fetchProgress,
   skipTutorialRemote,
   type ServerProgress,
-} from "@/desk/api"
+} from "@/desk/session/api"
 import { PLAYER_MAX_LEVEL, nextTutorialStep } from "@choke/shared/player"
 
 import { TUTORIAL_STEPS, type PlayerProgress, type TutorialStep } from "./types"

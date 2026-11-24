@@ -109,7 +109,7 @@
       transparent 64%,
       var(--lamp-lo)
     ),
-    url("./tex/grain.svg") 0 0 / 240px 240px,
+    url("/card-tex/grain.svg") 0 0 / 240px 240px,
     var(--stock);
   background-blend-mode: normal, var(--grain-blend), normal;
   /* 裁切边：左上露出浅色纸芯，右下是背光的厚度 */
@@ -321,26 +321,26 @@
   flex: 0 0 auto;
   width: 5.2cqw;
   height: 5.2cqw;
-  mask: url("./tex/emblem-c.svg") center / contain no-repeat;
+  mask: url("/card-tex/emblem-c.svg") center / contain no-repeat;
 }
 
 .cf[data-rarity="UC"] .cf__emblem {
-  mask-image: url("./tex/emblem-uc.svg");
+  mask-image: url("/card-tex/emblem-uc.svg");
 }
 .cf[data-rarity="R"] .cf__emblem {
-  mask-image: url("./tex/emblem-r.svg");
+  mask-image: url("/card-tex/emblem-r.svg");
 }
 .cf[data-rarity="E"] .cf__emblem {
-  mask-image: url("./tex/emblem-e.svg");
+  mask-image: url("/card-tex/emblem-e.svg");
 }
 .cf[data-rarity="L"] .cf__emblem {
-  mask-image: url("./tex/emblem-l.svg");
+  mask-image: url("/card-tex/emblem-l.svg");
 }
 .cf[data-rarity="Mythic"] .cf__emblem {
-  mask-image: url("./tex/emblem-radiant.svg");
+  mask-image: url("/card-tex/emblem-radiant.svg");
 }
 .cf[data-rarity="Prismatic"] .cf__emblem {
-  mask-image: url("./tex/emblem-prismatic.svg");
+  mask-image: url("/card-tex/emblem-prismatic.svg");
 }
 
 .cf__rarity {
@@ -394,7 +394,7 @@
 .cf__star {
   width: 4.9cqw;
   height: 4.9cqw;
-  mask: url("./tex/star-fill.svg") center / contain no-repeat;
+  mask: url("/card-tex/star-fill.svg") center / contain no-repeat;
 }
 
 .cf__star[data-state="empty"] {

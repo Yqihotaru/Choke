@@ -1,4 +1,4 @@
-import type { PanelId } from "@/desk/DeskBook"
+import type { PanelId } from "@/desk/shell/DeskBook"
 
 import { MARKET_UNLOCK_LEVEL } from "./constants"
 import type { PlayerProgress } from "./types"

@@ -118,7 +118,7 @@
       transparent 62%,
       var(--lamp-lo)
     ),
-    url("./tex/grain.svg") 0 0 / 220px 220px,
+    url("/card-tex/grain.svg") 0 0 / 220px 220px,
     var(--rim);
   background-blend-mode: normal, var(--grain-blend), normal;
   box-shadow:
@@ -139,7 +139,7 @@
       transparent 48%,
       rgb(0 0 0 / 0.04)
     ),
-    url("./tex/grain.svg") 0 0 / 220px 220px,
+    url("/card-tex/grain.svg") 0 0 / 220px 220px,
     var(--stock);
   background-blend-mode: normal, var(--grain-blend), normal;
   box-shadow: 0 0 0 var(--hair) rgb(0 0 0 / 0.08);
@@ -246,26 +246,26 @@
 .cfg__emblem {
   width: 5cqw;
   height: 5cqw;
-  mask: url("./tex/emblem-c.svg") center / contain no-repeat;
+  mask: url("/card-tex/emblem-c.svg") center / contain no-repeat;
 }
 
 .cfg[data-rarity="UC"] .cfg__emblem {
-  mask-image: url("./tex/emblem-uc.svg");
+  mask-image: url("/card-tex/emblem-uc.svg");
 }
 .cfg[data-rarity="R"] .cfg__emblem {
-  mask-image: url("./tex/emblem-r.svg");
+  mask-image: url("/card-tex/emblem-r.svg");
 }
 .cfg[data-rarity="E"] .cfg__emblem {
-  mask-image: url("./tex/emblem-e.svg");
+  mask-image: url("/card-tex/emblem-e.svg");
 }
 .cfg[data-rarity="L"] .cfg__emblem {
-  mask-image: url("./tex/emblem-l.svg");
+  mask-image: url("/card-tex/emblem-l.svg");
 }
 .cfg[data-rarity="Mythic"] .cfg__emblem {
-  mask-image: url("./tex/emblem-radiant.svg");
+  mask-image: url("/card-tex/emblem-radiant.svg");
 }
 .cfg[data-rarity="Prismatic"] .cfg__emblem {
-  mask-image: url("./tex/emblem-prismatic.svg");
+  mask-image: url("/card-tex/emblem-prismatic.svg");
 }
 
 .cfg__grade {
@@ -493,11 +493,11 @@
 .cfg__star {
   width: 4cqw;
   height: 4cqw;
-  mask: url("./tex/star-fill.svg") center / contain no-repeat;
+  mask: url("/card-tex/star-fill.svg") center / contain no-repeat;
 }
 
 .cfg__star[data-state="empty"] {
-  mask-image: url("./tex/star-line.svg");
+  mask-image: url("/card-tex/star-line.svg");
   background: color-mix(in srgb, var(--dock-dim) 45%, transparent);
 }
 
@@ -1032,7 +1032,7 @@
   background-size: 300% 300%;
   background-position: calc(var(--my) * 100%) calc(var(--mx) * 100%);
   mask-image:
-    url("./tex/glitter.svg"),
+    url("/card-tex/glitter.svg"),
     radial-gradient(40% 28% at var(--at-light), #000, transparent);
   mask-size:
     220px 220px,
@@ -1045,7 +1045,7 @@
 .cfg__foil-glitter--b {
   background: #fff;
   mask-image:
-    url("./tex/glitter-b.svg"),
+    url("/card-tex/glitter-b.svg"),
     radial-gradient(30% 22% at var(--at-far), #000, transparent);
   mask-size:
     260px 260px,
