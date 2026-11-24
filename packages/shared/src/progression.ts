@@ -90,7 +90,7 @@ export function applyExp(
   return { level: nextLevel, exp: nextExp, wasted: 0 }
 }
 
-/** 40+ 突破金币消耗（v0.3 §6.2）：40→50: 300, 50→60: 500, 60→70: 500, 70→80: 700，合计 2000 */
+/** 40+ 突破金币消耗（v0.3 §6.3）：40→50: 300, 50→60: 500, 60→70: 500, 70→80: 700，合计 2000 */
 export const BREAKTHROUGH_COIN_COST: Readonly<Record<number, number>> = {
   40: 300,
   50: 500,

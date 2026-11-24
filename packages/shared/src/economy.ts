@@ -18,7 +18,7 @@ export const FOIL_COST = ECONOMY.foilCost
 /** 市场单卡价格上限（金币） */
 export const MARKET_MAX_PRICE = ECONOMY.marketMaxPrice
 
-/** NPC 回收单价（v0.3 §8.3） */
+/** NPC 回收单价（v0.3 §8.2） */
 export const NPC_RECYCLE_PRICES: Record<Rarity, number> = {
   C: 2,
   UC: 5,
@@ -43,7 +43,7 @@ export function npcRecycleValue(rarity: Rarity, level: number, exp: number, isHe
   return base + expBonus
 }
 
-/** 市场税率与规则（v0.3 §8.4 + 押金防乱挂） */
+/** 市场税率与规则（v0.3 §8.1 + 押金防乱挂） */
 export const MARKET_LIST_TAX_RATE = 0.02
 export const MARKET_DEPOSIT_RATE = 0.05
 export const MARKET_TRADE_TAX_RATE = 0.05

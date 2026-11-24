@@ -1,5 +1,5 @@
 /** 卡包 / 卡池配置的服务端入口；数值在 content/packs.json。前端通过 GET /config 读取。 */
-/** 概率口径：Design/经济与养成系统 v0.3.md §4.2。卡包无保底（§11.1 方案 A）。 */
+/** 概率口径：Design/经济与养成系统 v0.3.md §4.2。卡包无保底（§4.5）。 */
 import { CONTENT, MYSTERY_PACK_ID, type PackId } from "@choke/shared/content"
 
 export type { PackId }
