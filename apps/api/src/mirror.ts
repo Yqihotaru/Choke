@@ -1,4 +1,4 @@
-import { and, eq, gte, sql } from "drizzle-orm"
+import { and, asc, count, eq, gte, sql } from "drizzle-orm"
 
 import { CONTENT } from "@choke/shared/content"
 
@@ -58,21 +58,28 @@ export async function pickMirrorCard(
 
   for (let i = Math.max(0, start); i < MIRROR_FALLBACK_ORDER.length; i += 1) {
     const rarity = MIRROR_FALLBACK_ORDER[i]!
-    const rows = await db
+    const where = and(
+      eq(cards.cardType, CARD_TYPES.mirror),
+      eq(cards.rarity, rarity),
+      eq(users.onboarded, true),
+      gte(users.lastSeenAt, cutoff),
+    )
+    const [counted] = await db
+      .select({ total: count() })
+      .from(cards)
+      .innerJoin(users, eq(users.osuId, cards.originOsuId))
+      .where(where)
+    const total = Number(counted?.total ?? 0)
+    if (total === 0) continue
+    const [picked] = await db
       .select({ id: cards.id, rarity: cards.rarity })
       .from(cards)
       .innerJoin(users, eq(users.osuId, cards.originOsuId))
-      .where(
-        and(
-          eq(cards.cardType, CARD_TYPES.mirror),
-          eq(cards.rarity, rarity),
-          eq(users.onboarded, true),
-          gte(users.lastSeenAt, cutoff),
-        ),
-      )
-    if (rows.length > 0) {
-      return rows[Math.floor(random() * rows.length)] ?? null
-    }
+      .where(where)
+      .orderBy(asc(cards.id))
+      .limit(1)
+      .offset(Math.floor(random() * total))
+    if (picked) return picked
   }
   return null
 }
