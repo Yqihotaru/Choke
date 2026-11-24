@@ -87,7 +87,12 @@ const skillSchema = z
     healBonus: ratio.optional(),
     triggerBonus: ratio.optional(),
     supportShield: ratio.optional(),
+    teamDamageReduce: ratio.max(0.15).optional(),
 
+    debuffScale: ratio.max(0.3).optional(),
+    comboThreshold: z.int().min(2).max(9).optional(),
+    comboDamageBonus: ratio.max(1).optional(),
+    comboBoostAllies: z.int().min(1).max(3).optional(),
     unlockTurn: z.int().min(2).max(10).optional(),
     cleanse: z.boolean().optional(),
     boostAllies: z.int().min(1).max(3).optional(),
@@ -99,14 +104,14 @@ const skillSchema = z
     const has = (key: keyof typeof def) => def[key] !== undefined
     const PASSIVE_KEYS = [
       "openingStatus", "defMul", "lowHpMul", "lifesteal", "spellCrit", "swift", "critVsVulnerable", "regenPct",
-      "controlBonus", "supportProcBonus", "apRegenBonus", "healBonus", "triggerBonus", "supportShield",
+      "controlBonus", "supportProcBonus", "apRegenBonus", "healBonus", "triggerBonus", "supportShield", "teamDamageReduce",
     ] as const
 
     if (def.passive) {
       if (def.kind !== "passive") fail("passive 为真时 kind 必须是 passive")
       if (def.ap !== 0) fail("被动技能 ap 必须是 0")
       if (!PASSIVE_KEYS.some(has)) fail("被动技能必须声明至少一个效果字段")
-      for (const key of ["power", "hits", "statusId", "unlockTurn", "cleanse", "boostAllies", "revive", "selfStatus", "supportDef"] as const) {
+      for (const key of ["power", "hits", "statusId", "unlockTurn", "cleanse", "boostAllies", "revive", "selfStatus", "supportDef", "debuffScale", "comboThreshold", "comboDamageBonus", "comboBoostAllies"] as const) {
         if (has(key)) fail(`被动技能不能带主动字段 ${key}`)
       }
       return
@@ -128,6 +133,12 @@ const skillSchema = z
     if (has("cleanse") && def.kind !== "heal") fail("cleanse 只能用在 heal 技能上")
     if (has("revive") && def.kind !== "heal") fail("revive 只能用在 heal 技能上")
     if (has("boostAllies") && def.kind !== "buff") fail("boostAllies 只能用在 buff 技能上")
+    if (has("debuffScale") && def.kind !== "damage") fail("debuffScale 只能用在 damage 技能上")
+    if (has("comboThreshold") !== (has("comboDamageBonus") || has("comboBoostAllies"))) {
+      fail("comboThreshold 必须和 comboDamageBonus 或 comboBoostAllies 一起写")
+    }
+    if (has("comboDamageBonus") && def.kind !== "damage") fail("comboDamageBonus 只能用在 damage 技能上")
+    if (has("comboBoostAllies") && def.kind !== "buff") fail("comboBoostAllies 只能用在 buff 技能上")
     if (has("selfStatus") && def.kind !== "taunt") fail("selfStatus 目前只能用在 taunt 技能上")
     if (def.once && def.costTag === "accumulate") fail("once 与 accumulate 费用标签冲突")
 
@@ -216,6 +227,7 @@ export function autoDescribeSkill(def: SkillDef): string {
     if (def.healBonus) parts.push(`治疗量 +${pct(def.healBonus)}`)
     if (def.triggerBonus) parts.push(`Boost 与必杀触发概率 +${pct(def.triggerBonus)}`)
     if (def.supportShield) parts.push(`敌方拆除我方侧面支援时，每个目标 ${pct(def.supportShield)} 概率免于被拆`)
+    if (def.teamDamageReduce) parts.push(`全队受到的伤害 −${pct(def.teamDamageReduce)}`)
     return parts.join("；")
   }
 
@@ -225,6 +237,8 @@ export function autoDescribeSkill(def: SkillDef): string {
     case "interrupt":
       parts.push(`${hitText}造成 ${pct(def.power ?? 0)} ${element}伤害`.replace("  ", " "))
       if (def.piercePct) parts.push(`无视目标 ${pct(def.piercePct)} 防御`)
+      if (def.debuffScale) parts.push(`目标每有 1 种负面状态伤害 +${pct(def.debuffScale)}（最多计 3 种）`)
+      if (def.comboThreshold && def.comboDamageBonus) parts.push(`施放时 Combo ≥ ${def.comboThreshold} 则伤害 +${pct(def.comboDamageBonus)}`)
       if (def.executeBonus && def.executeWhen) {
         const label = def.executeWhen.map((c) => (c === "vulnerable" ? "处于【脆弱】" : "血量低于 40%")).join("或")
         parts.push(`目标${label}时伤害 +${pct(def.executeBonus)}`)
@@ -247,6 +261,7 @@ export function autoDescribeSkill(def: SkillDef): string {
     case "buff":
       if (def.stat && def.amount) parts.push(`全队 ${STAT_LABEL[def.stat]} +${pct(def.amount)}，持续 ${def.turns} 回合`)
       if (def.boostAllies) parts.push(`点亮 ${def.boostAllies} 名未行动队友的 BOOST`)
+      if (def.comboThreshold && def.comboBoostAllies) parts.push(`施放时 Combo ≥ ${def.comboThreshold} 则多点亮 ${def.comboBoostAllies} 名未行动队友的 BOOST`)
       break
     case "ap":
       parts.push(`获得 ${def.amount} 点 AP`)

@@ -38,6 +38,8 @@ import {
   STATUS_CHANCE_BY_TIER,
   SUPPORT_PROC_RATE,
   TEAM_STATUS_NAME,
+  TEAM_DAMAGE_REDUCE_CAP,
+  DEBUFF_SCALE_MAX_KINDS,
   TOTAL_DEFENSE_REDUCTION_CAP,
 } from "./config"
 import {
@@ -233,7 +235,8 @@ export function playerResist(state: BattleState, card: BattleCard, magic: boolea
  */
 export function incomingDamageFactor(state: BattleState, resist: number): number {
   const manual = defenseReductionOf(manualDefenseTier(state), hasTankAlive(state.cards))
-  return Math.max(1 - TOTAL_DEFENSE_REDUCTION_CAP, (1 - mitigation(resist)) * (1 - manual))
+  const team = Math.min(TEAM_DAMAGE_REDUCE_CAP, teamEffectSum(state.cards, "teamDamageReduce"))
+  return Math.max(1 - TOTAL_DEFENSE_REDUCTION_CAP, (1 - mitigation(resist)) * (1 - manual) * (1 - team))
 }
 
 /** 计算敌方当前生效的防御档位（来自左侧敌方装甲支援，扣除我方施加的破防层数） */
@@ -545,6 +548,13 @@ function applyDamageToEnemy(
     if (met) execMult += skill.executeBonus
   }
 
+  // 异常计数增伤：目标身上每种不同的负面状态 +debuffScale（最多计 3 种），独立乘区；脆弱已有自己的 +30%，不重复计
+  const debuffKinds = new Set(state.enemy.statuses.filter((s) => s.isDebuff && s.id !== "vulnerable").map((s) => s.id)).size
+  const debuffMult = skill.debuffScale ? 1 + skill.debuffScale * Math.min(debuffKinds, DEBUFF_SCALE_MAX_KINDS) : 1
+  // 节拍阈值：以"开始施放时"的 Combo 为准，多段技能不会被自己打出的 Combo 抬到阈值
+  const comboMult =
+    skill.comboThreshold && skill.comboDamageBonus && state.combo >= skill.comboThreshold ? 1 + skill.comboDamageBonus : 1
+
   let total = 0
   let thornsReflectedCount = 0
   const enemyThorns = state.enemySupports.find((s) => s.kind === "thorns" && !s.bannedTurns)
@@ -586,6 +596,8 @@ function applyDamageToEnemy(
         skillPower *
         triggerMult *
         execMult *
+        debuffMult *
+        comboMult *
         statusVuln *
         comboMultiplier(state.combo) *
         elMult *
@@ -945,10 +957,13 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
           amount: skill.amount ?? 0.2,
           turns: skill.turns ?? 2,
         })
-        // 专拐技能：直接为未行动队友点亮 BOOST
-        if (skill.boostAllies) {
+        // 专拐技能：直接为未行动队友点亮 BOOST；节拍阈值技能在 Combo 够高时多点亮几个
+        const comboBoost =
+          skill.comboThreshold && skill.comboBoostAllies && state.combo >= skill.comboThreshold ? skill.comboBoostAllies : 0
+        const boostCount = (skill.boostAllies ?? 0) + comboBoost
+        if (boostCount > 0) {
           const candidates = state.cards.filter((c, idx) => idx !== cardIndex && !c.down && !c.acted && !c.trigger)
-          for (const target of candidates.slice(0, skill.boostAllies)) {
+          for (const target of candidates.slice(0, boostCount)) {
             target.trigger = "boost"
           }
           log(state, `🎵 ${card.name} 奏响专拐战歌，全队攻击提升并为队友点亮【BOOST 1.5×】！`)

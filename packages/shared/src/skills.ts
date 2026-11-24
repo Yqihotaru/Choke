@@ -58,7 +58,7 @@ export type NumericEffectKey =
   | "healBonus"
   | "triggerBonus"
   | "supportShield"
-
+  | "teamDamageReduce"
 export interface SkillDef {
   id: string
   name: string
@@ -150,8 +150,18 @@ export interface SkillDef {
   triggerBonus?: number
   /** 敌方拆我方支援时，每个目标免拆概率 */
   supportShield?: number
+  /** 全队受到的伤害额外减免比例（多张叠加，合计封顶 20%） */
+  teamDamageReduce?: number
 
   /* ---- 主动技能效果字段 ---- */
+  /** 异常计数增伤：目标每有 1 种负面状态，伤害 +此比例（最多计 3 种） */
+  debuffScale?: number
+  /** 节拍阈值：施放时 Combo 达到这个数，才触发下面的 combo 强化项 */
+  comboThreshold?: number
+  /** 达到阈值时伤害加成（只用于伤害技能） */
+  comboDamageBonus?: number
+  /** 达到阈值时额外为 N 张未行动队友点亮 BOOST（只用于 buff 技能） */
+  comboBoostAllies?: number
   /** 第 N 回合起才能用 */
   unlockTurn?: number
   /** 净化全队负面状态 */
@@ -456,6 +466,18 @@ export const SKILLS: Record<string, SkillDef> = {
     passive: true,
     minRarity: "L",
     desc: "被动：常驻 DEF +15%",
+  }),
+  warden_parry: S({
+    id: "warden_parry",
+    job: "tank",
+    teamDamageReduce: 0.1,
+    name: "滞拍格挡",
+    element: "metal",
+    ap: 0,
+    kind: "passive",
+    passive: true,
+    minRarity: "Mythic",
+    desc: "被动：全队受到的伤害 −10%（多张叠加，合计最多 −20%）",
   }),
   bulwark_resolve: S({
     id: "bulwark_resolve",
@@ -802,6 +824,21 @@ export const SKILLS: Record<string, SkillDef> = {
   }),
 
   /* ---- 战士：技能池扩充第一批 ---- */
+  assassin_exploit: S({
+    id: "assassin_exploit",
+    job: "warrior",
+    name: "痛点追斩",
+    element: "dark",
+    ap: 2,
+    kind: "damage",
+    costTag: "normal",
+    power: 1.45,
+    hits: 1,
+    debuffScale: 0.15,
+    target: "enemy",
+    minRarity: "L",
+    desc: "1.45× 暗属性斩击；目标每有 1 种负面状态，伤害 +15%（最多计 3 种，脆弱不计）",
+  }),
   breaker_keen: S({
     id: "breaker_keen",
     job: "warrior",
@@ -919,6 +956,38 @@ export const SKILLS: Record<string, SkillDef> = {
     minRarity: "R",
     desc: "1.65× 金属性法术，无视 50% 防御，不附带状态",
   }),
+  warlock_collapse: S({
+    id: "warlock_collapse",
+    job: "mage",
+    name: "异象坍缩",
+    element: "dark",
+    ap: 3,
+    kind: "damage",
+    costTag: "accumulate",
+    power: 1.95,
+    hits: 1,
+    debuffScale: 0.15,
+    target: "enemy",
+    minRarity: "L",
+    desc: "1.95× 暗属性法术；目标每有 1 种负面状态，伤害 +15%（最多计 3 种，脆弱不计）· 远征累积",
+  }),
+  warlock_cadence: S({
+    id: "warlock_cadence",
+    job: "mage",
+    name: "强拍星落",
+    element: "light",
+    ap: 3,
+    kind: "damage",
+    costTag: "once",
+    once: true,
+    power: 2.05,
+    hits: 1,
+    comboThreshold: 5,
+    comboDamageBonus: 0.35,
+    target: "enemy",
+    minRarity: "L",
+    desc: "单次：2.05× 光属性法术；施放时 Combo ≥ 5，伤害 +35%",
+  }),
   warlock_overclock: S({
     id: "warlock_overclock",
     job: "mage",
@@ -1025,6 +1094,7 @@ export const SKILLS: Record<string, SkillDef> = {
     costTag: "normal",
     healPct: 0.15,
     target: "team",
+    minRarity: "L",
     desc: "回复 15% 队伍最大生命，并立即唤醒所有被 Down 的队友",
   }),
   life_regen: S({
@@ -1259,6 +1329,7 @@ export const SKILLS: Record<string, SkillDef> = {
     costTag: "normal",
     healPct: 0.12,
     target: "team",
+    minRarity: "L",
     desc: "救醒场上所有被 Down 的卡片，并回复 12% 队伍最大生命",
   }),
   healer_plus: S({
@@ -1442,6 +1513,35 @@ export const SKILLS: Record<string, SkillDef> = {
     passive: true,
     minRarity: "E",
     desc: "被动：全队治疗量 +15%；自身 DEF +8%",
+  }),
+  bard_crescendo: S({
+    id: "bard_crescendo",
+    job: "support",
+    name: "高潮合拍",
+    element: "thunder",
+    ap: 1,
+    kind: "buff",
+    costTag: "normal",
+    stat: "atk",
+    amount: 0.15,
+    turns: 2,
+    comboThreshold: 5,
+    comboBoostAllies: 2,
+    target: "team",
+    minRarity: "L",
+    desc: "全队 ATK/INT +15%（2 回合）；施放时 Combo ≥ 5，额外为 2 名未行动队友点亮 BOOST",
+  }),
+  bard_shelter: S({
+    id: "bard_shelter",
+    job: "support",
+    teamDamageReduce: 0.08,
+    name: "稳拍护盾",
+    element: "earth",
+    ap: 0,
+    kind: "passive",
+    passive: true,
+    minRarity: "Mythic",
+    desc: "被动：全队受到的伤害 −8%（多张叠加，合计最多 −20%）",
   }),
   healer_barrier: S({
     id: "healer_barrier",

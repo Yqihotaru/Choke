@@ -57,7 +57,7 @@ const down = (state: BattleState) => {
   check("每个技能都有大职业", all.every((s) => s.job))
   const effectKeys = [
     "openingStatus", "defMul", "lowHpMul", "lifesteal", "spellCrit", "swift", "critVsVulnerable", "regenPct",
-    "controlBonus", "supportProcBonus", "apRegenBonus", "healBonus", "triggerBonus", "supportShield",
+    "controlBonus", "supportProcBonus", "apRegenBonus", "healBonus", "triggerBonus", "supportShield", "teamDamageReduce",
   ] as const
   const bare = all.filter((s) => s.passive && !effectKeys.some((k) => s[k] !== undefined))
   check("每个被动都声明了效果字段", bare.length === 0, bare.map((s) => s.id).join(","))
@@ -1016,6 +1016,85 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   const newActive0 = Object.values(SKILLS).filter((s) => !s.passive && s.ap === 0 && added.includes(s.id))
   check("技能池扩充：新增的 0 费主动不超过 2 个", newActive0.length <= 2, newActive0.map((s) => s.id).join())
   check("技能池扩充：吸血被动都不超过 8%", Object.values(SKILLS).filter((s) => s.lifesteal).every((s) => s.lifesteal! <= 0.08))
+}
+
+// ---------- 9l. 技能池扩充第二批：三个新机制 ----------
+{
+  const ghost = resolveEncounter(BATTLE_CONTENT, "ghost")!
+  const RESIST = 1000
+
+  // 全队减伤（滞拍格挡 10%、稳拍护盾 8%）：多张叠加，合计 20% 封顶，仍受总减伤 90% 上限约束
+  const factorWith = (decks: Array<[Job, string[]]>) => {
+    const cards = inputs(decks.map(([job, ids], i) => face(`t${i}`, job, "Mythic", 40, 0, ids)), 10)
+    return { s: createBattle(spec, cards, { apMax: 7, seed: "team-reduce" }) }
+  }
+  const none = incomingDamageFactor(factorWith([["tank", ["bulwark_quake"]], ["tank", ["bulwark_quake"]]]).s, RESIST)
+  const parry = factorWith([["tank", ["warden_parry"]], ["tank", ["bulwark_quake"]]]).s
+  check("滞拍格挡：全队受到的伤害 −10%", Math.abs(incomingDamageFactor(parry, RESIST) / none - 0.9) < 0.002)
+  const both = factorWith([["tank", ["warden_parry"]], ["support", ["bard_shelter"]]]).s
+  check("滞拍格挡 + 稳拍护盾：叠加 −18%", Math.abs(incomingDamageFactor(both, RESIST) / none - 0.82) < 0.002)
+  const many = factorWith([["tank", ["warden_parry"]], ["tank", ["warden_parry"]], ["tank", ["warden_parry"]]]).s
+  check("全队减伤：叠到 30% 也只算 20%", Math.abs(incomingDamageFactor(many, RESIST) / none - 0.8) < 0.002)
+  const downed = factorWith([["tank", ["warden_parry"]], ["tank", ["bulwark_quake"]]]).s
+  downed.cards[0]!.down = true
+  check("滞拍格挡：带它的卡被 Down 就失效", Math.abs(incomingDamageFactor(downed, RESIST) - none) < 1e-9)
+  many.defenseTier = 4
+  check("全队减伤：叠上满档防御，总减伤仍不超过 90%", incomingDamageFactor(many, RESIST) >= 0.1 - 1e-9, String(incomingDamageFactor(many, RESIST)))
+
+  // 异常计数增伤：每种负面 +15%，最多 3 种，脆弱不计
+  const hitFor = (id: string, job: Job, kinds: string[], extra?: (s: BattleState) => void) => {
+    let total = 0
+    for (const seed of seedsOf(id)) {
+      const s = start(job, [id], seed, ghost)
+      s.enemy.hp = s.enemy.hpMax = 1e9
+      s.ap = 6
+      for (const kind of kinds) s.enemy.statuses.push({ id: kind, name: kind, amount: 0.03, turns: 3, isDebuff: true } as never)
+      extra?.(s)
+      total += s.enemy.hp - apply(s, { type: "skill", card: 0, skill: id }).enemy.hp
+    }
+    return total
+  }
+  for (const [id, job] of [["assassin_exploit", "warrior"], ["warlock_collapse", "mage"]] as const) {
+    const base = hitFor(id, job, [])
+    check(`${SKILLS[id]!.name}：目标 2 种负面状态时伤害约 +30%`, Math.abs(hitFor(id, job, ["poison", "bleed"]) / base - 1.3) < 0.03)
+    check(`${SKILLS[id]!.name}：5 种负面状态也只计 3 种（+45%）`, Math.abs(hitFor(id, job, ["poison", "bleed", "curse", "shock", "weaken"]) / base - 1.45) < 0.03)
+    check(`${SKILLS[id]!.name}：脆弱不重复计入`, Math.abs(hitFor(id, job, ["vulnerable"]) / base - 1.3) < 0.03, "脆弱本身有 +30% 乘区，不应再叠 +15%")
+  }
+
+  // 节拍阈值：强拍星落 Combo ≥ 5 伤害 +35%
+  {
+    const at = (combo: number) => hitFor("warlock_cadence", "mage", [], (s) => { s.combo = combo })
+    const expected = 1.35 * (comboMultiplier(6) / comboMultiplier(5))
+    check("强拍星落：Combo 5 比 Combo 4 多 35%（另计 Combo 倍率差）", Math.abs(at(5) / at(4) - expected) < 0.04, `${at(5) / at(4)} vs ${expected}`)
+    check("强拍星落：Combo 6 和 Combo 5 的差只剩 Combo 倍率", Math.abs(at(6) / at(5) - comboMultiplier(7) / comboMultiplier(6)) < 0.04)
+  }
+
+  // 高潮合拍：Combo ≥ 5 多点亮 2 名队友的 BOOST
+  {
+    const lit = (combo: number) => {
+      const cards = inputs(
+        [face("bard", "support", "L", 40, 0, ["bard_crescendo"]), face("a", "tank", "L", 40, 0, ["bulwark_quake"]), face("b", "tank", "L", 40, 0, ["bulwark_quake"]), face("c", "tank", "L", 40, 0, ["bulwark_quake"])],
+        10,
+      )
+      const s = createBattle(spec, cards, { apMax: 7, seed: "crescendo-1" })
+      for (const c of s.cards) c.trigger = null
+      s.combo = combo
+      s.ap = 6
+      const after = apply(s, { type: "skill", card: 0, skill: "bard_crescendo" })
+      return {
+        boosts: after.cards.filter((c, i) => i > 0 && c.trigger === "boost").length,
+        buffed: after.teamStatuses.some((st) => st.id === "buff_atk"),
+      }
+    }
+    check("高潮合拍：Combo 不够时只加全队增益，不点亮 BOOST", lit(4).boosts === 0 && lit(4).buffed)
+    check("高潮合拍：Combo ≥ 5 时多点亮 2 名队友的 BOOST", lit(5).boosts === 2 && lit(5).buffed, String(lit(5).boosts))
+  }
+
+  // 数据口径
+  const second = ["warden_parry", "assassin_exploit", "warlock_collapse", "warlock_cadence", "bard_crescendo", "bard_shelter"]
+  check("技能池扩充第二批：6 个技能都在表里", second.every((id) => SKILLS[id]))
+  check("技能池扩充第二批：两个全队减伤被动 Mythic 起", SKILLS.warden_parry!.minRarity === "Mythic" && SKILLS.bard_shelter!.minRarity === "Mythic")
+  check("技能池扩充第二批：只有这两个技能带全队减伤", Object.values(SKILLS).filter((s) => s.teamDamageReduce).map((s) => s.id).sort().join() === "bard_shelter,warden_parry")
 }
 
 // ---------- 10. 坦克只看大职业 ----------

@@ -104,6 +104,8 @@ function measure(skill: SkillDef): Row {
   const notes: string[] = []
   if (skill.selfHpCostPct) notes.push(`扣队伍 ${Math.round(skill.selfHpCostPct * 100)}% 生命`)
   if (skill.executeBonus) notes.push(`斩杀 +${Math.round(skill.executeBonus * 100)}%（本表不计）`)
+  if (skill.debuffScale) notes.push(`每种负面状态 +${Math.round(skill.debuffScale * 100)}%，最多 +${Math.round(skill.debuffScale * 300)}%（本表不计）`)
+  if (skill.comboThreshold && skill.comboDamageBonus) notes.push(`Combo ≥ ${skill.comboThreshold} 时 +${Math.round(skill.comboDamageBonus * 100)}%（热身已含）`)
   if (skill.clearEnemySupports) notes.push(`拆 ${skill.clearEnemySupports} 个支援`)
   if (skill.kind === "interrupt") notes.push("含打断")
   if (skill.ap === 0) notes.push("0 费按每回合 0.5 AP 折算")
