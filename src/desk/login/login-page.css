@@ -180,11 +180,6 @@
   cursor: default;
   opacity: 0.6;
 }
-.login-tabs button:focus-visible,
-.login-back:focus-visible {
-  outline: 2px solid var(--bk-osu);
-  outline-offset: 2px;
-}
 
 .login-form {
   display: flex;

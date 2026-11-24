@@ -16,10 +16,6 @@
   cursor: grab;
   outline: none;
 }
-.invite-env:focus-visible .invite-env__body {
-  outline: 2px solid var(--d-osu, #ff66aa);
-  outline-offset: 4px;
-}
 /* 拿在手里时浮到书上面 */
 .invite-env.is-dragging {
   z-index: 40;
@@ -142,6 +138,11 @@
   z-index: -1;
   scale: 1 -1;
   background: linear-gradient(0deg, var(--i-paper-lo), #cdbdc5);
+  /* 翻盖底边和背板顶边正好重合，信封一旋转，两条边之间就会漏出一条桌面色的细缝；
+     以顶边下 1px 为轴翻转，让翻盖往信封里多压 3px 盖住接缝 */
+  top: -1px;
+  height: calc(62% + 1px);
+  transform-origin: 50% 1px;
 }
 .invite-env.is-open .invite-env__back {
   z-index: -2;
@@ -504,11 +505,6 @@
   opacity: 0.6;
   cursor: progress;
 }
-.invite-paper__btn:focus-visible,
-.invite-paper__close:focus-visible {
-  outline: 2px solid #2c2227;
-  outline-offset: 2px;
-}
 .invite-paper__btn--ghost {
   background: transparent;
   color: var(--i-ink);
@@ -516,6 +512,65 @@
 }
 .invite-paper__btn--ghost:hover {
   background: rgb(44 34 39 / 0.06);
+}
+/* 登录 / 注册页：信纸永远是浅粉纸色，面板用的 bk-* 在这里换成纸上的配色，亮暗主题都一样 */
+.invite-paper {
+  --bk-ink: var(--i-ink);
+  --bk-dim: var(--i-dim);
+  --bk-faint: #a09097;
+  --bk-line: rgb(44 34 39 / 0.16);
+  --bk-well: #e6d9df;
+  --bk-raised: #e8dce2;
+  --bk-raised-hi: #dfd0d8;
+  --bk-edge: #c9b8c1;
+  --bk-bad: #c4264f;
+}
+.invite-paper .bk-input {
+  box-shadow: inset 0 1px 2px rgb(44 34 39 / 0.18), inset 0 0 0 1px var(--bk-line);
+}
+.invite-paper .login-tabs {
+  box-shadow: inset 0 1px 2px rgb(44 34 39 / 0.2);
+}
+.invite-paper .login-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.invite-paper .login-divider {
+  margin: 4px 0 12px;
+}
+.invite-paper__btn--wide {
+  display: flex;
+  width: 100%;
+}
+.invite-paper__center {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 12px !important;
+}
+.invite-paper__back {
+  display: block;
+  margin: 14px auto 0;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--i-dim);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.14s ease;
+}
+.invite-paper__back > span {
+  display: inline-block;
+  transition: translate 0.14s ease;
+}
+.invite-paper__back:hover {
+  color: #e8408c;
+}
+.invite-paper__back:hover > span {
+  translate: -3px 0;
 }
 .invite-paper__error {
   color: #c4264f;

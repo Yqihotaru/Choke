@@ -16,6 +16,7 @@ import { useModal } from "@/ui/useModal"
 import { onboard } from "@/desk/session/api"
 import { cellScale, type DeskDrawerHandle } from "@/desk/shell/DeskDrawer"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
+import { EmailAuthForm } from "@/desk/login/EmailAuthForm"
 import {
   ACHIEVEMENTS,
   INVITE_OPEN_EVENT,
@@ -475,6 +476,10 @@ function LetterModal({
   const [granted, setGranted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [jumping, setJumping] = useState(false)
+  /** 未登录时信纸上的两页：邀请词 / 登录注册 */
+  const [view, setView] = useState<"intro" | "auth">("intro")
+  const signInRef = useRef<HTMLButtonElement>(null)
+  const osuRef = useRef<HTMLAnchorElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
   const config = useGameConfig()
   const stats = useCardStats()
@@ -490,6 +495,17 @@ function LetterModal({
     window.addEventListener("pageshow", reset)
     return () => window.removeEventListener("pageshow", reset)
   }, [])
+
+  // 信纸原地换页：触发切换的按钮会被卸掉，焦点交给新页的第一个控件
+  const firstView = useRef(true)
+  useEffect(() => {
+    if (firstView.current) {
+      firstView.current = false
+      return
+    }
+    if (view === "auth") osuRef.current?.focus()
+    else signInRef.current?.focus()
+  }, [view])
 
   async function claim() {
     if (claiming) return
@@ -590,6 +606,43 @@ function LetterModal({
         </div>
       </>
     )
+  } else if (!user && view === "auth") {
+    body = (
+      <>
+        <span className="invite-paper__eyebrow">入座登记</span>
+        <h2>登录 / 注册</h2>
+        <a
+          ref={osuRef}
+          className="invite-paper__btn invite-paper__btn--wide"
+          href="/auth/osu"
+          aria-disabled={jumping || undefined}
+          aria-busy={jumping || undefined}
+          onClick={(event) => {
+            if (jumping) {
+              event.preventDefault()
+              return
+            }
+            setJumping(true)
+          }}
+        >
+          {jumping ? "正在前往 osu!…" : "用 osu! 登录"}
+        </a>
+        <p className="invite-paper__hint invite-paper__center">
+          首次登录会自动建号，并拿到你自己的本体卡。
+        </p>
+        <div className="login-divider" role="separator">
+          <span>或者用邮箱</span>
+        </div>
+        <EmailAuthForm />
+        <button
+          type="button"
+          className="invite-paper__back"
+          onClick={() => setView("intro")}
+        >
+          <span aria-hidden>‹</span> 返回邀请函
+        </button>
+      </>
+    )
   } else if (!user) {
     body = (
       <>
@@ -615,21 +668,14 @@ function LetterModal({
           </li>
         </ul>
         <div className="invite-paper__actions">
-          <a
+          <button
+            ref={signInRef}
+            type="button"
             className="invite-paper__btn"
-            href="/auth/osu"
-            aria-disabled={jumping || undefined}
-            aria-busy={jumping || undefined}
-            onClick={(event) => {
-              if (jumping) {
-                event.preventDefault()
-                return
-              }
-              setJumping(true)
-            }}
+            onClick={() => setView("auth")}
           >
-            {jumping ? "正在前往 osu!…" : "用 osu! 登录"}
-          </a>
+            登录 / 注册
+          </button>
           <GuestLoginButton
             className="invite-paper__btn invite-paper__btn--ghost"
             label="先以游客身份入座"
