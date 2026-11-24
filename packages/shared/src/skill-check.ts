@@ -61,6 +61,7 @@ const skillSchema = z
     statusChance: ratio.optional(),
     selfHpCostPct: ratio.optional(),
     piercePct: ratio.optional(),
+    scaleStat: z.enum(["atk", "int"]).optional(),
     executeBonus: z.number().positive().max(3).optional(),
     executeWhen: z.array(z.enum(["vulnerable", "lowHp"])).min(1).max(2).optional(),
     clearEnemySupports: z.int().min(1).max(5).optional(),

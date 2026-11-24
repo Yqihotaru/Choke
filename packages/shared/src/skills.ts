@@ -70,6 +70,8 @@ export interface SkillDef {
   costTag?: SkillCostTag
   power?: number
   hits?: number
+  /** 伤害吃哪个面板：不写则按职业默认（战士、坦克吃 ATK；法师、辅助看属性，物理吃 ATK 其余吃 INT）。只管"用谁的攻击力"，敌人那边的减伤仍按属性算 */
+  scaleStat?: "atk" | "int"
   /** 治疗量：占队伍最大生命的比例（不随卡牌等级变）；只用于 heal 技能 */
   healPct?: number
   target?: "enemy" | "self" | "ally" | "team"
@@ -1542,6 +1544,13 @@ export function requireSkill(id: string): SkillDef {
   const def = SKILLS[id]
   if (!def) throw new Error(`未知技能 id：${id}`)
   return def
+}
+
+/** 这个技能的伤害吃 ATK 还是 INT（敌人的减伤另按属性算） */
+export function skillAttackStat(skill: Pick<SkillDef, "job" | "element" | "scaleStat">): "atk" | "int" {
+  if (skill.scaleStat) return skill.scaleStat
+  if (skill.job === "warrior" || skill.job === "tank") return "atk"
+  return skill.element === "physical" ? "atk" : "int"
 }
 
 /** 技能定义 → 卡面上显示的技能（带 id，费用和属性一律取注册表） */

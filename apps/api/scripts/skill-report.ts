@@ -13,7 +13,7 @@ import { withAction } from "@choke/shared/battle/actions"
 import { resolveEncounter, type EncounterSpec } from "@choke/shared/battle/content"
 import { createBattle } from "@choke/shared/battle/engine"
 import type { BattleState } from "@choke/shared/battle/types"
-import { JOB_ORDER, SKILLS, type SkillDef } from "@choke/shared/skills"
+import { JOB_ORDER, SKILLS, skillAttackStat, type SkillDef } from "@choke/shared/skills"
 import { ELEMENT_LABEL, type Job, type Rarity } from "@choke/shared/types"
 
 import { BATTLE_CONTENT } from "../src/content"
@@ -97,8 +97,8 @@ function measure(skill: SkillDef): Row {
     if (skill.statusId && after.enemy.statuses.some((s) => s.id === skill.statusId)) statusHit += 1
   }
   const probe = setup(skill.job, skill.id, "probe", 0).cards[0]!
-  const magic = skill.element !== "physical"
-  const used = magic ? probe.stats.int : probe.stats.atk
+  const usesInt = skillAttackStat(skill) === "int"
+  const used = usesInt ? probe.stats.int : probe.stats.atk
   const best = Math.max(probe.stats.atk, probe.stats.int)
   const effectiveAp = skill.ap === 0 ? 0.5 : skill.ap
   const notes: string[] = []
@@ -113,7 +113,7 @@ function measure(skill: SkillDef): Row {
     warm: warm / SEEDS,
     hitRate: landed / swings,
     statusRate: skill.statusId ? statusHit / SEEDS : null,
-    statUsed: magic ? "INT" : "ATK",
+    statUsed: usesInt ? "INT" : "ATK",
     statUtil: used / best,
     effectiveAp,
     perApWarm: warm / SEEDS / effectiveAp,
@@ -157,10 +157,11 @@ line(`| 职业 | ATK | INT | 吃 ATK 的技能 | 吃 INT 的技能 |`)
 line(`|---|--:|--:|---|---|`)
 for (const job of JOB_ORDER) {
   const probe = setup(job, "bulwark_quake", "probe", 0).cards[0]!
-  line(`| ${JOB_LABEL[job]} | ${num(probe.stats.atk)} | ${num(probe.stats.int)} | 只有物理属性 | 其他所有属性（火冰雷木土金光暗） |`)
+  const atkJob = job === "tank" || job === "warrior"
+  line(`| ${JOB_LABEL[job]} | ${num(probe.stats.atk)} | ${num(probe.stats.int)} | ${atkJob ? "所有伤害技能" : "只有物理属性的"} | ${atkJob ? "无" : "非物理属性（火冰雷木土金光暗）"} |`)
 }
 line()
-line(`伤害公式里 \`非物理属性 = 魔法 = 吃 INT\`，物理属性才吃 ATK。所以战士和坦克的"属性利用率"取决于技能是不是物理属性。`)
+line(`伤害吃哪个面板由 \`skillAttackStat\` 决定：战士和坦克一律吃 ATK，法师和辅助看属性（物理吃 ATK，其他吃 INT），技能也可以用 \`scaleStat\` 单独指定。敌人的减伤仍按技能属性算（物理看 DEF，其他看 INT）。`)
 line()
 
 const allRows: Row[] = []
@@ -228,7 +229,35 @@ for (const job of JOB_ORDER) {
 }
 line()
 
-line(`## 五、被标成"偏弱"的技能（每 AP 低于同职业中位数 70%）`)
+line(`## 五、跨职业按 AP 档位对比（热身每次施放伤害）`)
+line()
+line(`同样花 N 点 AP，各职业的伤害技能打出多少。0 费的技能按 0 档单独列。「相对全档中位数」用来看某职业是不是整体落后。`)
+line()
+line(`| AP | 技能（职业，热身伤害） | 该档中位数 |`)
+line(`|--:|---|--:|`)
+for (const ap of [0, 1, 2, 3, 4]) {
+  const group = allRows.filter((r) => r.skill.ap === ap).sort((x, y) => y.warm - x.warm)
+  if (group.length === 0) continue
+  const cells = group.map((r) => `${r.skill.name}（${JOB_LABEL[r.skill.job]}，${num(r.warm)}）`).join("、")
+  line(`| ${ap} | ${cells} | ${num(median(group.map((r) => r.warm)))} |`)
+}
+line()
+line(`各职业在各档位的中位数（热身伤害）：`)
+line()
+line(`| 职业 | 0 AP | 1 AP | 2 AP | 3 AP | 4 AP |`)
+line(`|---|--:|--:|--:|--:|--:|`)
+for (const job of JOB_ORDER) {
+  const cells = [0, 1, 2, 3, 4].map((ap) => {
+    const group = allRows.filter((r) => r.skill.job === job && r.skill.ap === ap)
+    return group.length === 0 ? "—" : `${num(median(group.map((r) => r.warm)))}（${group.length}）`
+  })
+  line(`| ${JOB_LABEL[job]} | ${cells.join(" | ")} |`)
+}
+line()
+line(`持续伤害不在表里：燃烧每回合 3% 最大生命 × 3 回合，中毒每回合 3% 当前生命 × 4 回合，流血每层每回合 1% 最大生命 × 3 回合，都是按敌人血量算的，对高血量的 BOSS 比直接伤害更值钱，对低血量的小怪则几乎没用。`)
+line()
+
+line(`## 六、被标成"偏弱"的技能（每 AP 低于同职业中位数 70%）`)
 line()
 if (verdicts.length === 0) line(`没有。`)
 for (const v of verdicts) line(`- ${v}`)

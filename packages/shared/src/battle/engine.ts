@@ -1,5 +1,5 @@
 import { deriveStream, nextRandom } from "../rng"
-import type { NumericEffectKey, SkillDef } from "../skills"
+import { skillAttackStat, type NumericEffectKey, type SkillDef } from "../skills"
 import type { CardFaceData, Element } from "../types"
 import { ELEMENT_LABEL } from "../types"
 
@@ -516,7 +516,7 @@ function applyDamageToEnemy(
 ) {
   const element = skill.element
   const magic = element !== "physical"
-  const attack = statOf(state, card, magic ? "int" : "atk")
+  const attack = statOf(state, card, skillAttackStat(skill))
   const rawEnemyDef = enemyDefence(state, magic)
   const effectiveDef = skill.piercePct ? Math.round(rawEnemyDef * (1 - skill.piercePct)) : rawEnemyDef
   const enemyArmorTier = effectiveEnemyDefenseTier(state)
@@ -777,8 +777,7 @@ export function playSkill(state: BattleState, cardIndex: number, skillId: string
     trigger: consumedTrigger,
   })
 
-  const magic = skill.element !== "physical"
-  const attack = statOf(state, card, magic ? "int" : "atk")
+  const attack = statOf(state, card, skillAttackStat(skill))
 
   for (let castIdx = 0; castIdx < execTimes; castIdx += 1) {
     if (state.phase !== "player") break
