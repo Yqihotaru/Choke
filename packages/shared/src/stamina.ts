@@ -1,10 +1,16 @@
 /**
- * 体力：每 6 分钟 1 点，上限 360。
+ * 体力：0–360 每 6 分钟 1 点（240/天）；溢出槽 360–720 每 12 分钟 1 点。
  * 纯函数，前后端共用；数据库只存 value + updatedAt。
  */
 
 export const STAMINA_MAX = 360
+export const STAMINA_OVERFLOW_MAX = 720
 export const STAMINA_REGEN_MS = 6 * 60 * 1000
+export const STAMINA_OVERFLOW_REGEN_MS = 12 * 60 * 1000
+
+export const STAMINA_POTION_COST = 100
+export const STAMINA_POTION_GAIN = 60
+export const STAMINA_POTION_DAILY_LIMIT = 2
 
 export interface StaminaSnapshot {
   value: number
@@ -17,26 +23,49 @@ export function settleStamina(
   snapshot: StaminaSnapshot,
   now: number = Date.now(),
 ): StaminaSnapshot {
-  const value = Math.min(STAMINA_MAX, Math.max(0, Math.floor(snapshot.value)))
-  if (value >= STAMINA_MAX) return { value, updatedAt: now }
-  const elapsed = Math.max(0, now - snapshot.updatedAt)
-  const gained = Math.floor(elapsed / STAMINA_REGEN_MS)
-  if (gained <= 0) return { value, updatedAt: snapshot.updatedAt }
-  const next = Math.min(STAMINA_MAX, value + gained)
+  let value = Math.min(STAMINA_OVERFLOW_MAX, Math.max(0, Math.floor(snapshot.value)))
+  if (value >= STAMINA_OVERFLOW_MAX) return { value, updatedAt: now }
+
+  let updatedAt = snapshot.updatedAt
+  let elapsed = Math.max(0, now - updatedAt)
+
+  if (value < STAMINA_MAX) {
+    const baseGain = Math.min(STAMINA_MAX - value, Math.floor(elapsed / STAMINA_REGEN_MS))
+    if (baseGain > 0) {
+      const used = baseGain * STAMINA_REGEN_MS
+      value += baseGain
+      updatedAt += used
+      elapsed -= used
+    }
+  }
+
+  if (value >= STAMINA_MAX && value < STAMINA_OVERFLOW_MAX) {
+    const overflowGain = Math.min(
+      STAMINA_OVERFLOW_MAX - value,
+      Math.floor(elapsed / STAMINA_OVERFLOW_REGEN_MS),
+    )
+    if (overflowGain > 0) {
+      value += overflowGain
+      updatedAt += overflowGain * STAMINA_OVERFLOW_REGEN_MS
+    }
+  }
+
   return {
-    value: next,
-    updatedAt: next >= STAMINA_MAX ? now : snapshot.updatedAt + gained * STAMINA_REGEN_MS,
+    value,
+    updatedAt: value >= STAMINA_OVERFLOW_MAX ? now : updatedAt,
   }
 }
 
-/** 距离下一点体力还有多少毫秒；满了返回 0。 */
+/** 距离下一点体力还有多少毫秒；达到 720 总上限返回 0。 */
 export function staminaNextIn(
   snapshot: StaminaSnapshot,
   now: number = Date.now(),
 ): number {
-  if (snapshot.value >= STAMINA_MAX) return 0
-  const elapsed = Math.max(0, now - snapshot.updatedAt)
-  return Math.max(0, STAMINA_REGEN_MS - (elapsed % STAMINA_REGEN_MS))
+  const settled = settleStamina(snapshot, now)
+  if (settled.value >= STAMINA_OVERFLOW_MAX) return 0
+  const interval = settled.value < STAMINA_MAX ? STAMINA_REGEN_MS : STAMINA_OVERFLOW_REGEN_MS
+  const elapsed = Math.max(0, now - settled.updatedAt)
+  return Math.max(0, interval - (elapsed % interval))
 }
 
 /** 扣体力：返回 null 表示不够。 */

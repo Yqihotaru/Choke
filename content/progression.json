@@ -1,7 +1,7 @@
 {
   "card": {
     "levelCap": { "normal": 80, "hero": 12 },
-    "constellationCap": { "normal": 6, "hero": 12 },
+    "constellationCap": { "normal": 6, "hero": 8 },
     "levelExpTotal": {
       "C": 20000,
       "UC": 30000,

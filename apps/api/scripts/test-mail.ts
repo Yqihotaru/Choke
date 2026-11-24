@@ -130,7 +130,7 @@ await test("多种附件一起发：道具、卡包、卡牌、体力，流水�
 })
 
 await test("体力超过上限的部分作废，流水只记实际到账", async () => {
-  const userId = await newUser({ stamina: 355 })
+  const userId = await newUser({ stamina: 715 })
   const id = await mail.sendMail(userId, { title: "体力", attachment: { stamina: 50 } })
   await mail.claimMail(userId, id)
   const stamina = (await ledgerOf(userId)).filter((e) => e.kind === "stamina")

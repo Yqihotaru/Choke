@@ -10,6 +10,16 @@ import {
   shardItemId,
   type ItemStack,
 } from "@choke/shared/items"
+import {
+  RESONANCE_ATTR_CAP,
+  RESONANCE_TOTAL_CAP,
+  RESONANCE_VALUE_BP,
+  resonanceAttributeOf,
+  summarizeResonance,
+  type ResonanceAttribute,
+  type ResonanceRecord,
+} from "@choke/shared/resonance"
+import type { Job, Mod } from "@choke/shared/types"
 
 import { requireSelf } from "../auth/guard"
 import {
@@ -26,7 +36,7 @@ import {
 } from "../shared/cards"
 import { db } from "../db/client"
 import { EXPEDITION_LOCK_MESSAGE, anyLocked, lockedUserCardIds } from "../expedition/locks"
-import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
+import { cards, deckSlots, heroResonance, marketListings, userCards, users } from "../db/schema"
 import { grantItems, loadItems, mergeStacks, spendItems } from "../items"
 import { recordLedger, type LedgerEntryInput } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
@@ -120,7 +130,47 @@ async function loadFuel(userId: string, excludeUserCardId: number) {
     .limit(60)
 }
 
+const constellationBodySchema = z
+  .object({
+    materialUserCardId: z.number().int().positive().optional(),
+  })
+  .optional()
+
+async function loadResonance(executor: Tx | typeof db, userId: string): Promise<ResonanceRecord[]> {
+  const rows = await executor
+    .select({
+      sourceCardId: heroResonance.sourceCardId,
+      attribute: heroResonance.attribute,
+      valueBp: heroResonance.valueBp,
+      slot: heroResonance.slot,
+    })
+    .from(heroResonance)
+    .where(eq(heroResonance.userId, userId))
+    .orderBy(asc(heroResonance.slot), asc(heroResonance.createdAt))
+  return rows.map((row) => ({
+    sourceCardId: row.sourceCardId,
+    attribute: row.attribute as ResonanceAttribute,
+    valueBp: row.valueBp,
+    slot: row.slot,
+  }))
+}
+
 export async function progressionRoutes(app: FastifyInstance) {
+  /** 本体卡吞噬共鸣记录与汇总 */
+  app.get("/users/:userId/resonance", async (request, reply) => {
+    const { userId: paramUserId } = z.object({ userId: z.string() }).parse(request.params)
+    const userId = requireSelf(request, reply, paramUserId)
+    if (!userId) return
+    const records = await loadResonance(db, userId)
+    return {
+      ok: true,
+      data: {
+        records,
+        summary: summarizeResonance(records),
+      },
+    }
+  })
+
   /** 可作为喂养/融合材料的重复卡 */
   app.get("/users/:userId/cards/:userCardId/fuel", async (request, reply) => {
     const params = paramsSchema.parse(request.params)
@@ -201,6 +251,7 @@ export async function progressionRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    const body = constellationBodySchema.parse(request.body)
     const { userCardId } = params
     const target = await loadCard(userId, userCardId)
     if (!target) {
@@ -210,13 +261,127 @@ export async function progressionRoutes(app: FastifyInstance) {
       })
     }
 
-    const hero = isHeroCardId(target.id)
+    const hero = target.cardType === "hero" || isHeroCardId(target.id)
     const cap = constellationCap(hero)
     if (target.constellation >= cap) {
       return reply.code(400).send({
         ok: false,
         error: { code: "max_constellation", message: "已经满命座" },
       })
+    }
+
+    if (hero) {
+      const materialUserCardId = body?.materialUserCardId
+      if (!materialUserCardId) {
+        return reply.code(400).send({
+          ok: false,
+          error: { code: "missing_material", message: "本体卡升命座需要选择一张镜像卡作为材料" },
+        })
+      }
+      if (materialUserCardId === userCardId) {
+        return reply.code(400).send({
+          ok: false,
+          error: { code: "invalid_material", message: "不能吞噬自己" },
+        })
+      }
+
+      const result = await runTx(reply, async (tx) => {
+        await lockUser(tx, userId)
+
+        const [freshTarget] = await tx
+          .select({ id: userCards.id, constellation: userCards.constellation })
+          .from(userCards)
+          .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+          .limit(1)
+        if (!freshTarget) throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
+        if (freshTarget.constellation >= cap) {
+          throw new TxAbort(400, "max_constellation", "已经满命座")
+        }
+
+        const [material] = await tx
+          .select({
+            id: userCards.id,
+            cardId: userCards.cardId,
+            cardType: cards.cardType,
+            job: cards.job,
+            mods: userCards.mods,
+          })
+          .from(userCards)
+          .innerJoin(cards, eq(cards.id, userCards.cardId))
+          .where(and(eq(userCards.id, materialUserCardId), eq(userCards.userId, userId)))
+          .limit(1)
+        if (!material) {
+          throw new TxAbort(404, "material_not_found", "材料卡不在这个账号的卡册里")
+        }
+        if (material.cardType !== "mirror") {
+          throw new TxAbort(400, "invalid_material", "本体卡命座只能吞噬镜像卡")
+        }
+
+        const existing = await loadResonance(tx, userId)
+        if (existing.some((r) => r.sourceCardId === material.cardId)) {
+          throw new TxAbort(409, "duplicate_source", "同一玩家的镜像卡只能提供一次共鸣")
+        }
+
+        const attr = resonanceAttributeOf(material.job as Job, (material.mods ?? []) as Mod[])
+        const attrCount = existing.filter((r) => r.attribute === attr).length
+        const capped = attrCount >= RESONANCE_ATTR_CAP || existing.length >= RESONANCE_TOTAL_CAP
+
+        await removeUserCard(tx, userId, material.id)
+
+        const nextSlot = freshTarget.constellation + 1
+        const [upgraded] = await tx
+          .update(userCards)
+          .set({ constellation: nextSlot })
+          .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId), lt(userCards.constellation, cap)))
+          .returning({ constellation: userCards.constellation })
+        if (!upgraded) {
+          throw new TxAbort(400, "max_constellation", "已经满命座")
+        }
+
+        let addedResonance: ResonanceRecord | null = null
+        if (!capped) {
+          addedResonance = {
+            sourceCardId: material.cardId,
+            attribute: attr,
+            valueBp: RESONANCE_VALUE_BP,
+            slot: nextSlot,
+          }
+          await tx.insert(heroResonance).values({
+            userId,
+            sourceCardId: addedResonance.sourceCardId,
+            attribute: addedResonance.attribute,
+            valueBp: addedResonance.valueBp,
+            slot: addedResonance.slot,
+          })
+        }
+
+        await recordLedger(
+          tx,
+          userId,
+          [{ kind: "card", ref: material.cardId, delta: -1, userCardId: material.id }],
+          { source: "resonance", sourceRef: String(userCardId) },
+        )
+        await recordQuestEvent(tx, userId, "fuse")
+
+        const resonance = await loadResonance(tx, userId)
+        return {
+          consumedUserCardId: material.id,
+          constellation: upgraded.constellation,
+          resonance,
+          summary: summarizeResonance(resonance),
+          addedResonance,
+          capped,
+        }
+      })
+      if (!result) return
+
+      return {
+        ok: true,
+        data: {
+          card: await loadCard(userId, userCardId),
+          ...result,
+        },
+      }
     }
 
     const duplicates = await db
@@ -231,10 +396,13 @@ export async function progressionRoutes(app: FastifyInstance) {
       )
       .orderBy(asc(userCards.level), asc(userCards.id))
     const locked = await lockedUserCardIds(db, userId)
-    const duplicate = duplicates.find((row) => !locked.has(row.id))
+    const preferredId = body?.materialUserCardId
+    const duplicate = preferredId
+      ? duplicates.find((row) => row.id === preferredId && !locked.has(row.id))
+      : duplicates.find((row) => !locked.has(row.id))
 
     if (!duplicate) {
-      if (duplicates.length > 0) {
+      if (duplicates.length > 0 && (!preferredId || duplicates.some((row) => row.id === preferredId))) {
         return reply.code(400).send({
           ok: false,
           error: { code: "in_expedition", message: EXPEDITION_LOCK_MESSAGE },

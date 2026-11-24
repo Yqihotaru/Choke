@@ -47,6 +47,8 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   "market-sell": "市场出售",
   quest: "任务奖励",
   "sign-in": "签到",
+  "stamina-potion": "购买体力药水",
+  resonance: "吞噬共鸣",
 }
 
 /** 在发放 / 扣除的同一个事务里调用，流水和余额一起提交或回滚；delta 为 0 的不记 */

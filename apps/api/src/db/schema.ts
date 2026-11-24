@@ -95,9 +95,9 @@ export const users = pgTable("users", {
   /** 回归玩家补发的一次性教程包 */
   tutorialPackClaimed: boolean("tutorial_pack_claimed").notNull().default(false),
   /**
-   * 体力：每 6 分钟 1 点，上限 360（STAMINA_MAX）；设计初值 240（= 每日自然恢复量）。
+   * 体力：0–360 每 6 分钟 1 点，360–720（STAMINA_OVERFLOW_MAX）每 12 分钟 1 点；设计初值 240（= 每日自然恢复量）。
    * updatedAt 为上次结算时间戳。注意 updatedAt 的列默认值 0 会被 settleStamina 当成
-   * 「离线很久」而回满到 360，所以任何 insert(users) 都必须显式写 staminaUpdatedAt: Date.now()。
+   * 「离线很久」而回满，所以任何 insert(users) 都必须显式写 staminaUpdatedAt: Date.now()。
    */
   stamina: integer("stamina").notNull().default(240),
   staminaUpdatedAt: bigint("stamina_updated_at", { mode: "number" }).notNull().default(0),
@@ -392,4 +392,21 @@ export const questProgress = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.questId, table.periodKey] })],
+)
+
+/** 本体卡吞噬镜像卡获得的共鸣属性（每个 mirror-<osuId> 只能吃 1 次，最多 8 条） */
+export const heroResonance = pgTable(
+  "hero_resonance",
+  {
+    userId: text("user_id").notNull(),
+    sourceCardId: text("source_card_id").notNull(),
+    attribute: text("attribute").notNull(),
+    valueBp: integer("value_bp").notNull(),
+    slot: integer("slot").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.sourceCardId] }),
+    index("hero_resonance_user_attr_idx").on(table.userId, table.attribute),
+  ],
 )
