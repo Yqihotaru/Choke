@@ -59,6 +59,12 @@ export type NumericEffectKey =
   | "triggerBonus"
   | "supportShield"
   | "teamDamageReduce"
+
+export interface SkillEffect {
+  name: string
+  description: string
+}
+
 export interface SkillDef {
   id: string
   name: string
@@ -114,6 +120,8 @@ export interface SkillDef {
   /** 拆除强度 1~3：只拆得动强度不超过它的敌方支援；写了 clearEnemySupports 必须写 */
   breakTier?: number
   supportDef?: SupportSpawnDef
+  /** Named effects rendered separately from the skill description. */
+  effects?: SkillEffect[]
   /** 手写文案（覆盖）；留空则由 describeSkill 按字段自动生成 */
   desc?: string
   /** 最低发放稀有度，默认 C；发牌只在 [minRarity, maxRarity] 范围内的稀有度里抽到它 */
@@ -297,7 +305,7 @@ export const SKILLS: Record<string, SkillDef> = {
     target: "enemy",
     statusId: "stun",
     turns: 1,
-    desc: "硬控（3 AP）：作废目标本回合全部行动（受击即打醒；可打断蓄力使其脆弱）。本回合有难以打断的招式时成功率 ×0.4",
+    desc: "作废目标本回合全部行动（受击即打醒；可打断蓄力使其脆弱）。本回合有难以打断的招式时成功率 ×0.4",
   }),
   warden_hold: S({
     id: "warden_hold",
@@ -1186,7 +1194,7 @@ export const SKILLS: Record<string, SkillDef> = {
     statusId: "sleep",
     turns: 1,
     target: "enemy",
-    desc: "硬控（3 AP）：催眠目标作废其本回合全部行动（受击即打醒；可打断蓄力）。本回合有难以打断的招式时成功率 ×0.4",
+    desc: "催眠目标，取消其本回合全部行动，可打断蓄力。目标受击即醒；本回合有难以打断的招式时，成功率 ×0.4。",
   }),
   binder_charm: S({
     id: "binder_charm",
@@ -1201,7 +1209,7 @@ export const SKILLS: Record<string, SkillDef> = {
     turns: 2,
     target: "enemy",
     minRarity: "L",
-    desc: "软控（2 AP）：施加 2 回合【魅惑】（50% 概率打错目标自残，受击不打醒）",
+    desc: "施加 2 回合【魅惑】（50% 概率打错目标自残，受击不打醒）",
   }),
   binder_bind: S({
     id: "binder_bind",
@@ -1454,7 +1462,11 @@ export const SKILLS: Record<string, SkillDef> = {
     turns: 2,
     target: "team",
     minRarity: "L",
-    desc: "全队 ATK/INT +20%（2 回合），并立即为 1~2 张未行动队友赋予【BOOST 1.5×】！",
+    desc: "提升全队战力，并强化未行动队友。",
+    effects: [
+      { name: "群体增益", description: "全队 ATK/INT +20%（2 回合）" },
+      { name: "BOOST", description: "立即点亮 1~2 张未行动队友的 BOOST 1.5×" },
+    ],
   }),
   bard_anthem: S({
     id: "bard_anthem",

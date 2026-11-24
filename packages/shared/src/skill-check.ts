@@ -1,6 +1,6 @@
 import { prettifyError, z } from "zod"
 
-import { SKILLS, type SkillDef } from "./skills"
+import { SKILLS, type SkillDef, type SkillEffect } from "./skills"
 import { ELEMENTS, ELEMENT_LABEL, RARITIES } from "./types"
 
 /* ======================== 校验 ======================== */
@@ -67,6 +67,7 @@ const skillSchema = z
     clearEnemySupports: z.int().min(1).max(5).optional(),
     breakTier: z.int().min(1).max(3).optional(),
     supportDef: supportDef.optional(),
+    effects: z.array(z.strictObject({ name: z.string().min(1), description: z.string().min(1) })).optional(),
     /** 手写文案；留空则由 describeSkill 自动生成 */
     desc: z.string().min(1).optional(),
     minRarity: z.enum(RARITIES).optional(),
@@ -288,6 +289,18 @@ export function autoDescribeSkill(def: SkillDef): string {
   return parts.join("；")
 }
 
+/** Structured named effects displayed separately from a skill's description. */
+export function describeSkillEffects(def: SkillDef): SkillEffect[] {
+  const effects: SkillEffect[] = []
+  const support = def.supportDef
+  if (support) {
+    const description = support.kind === "aura" && support.stat === "def" && support.amount !== undefined
+      ? `在场时全队 DEF +${pct(support.amount)}。`
+      : support.roleText
+    effects.push({ name: support.name, description })
+  }
+  return [...effects, ...(def.effects ?? [])]
+}
 /** 界面显示的技能描述：有手写文案用手写，没有则自动生成 */
 export function describeSkill(def: SkillDef): string {
   if (def.desc === undefined) return autoDescribeSkill(def)
