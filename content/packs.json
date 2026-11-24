@@ -53,13 +53,13 @@
       "name": "新手卡包",
       "short": "新手",
       "color": "#FF66AA",
-      "weights": { "C": 57, "UC": 26, "R": 11, "E": 5, "L": 0.85, "Mythic": 0.13, "Prismatic": 0.02 },
-      "foilRate": 0.03,
+      "weights": { "C": 45, "UC": 27.35, "R": 16, "E": 10, "L": 1.5, "Mythic": 0.13, "Prismatic": 0.02 },
+      "foilRate": 0.04,
       "mirrorWeights": { "UC": 40, "R": 35, "E": 20, "L": 5 },
       "event": true
     }
   },
-  "starterGrant": { "starter": 30, "mystery": 1 },
+  "starterGrant": { "starter": 45, "golden": 5, "mystery": 1 },
   "starterGuarantee": { "pool": "starter", "rarity": "L" },
   "mystery": { "name": "神秘卡包" },
   "mirror": { "rate": 0.015, "activeDays": 45 }

@@ -2,33 +2,37 @@
   "signIn": {
     "base": { "coins": 50 },
     "bonus": {
-      "7": { "coins": 100, "packs": [{ "pool": "normal", "count": 2 }] },
-      "14": { "coins": 100, "packs": [{ "pool": "golden", "count": 1 }] },
-      "21": { "coins": 100, "packs": [{ "pool": "normal", "count": 3 }] },
+      "1": { "coins": 100, "items": [{ "itemId": "exp-medium", "count": 2 }], "packs": [{ "pool": "normal", "count": 15 }, { "pool": "golden", "count": 2 }] },
+      "2": { "coins": 150, "items": [{ "itemId": "exp-large", "count": 1 }], "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 4 }] },
+      "3": { "coins": 200, "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 4 }, { "pool": "radiant", "count": 1 }] },
+      "4": { "coins": 200, "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 5 }, { "pool": "radiant", "count": 1 }] },
+      "7": { "coins": 100, "packs": [{ "pool": "normal", "count": 5 }, { "pool": "golden", "count": 1 }] },
+      "14": { "coins": 100, "packs": [{ "pool": "golden", "count": 2 }] },
+      "21": { "coins": 100, "packs": [{ "pool": "normal", "count": 5 }, { "pool": "golden", "count": 1 }] },
       "28": { "coins": 200, "packs": [{ "pool": "radiant", "count": 1 }] }
     }
   },
   "activity": {
     "daily": [
       { "at": 20, "rewards": { "packs": [{ "pool": "normal", "count": 2 }] } },
-      { "at": 40, "rewards": { "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] } },
-      { "at": 60, "rewards": { "items": [{ "itemId": "exp-medium", "count": 1 }], "packs": [{ "pool": "normal", "count": 2 }] } },
+      { "at": 40, "rewards": { "coins": 200, "packs": [{ "pool": "normal", "count": 2 }, { "pool": "golden", "count": 1 }] } },
+      { "at": 60, "rewards": { "items": [{ "itemId": "exp-medium", "count": 2 }], "packs": [{ "pool": "normal", "count": 3 }] } },
       { "at": 80, "rewards": { "packs": [{ "pool": "normal", "count": 2 }, { "pool": "golden", "count": 1 }] } },
-      { "at": 100, "rewards": { "packs": [{ "pool": "normal", "count": 2 }, { "pool": "golden", "count": 2 }] } }
+      { "at": 100, "rewards": { "packs": [{ "pool": "normal", "count": 3 }, { "pool": "golden", "count": 2 }] } }
     ],
     "weekly": [
-      { "at": 20, "rewards": { "coins": 300, "packs": [{ "pool": "normal", "count": 3 }] } },
-      { "at": 40, "rewards": { "packs": [{ "pool": "normal", "count": 4 }] } },
-      { "at": 60, "rewards": { "items": [{ "itemId": "exp-medium", "count": 3 }], "packs": [{ "pool": "normal", "count": 4 }, { "pool": "golden", "count": 1 }] } },
+      { "at": 20, "rewards": { "coins": 300, "packs": [{ "pool": "normal", "count": 4 }] } },
+      { "at": 40, "rewards": { "packs": [{ "pool": "normal", "count": 5 }, { "pool": "golden", "count": 1 }] } },
+      { "at": 60, "rewards": { "items": [{ "itemId": "exp-medium", "count": 3 }], "packs": [{ "pool": "normal", "count": 5 }, { "pool": "golden", "count": 2 }] } },
       { "at": 80, "rewards": { "packs": [{ "pool": "normal", "count": 5 }, { "pool": "golden", "count": 2 }] } },
-      { "at": 100, "rewards": { "packs": [{ "pool": "normal", "count": 5 }, { "pool": "golden", "count": 4 }, { "pool": "radiant", "count": 1 }] } }
+      { "at": 100, "rewards": { "packs": [{ "pool": "normal", "count": 6 }, { "pool": "golden", "count": 4 }, { "pool": "radiant", "count": 1 }] } }
     ],
     "monthly": [
-      { "at": 20, "rewards": { "coins": 1000, "packs": [{ "pool": "normal", "count": 8 }] } },
-      { "at": 40, "rewards": { "packs": [{ "pool": "normal", "count": 12 }, { "pool": "golden", "count": 1 }] } },
-      { "at": 60, "rewards": { "items": [{ "itemId": "exp-large", "count": 1 }], "packs": [{ "pool": "normal", "count": 15 }, { "pool": "golden", "count": 4 }] } },
-      { "at": 80, "rewards": { "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 6 }, { "pool": "radiant", "count": 1 }] } },
-      { "at": 100, "rewards": { "packs": [{ "pool": "normal", "count": 26 }, { "pool": "golden", "count": 10 }, { "pool": "radiant", "count": 3 }, { "pool": "sky", "count": 1 }, { "pool": "prism", "count": 1 }] } }
+      { "at": 20, "rewards": { "coins": 1000, "packs": [{ "pool": "normal", "count": 12 }] } },
+      { "at": 40, "rewards": { "packs": [{ "pool": "normal", "count": 15 }, { "pool": "golden", "count": 3 }] } },
+      { "at": 60, "rewards": { "items": [{ "itemId": "exp-large", "count": 2 }], "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 5 }] } },
+      { "at": 80, "rewards": { "packs": [{ "pool": "normal", "count": 23 }, { "pool": "golden", "count": 7 }, { "pool": "radiant", "count": 2 }] } },
+      { "at": 100, "rewards": { "packs": [{ "pool": "normal", "count": 30 }, { "pool": "golden", "count": 10 }, { "pool": "radiant", "count": 4 }, { "pool": "sky", "count": 2 }, { "pool": "prism", "count": 1 }] } }
     ]
   },
   "quests": {
