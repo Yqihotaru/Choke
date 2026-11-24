@@ -5,7 +5,7 @@ import type { MapDef, Reward } from "./content"
  * 出征难度（纯函数，服务端和前端共用）：
  * - 威胁值（threat）只在大地图的格子和事件选项上变动，普通战斗打赢不涨；
  * - 档位 = 威胁值按阈值换算，1–5 档，战斗中不变，只在走进格子 / 做事件选择时变；
- * - 第一版每档只放大敌人血量，并按档位放大掉落表里的主产（金币、精华、玩家经验、物品、卡包）。
+ * - 第一版每档放大敌人血量；掉落倍率默认全 1（不放大），需要「高难多拿」的图在地图配置里自己写 lootMult。
  * 地图配置可以整体覆盖；不写就用下面的默认值，没有任何格子带威胁的地图永远是 1 档、倍率 1。
  */
 
@@ -14,7 +14,7 @@ export const MAX_THREAT = 99
 
 export const DEFAULT_THRESHOLDS = [3, 6, 10, 15] as const
 export const DEFAULT_HP_MULT = [1, 1.3, 1.7, 2.2, 3] as const
-export const DEFAULT_LOOT_MULT = [1, 1.4, 1.9, 2.6, 3.5] as const
+export const DEFAULT_LOOT_MULT = [1, 1, 1, 1, 1] as const
 
 export interface Difficulty {
   startThreat: number

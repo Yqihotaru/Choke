@@ -6,6 +6,7 @@
   "deckSize": 8,
   "start": "n1",
   "rewards": "test-clear",
+  "difficulty": { "lootMult": [1, 1.4, 1.9, 2.6, 3.5] },
   "objectives": [
     { "tierAtLeast": 3, "label": "3 档及以上通关" },
     { "flag": "blessed", "label": "得到祭坛的祝福" }
