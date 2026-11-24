@@ -4,7 +4,7 @@
 
 ## 现状
 
-「关于」面板（`src/desk/AboutPanel.tsx`）的「实验室工具」区把下面几个页面直接列给所有玩家：
+「关于」面板（`src/desk/panels/player/AboutPanel.tsx`）的「实验室工具」区把下面几个页面直接列给所有玩家：
 
 | 入口 | 路径 | 用途 |
 |---|---|---|
