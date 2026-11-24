@@ -124,10 +124,15 @@ pnpm build:cards     # 由 rankings 生成 choke-cards.json
 
 ## 文档
 
-- `Design/前后端需求清单 v0.1.md`：功能范围和里程碑
-- `Design/经济与养成系统 v0.2.md`：经济、养成、卡包
+- `Design/备忘录.md`：所有"以后再做""等别人""还没定"的事
+- `Design/经济与养成系统 v0.3.md`：经济、养成、卡包
 - `Design/卡牌数值与战斗机制 v0.1.md`：回合制战斗
-- `Design/职业与技能总表 v0.1.md`：14 子职业与全部技能（代码实装快照）
-- `Design/M1-验收清单.md`：早期验收记录
+- `Design/职业与技能总表 v0.1.md`：4 大职业与全部技能（代码实装快照）
+- `Design/技能定义指南 v0.1.md`：怎么写技能
+- `Design/战斗内容编写指南 v0.1.md`：怎么写敌人、遭遇、地图
+- `Design/内容层结构 v0.1.md`：`content/` 目录和各 JSON 的格式
+- `Design/测试说明 v0.1.md`：测试怎么跑
+- `Design/任务前端对接清单 v0.1.md`、`出征前端对接清单 v0.1.md`、`养成与经济前端对接清单 v0.1.md`：给前端的接口说明
+- `Design/M1-验收清单.md`、`架构重整 v0.1.md`：历史记录
 
 PR #3 的实时边线战斗在独立 worktree 试验，不在 `master`。
