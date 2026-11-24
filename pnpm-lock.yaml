@@ -23,9 +23,6 @@ importers:
       gsap:
         specifier: ^3.15.1
         version: 3.15.1
-      howler:
-        specifier: ^2.2.4
-        version: 2.2.4
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -48,9 +45,6 @@ importers:
       '@eslint/js':
         specifier: ^10
         version: 10.0.1(eslint@10.13.0(jiti@2.7.0))
-      '@types/howler':
-        specifier: ^2.2.13
-        version: 2.2.13
       '@types/node':
         specifier: ^24
         version: 24.19.2
@@ -93,9 +87,6 @@ importers:
 
   apps/api:
     dependencies:
-      '@electric-sql/pglite':
-        specifier: ^0.3.14
-        version: 0.3.16
       '@fastify/cookie':
         specifier: ^11.1.5
         version: 11.1.5
@@ -115,6 +106,9 @@ importers:
         specifier: ^4.1.12
         version: 4.6.7
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.3.14
+        version: 0.3.16
       '@types/node':
         specifier: ^24.10.0
         version: 24.19.2
@@ -790,9 +784,6 @@ packages:
   '@types/estree@1.0.10':
     resolution: {integrity: sha512-lTyOMnOcmRBzdCv6/4zUZCrEhV0xrqQiUZBZtVcbmLHBXKLnN8q89v/wKRF/Q0HbwVsqbIG3o5HDoFl9sduM+g==}
 
-  '@types/howler@2.2.13':
-    resolution: {integrity: sha512-40+EBjqIHHrC4VShlz/7i0lBUsE3QkgzZinQQji74Hd8sBkJZUBaT7LWFLK6rcabsDOOQpoMbEJvtaFQwxOu/g==}
-
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
@@ -1428,9 +1419,6 @@ packages:
 
   hookified@2.2.0:
     resolution: {integrity: sha512-p/LgFzRN5FeoD3DLS6bkUapeye6E4SI6yJs6KetENd18S+FBthqYq2amJUWpt5z0EQwwHemidjY5OqJGEKm5uA==}
-
-  howler@2.2.4:
-    resolution: {integrity: sha512-iARIBPgcQrwtEr+tALF+rapJ8qSc+Set2GJQl7xT1MQzWaVkFebdJhR3alVlSiUf5U7nAANKuj3aWpwerocD5w==}
 
   human-signals@2.1.0:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
@@ -2966,8 +2954,6 @@ snapshots:
 
   '@types/estree@1.0.10': {}
 
-  '@types/howler@2.2.13': {}
-
   '@types/json-schema@7.0.15': {}
 
   '@types/node@24.19.2':
@@ -3556,8 +3542,6 @@ snapshots:
   hookified@1.15.1: {}
 
   hookified@2.2.0: {}
-
-  howler@2.2.4: {}
 
   human-signals@2.1.0: {}
 

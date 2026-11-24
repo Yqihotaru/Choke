@@ -6,18 +6,15 @@
  *   pnpm test:ledger
  */
 import assert from "node:assert/strict"
-import fs from "node:fs"
-import os from "node:os"
-import path from "node:path"
 
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "choke-ledger-test-"))
-process.env.DATABASE_URL = ""
-process.env.PG_DATA_DIR = dataDir
+import { setupTestDb } from "./test-db"
+
+const dropTestDb = await setupTestDb("ledger")
 
 const { eq } = await import("drizzle-orm")
 const { default: Fastify } = await import("fastify")
 const { default: cookie } = await import("@fastify/cookie")
-const { db, client } = await import("../src/db/client")
+const { db } = await import("../src/db/client")
 const { users, cards, ledgerEntries, userPacks } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
@@ -55,8 +52,7 @@ async function test(name: string, fn: () => Promise<void>) {
 
 async function cleanup() {
   await app.close().catch(() => {})
-  await client?.close().catch(() => {})
-  fs.rmSync(dataDir, { recursive: true, force: true })
+  await dropTestDb()
 }
 
 interface Reply {

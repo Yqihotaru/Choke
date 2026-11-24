@@ -5,7 +5,7 @@
  *   pnpm --filter @choke/api exec tsx scripts/seed-test-account.ts
  *
  * 输出一条 session cookie 值；浏览器里 document.cookie = "choke_session=<值>; path=/" 即可登录。
- * 注意 PGlite 单进程：运行前先停掉 API。
+ * 会写入开发库：运行前建议先停掉 API。
  */
 import { and, eq, sql } from "drizzle-orm"
 

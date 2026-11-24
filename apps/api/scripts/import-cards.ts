@@ -4,7 +4,7 @@ import path from "node:path"
 import { db } from "../src/db/client"
 import { cards } from "../src/db/schema"
 import { invalidateCardCache } from "../src/gacha/open"
-// PGlite 数据目录只能由一个进程打开；按 README 要求必须先停止 API，再运行导入。
+// 导入会整表替换卡定义；先停 API，避免请求读到半成品。
 
 interface CardDefRow {
   id: string

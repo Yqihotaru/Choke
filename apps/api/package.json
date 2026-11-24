@@ -9,7 +9,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.3.14",
     "@fastify/cookie": "^11.1.5",
     "@fastify/cors": "^11.1.0",
     "drizzle-orm": "^0.44.7",
@@ -18,6 +17,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
     "@types/node": "^24.10.0",
     "tsx": "^4.20.6",
     "typescript": "~6.0.2"

@@ -6,16 +6,13 @@
  *   pnpm test:mail
  */
 import assert from "node:assert/strict"
-import fs from "node:fs"
-import os from "node:os"
-import path from "node:path"
 
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "choke-mail-test-"))
-process.env.DATABASE_URL = ""
-process.env.PG_DATA_DIR = dataDir
+import { setupTestDb } from "./test-db"
+
+const dropTestDb = await setupTestDb("mail")
 
 const { and, eq } = await import("drizzle-orm")
-const { db, client } = await import("../src/db/client")
+const { db } = await import("../src/db/client")
 const schema = await import("../src/db/schema")
 const { ITEMS } = await import("@choke/shared/items")
 const { MAIL_PIN_LIMIT, MAIL_RETENTION_MS } = await import("@choke/shared/mail")
@@ -39,8 +36,7 @@ async function test(name: string, fn: () => Promise<void>) {
 }
 
 async function cleanup() {
-  await client?.close().catch(() => {})
-  fs.rmSync(dataDir, { recursive: true, force: true })
+  await dropTestDb()
 }
 
 let seq = 0

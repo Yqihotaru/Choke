@@ -74,25 +74,11 @@ Write-Host "[Choke!] API : $apiUrl/health"
 Write-Host "[Choke!] Web : $webUrl/"
 
 if (-not (Test-Url "$apiUrl/health")) {
-  if (-not (Test-Port $apiPort)) {
-    # PGlite leaves postmaster.pid behind after an unclean shutdown or a hard
-    # restart. Removing it is safe only when nothing is listening on the API port.
-    $pgDir = Read-EnvValue "PG_DATA_DIR"
-    if (-not $pgDir) { $pgDir = ".data\pg" }
-    if (-not [System.IO.Path]::IsPathRooted($pgDir)) {
-      $pgDir = Join-Path $root "apps\api\$pgDir"
-    }
-    $lock = Join-Path $pgDir "postmaster.pid"
-    if (Test-Path $lock) {
-      Write-Host "[Choke!] Removing stale PGlite lock: $lock"
-      Remove-Item $lock -Force -ErrorAction SilentlyContinue
-    }
-  } else {
+  if (Test-Port $apiPort) {
     Write-Host "[Choke!] Port $apiPort is occupied but /health is not responding."
-    Write-Host "[Choke!] Not touching the database; stop the process using that port first."
+    Write-Host "[Choke!] Stop the process using that port first."
   }
   Write-Host "[Choke!] Starting API in a new window..."
-  Write-Host "[Choke!] First start can take 20-30s while PGlite loads the card database."
   Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "pnpm dev:api" -WorkingDirectory $root
 } else {
   Write-Host "[Choke!] API is already running."

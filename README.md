@@ -61,7 +61,7 @@ http://localhost:3100/auth/osu/callback
 apps/api/data/choke-cards.json   # 约 90 MB
 ```
 
-导入（**先停 API**，PGlite 单进程）：
+导入（建议先停 API，避免导入过程中请求读到半成品）：
 
 ```bash
 pnpm import:sample   # 7 张示例卡
@@ -72,28 +72,21 @@ pnpm import:cards    # 全量卡池
 
 默认使用便携版 PostgreSQL 16（端口 **55432**，数据目录 E:\pgdata）。
 
-`powershell
+```powershell
 ./scripts/postgres.ps1 start    # 启动
 ./scripts/postgres.ps1 status   # 查看
 ./scripts/postgres.ps1 stop     # 停止
-`
+```
 
-连接串写在 .env 的 DATABASE_URL。不设置它时会回落到 PGlite（单进程嵌入式，进程被强杀可能写坏，不推荐日常使用）。
+连接串写在 .env 的 `DATABASE_URL`，API 只支持 PostgreSQL，没配置会直接拒绝启动。
 
+服务端测试脚本（`pnpm test:*`）会自己起一个临时 PGlite 数据目录（`PG_DATA_DIR`），不碰开发库；PGlite 只是 devDependency，生产安装不会带上。
 
-
-数据在 `apps/api/.data/pg`。PGlite 是单进程单连接，不要同时开两个 API 或一边跑 API 一边导入。
+PGlite 和真 PostgreSQL 有细微差别（例如 Date 参数在 postgres-js 上会报错，PGlite 不会）。大改动后、合并或上线前，跑 `pnpm test:pg`：把需要数据库的测试在真 PostgreSQL 上再跑一遍。它读 `.env` 里的 `DATABASE_URL` 作为服务器，每个测试现建、跑完删掉一个 `choke_test_*` 临时库，不碰开发库里的数据。
 
 卡牌实例新增永久序号 `serial`，卡定义的 `pulled` 记录累计发行数；熔卡不回收序号，交易保留原号。发号和实例创建在同一事务中完成。
 
 API 启动会自动补列和旧卡序号：已有号码不变，未编号实例按实例 ID 顺序从现有最大号／累计发行数之后续号。重复启动不重新编号。旧版已删除的实例历史无法还原；`import --replace` 会清掉卡定义和计数，重启后只能从仍存实例恢复发行数下界，不能把它当作完整历史恢复工具。
-
-如果启动报 `invalid checkpoint` / `PANIC: could not locate a valid checkpoint record`，说明数据库在关机时被写坏了。直接删掉数据目录再导入即可（源卡池文件还在）：
-
-```bash
-rm -rf apps/api/.data/pg     # Windows: Remove-Item -Recurse -Force apps/api/.data/pg
-pnpm import:cards
-```
 
 ## 目录
 
@@ -103,7 +96,7 @@ src/                前端（Vite root）
   battle/           回合制 PvE 原型
   card/             卡面、卡牌定义、养成
   pool/             卡池构建与实验室
-apps/api/           Fastify API + PGlite
+apps/api/           Fastify API + PostgreSQL
   src/routes/       auth / cards / packs / decks / market / progression
   samples/          7 张示例卡
   data/             全量卡池（gitignore）

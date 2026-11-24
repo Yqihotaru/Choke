@@ -122,7 +122,7 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
   // 镜像卡用独立随机流，避免改变主卡包序列。
   const mirrorRandom = mulberry32((seed ^ 0x9e3779b9) >>> 0)
 
-  // PGlite 是单连接：事务内再查 cards 会死锁，先把各档 id 取到内存
+  // 先把各档 id 取到内存，事务里只做写入，避免长事务里反复扫 cards
   const pools = new Map<string, string[]>()
   for (const rarity of ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"]) {
     pools.set(rarity, await idsFor(rarity))

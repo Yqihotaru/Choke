@@ -51,8 +51,7 @@ app.get("/health", async () => ({ ok: true, data: { status: "up", contentVersion
 const port = Number(process.env.PORT ?? 3100)
 await app.listen({ port, host: "0.0.0.0" })
 
-// PGlite keeps its WAL in the data directory. Closing it on Ctrl+C / a normal
-// process signal keeps the next startup from finding an invalid checkpoint.
+// 正常关闭连接池，避免重启时留下半开连接（测试用的临时 PGlite 也要关）。
 let closing = false
 async function shutdown(signal: string) {
   if (closing) return
@@ -63,7 +62,8 @@ async function shutdown(signal: string) {
   } finally {
     if (client) {
       await client.close().catch((error) => app.log.warn({ err: error }, "close database failed"))
-    } else if (sql) {
+    }
+    if (sql) {
       await sql.end({ timeout: 5 }).catch((error) => app.log.warn({ err: error }, "close database failed"))
     }
   }

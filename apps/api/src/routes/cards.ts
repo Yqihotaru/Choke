@@ -44,6 +44,15 @@ const publicCountCache = new Map<string, number>()
 const PUBLIC_CACHE_LIMIT = 64
 let publicStats: { total: number; byRarity: Record<string, number> } | null = null
 let publicCardsRevision = 0
+
+/** 图鉴分母（卡池按稀有度 / 国家的总数）与用户无关，进程内缓存即可。 */
+interface CodexPoolStats {
+  total: number
+  byRarity: Record<string, number>
+  countries: Record<string, number>
+}
+let codexPoolStats: CodexPoolStats | null = null
+
 /** 发行数变化只失效卡行；卡定义总数、稀有度统计仍可复用。 */
 export function invalidatePublicCardRows() {
   publicCardsCache.clear()
@@ -53,6 +62,7 @@ export function invalidatePublicCardCache() {
   invalidatePublicCardRows()
   publicCountCache.clear()
   publicStats = null
+  codexPoolStats = null
 }
 
 async function queryPublicCards(query: {
@@ -97,6 +107,28 @@ async function queryPublicCards(query: {
   }
   return { rows, total, limit: query.limit, offset: query.offset }
 }
+
+async function loadCodexPoolStats(): Promise<CodexPoolStats> {
+  if (codexPoolStats) return codexPoolStats
+  const rows = await db
+    .select({ rarity: cards.rarity, country: cards.country, total: count() })
+    .from(cards)
+    .where(eq(cards.cardType, CARD_TYPES.pool))
+    .groupBy(cards.rarity, cards.country)
+
+  const byRarity: Record<string, number> = {}
+  const countries: Record<string, number> = {}
+  let total = 0
+  for (const row of rows) {
+    const value = Number(row.total)
+    total += value
+    byRarity[row.rarity] = (byRarity[row.rarity] ?? 0) + value
+    if (row.country) countries[row.country] = (countries[row.country] ?? 0) + value
+  }
+  codexPoolStats = { total, byRarity, countries }
+  return codexPoolStats
+}
+
 export async function cardRoutes(app: FastifyInstance) {
   app.get("/cards", async (request) => {
     const query = z
@@ -166,37 +198,27 @@ export async function cardRoutes(app: FastifyInstance) {
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
 
-    const poolRows = await db
-      .select({ rarity: cards.rarity, country: cards.country, total: count() })
-      .from(cards)
-      .where(eq(cards.cardType, CARD_TYPES.pool))
-      .groupBy(cards.rarity, cards.country)
-
-    const ownedRows = await db
-      .select({
-        rarity: cards.rarity,
-        country: cards.country,
-        owned: countDistinct(userCards.cardId),
-      })
-      .from(userCards)
-      .innerJoin(cards, eq(cards.id, userCards.cardId))
-      .where(eq(userCards.userId, userId))
-      .groupBy(cards.rarity, cards.country)
+    const [pool, ownedRows] = await Promise.all([
+      loadCodexPoolStats(),
+      db
+        .select({
+          rarity: cards.rarity,
+          country: cards.country,
+          owned: countDistinct(userCards.cardId),
+        })
+        .from(userCards)
+        .innerJoin(cards, eq(cards.id, userCards.cardId))
+        .where(eq(userCards.userId, userId))
+        .groupBy(cards.rarity, cards.country),
+    ])
 
     const byRarity: Record<string, { total: number; owned: number }> = {}
+    for (const [rarity, value] of Object.entries(pool.byRarity)) {
+      byRarity[rarity] = { total: value, owned: 0 }
+    }
     const countries = new Map<string, { code: string; total: number; owned: number }>()
-    let total = 0
-
-    for (const row of poolRows) {
-      const rowTotal = Number(row.total)
-      total += rowTotal
-      const rarity = (byRarity[row.rarity] ??= { total: 0, owned: 0 })
-      rarity.total += rowTotal
-      if (row.country) {
-        const country = countries.get(row.country) ?? { code: row.country, total: 0, owned: 0 }
-        country.total += rowTotal
-        countries.set(row.country, country)
-      }
+    for (const [code, value] of Object.entries(pool.countries)) {
+      countries.set(code, { code, total: value, owned: 0 })
     }
 
     let owned = 0
@@ -215,7 +237,7 @@ export async function cardRoutes(app: FastifyInstance) {
     return {
       ok: true,
       data: {
-        total,
+        total: pool.total,
         owned,
         byRarity,
         countries: [...countries.values()].sort(
