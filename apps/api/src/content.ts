@@ -5,6 +5,7 @@ import path from "node:path"
 import { parseBattleContent, type BattleContent } from "@choke/shared/battle/content"
 import { parseWorldContent, type WorldContent } from "@choke/shared/expedition/content"
 import { parseQuestContent } from "@choke/shared/quest-content"
+import { parseOsuDailyContent, type OsuDailyContent } from "@choke/shared/osu-daily"
 import type { QuestsContent } from "@choke/shared/quests"
 // import 时即完成 schema + 交叉引用校验；失败会直接抛错，服务端拒绝启动
 import { CONTENT_FILES } from "@choke/shared/content"
@@ -14,6 +15,7 @@ export const CONTENT_DIR = path.resolve(import.meta.dirname, "../../../content")
 /** 由服务端从磁盘读的内容：单文件 + 「一个文件一个 id」的目录 */
 const BATTLE_FILE = "enemy-supports.json"
 const QUESTS_FILE = "quests.json"
+const OSU_DAILY_FILE = "osu-daily.json"
 const BATTLE_DIRS = ["enemies", "encounters", "maps", "rewards", "stories", "events"] as const
 
 function isDirEntry(file: string): boolean {
@@ -52,7 +54,7 @@ function listFiles(dir: string, prefix = ""): string[] {
 /** content/ 里所有文件；有没接入的文件就报错，避免新加的内容被悄悄忽略 */
 function checkFiles(root: string): string[] {
   const files = listFiles(root)
-  const required = [...CONTENT_FILES, BATTLE_FILE, QUESTS_FILE]
+  const required = [...CONTENT_FILES, BATTLE_FILE, QUESTS_FILE, OSU_DAILY_FILE]
   const known = new Set<string>(required)
   const unknown = files.filter((file) => !known.has(file) && !isDirEntry(file))
   const missing = required.filter((file) => !files.includes(file))
@@ -94,6 +96,7 @@ export function loadContentDir(root: string): {
   battle: BattleContent
   world: WorldContent
   quests: QuestsContent
+  osuDaily: OsuDailyContent
 } {
   const files = checkFiles(root)
   const battle = parseBattleContent({
@@ -111,7 +114,8 @@ export function loadContentDir(root: string): {
     battle,
   )
   const quests = parseQuestContent(readJson(root, QUESTS_FILE), world)
-  return { version: hashContent(root, files), battle, world, quests }
+  const osuDaily = parseOsuDailyContent(readJson(root, OSU_DAILY_FILE))
+  return { version: hashContent(root, files), battle, world, quests, osuDaily }
 }
 
 const loaded = loadContentDir(CONTENT_DIR)
@@ -126,3 +130,6 @@ export const WORLD_CONTENT: WorldContent = loaded.world
 
 /** 签到奖励表 / 任务 */
 export const QUEST_CONTENT: QuestsContent = loaded.quests
+
+/** 每日推荐谱面的候选池和手动指定 */
+export const OSU_DAILY_CONTENT: OsuDailyContent = loaded.osuDaily

@@ -399,6 +399,19 @@ export const questProgress = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.questId, table.periodKey] })],
 )
 
+/** 每日推荐谱面用过的 osu! 成绩：score_id 唯一，同一条成绩只能用一次（见 migrations/0015） */
+export const osuScoreClaims = pgTable(
+  "osu_score_claims",
+  {
+    scoreId: bigint("score_id", { mode: "number" }).primaryKey(),
+    userId: text("user_id").notNull(),
+    beatmapId: integer("beatmap_id").notNull(),
+    dayKey: text("day_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("osu_score_claims_user_day_idx").on(table.userId, table.dayKey)],
+)
+
 /** 本体卡吞噬镜像卡获得的共鸣属性（每个 mirror-<osuId> 只能吃 1 次，最多 8 条） */
 export const heroResonance = pgTable(
   "hero_resonance",

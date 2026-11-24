@@ -114,6 +114,15 @@
       "rewards": { "coins": 40, "items": [{ "itemId": "exp-small", "count": 3 }] },
       "points": 15
     },
+    "daily-osu-beatmap": {
+      "period": "daily",
+      "name": "今日推荐谱面",
+      "desc": "在 osu! 里通过今天的推荐谱面，回来点「检查」",
+      "event": "osu-daily-pass",
+      "target": 1,
+      "rewards": { "packs": [{ "pool": "normal", "count": 2 }] },
+      "points": 30
+    },
     "daily-market-buy": {
       "period": "daily",
       "name": "逛逛集市",

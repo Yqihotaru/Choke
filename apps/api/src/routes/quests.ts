@@ -4,6 +4,7 @@ import { z } from "zod"
 import { QUEST_PERIODS } from "@choke/shared/quests"
 
 import { requireSelf } from "../auth/guard"
+import { checkOsuDaily, getOsuDaily } from "../osu-daily"
 import { claimAllQuests, claimChest, claimQuest, getQuests, signIn } from "../quests"
 import { guardAbort } from "../tx"
 
@@ -46,6 +47,22 @@ export async function questRoutes(app: FastifyInstance) {
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
     const result = await guardAbort(reply, () => claimQuest(userId, params.questId))
+    if (!result) return
+    return { ok: true, data: result }
+  })
+
+  app.get("/users/:userId/osu-daily", async (request, reply) => {
+    const params = paramsSchema.parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+    return { ok: true, data: await getOsuDaily(userId) }
+  })
+
+  app.post("/users/:userId/osu-daily/check", async (request, reply) => {
+    const params = paramsSchema.parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+    const result = await guardAbort(reply, () => checkOsuDaily(userId))
     if (!result) return
     return { ok: true, data: result }
   })

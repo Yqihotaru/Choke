@@ -49,6 +49,7 @@ export const QUEST_EVENTS = [
   "card-level",
   "constellation",
   "player-level",
+  "osu-daily-pass",
 ] as const
 export type QuestEvent = (typeof QUEST_EVENTS)[number]
 
@@ -84,6 +85,7 @@ export const QUEST_EVENT_LABEL: Record<QuestEvent, string> = {
   "card-level": "一张卡的等级（取最高）",
   constellation: "一张卡的命座（取最高）",
   "player-level": "玩家等级（取最高）",
+  "osu-daily-pass": "在 osu! 里通过今天的推荐谱面",
 }
 
 /** 只有远征类事件可以限定地图种类。和 expedition/content.ts 的 MAP_KINDS 一致，测试里核对 */

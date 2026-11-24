@@ -27,6 +27,7 @@
     "test:mail": "pnpm --filter @choke/api exec tsx scripts/test-mail.ts",
     "test:p2": "pnpm --filter @choke/api exec tsx scripts/test-p2.ts",
     "test:quests": "pnpm --filter @choke/api exec tsx scripts/test-quests.ts",
+    "test:osu-daily": "pnpm --filter @choke/api exec tsx scripts/test-osu-daily.ts",
     "test:ledger": "pnpm --filter @choke/api exec tsx scripts/test-ledger.ts",
     "test:expedition-run": "pnpm --filter @choke/api exec tsx scripts/test-expedition-run.ts",
     "test:difficulty": "pnpm --filter @choke/api exec tsx scripts/test-difficulty.ts",
