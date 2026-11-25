@@ -474,3 +474,69 @@
     animation: none;
   }
 }
+
+/* =========================================================
+   和桌面统一的手感：平涂、不用渐变做装饰，按钮有厚度、按下会沉。
+   亮色主题的取值在 desk/light.css，这里只改暗色的基础样式和动效。
+   ========================================================= */
+.tut-dialog__box {
+  border: 0;
+  background: #2b2126;
+  box-shadow:
+    0 0 0 3px #4a313b,
+    0 5px 0 3px #2e1e25,
+    0 22px 44px -18px rgb(0 0 0 / 0.85);
+}
+.tut-dialog__box::before {
+  background: #ff66aa;
+}
+.tut-levelup {
+  background: #ff66aa;
+}
+.tut-skip {
+  background: #2b2126;
+  animation: ui-pop-in var(--ui-base) var(--ui-ease-out) both;
+}
+.tut-dialog__skip,
+.tut-skip__yes,
+.tut-skip__no {
+  transition:
+    translate 0.08s ease,
+    border-color 0.14s ease,
+    color 0.14s ease,
+    background 0.14s ease;
+}
+.tut-dialog__skip:active,
+.tut-skip__no:active {
+  translate: 0 1px;
+}
+.tut-skip__yes {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    0 2px 0 #a3303f;
+}
+.tut-skip__yes:hover {
+  background: #ff7686;
+}
+.tut-skip__yes:active {
+  translate: 0 1px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    0 1px 0 #a3303f;
+}
+/* 换到下一句：正文轻轻浮上来（正文节点带 key） */
+.tut-dialog__text {
+  animation: ui-rise-in var(--ui-base) var(--ui-ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tut-skip,
+  .tut-dialog__text {
+    animation: none;
+  }
+  .tut-dialog__skip,
+  .tut-skip__yes,
+  .tut-skip__no {
+    transition: none;
+  }
+}

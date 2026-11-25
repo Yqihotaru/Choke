@@ -50,6 +50,7 @@ import "@/desk/book.css"
 import { ConfirmBar } from "@/desk/shell/ConfirmBar"
 import { emitDeskData } from "@/desk/session/events"
 import "@/desk/panels/cards/card-detail.css"
+import "@/desk/panels/cards/card-detail-fx.css"
 
 interface Props {
   card: ApiUserCard
@@ -115,12 +116,22 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
 
   const face = useMemo(() => toFace(current), [current])
 
+  /** 玩家自己关掉（×、点外面、Esc）：合上的一声 */
+  const close = () => {
+    playSfx("close")
+    onClose()
+  }
+
   // Esc 先收起确认条，再关弹窗
   useModal(dialogRef, {
-    onClose: () => (pending ? setPending(null) : onClose()),
+    onClose: () => (pending ? setPending(null) : close()),
   })
 
-  useEffect(() => () => window.clearTimeout(closeTimer.current), [])
+  useEffect(() => {
+    // 卡被抽出来放到面前
+    playSfx("paper")
+    return () => window.clearTimeout(closeTimer.current)
+  }, [])
 
   useEffect(() => {
     if (readOnly || !userId) return
@@ -360,10 +371,10 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       aria-modal="true"
       aria-label={current.name}
       ref={dialogRef}
-      onClick={onClose}
+      onClick={close}
     >
       <div className="card-detail__panel" data-light onClick={(event) => event.stopPropagation()}>
-        <button type="button" className="card-detail__close" onClick={onClose} aria-label="关闭">
+        <button type="button" className="card-detail__close" onClick={close} aria-label="关闭">
           ×
         </button>
 

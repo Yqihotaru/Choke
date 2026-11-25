@@ -14,7 +14,6 @@
       ;(() => {
         const saved = localStorage.getItem("theme")
         const dark =
-          /battle(-sim)?\/*$/.test(location.pathname) ||
           saved === "dark" ||
           (saved !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)
         document.documentElement.classList.add(dark ? "dark" : "light")

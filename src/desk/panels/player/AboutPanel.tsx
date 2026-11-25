@@ -1,6 +1,9 @@
 import { useRef, useState } from "react"
+import { createPortal } from "react-dom"
 
+import { playSfx } from "@/audio/sfx"
 import { useModal } from "@/ui/useModal"
+import { usePresence } from "@/ui/usePresence"
 
 import { Pages } from "@/desk/shell/BookPages"
 import "@/desk/panels/player/about-panel.css"
@@ -76,11 +79,27 @@ const POLICIES = {
 
 type PolicyKey = keyof typeof POLICIES
 
-export function AboutPanel() {
-  const [policy, setPolicy] = useState<PolicyKey | null>(null)
-  const policyRef = useRef<HTMLDivElement>(null)
+/** 和 about-panel.css 里弹层离场动画的时长一致 */
+const POLICY_EXIT_MS = 170
 
-  useModal(policyRef, { active: policy !== null, onClose: () => setPolicy(null) })
+export function AboutPanel() {
+  /** 正在看的是哪一份；关掉之后先留着，离场动画播完前内容不能空 */
+  const [policy, setPolicy] = useState<PolicyKey>("privacy")
+  const [open, setOpen] = useState(false)
+  const policyRef = useRef<HTMLDivElement>(null)
+  const { mounted, leaving } = usePresence(open, POLICY_EXIT_MS)
+
+  const show = (key: PolicyKey) => {
+    playSfx("paper")
+    setPolicy(key)
+    setOpen(true)
+  }
+  const close = () => {
+    playSfx("close")
+    setOpen(false)
+  }
+
+  useModal(policyRef, { active: open, onClose: close })
 
   return (
     <>
@@ -159,10 +178,10 @@ export function AboutPanel() {
             <hr className="bk-divider" />
 
             <div className="about-policies">
-              <button type="button" className="bk-btn" onClick={() => setPolicy("privacy")}>
+              <button type="button" className="bk-btn" onClick={() => show("privacy")}>
                 隐私政策
               </button>
-              <button type="button" className="bk-btn" onClick={() => setPolicy("terms")}>
+              <button type="button" className="bk-btn" onClick={() => show("terms")}>
                 游玩协议
               </button>
             </div>
@@ -170,26 +189,30 @@ export function AboutPanel() {
         }
       />
 
-      {policy && (
-        <div
-          className="about-policy-layer"
-          role="dialog"
-          aria-modal="true"
-          aria-label={POLICIES[policy].title}
-          ref={policyRef}
-          onClick={() => setPolicy(null)}
-        >
-          <div className="about-policy-card" onClick={(event) => event.stopPropagation()}>
-            <b>{POLICIES[policy].title}</b>
-            {POLICIES[policy].body.map((line) => (
-              <p key={line}>{line}</p>
-            ))}
-            <button type="button" className="bk-btn bk-btn--main" onClick={() => setPolicy(null)}>
-              我知道了
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 挂到 body：书有自己的定位上下文，留在书里的话遮罩只盖得住书，焦点移进去还会把桌面顶歪 */}
+      {mounted &&
+        createPortal(
+          <div
+            className={`about-policy-layer ${leaving ? "is-leaving" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={POLICIES[policy].title}
+            ref={policyRef}
+            onClick={close}
+          >
+            <div className="about-policy-card" onClick={(event) => event.stopPropagation()}>
+              <span className="bk-label">{policy === "privacy" ? "PRIVACY" : "TERMS"}</span>
+              <b>{POLICIES[policy].title}</b>
+              {POLICIES[policy].body.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+              <button type="button" className="bk-btn bk-btn--main" onClick={close}>
+                我知道了
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   )
 }

@@ -67,10 +67,6 @@
   border-radius: 6px;
   cursor: pointer;
 }
-.codex-slot:focus-visible {
-  outline: 2px solid var(--bk-osu);
-  outline-offset: 2px;
-}
 .codex-slot .card-face {
   width: 100%;
 }

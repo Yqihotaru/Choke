@@ -173,7 +173,7 @@ export function canUseSkillReason(state: BattleState, cardIndex: number, skillId
   }
 
   const apCost = effectiveApCost(state, card, skill)
-  if (state.ap < apCost) return `AP 不足（需要 ${apCost} AP）`
+  if (state.ap < apCost) return `还差 ${apCost - state.ap} AP`
   if (skill.kind === "interrupt" && state.interruptUsedThisTurn) {
     return "每回合最多尝试 1 次打断"
   }

@@ -556,6 +556,24 @@
   border-radius: 0.8cqw 1.8cqw 1.8cqw 0.8cqw;
   background: var(--row);
 }
+button.cfb2__skill {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.cfb2__skill[aria-disabled="true"] {
+  cursor: default;
+}
+button.cfb2__skill[aria-disabled="true"] .cfb2__ap {
+  opacity: 0.7;
+}
+button.cfb2__skill:hover {
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
+  background: color-mix(in srgb, var(--row) 82%, var(--r));
+}
 
 .cfb2__skill--empty {
   border-left-color: transparent;

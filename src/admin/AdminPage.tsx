@@ -11,6 +11,8 @@ import {
   type MailKind,
 } from "@choke/shared/mail"
 
+import { playSfx } from "@/audio/sfx"
+import { PageLoading } from "@/components/PageLoading"
 import { ApiError, fetchMe } from "@/desk/session/api"
 
 import {
@@ -153,26 +155,30 @@ export function AdminPage() {
       )
   }, [])
 
+  if (gate === "loading") return <PageLoading label="检查账号中" />
   if (gate !== "ok") {
     const message = {
-      loading: "检查账号中…",
       anon: "请先登录管理员账号。",
       denied: "这个账号没有管理员权限。",
       error: "暂时连不上服务器，请稍后刷新重试。",
     }[gate]
     return (
       <main className="admin-page admin-page--gate">
-        <p>{message}</p>
-        <p>
-          {gate === "anon" && (
-            <a className="bk-btn bk-btn--main" href="/login">
-              去登录
+        <div className="admin-gate">
+          <span className="bk-label">ADMIN</span>
+          <h1>管理后台</h1>
+          <p className="bk-note">{message}</p>
+          <div className="admin-gate__actions">
+            {gate === "anon" && (
+              <a className="bk-btn bk-btn--main" href="/login">
+                去登录
+              </a>
+            )}
+            <a className="bk-btn bk-btn--ghost" href="/">
+              返回桌面
             </a>
-          )}{" "}
-          <a className="bk-btn bk-btn--ghost" href="/">
-            返回桌面
-          </a>
-        </p>
+          </div>
+        </div>
       </main>
     )
   }
@@ -297,6 +303,12 @@ function MailComposer() {
     loadBatches()
   }, [loadBatches])
 
+  /** 出错：提示条 + 一声错误音 */
+  const fail = (text: string) => {
+    playSfx("error")
+    setError(text)
+  }
+
   const runSearch = async () => {
     if (!query.trim()) return
     setError(null)
@@ -304,7 +316,7 @@ function MailComposer() {
       setFound((await searchUsers(query.trim())).users)
       setSearched(true)
     } catch (reason) {
-      setError(errorText(reason))
+      fail(errorText(reason))
     }
   }
 
@@ -320,15 +332,16 @@ function MailComposer() {
   const startPreview = async () => {
     setError(null)
     setDone(null)
-    if (!form.title.trim()) return setError("标题不能为空")
-    if (form.audience === "users" && form.users.length === 0) return setError("请先添加收件人")
-    if (form.audience === "level" && !positiveInt(form.minLevel)) return setError("请填写等级")
+    if (!form.title.trim()) return fail("标题不能为空")
+    if (form.audience === "users" && form.users.length === 0) return fail("请先添加收件人")
+    if (form.audience === "level" && !positiveInt(form.minLevel)) return fail("请填写等级")
     setBusy(true)
     try {
       setPending(await previewAudience(buildAudience(form)))
       setTyped("")
+      playSfx("paper")
     } catch (reason) {
-      setError(errorText(reason))
+      fail(errorText(reason))
     } finally {
       setBusy(false)
     }
@@ -347,6 +360,7 @@ function MailComposer() {
         attachment,
         confirmCount: pending.recipients,
       })
+      playSfx("send")
       setDone(`已发送给 ${result.recipients} 名玩家（批次 #${result.batchId}）`)
       setPending(null)
       setForm(EMPTY_FORM)
@@ -354,7 +368,7 @@ function MailComposer() {
       setSearched(false)
       loadBatches()
     } catch (reason) {
-      setError(errorText(reason))
+      fail(errorText(reason))
       setPending(null)
     } finally {
       setBusy(false)
@@ -562,11 +576,13 @@ function MailComposer() {
               </label>
             )}
             <div className="admin-row">
+              {/* 发出去和失败各有专属音效 */}
               <button
                 type="button"
                 className="bk-btn bk-btn--main"
                 disabled={busy || (needTyped && typed.trim() !== String(pending.recipients))}
                 onClick={() => void confirmSend()}
+                data-sfx="none"
               >
                 确认发送
               </button>
@@ -581,7 +597,7 @@ function MailComposer() {
       <section className="admin-card">
         <h2>发信记录</h2>
         {batches === null && <p className="bk-note">加载中…</p>}
-        {batches?.length === 0 && <p className="bk-note">还没有发过邮件。</p>}
+        {batches?.length === 0 && <p className="bk-note admin-history__empty">还没有发过邮件。</p>}
         <ul className="admin-history">
           {batches?.map((batch) => (
             <li key={batch.id}>

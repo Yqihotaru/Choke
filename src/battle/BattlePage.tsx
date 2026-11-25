@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react"
 
 import {
   fetchDeck,
@@ -20,8 +20,54 @@ import { withAction, type BattleAction } from "@choke/shared/battle/actions"
 import { TUTORIAL_ENCOUNTER_ID, type EncounterSpec, type EncounterSummary } from "@choke/shared/battle/content"
 import type { BattleState } from "@choke/shared/battle/types"
 import { randomSeed } from "@choke/shared/rng"
-import { BattleStage } from "./view/BattleStage"
-import "./battle.css"
+import { playSfx } from "@/audio/sfx"
+import "./battle-gate.css"
+
+type BattleUiMode = "classic" | "modern"
+const BATTLE_UI_KEY = "choke:battle-ui"
+
+const ClassicStage = lazy(() =>
+  import("./view/BattleStage").then((m) => ({ default: m.BattleStage })),
+)
+const ModernStage = lazy(() =>
+  import("./view-modern/BattleStage").then((m) => ({ default: m.BattleStage })),
+)
+
+function readBattleUiMode(searchParams: URLSearchParams): BattleUiMode {
+  const fromUrl = searchParams.get("ui")
+  if (fromUrl === "classic" || fromUrl === "modern") {
+    return fromUrl
+  }
+  try {
+    const saved = localStorage.getItem(BATTLE_UI_KEY)
+    if (saved === "classic" || saved === "modern") return saved
+  } catch {
+    // ignore storage failure
+  }
+  return "classic"
+}
+
+/** 进不了战斗时的整页提示（没登录、没卡、出错、加载中）：和战斗舞台同一套配色，都带回桌面的路 */
+function Gate({ tag, title, text, children }: { tag: string; title: string; text?: string; children?: ReactNode }) {
+  return (
+    <div className="choke-gate-page">
+      <div className="choke-gate">
+        <small>{tag}</small>
+        <h1>{title}</h1>
+        {text && <p>{text}</p>}
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function Loading({ label }: { label: string }) {
+  return (
+    <Gate tag="CHOKE! · BATTLE" title={label}>
+      <i className="choke-gate__spin" aria-hidden />
+    </Gate>
+  )
+}
 
 interface ApiUser {
   id: string
@@ -38,6 +84,14 @@ export function BattlePage() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   const searchParams = new URLSearchParams(window.location.search)
+  const [uiMode, setUiMode] = useState(() => readBattleUiMode(searchParams))
+  useEffect(() => {
+    try {
+      localStorage.setItem(BATTLE_UI_KEY, uiMode)
+    } catch {
+      // The current tab can still switch when storage is unavailable.
+    }
+  }, [uiMode])
   const tutorialMode = searchParams.get("tutorial") === "1"
   const [stageId, setStageId] = useState<string | null>(searchParams.get("stage"))
   const [encounters, setEncounters] = useState<EncounterSummary[] | null>(null)
@@ -139,26 +193,35 @@ export function BattlePage() {
 
   // 普通 PvE 暂不发玩家经验：战斗还在客户端结算，服务端无法校验（第 3 步战斗引擎进 shared 后由服务端复算发放）
 
-  if (loading) return <div className="battle-page battle-page--center">加载中…</div>
+  if (loading) return <Loading label="加载中" />
   if (!user) {
     return (
-      <div className="battle-page battle-page--center">
-        <div className="battle-gate">
-          <span>CHOKE! · BATTLE</span>
-          <h1>需要先登录</h1>
-          <p>战斗读取你账号里保存的出战卡组与替补席。</p>
-          <a href="/auth/osu">用 osu! 登录</a>
-          <GuestLoginButton className="battle-guest" label="以游客身份进入" />
+      <Gate tag="CHOKE! · BATTLE" title="需要先登录" text="战斗读取你账号里保存的出战卡组与替补席。">
+        <div className="choke-gate__actions">
+          <a href="/auth/osu" data-sfx="send">
+            用 osu! 登录
+          </a>
+          <GuestLoginButton className="choke-gate__guest" label="以游客身份进入" />
+          <a href="/">回桌面</a>
         </div>
-      </div>
+      </Gate>
     )
   }
-  if (error) return <div className="battle-page battle-page--center">{error}</div>
-  if (!deck) return <div className="battle-page battle-page--center">加载卡组…</div>
-  // 战前切关时等新遭遇到手再渲染，避免用旧关卡开战；已开战则不受影响（如教学战结束后教程步骤变化）
-  if (!encounter || (!battle && encounter.id !== encounterId)) {
-    return <div className="battle-page battle-page--center">加载关卡…</div>
+  if (error) {
+    return (
+      <Gate tag="CHOKE! · BATTLE" title="战斗没能加载" text={error}>
+        <div className="choke-gate__actions">
+          <button type="button" onClick={() => window.location.reload()}>
+            再试一次
+          </button>
+          <a href="/">回桌面</a>
+        </div>
+      </Gate>
+    )
   }
+  if (!deck) return <Loading label="加载卡组" />
+  // 战前切关时等新遭遇到手再渲染，避免用旧关卡开战；已开战则不受影响（如教学战结束后教程步骤变化）
+  if (!encounter || (!battle && encounter.id !== encounterId)) return <Loading label="加载关卡" />
 
   const deckCards = deck.slots.flatMap((slot) => (slot.card ? [slot.card] : []))
   // 教学战最多 4 张：卡组里多的话按推荐挑，不改动存着的卡组；教学战没有替补
@@ -172,14 +235,12 @@ export function BattlePage() {
 
   if (deckCards.length === 0) {
     return (
-      <div className="battle-page battle-page--center">
-        <div className="battle-gate">
-          <span>CHOKE! · BATTLE</span>
-          <h1>卡组里还没有卡</h1>
-          <p>回桌面，把卡拖进卡组；至少 1 张就能出战。</p>
+      <Gate tag="CHOKE! · BATTLE" title="卡组里还没有卡" text="回桌面，把卡拖进卡组；至少 1 张就能出战。">
+        <div className="choke-gate__actions">
+          <a href="/?panel=deck">去组卡</a>
           <a href="/">回桌面</a>
         </div>
-      </div>
+      </Gate>
     )
   }
 
@@ -211,14 +272,11 @@ export function BattlePage() {
 
   if (tutorialFinished && !battle) {
     return (
-      <div className="battle-page battle-page--center">
-        <div className="battle-gate">
-          <span>TUTORIAL · CLEARED</span>
-          <h1>教学战已经完成了</h1>
-          <p>回桌面继续教程结算吧。</p>
+      <Gate tag="TUTORIAL · CLEARED" title="教学战已经完成了" text="回桌面继续教程结算吧。">
+        <div className="choke-gate__actions">
           <a href="/">回桌面</a>
         </div>
-      </div>
+      </Gate>
     )
   }
 
@@ -237,24 +295,41 @@ export function BattlePage() {
   const swap = (slot: number, benchUid: number) => act({ type: "swap", slot, benchUid })
   const finishTurn = () => act({ type: "endTurn" })
 
+  const StageComponent = uiMode === "modern" ? ModernStage : ClassicStage
+
+  const switchUi = () => {
+    const nextMode: BattleUiMode = uiMode === "classic" ? "modern" : "classic"
+    playSfx("toggle")
+    setUiMode(nextMode)
+    const url = new URL(window.location.href)
+    url.searchParams.set("ui", nextMode)
+    if (encounterId && !tutorialRun) {
+      url.searchParams.set("stage", encounterId)
+    }
+    window.history.replaceState(null, "", url)
+  }
+
   return (
-    <BattleStage
-      battle={battle}
-      playerName={user?.username ?? "玩家"}
-      deck={cards.map(toFace)}
-      encounter={encounter}
-      encounters={pool}
-      tutorial={tutorialRun}
-      testMode={testMode && import.meta.env.DEV}
-      onToggleTest={import.meta.env.DEV ? () => setTestMode((on) => !on) : undefined}
-      actionError={actionError}
-      onSelectStage={(nextId) => setStageId(nextId)}
-      onStart={start}
-      onPlay={play}
-      onDefend={defend}
-      onSwap={swap}
-      onEndTurn={finishTurn}
-      onRestart={start}
-    />
+    <Suspense fallback={<Loading label="加载战斗舞台" />}>
+      <StageComponent
+        battle={battle}
+        playerName={user?.username ?? "玩家"}
+        deck={cards.map(toFace)}
+        encounter={encounter}
+        encounters={pool}
+        tutorial={tutorialRun}
+        testMode={testMode && import.meta.env.DEV}
+        onToggleTest={import.meta.env.DEV ? () => setTestMode((on) => !on) : undefined}
+        actionError={actionError}
+        onSelectStage={(nextId) => setStageId(nextId)}
+        onStart={start}
+        onPlay={play}
+        onDefend={defend}
+        onSwap={swap}
+        onEndTurn={finishTurn}
+        onRestart={start}
+        onSwitchUi={switchUi}
+      />
+    </Suspense>
   )
 }

@@ -1,7 +1,13 @@
 import { lazy, Suspense } from "react"
 
+import { installUiSfx } from "@/audio/ui-sfx"
 import { BackToDesk } from "@/components/BackToDesk"
+import { PageLoading } from "@/components/PageLoading"
 import { DeskPage } from "@/desk/DeskPage"
+import "@/ui/motion.css"
+
+// 任何按钮被点到都至少有一声反馈；各面板自己的专属音效优先
+installUiSfx()
 
 const BattlePage = lazy(() =>
   import("@/battle/BattlePage").then((m) => ({ default: m.BattlePage }))
@@ -28,20 +34,7 @@ const AdminPage = lazy(() =>
   import("@/admin/AdminPage").then((m) => ({ default: m.AdminPage }))
 )
 
-const FALLBACK = (
-  <div
-    style={{
-      minHeight: "100vh",
-      display: "grid",
-      placeItems: "center",
-      background: "#18171c",
-      color: "#edeae5",
-      fontFamily: "Outfit, sans-serif",
-    }}
-  >
-    加载中…
-  </div>
-)
+const FALLBACK = <PageLoading />
 
 export function App() {
   const path = window.location.pathname.replace(/\/+$/, "")
@@ -60,13 +53,11 @@ export function App() {
     )
   }
   if (path.endsWith("battle")) {
+    // 战斗舞台自己带「桌面」按钮，不再叠一个悬浮的返回键（会压住左下角的战报）
     return (
-      <>
-        <Suspense fallback={FALLBACK}>
-          <BattlePage />
-        </Suspense>
-        <BackToDesk />
-      </>
+      <Suspense fallback={FALLBACK}>
+        <BattlePage />
+      </Suspense>
     )
   }
   if (path.endsWith("intro")) {

@@ -1,3 +1,4 @@
+import type { ButtonHTMLAttributes } from "react"
 import { useTheme } from "@/components/theme-provider"
 import { CardFaceB2 } from "./CardFaceB2"
 import type { CardFaceData } from "./types"
@@ -7,6 +8,7 @@ interface Props {
   className?: string
   /** 书里的邻页提前加载，避免翻过去时才开始请求插画 */
   eager?: boolean
+  skillActions?: readonly ButtonHTMLAttributes<HTMLButtonElement>[]
 }
 
 /**

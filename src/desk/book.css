@@ -359,10 +359,6 @@
   opacity: 1;
   translate: 0 0;
 }
-.book__tab:focus-visible {
-  outline: 2px solid var(--bk-ink);
-  outline-offset: 2px;
-}
 /* 未解锁章节：签仍然画出来做等级预告，但不能点开 */
 .book__tab[data-locked] {
   opacity: 0.34;
@@ -742,16 +738,6 @@
   align-items: center;
   overflow: hidden;
   white-space: pre;
-}
-.bk-input:focus-visible,
-.bk-select:focus-visible,
-.bk-btn:focus-visible,
-.bk-chip:focus-visible,
-.bk-seg > button:focus-visible,
-.book__turn:focus-visible,
-.book__close:focus-visible {
-  outline: 2px solid var(--bk-osu);
-  outline-offset: 2px;
 }
 
 /* 一块区域：页面上浅浅凸起的一块 */

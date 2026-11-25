@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState, type CSSProperties } from "react"
+import { memo, useEffect, useMemo, useState, type ButtonHTMLAttributes, type CSSProperties } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -32,6 +32,7 @@ interface Props {
   version?: "v1" | "v2"
   className?: string
   eager?: boolean
+  skillActions?: readonly ButtonHTMLAttributes<HTMLButtonElement>[]
 }
 
 /**
@@ -47,6 +48,7 @@ export const CardFaceB2 = memo(function CardFaceB2({
   version = "v2",
   className,
   eager = false,
+  skillActions,
 }: Props) {
   useEffect(trackCardLight, [])
 
@@ -192,8 +194,9 @@ export const CardFaceB2 = memo(function CardFaceB2({
         </div>
 
         <div className="cfb2__skills">
-          {card.skills.slice(0, 3).map((skill, i) => (
-            <div className="cfb2__skill" key={i} data-surcharged={skill.surcharged ? "true" : undefined}>
+          {card.skills.slice(0, 3).map((skill, i) => {
+            const action = skillActions?.[i]
+            const content = <>
               <span
                 className="cfb2__el"
                 style={{ "--el": ELEMENT_COLOR[skill.element] } as CSSProperties}
@@ -209,8 +212,12 @@ export const CardFaceB2 = memo(function CardFaceB2({
                   {skill.ap}
                 </span>
               )}
-            </div>
-          ))}
+            </>
+            const props = { className: "cfb2__skill", "data-surcharged": skill.surcharged ? "true" : undefined }
+            return action
+              ? <button key={skill.id ?? i} {...props} {...action}>{content}</button>
+              : <div key={skill.id ?? i} {...props}>{content}</div>
+          })}
           {/* 不足三行补空槽，所有卡的技能区一样高 */}
           {Array.from({ length: 3 - Math.min(card.skills.length, 3) }, (_, i) => (
             <div className="cfb2__skill cfb2__skill--empty" key={`empty-${i}`} aria-hidden />

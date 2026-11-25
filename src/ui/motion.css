@@ -1,0 +1,143 @@
+/* =========================================================
+   全站共用的动效：时长、曲线和几个进出场关键帧。
+   只动 transform / opacity，不碰会触发重排的属性；
+   系统开了「减少动态效果」时，这里的类一律不动。
+   ========================================================= */
+
+:root {
+  /* 出现：快起慢停；离开：慢起快走；实物落定：带一点回弹 */
+  --ui-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ui-ease-in: cubic-bezier(0.5, 0, 0.9, 0.4);
+  --ui-ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+  --ui-fast: 120ms;
+  --ui-base: 200ms;
+  --ui-slow: 320ms;
+}
+
+@keyframes ui-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ui-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+/* 弹层、卡片：从下面一点点浮上来并长到原大 */
+@keyframes ui-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.965);
+  }
+}
+@keyframes ui-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes ui-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes ui-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+@keyframes ui-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+/* 盖章：从大到小砸下来，回弹一下 */
+@keyframes ui-stamp-in {
+  from {
+    opacity: 0;
+    transform: scale(1.7) rotate(-9deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.94) rotate(-3deg);
+  }
+}
+/* 出错：左右抖两下 */
+@keyframes ui-shake {
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+/* 提醒：轻轻鼓一下 */
+@keyframes ui-bump {
+  40% {
+    transform: scale(1.18);
+  }
+}
+/* 加载占位：明暗来回 */
+@keyframes ui-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* 一组子元素依次浮上来；超过 12 个的和第 12 个同时出现，不让长列表等太久 */
+.ui-stagger > * {
+  animation: ui-rise-in var(--ui-slow) var(--ui-ease-out) both;
+  animation-delay: calc(var(--ui-i, 12) * 32ms);
+}
+.ui-stagger > :nth-child(1) {
+  --ui-i: 0;
+}
+.ui-stagger > :nth-child(2) {
+  --ui-i: 1;
+}
+.ui-stagger > :nth-child(3) {
+  --ui-i: 2;
+}
+.ui-stagger > :nth-child(4) {
+  --ui-i: 3;
+}
+.ui-stagger > :nth-child(5) {
+  --ui-i: 4;
+}
+.ui-stagger > :nth-child(6) {
+  --ui-i: 5;
+}
+.ui-stagger > :nth-child(7) {
+  --ui-i: 6;
+}
+.ui-stagger > :nth-child(8) {
+  --ui-i: 7;
+}
+.ui-stagger > :nth-child(9) {
+  --ui-i: 8;
+}
+.ui-stagger > :nth-child(10) {
+  --ui-i: 9;
+}
+.ui-stagger > :nth-child(11) {
+  --ui-i: 10;
+}
+.ui-stagger > :nth-child(12) {
+  --ui-i: 11;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-stagger > * {
+    animation: none;
+  }
+}

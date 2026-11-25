@@ -832,11 +832,6 @@
 .obj-pick.is-open .obj-pick__box {
   background: var(--o-stock-hi);
 }
-.obj-pick__box:focus-visible,
-.obj-pick__item:focus-visible {
-  outline: 2px solid var(--o-osu);
-  outline-offset: 2px;
-}
 .obj-deal.is-empty .obj-pick__box > span {
   color: var(--o-ink-dim);
 }

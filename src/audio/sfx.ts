@@ -39,13 +39,37 @@ type SfxName =
   | "reveal-l"
   | "reveal-radiant"
   | "reveal-prismatic"
+  | "hover"
+  | "open"
+  | "close"
+  | "tab"
+  | "toggle"
+  | "notify"
+  | "claim"
+  | "send"
+  | "whoosh"
+  | "deal"
+  | "stamp"
+  | "select"
+  | "ap"
+  | "start"
+  | "warn"
+  | "laser"
+  | "buff"
+  | "debuff"
+  | "star"
 
 export type SfxId = SfxName
 
 interface SfxOptions {
   rate?: number
   volume?: number
+  /** 过多少秒再响。排在音频时钟上，不占 JS 定时器：一串发牌声、落地声用它错开 */
+  delay?: number
 }
+
+/** 正在排的这一声整体往后挪多少秒；只在 playSfx 同步渲染期间非零 */
+let startOffset = 0
 
 const STORAGE_KEY = "choke:sfx-volume"
 
@@ -174,7 +198,7 @@ function playSample(c: AudioContext, o: AudioNode, name: SfxName, rate: number, 
   // 同一个音每次略有不同，连点时不会像机关枪
   src.playbackRate.value = rate * (opts.fixedPitch ? 1 : 0.97 + Math.random() * 0.06)
   src.connect(o)
-  src.start()
+  src.start(c.currentTime + startOffset)
   if (opts.source !== "bare") SAMPLE_BODY[name]?.(c, o, rate)
   return true
 }
@@ -196,7 +220,7 @@ interface ToneSpec {
 }
 
 function tone(c: AudioContext, out: AudioNode, spec: ToneSpec, rate: number) {
-  const t = c.currentTime + (spec.at ?? 0)
+  const t = c.currentTime + startOffset + (spec.at ?? 0)
   const attack = spec.attack ?? 0.004
   const osc = c.createOscillator()
   const g = c.createGain()
@@ -224,7 +248,7 @@ interface NoiseSpec {
 
 function noise(c: AudioContext, out: AudioNode, spec: NoiseSpec, rate: number) {
   if (!noiseBuf) return
-  const t = c.currentTime + (spec.at ?? 0)
+  const t = c.currentTime + startOffset + (spec.at ?? 0)
   const src = c.createBufferSource()
   src.buffer = noiseBuf
   src.loop = true
@@ -472,23 +496,142 @@ const SYNTH: Record<SfxName, (c: AudioContext, o: AudioNode, r: number) => void>
     noise(c, o, { filter: "highpass", f0: 6000, dur: 0.7, gain: 0.22, at: 0.1 }, r)
     SYNTH.shine(c, o, r)
   },
+  // ---------- 界面 ----------
+  hover: (c, o, r) => {
+    tone(c, o, { type: "sine", f0: 1800, f1: 1650, dur: 0.022, gain: 0.03 }, r)
+  },
+  // 面板 / 弹层打开：一口往上的气 + 落定的软底
+  open: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 700, f1: 2600, q: 0.8, dur: 0.14, gain: 0.14 }, r)
+    tone(c, o, { type: "sine", f0: 300, f1: 460, dur: 0.1, gain: 0.1, at: 0.02 }, r)
+    tone(c, o, { type: "triangle", f0: 920, dur: 0.12, gain: 0.05, at: 0.09 }, r)
+  },
+  close: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 2400, f1: 600, q: 0.8, dur: 0.12, gain: 0.12 }, r)
+    tone(c, o, { type: "sine", f0: 420, f1: 250, dur: 0.1, gain: 0.1, at: 0.01 }, r)
+  },
+  tab: (c, o, r) => {
+    tone(c, o, { type: "triangle", f0: 880, dur: 0.045, gain: 0.08 }, r)
+    tone(c, o, { type: "sine", f0: 1320, dur: 0.07, gain: 0.05, at: 0.03 }, r)
+  },
+  toggle: (c, o, r) => {
+    tone(c, o, { type: "square", f0: 1300, f1: 900, dur: 0.025, gain: 0.07 }, r)
+    noise(c, o, { filter: "highpass", f0: 4000, dur: 0.018, gain: 0.1 }, r)
+  },
+  // 新邮件 / 有东西可领：两声小铃
+  notify: (c, o, r) => {
+    tone(c, o, { type: "sine", f0: 1175, dur: 0.22, gain: 0.14 }, r)
+    tone(c, o, { type: "sine", f0: 1568, dur: 0.4, gain: 0.14, at: 0.11 }, r)
+    tone(c, o, { type: "triangle", f0: 3136, dur: 0.3, gain: 0.03, at: 0.11 }, r)
+  },
+  // 领奖：硬币落袋 + 一串上行亮音
+  claim: (c, o, r) => {
+    SYNTH.coin(c, o, r)
+    ;[1047, 1319, 1568, 2093].forEach((f, i) =>
+      tone(c, o, { type: "triangle", f0: f, dur: 0.28, gain: 0.1, at: 0.12 + i * 0.055 }, r),
+    )
+    noise(c, o, { filter: "highpass", f0: 6000, dur: 0.25, gain: 0.08, at: 0.14 }, r)
+  },
+  send: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 900, f1: 5200, q: 1.1, dur: 0.2, gain: 0.18 }, r)
+    tone(c, o, { type: "sine", f0: 520, f1: 1040, dur: 0.18, gain: 0.08 }, r)
+  },
+  // 东西飞过去：卡牌飞行、换人
+  whoosh: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 500, f1: 3400, q: 1.4, dur: 0.16, gain: 0.2 }, r)
+    noise(c, o, { filter: "bandpass", f0: 3400, f1: 900, q: 1.4, dur: 0.14, gain: 0.12, at: 0.1 }, r)
+  },
+  // 一张牌拍到桌上：短促的纸声 + 轻敲
+  deal: (c, o, r) => {
+    noise(c, o, { filter: "bandpass", f0: 4200, f1: 1600, q: 0.8, dur: 0.05, gain: 0.2 }, r)
+    tone(c, o, { type: "sine", f0: 260, f1: 150, dur: 0.06, gain: 0.2, at: 0.035 }, r)
+  },
+  stamp: (c, o, r) => {
+    tone(c, o, { type: "sine", f0: 150, f1: 62, dur: 0.14, gain: 0.5 }, r)
+    noise(c, o, { filter: "lowpass", f0: 900, f1: 200, dur: 0.07, gain: 0.3 }, r)
+    tone(c, o, { type: "triangle", f0: 1400, f1: 700, dur: 0.03, gain: 0.08 }, r)
+  },
+  // ---------- 战斗 ----------
+  select: (c, o, r) => {
+    tone(c, o, { type: "triangle", f0: 740, f1: 1110, dur: 0.05, gain: 0.14 }, r)
+    noise(c, o, { filter: "highpass", f0: 5000, dur: 0.02, gain: 0.08 }, r)
+  },
+  ap: (c, o, r) => {
+    tone(c, o, { type: "square", f0: 988, dur: 0.04, gain: 0.07 }, r)
+    tone(c, o, { type: "sine", f0: 1480, f1: 1318, dur: 0.12, gain: 0.1, at: 0.03 }, r)
+  },
+  // 开战：一记大鼓 + 往上顶的铜管感
+  start: (c, o, r) => {
+    tone(c, o, { type: "sine", f0: 110, f1: 42, dur: 0.5, gain: 0.75 }, r)
+    noise(c, o, { filter: "lowpass", f0: 1400, f1: 180, dur: 0.22, gain: 0.4 }, r)
+    ;[196, 294, 392].forEach((f, i) =>
+      tone(c, o, { type: "sawtooth", f0: f, f1: f * 1.5, dur: 0.42, gain: 0.07, at: 0.06 + i * 0.03 }, r),
+    )
+    noise(c, o, { filter: "bandpass", f0: 600, f1: 5200, q: 1, dur: 0.4, gain: 0.16, at: 0.05 }, r)
+    tone(c, o, { type: "triangle", f0: 1175, dur: 0.5, gain: 0.1, at: 0.4 }, r)
+  },
+  warn: (c, o, r) => {
+    tone(c, o, { type: "sawtooth", f0: 233, dur: 0.11, gain: 0.14 }, r)
+    tone(c, o, { type: "sawtooth", f0: 220, dur: 0.2, gain: 0.14, at: 0.15 }, r)
+    tone(c, o, { type: "sine", f0: 58, dur: 0.34, gain: 0.3 }, r)
+  },
+  laser: (c, o, r) => {
+    tone(c, o, { type: "sawtooth", f0: 1900, f1: 240, dur: 0.24, gain: 0.14 }, r)
+    tone(c, o, { type: "square", f0: 950, f1: 120, dur: 0.24, gain: 0.07 }, r)
+    noise(c, o, { filter: "highpass", f0: 3200, dur: 0.16, gain: 0.2 }, r)
+  },
+  buff: (c, o, r) => {
+    ;[659, 880, 1175].forEach((f, i) => tone(c, o, { type: "sine", f0: f, f1: f * 1.06, dur: 0.2, gain: 0.12, at: i * 0.045 }, r))
+    noise(c, o, { filter: "highpass", f0: 5500, dur: 0.18, gain: 0.06, at: 0.05 }, r)
+  },
+  debuff: (c, o, r) => {
+    ;[523, 415, 311].forEach((f, i) => tone(c, o, { type: "triangle", f0: f, f1: f * 0.94, dur: 0.2, gain: 0.12, at: i * 0.05 }, r))
+    tone(c, o, { type: "sine", f0: 90, f1: 60, dur: 0.25, gain: 0.2 }, r)
+  },
+  // 结算评价的星星一颗颗盖上去
+  star: (c, o, r) => {
+    tone(c, o, { type: "sine", f0: 160, f1: 80, dur: 0.1, gain: 0.3 }, r)
+    tone(c, o, { type: "triangle", f0: 1568, dur: 0.3, gain: 0.16, at: 0.015 }, r)
+    tone(c, o, { type: "sine", f0: 3136, dur: 0.24, gain: 0.06, at: 0.015 }, r)
+  },
 }
 
 const lastPlayed = new Map<SfxName, number>()
+let lastAny = -1e9
+
+/** 最近一次有人调用 playSfx 的时刻（performance.now()）；全局按键音靠它判断「这次点击已经有专属音效了」 */
+export function lastSfxAt() {
+  return lastAny
+}
+
+/**
+ * 页面还没被点过时，浏览器会把 AudioContext 挂起；这时排进去的声音不会丢，而是攒到第一次点击时一口气全响。
+ * 所以挂起、且当前不在用户手势里（resume 不会马上生效）时，这一声直接不排。
+ */
+function audible(c: AudioContext) {
+  return c.state === "running" || navigator.userActivation?.isActive === true
+}
 
 export function playSfx(name: SfxName, options: SfxOptions = {}) {
-  if (volume <= 0) return
   const now = performance.now()
-  if (now - (lastPlayed.get(name) ?? -1e9) < 30) return
-  lastPlayed.set(name, now)
+  lastAny = now
+  if (volume <= 0) return
+  // 节流按「实际响起的时刻」算：同一下排出去的一串延时音不会互相吃掉
+  const due = now + (options.delay ?? 0) * 1000
+  if (Math.abs(due - (lastPlayed.get(name) ?? -1e9)) < 30) return
+  lastPlayed.set(name, due)
   try {
     const { ctx: c, master: m } = ensure()
+    if (!audible(c)) return
     const out = c.createGain()
     out.gain.value = options.volume ?? 1
     out.connect(m)
+    startOffset = options.delay ?? 0
     render(c, out, name, options.rate ?? 1)
   } catch {
     // 无音频设备或被浏览器拦截时静默
+  } finally {
+    startOffset = 0
   }
 }
 
@@ -553,9 +696,9 @@ const REVEAL_BY_RARITY: Record<string, SfxName> = {
   Prismatic: "reveal-prismatic",
 }
 
-/** 开包翻牌：稀有度越高，层次越多。 */
-export function playReveal(rarity: string) {
-  playSfx(REVEAL_BY_RARITY[rarity] ?? "reveal-c")
+/** 开包翻牌：稀有度越高，层次越多。rate 让连着翻的几张一张比一张高 */
+export function playReveal(rarity: string, rate = 1) {
+  playSfx(REVEAL_BY_RARITY[rarity] ?? "reveal-c", { rate })
 }
 
 /** Combo 越高音调越高，最高 +8 级；传入属性则叠加对应属性层。 */
@@ -565,6 +708,7 @@ export function playHit(combo: number, crit = false, element?: Element) {
   if (!element || element === "physical") return
   try {
     const { ctx: c, master: m } = ensure()
+    if (!audible(c)) return
     const out = c.createGain()
     out.gain.value = 0.8
     out.connect(m)

@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
 import { SKILLS, JOB_ORDER, JOB_STAT_WEIGHTS, ARCHETYPE_COEF, type SkillDef } from "@choke/shared/skills"
-import { describeSkill } from "@choke/shared/skill-check"
+import { describeSkill, describeSkillEffects } from "@choke/shared/skill-check"
 import { ELEMENT_LABEL } from "@choke/shared/types"
 
 /**
@@ -16,7 +16,7 @@ const END = "<!-- skills:end -->"
 
 const JOB_LABEL = { tank: "坦克", warrior: "战士", mage: "法师", support: "辅助" } as const
 
-const cell = (text: string) => text.replace(/\|/g, "\\|").replace(/\n/g, " ")
+const cell = (text: string) => text.replace(/\|/g, "\\|").replace(/\n/g, "<br>")
 const fixed = (n: number) => String(Math.round(n * 100) / 100)
 
 function costLabel(def: SkillDef): string {
@@ -54,7 +54,7 @@ function build(): string {
     lines.push("| 技能 | id | 属性 | AP | 标签 | 倍率合计 | 效果 |", "|---|---|---|---:|---|---|---|")
     for (const def of ordered) {
       lines.push(
-        `| ${def.name} | \`${def.id}\` | ${ELEMENT_LABEL[def.element]} | ${def.passive ? "—" : def.ap} | ${costLabel(def)} | ${totalPower(def)} | ${cell(describeSkill(def))} |`,
+        `| ${def.name} | \`${def.id}\` | ${ELEMENT_LABEL[def.element]} | ${def.passive ? "—" : def.ap} | ${costLabel(def)} | ${totalPower(def)} | ${cell([describeSkill(def), ...describeSkillEffects(def).map(effect => `【${effect.name}】：${effect.description}`)].join("\n"))} |`,
       )
     }
     lines.push("")

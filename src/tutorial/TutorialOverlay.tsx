@@ -122,7 +122,7 @@ const TypedText = forwardRef<TypedTextHandle, { text: string }>(
     )
 
     return (
-      <p className="tut-dialog__text">
+      <p className="tut-dialog__text" key={text}>
         {text.slice(0, count)}
         {count < text.length && <span className="tut-dialog__caret" />}
       </p>
@@ -171,18 +171,18 @@ function TutorialDialogue({
       return
     }
     if (lineIndex < script.lines.length - 1) {
-      playSfx("click")
+      playSfx("tab")
       setLineIndex((index) => index + 1)
       return
     }
     if (script.advanceOn === "continue") {
-      playSfx("click")
+      playSfx("tab")
       onComplete()
     }
   }, [script, lineIndex, onComplete])
 
   const confirmSkip = () => {
-    playSfx("click")
+    playSfx("close")
     skipTutorial()
     requestTutorialCloseBook()
     setConfirmingSkip(false)
@@ -224,6 +224,7 @@ function TutorialDialogue({
           className="tut-dialog__skip"
           onClick={(event) => {
             event.stopPropagation()
+            playSfx("open")
             setConfirmingSkip(true)
           }}
         >

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
 import gsap from "gsap"
+import { FiChevronLeft, FiRefreshCw, FiRepeat } from "react-icons/fi"
 import {
   GiBroadsword,
   GiBrokenShield,
@@ -30,14 +31,15 @@ import {
 
 import { ElementGlyph, JobGlyph } from "@/card/CardFace"
 import { GameCardFace } from "@/card/GameCardFace"
+import { BattleLog, SkillHint, SupportReadout, TriggerReadout } from "../BattleReadouts"
 import { ELEMENT_COLOR, ELEMENT_LABEL, JOB_LABEL, battlePower } from "@/card/data"
-import type { SkillDef } from "@/card/jobs"
+import { pointerCommand, useSkillRows } from "../useSkillRows"
+import { usePlaybackSpeed } from "../usePlaybackSpeed"
+import { impact, reducedImpactMotion, sustainHurtTint } from "../impact"
 import type { CardFaceData, Element } from "@/card/types"
 
 import {
-  canUseSkillReason,
   comboMultiplier,
-  effectiveApCost,
   enemyDamageTier,
   evaluateStars,
   hasTankAlive,
@@ -46,14 +48,16 @@ import {
 } from "@choke/shared/battle/engine"
 import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
 import { describeStar, starProgress } from "@choke/shared/battle/stars"
-import { describeSkill } from "@choke/shared/skill-check"
 import { BentGauge } from "./BentGauge"
 import { playHit, playLose, playSfx, playTurn, playWin } from "../sfx"
 import { TestEnemyPicker } from "./TestEnemyPicker"
 import type { BattleState, EnemyIntent, SideSupportUnit } from "@choke/shared/battle/types"
-import "./choke-battle.css"
+import stageCss from "./choke-battle.css?inline"
 
 const AP_SLOTS = 10
+/** 结算层亮起后，第一颗星盖下去的时刻和每颗星的间隔（毫秒）；choke-battle.css 里的延时与之对应 */
+const RESULT_STAR_DELAY = 620
+const RESULT_STAR_GAP = 260
 
 /**
  * 兰斯10 标志性「外低内高」阶梯折线血条 SVG 路径（viewBox="0 0 460 54"）
@@ -83,6 +87,7 @@ interface Props {
   onSwap: (activeSlotIndex: number, benchUid: number) => void
   onEndTurn: () => void
   onRestart: () => void
+  onSwitchUi?: () => void
 }
 
 function bossBgStyle(background: string): CSSProperties {
@@ -146,11 +151,6 @@ function WeaknessRibbon({
   )
 }
 
-function costTagLabel(tag: SkillDef["costTag"]): string | null {
-  if (tag === "accumulate") return "累积"
-  if (tag === "once") return "单次"
-  return null
-}
 
 function IntentIcon({ kind }: { kind: EnemyIntent["kind"] }) {
   switch (kind) {
@@ -211,29 +211,27 @@ export function BattleStage({
   onSwap,
   onEndTurn,
   onRestart,
+  onSwitchUi,
 }: Props) {
-  const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
-  const [hoveredSlot, setHoveredSlot] = useState<number | null>(null)
-  const [hoveredSkill, setHoveredSkill] = useState<{
-    slotIndex: number
-    skill: SkillDef
-    actualAp: number
-    reason: string | null
-  } | null>(null)
   const [hoveredIntent, setHoveredIntent] = useState<EnemyIntent | null>(null)
   const [previewAp, setPreviewAp] = useState(0)
   const [logOpen, setLogOpen] = useState(false)
   const [swapOpen, setSwapOpen] = useState(false)
   const [swapOutIdx, setSwapOutIdx] = useState(0)
-  const [speedHigh, setSpeedHigh] = useState(false)
+  const { label, hint, cycle, stepGap } = usePlaybackSpeed()
+  /** 胜负已定后，等最后一击演完才亮结算层 */
+  const [resultShown, setResultShown] = useState(battle?.phase === "won" || battle?.phase === "lost")
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   // 兰斯10 实时演出横幅与扣血垂直光柱状态
   const [cutinBanner, setCutinBanner] = useState<{
+    seq: number
     actor: "card" | "support" | "preemptive" | "enemy"
     title: string
     subtitle: string
     element: Element
   } | null>(null)
+  const cutinSeq = useRef(0)
   const [slashKey, setSlashKey] = useState(0)
   const [laserTargets, setLaserTargets] = useState<number[]>([])
   const [guardChipSlot, setGuardChipSlot] = useState<number | null>(null)
@@ -248,15 +246,21 @@ export function BattleStage({
   const pillarId = useRef(1)
 
   const stageRef = useRef<HTMLDivElement | null>(null)
+  const hurtTintRef = useRef<HTMLDivElement | null>(null)
   const bossRef = useRef<HTMLElement | null>(null)
   const comboRef = useRef<HTMLDivElement | null>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
-  const lastSeq = useRef(0)
-  const fxTimers = useRef<number[]>([])
+  const lastSeq = useRef(battle?.actionSeq ?? 0)
+  const fxTimers = useRef(new Set<number>())
+  /** 同时飘着几个伤害数字：新数字按这个数错开位置，连击时不会叠成一团 */
+  const popupLive = useRef(0)
 
   const later = useCallback((fn: () => void, ms: number) => {
-    const id = window.setTimeout(fn, ms)
-    fxTimers.current.push(id)
+    const id = window.setTimeout(() => {
+      fxTimers.current.delete(id)
+      fn()
+    }, ms)
+    fxTimers.current.add(id)
     return id
   }, [])
 
@@ -264,6 +268,7 @@ export function BattleStage({
     const timers = fxTimers.current
     return () => {
       timers.forEach((id) => window.clearTimeout(id))
+      timers.clear()
     }
   }, [])
 
@@ -305,20 +310,24 @@ export function BattleStage({
         em.textContent = subLabel
         node.appendChild(em)
       }
+      // 打在敌人身上的数字：第 n 个还没消失的数字往旁边、往上错开，连击时每一段都看得清
+      if (variant === "enemy") {
+        const n = popupLive.current
+        const side = n % 2 === 0 ? 1 : -1
+        node.style.setProperty("--px", `${side * Math.ceil(n / 2) * 6.5}cqw`)
+        node.style.setProperty("--py", `${-(n % 3) * 2.2}cqw`)
+        popupLive.current = n + 1
+      }
+      const life = 820
+      node.style.animationDuration = `${life}ms`
       parent.appendChild(node)
-      later(() => node.remove(), speedHigh ? 520 : 820)
+      later(() => {
+        node.remove()
+        if (variant === "enemy") popupLive.current = Math.max(0, popupLive.current - 1)
+      }, life)
     },
-    [later, speedHigh],
+    [later],
   )
-
-  const flash = useCallback(() => {
-    const parent = stageRef.current
-    if (!parent) return
-    const node = document.createElement("div")
-    node.className = "choke-hit-flash"
-    parent.appendChild(node)
-    later(() => node.remove(), 150)
-  }, [later])
 
   // 受击演出：属性色爆光 + 放射线 + 斩痕，规模随伤害占敌方血量的比例放大
   const hitBurst = useCallback(
@@ -338,6 +347,7 @@ export function BattleStage({
       parent.appendChild(root)
       later(() => root.remove(), 520)
 
+      if (reducedImpactMotion()) return
       const amp = 3 + tier * 4
       gsap.fromTo(
         parent,
@@ -356,18 +366,35 @@ export function BattleStage({
     [later],
   )
 
-  const turnBanner = useCallback(
-    (owner: "player" | "enemy", round: number) => {
+  // 多段受击只保留一层底边红晕，不叠亮；卡牌仍逐段回弹。
+  const hurt = useCallback(
+    (target: HTMLElement | undefined, ratio: number) => {
+      if (ratio <= 0) return
+      const parent = stageRef.current
+      sustainHurtTint(hurtTintRef.current)
+      impact(target, ratio, "card")
+      impact(parent?.querySelector(".choke-party-grid"), ratio, "row")
+    },
+    [],
+  )
+
+  /** 横扫屏幕的大字：回合切换、开战 */
+  const sweepBanner = useCallback(
+    (text: string, tone: "player" | "enemy" | "start") => {
       const parent = stageRef.current
       if (!parent) return
+      const life = tone === "start" ? 900 : 780
       const node = document.createElement("div")
       node.className = "choke-turn-banner"
-      node.dataset.owner = owner
-      node.textContent = owner === "player" ? `ROUND ${round} · PLAYER TURN` : "ENEMY TURN"
+      node.dataset.owner = tone
+      node.style.animationDuration = `${life}ms`
+      const label = document.createElement("span")
+      label.textContent = text
+      node.appendChild(label)
       parent.appendChild(node)
-      later(() => node.remove(), speedHigh ? 500 : 780)
+      later(() => node.remove(), life)
     },
-    [later, speedHigh],
+    [later],
   )
 
   useEffect(() => {
@@ -392,13 +419,15 @@ export function BattleStage({
     const partyMax = Math.max(1, teamHpOf(battle).max)
     const enemyMax = Math.max(1, battle.enemy.hpMax)
 
-    const stepGap = speedHigh ? 110 : 190
     battle.events.forEach((event, idx) => {
       const delay = idx * stepGap
       later(() => {
         if (event.type === "cutin") {
-          playSfx("cutin")
+          // 敌人出招是预警的低音，我方出招是一道风声
+          playSfx(event.actor === "enemy" ? "warn" : "cutin")
+          const seq = ++cutinSeq.current
           setCutinBanner({
+            seq,
             actor: event.actor,
             title: event.title,
             subtitle: event.subtitle,
@@ -406,7 +435,7 @@ export function BattleStage({
           })
           if (event.cardIndex != null) {
             const node = cardRefs.current[event.cardIndex]
-            if (node) {
+            if (node && !reducedImpactMotion()) {
               gsap.fromTo(
                 node,
                 { y: 0, scale: 1 },
@@ -422,11 +451,13 @@ export function BattleStage({
               )
             }
           }
-          later(() => setCutinBanner(null), speedHigh ? 480 : 750)
+          // 只收自己这一条：连着两次出招时，前一条的定时器不会把后一条提前收掉
+          later(() => setCutinBanner((cur) => (cur?.seq === seq ? null : cur)), 750)
           return
         }
 
         if (event.type === "laser") {
+          playSfx("laser")
           setLaserTargets(event.targetSlots)
           if (event.guardedSlot != null) {
             setGuardChipSlot(event.guardedSlot)
@@ -434,7 +465,7 @@ export function BattleStage({
           later(() => {
             setLaserTargets([])
             setGuardChipSlot(null)
-          }, speedHigh ? 420 : 650)
+          }, 650)
           return
         }
 
@@ -442,12 +473,12 @@ export function BattleStage({
           if (event.target === "enemy") {
             if (event.enemyHpAfter != null) {
               const before = liveHp.current.enemy
+              impact(stageRef.current?.querySelector(".choke-bent-svg--boss"), (before - event.enemyHpAfter) / enemyMax, "gauge")
               liveHp.current.enemy = event.enemyHpAfter
               spawnLossPillar("boss", (before / enemyMax) * 100, (event.enemyHpAfter / enemyMax) * 100)
               setHpView((prev) => ({ ...prev, enemy: event.enemyHpAfter }))
             }
             setSlashKey((k) => k + 1)
-            flash()
             const tag = event.crit ? "CRITICAL!" : event.isWeak ? "WEAK!" : undefined
             popup(
               bossRef.current,
@@ -460,7 +491,7 @@ export function BattleStage({
             )
             hitBurst(event.element, event.amount / Math.max(1, battle.enemy.hpMax), Boolean(event.crit))
             const attacker = cardRefs.current[event.cardIndex ?? -1]
-            if (attacker) {
+            if (attacker && !reducedImpactMotion()) {
               gsap.fromTo(
                 attacker,
                 { y: 0 },
@@ -474,7 +505,7 @@ export function BattleStage({
                 },
               )
             }
-            if (comboRef.current) {
+            if (comboRef.current && !reducedImpactMotion()) {
               gsap.fromTo(
                 comboRef.current,
                 { scale: 1.38 },
@@ -483,15 +514,24 @@ export function BattleStage({
             }
             playHit(event.combo ?? battle.combo, Boolean(event.crit), event.element)
           } else {
+            const ratio = event.hpAfter == null ? 0 : (liveHp.current.party - event.hpAfter) / partyMax
             if (event.hpAfter != null) {
               const before = liveHp.current.party
               liveHp.current.party = event.hpAfter
+              impact(stageRef.current?.querySelector(".choke-bent-svg--party"), ratio, "gauge")
               spawnLossPillar("party", (before / partyMax) * 100, (event.hpAfter / partyMax) * 100)
               setHpView((prev) => ({ ...prev, party: event.hpAfter }))
             }
             const targetNode = cardRefs.current[event.cardIndex ?? -1] ?? stageRef.current
             popup(targetNode, `-${event.amount.toLocaleString("en-US")}`, "card", event.source)
-            playSfx("hit", { rate: 0.88 })
+            const heavy = ratio >= 0.1
+            hurt(cardRefs.current[event.cardIndex ?? -1] ?? undefined, ratio)
+            // 挨打和打人不是一个声音：被挡下是金属声，吃满是闷响
+            if (event.blocked) playSfx("guard", { rate: 1.15 })
+            else {
+              playSfx("thud", { rate: heavy ? 0.85 : 1 })
+              playSfx("hit", { rate: 0.8, volume: 0.6 })
+            }
           }
           return
         }
@@ -560,25 +600,54 @@ export function BattleStage({
           return
         }
 
+        if (event.type === "ap") {
+          playSfx("ap")
+          return
+        }
+
         if (event.type === "turn") {
-          turnBanner(event.owner, event.round)
+          sweepBanner(event.owner === "player" ? `ROUND ${event.round} · PLAYER TURN` : "ENEMY TURN", event.owner)
           playTurn()
           return
         }
 
-        if (event.type === "won") playWin()
-        if (event.type === "lost") playLose()
+        // 胜负：等最后一击的演出收完再亮结算；三星一颗一颗盖上去
+        if (event.type === "won" || event.type === "lost") {
+          const won = event.type === "won"
+          later(() => {
+            if (won) playWin()
+            else playLose()
+            setResultShown(true)
+            if (!won) return
+            evaluateStars(battle).stars.forEach(({ met }, i) => {
+              if (met) later(() => playSfx("star", { rate: 1 + i * 0.12 }), RESULT_STAR_DELAY + i * RESULT_STAR_GAP)
+            })
+          }, 480)
+        }
       }, delay)
     })
 
     // 事件全部播完后回落到引擎真实值，保证长时间挂机也不会和状态脱节
     later(() => setHpView(hpTruth.current), battle.events.length * stepGap + 520)
-  }, [battle, flash, hitBurst, later, popup, spawnLossPillar, speedHigh, turnBanner])
+  }, [battle, hitBurst, hurt, later, popup, spawnLossPillar, stepGap, sweepBanner])
 
-  const startBattle = () => {
-    playSfx("click")
-    onStart()
+  // 操作被拒（AP 不够、已经行动过……）：底栏会出提示，这里补一声
+  useEffect(() => {
+    if (actionError) playSfx("deny")
+  }, [actionError])
+
+  const skillRows = useSkillRows(battle, onPlay)
+
+  /** 开战 / 重开：鼓点 + 横扫的 BATTLE START；run 是页面给的 onStart 或 onRestart */
+  const begin = (run: () => void) => {
+    playSfx("start")
+    setResultShown(false)
+    setSwapOpen(false)
+    run()
+    // 等战斗画面挂上去再扫字
+    later(() => sweepBanner("BATTLE START", "start"), 30)
   }
+  const startBattle = () => begin(onStart)
 
   // ==================== 1. 战前准备画面 ====================
   if (!battle) {
@@ -590,39 +659,77 @@ export function BattleStage({
 
     return (
       <div className="choke-viewport">
+        <style>{stageCss}</style>
         <div className="choke-stage" data-phase="prepare" data-production="true">
           <section className="choke-boss-zone" style={bossBgStyle(encounter.background)}>
             <div className="choke-boss-backdrop" aria-hidden />
-            <div className="choke-tapes choke-tapes--left" aria-hidden>
-              <span className="choke-tape">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
-              <span className="choke-tape choke-tape--sub">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
+            {/* 左侧构图：大号衬线 VS 在后，深红敌名斜带跨过 VS 右下延伸至上沿 */}
+            <div className="choke-vs-giant" aria-hidden>
+              VS
             </div>
-            <div className="choke-tapes choke-tapes--right" aria-hidden>
-              <span className="choke-tape">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
-              <span className="choke-tape choke-tape--sub">WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING</span>
+            <div className="choke-prep-ribbon" key={encounter.id}>
+              <span className="choke-prep-ribbon__name">{enemyName}</span>
+              <small className="choke-prep-ribbon__sub">
+                {tutorial ? "TUTORIAL STAGE" : foe.title}
+              </small>
+            </div>
+
+            {/* 右侧构图：两条平行斜向 WARNING 警戒带夹着中空描边「准备战斗」 */}
+            <div className="choke-prep-warn" aria-hidden>
+              <span className="choke-prep-warn__tape">
+                WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING
+              </span>
+              <b className="choke-prep-warn__stamp">
+                {tutorial ? "教学战斗" : testMode ? "战斗测试" : "准备战斗"}
+              </b>
+              <span className="choke-prep-warn__tape">
+                WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING &nbsp; WARNING
+              </span>
             </div>
 
             <div className="choke-top-tools">
-              <a className="choke-tool-btn" href="/">
-                <b>‹</b>
+              {onSwitchUi && (
+                <button
+                  type="button"
+                  className="choke-tool-btn"
+                  onClick={onSwitchUi}
+                  title="切换到新版五段式战斗界面"
+                >
+                  <FiRepeat aria-hidden />
+                  <span>新版界面</span>
+                </button>
+              )}
+              <a className="choke-tool-btn" href="/" data-sfx="close">
+                <FiChevronLeft aria-hidden />
                 <span>桌面</span>
               </a>
             </div>
 
-            <div className="choke-vs-giant" aria-hidden>
-              VS
-            </div>
-
-            <div className="choke-prep-title">
-              <small>{tutorial ? "TUTORIAL STAGE" : foe.title}</small>
-              <div>{enemyName}</div>
-            </div>
-            <div className="choke-prep-badge">{tutorial ? "教学战斗" : testMode ? "战斗测试" : "准备战斗"}</div>
-
             {!tutorial && (
-              <div className="choke-stage-selector" data-test={testMode ? "true" : undefined}>
-                <span className="choke-stage-selector__label">
-                  <GiTargetLaser /> {testMode ? "选择测试对象" : "选择讨伐目标"}
+              <div
+                className="choke-stage-selector"
+                data-open={pickerOpen || testMode ? "true" : undefined}
+                data-test={testMode ? "true" : undefined}
+              >
+                <div className="choke-stage-selector__bar">
+                  <button
+                    type="button"
+                    className="choke-stage-selector__trigger"
+                    aria-expanded={pickerOpen || testMode}
+                    onClick={() => {
+                      playSfx(pickerOpen ? "close" : "open")
+                      setPickerOpen((open) => !open)
+                    }}
+                  >
+                    <GiTargetLaser />
+                    <span>讨伐目标</span>
+                    <b>{enemyName}</b>
+                    <small>
+                      {foe.tier === "boss" ? "BOSS" : foe.tier === "elite" ? "高T精英" : "常规"} · HP{" "}
+                      {enemyHp.toLocaleString("en-US")}
+                    </small>
+                    <em>{pickerOpen || testMode ? "收起 ▾" : `切换 (${encounters.length}) ▴`}</em>
+                  </button>
                   {onToggleTest && (
                     <button
                       type="button"
@@ -630,42 +737,56 @@ export function BattleStage({
                       data-active={testMode ? "true" : undefined}
                       title="开发模式：可选所有敌人，不发奖励、不扣体力、不记弱点发现"
                       onClick={() => {
-                        playSfx("click")
+                        playSfx("toggle")
+                        if (!testMode) setPickerOpen(true)
                         onToggleTest()
                       }}
                     >
                       战斗测试
                     </button>
                   )}
-                </span>
-                {testMode ? (
-                  <TestEnemyPicker encounters={encounters} activeId={encounter.id} onSelect={onSelectStage} />
-                ) : (
-                  <div className="choke-stage-selector__btns">
-                    {encounters.map((st) => (
-                      <button
-                        key={st.id}
-                        type="button"
-                        className="choke-stage-pill"
-                        data-active={st.id === encounter.id ? "true" : undefined}
-                        onClick={() => {
-                          playSfx("click")
-                          onSelectStage(st.id)
+                </div>
+
+                {(pickerOpen || testMode) && (
+                  <div className="choke-stage-selector__body">
+                    {testMode ? (
+                      <TestEnemyPicker
+                        encounters={encounters}
+                        activeId={encounter.id}
+                        onSelect={(id) => {
+                          onSelectStage(id)
                         }}
-                      >
-                        <b>{st.name}</b>
-                        <small>
-                          {st.tier === "boss" ? "BOSS" : st.tier === "elite" ? "高T精英" : "常规"} · HP{" "}
-                          {st.hp.toLocaleString("en-US")}
-                        </small>
-                      </button>
-                    ))}
+                      />
+                    ) : (
+                      <div className="choke-stage-selector__btns">
+                        {encounters.map((st) => (
+                          <button
+                            key={st.id}
+                            type="button"
+                            className="choke-stage-pill"
+                            data-active={st.id === encounter.id ? "true" : undefined}
+                            onClick={() => {
+                              playSfx("select")
+                              onSelectStage(st.id)
+                              setPickerOpen(false)
+                            }}
+                          >
+                            <b>{st.name}</b>
+                            <small>
+                              {st.tier === "boss" ? "BOSS" : st.tier === "elite" ? "高T精英" : "常规"} · HP{" "}
+                              {st.hp.toLocaleString("en-US")}
+                            </small>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="choke-stage-selector__desc" key={encounter.id}>
+                      {encounter.summary}
+                    </p>
                   </div>
                 )}
-                <p className="choke-stage-selector__desc">{encounter.summary}</p>
               </div>
             )}
-
             <div className="choke-outcome-box">
               <div className="choke-outcome-head">战斗评价与路线条件</div>
               {encounter.stars.map((cond, i) => {
@@ -741,8 +862,8 @@ export function BattleStage({
               </a>
             </aside>
             <div className="choke-party-grid">
-              {deck.map((card) => (
-                <div className="choke-card-slot" key={card.id}>
+              {deck.map((card, slot) => (
+                <div className="choke-card-slot" key={card.id} style={{ "--slot": slot } as CSSProperties}>
                   <div className="choke-card-frame">
                     <GameCardFace card={card} eager />
                   </div>
@@ -795,20 +916,29 @@ export function BattleStage({
   const apMax = battle.apMax
   const comboPct = Math.round((comboMultiplier(battle.combo) - 1) * 100)
   const stars = evaluateStars(battle)
+  const ticker = actionError
+    ? `⚠️ ${actionError}`
+    : tutorial && battle.phase === "player" && battle.hiddenFound.length === 0
+      ? "💡 教学提示：弱点条里的“？”是隐藏弱点，用对应属性打中一次才会揭开。幽灵最怕火；没有火属性的卡也不影响通关。"
+      : (battle.log[0] ?? "战斗开始")
 
-  const activeSlotIndex = hoveredSlot ?? selectedSlot
+  const skillHint = swapOpen ? null : skillRows.hint
+  const shownApCost = skillHint?.ap ?? previewAp
   const bossFillWidth = (452 * bossPct) / 100
   const partyFillWidth = (452 * partyPct) / 100
   const partyFillX = 4 + (452 - partyFillWidth)
 
   return (
     <div className="choke-viewport">
+      <style>{stageCss}</style>
       <div
         className="choke-stage"
         data-phase={battle.phase === "player" ? "battle" : battle.phase}
+        data-danger={partyPct > 0 && partyPct <= 25 ? "true" : undefined}
         data-production="true"
         ref={stageRef}
       >
+        <div className="choke-hurt-vignette" ref={hurtTintRef} aria-hidden />
         {/* ================= 1. 上半区：BOSS 舞台 + 梯形侧面支援铭牌（仅在有支援时显示，无空表框） ================= */}
         <section className="choke-boss-zone" ref={bossRef} style={bossBgStyle(encounter.background)}>
           <div
@@ -821,13 +951,16 @@ export function BattleStage({
 
           {slashKey > 0 && <div className="choke-slash-fx" key={`slash-${slashKey}`} aria-hidden />}
 
-          {/* 敌人本体用战区背景图表现，这里只留属性色光晕 */}
+          {/* 敌人本体：战区属性印记与光晕（谱面背景图存在时叠加其上） */}
           <div
             className="choke-boss-figure"
             style={{ "--el": elementColor(battle.enemy.element) } as CSSProperties}
             aria-hidden
           >
             <div className="choke-boss-aura" />
+            <div className="choke-boss-core">
+              <ElementGlyph element={battle.enemy.element} />
+            </div>
           </div>
 
           {/* 敌方攻击红激光靶线 */}
@@ -857,91 +990,54 @@ export function BattleStage({
 
           {/* 右上角快捷工具 */}
           <div className="choke-top-tools">
+            {onSwitchUi && (
+              <button
+                type="button"
+                className="choke-tool-btn"
+                onClick={onSwitchUi}
+                title="切换到新版五段式战斗界面"
+              >
+                <FiRepeat aria-hidden />
+                <span>新版界面</span>
+              </button>
+            )}
             <button
               type="button"
               className="choke-tool-btn"
-              onClick={() => {
-                playSfx("click")
-                onRestart()
-              }}
+              onClick={() => begin(onRestart)}
               title="重新开始本场战斗"
             >
-              <b>↻</b>
+              <FiRefreshCw aria-hidden />
               <span>重开</span>
             </button>
-            <a className="choke-tool-btn" href="/">
-              <b>‹</b>
+            <a className="choke-tool-btn" href="/" data-sfx="close">
+              <FiChevronLeft aria-hidden />
               <span>桌面</span>
             </a>
           </div>
 
-          {/* 左侧：敌方侧面支援梯形铭牌（像兰斯10的「知性覚醒(1/4)」一样叠在左侧剪影上方，无空槽框） */}
-          {battle.enemySupports.length > 0 && (
+          <div className="choke-classic-readouts">
+            {logOpen && <BattleLog lines={battle.log} />}
             <div className="choke-rance-supports choke-rance-supports--enemy">
-              {battle.enemySupports.map((unit) => (
-                <div
-                  className="choke-rance-support-plate choke-rance-support-plate--enemy"
-                  key={unit.id}
-                  data-kind={unit.kind}
-                  data-tier={(unit.tier ?? 1) > 1 ? unit.tier : undefined}
-                  style={{ "--el": elementColor(unit.element) } as CSSProperties}
-                  title={`${unit.name}：${unit.roleText}（强度 ${unit.tier ?? 1}）`}
-                >
-                  {(unit.tier ?? 1) > 1 && (
-                    <span className="choke-plate-tier" aria-hidden>
-                      {unit.tier}
-                    </span>
-                  )}
-                  <div className="choke-plate-icon">
-                    <SupportKindIcon unit={unit} />
-                    {unit.defenseTier != null && <i>{unit.defenseTier}</i>}
-                    {unit.stacks != null && <i>{unit.stacks}</i>}
-                  </div>
-                  <div className="choke-plate-text">
-                    <b>{unit.name}</b>
-                    <small>{unit.roleText}</small>
-                  </div>
-                </div>
-              ))}
+              {battle.enemySupports.map(unit => <SupportReadout key={unit.id} side="enemy" unit={unit} description={encounter.supports.find(s => s.id === unit.id)?.roleText} icon={<SupportKindIcon unit={unit} />} />)}
             </div>
-          )}
-
-          {/* 右侧：我方侧面支援梯形铭牌（点右翼【防御】即在此处追加「防御 Lv1~Lv4」！） */}
-          {battle.playerSupports.length > 0 && (
-            <div className="choke-rance-supports choke-rance-supports--party">
-              {battle.playerSupports.map((unit) => (
-                <div
-                  className="choke-rance-support-plate choke-rance-support-plate--party"
-                  key={unit.id}
-                  data-kind={unit.kind}
-                  data-active={unit.triggered ? "true" : undefined}
-                  data-tier={(unit.tier ?? 1) > 1 ? unit.tier : undefined}
-                  style={{ "--el": elementColor(unit.element) } as CSSProperties}
-                  title={`${unit.name}：${unit.roleText}（强度 ${unit.tier ?? 1}）`}
-                >
-                  {(unit.tier ?? 1) > 1 && (
-                    <span className="choke-plate-tier" aria-hidden>
-                      {unit.tier}
-                    </span>
-                  )}
-                  <div className="choke-plate-icon">
-                    <SupportKindIcon unit={unit} />
-                    {unit.defenseTier != null && <i>{unit.defenseTier}</i>}
-                  </div>
-                  <div className="choke-plate-text">
-                    <b>{unit.name}</b>
-                    <small>{unit.roleText}</small>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
+          <div className="choke-rance-supports choke-rance-supports--party">
+            {battle.playerSupports.map(unit => <SupportReadout key={unit.id} side="party" unit={unit} icon={<SupportKindIcon unit={unit} />} />)}
+          </div>
 
           {/* 技能 / 支援 / 抢攻 Cut-in 横幅 */}
           {cutinBanner && (
             <div
+              key={cutinBanner.seq}
               className={`choke-skill-banner ${cutinBanner.actor === "support" || cutinBanner.actor === "preemptive" ? "choke-skill-banner--support" : ""}`}
-              style={{ "--el": elementColor(cutinBanner.element) } as CSSProperties}
+              data-actor={cutinBanner.actor}
+              style={
+                {
+                  "--el": elementColor(cutinBanner.element),
+                  animationDuration: "750ms",
+                } as CSSProperties
+              }
             >
               <span className="choke-banner-tag">
                 {cutinBanner.actor === "support"
@@ -1106,7 +1202,9 @@ export function BattleStage({
 
             <button type="button" className="choke-center-orb" disabled>
               <i className="choke-orb-round">Round</i>
-              <b className="choke-orb-num">{battle.turn}</b>
+              <b className="choke-orb-num" key={battle.turn}>
+                {battle.turn}
+              </b>
               <span className="choke-orb-vs">VS</span>
             </button>
 
@@ -1119,7 +1217,7 @@ export function BattleStage({
                   const n = i + 1
                   const active = n <= battle.ap
                   const locked = n > apMax
-                  const previewConsume = active && previewAp > 0 && n > battle.ap - previewAp
+                  const previewConsume = active && shownApCost > 0 && n > battle.ap - shownApCost
                   return (
                     <span
                       key={n}
@@ -1141,11 +1239,12 @@ export function BattleStage({
         <section className="choke-deck">
           <aside className="choke-wing choke-wing--left">
             <button
+              {...pointerCommand}
               type="button"
               className="choke-btn-panel"
               disabled={!playerTurn || battle.bench.length === 0}
               onClick={() => {
-                playSfx("click")
+                playSfx(swapOpen ? "close" : "open")
                 setSwapOpen((v) => !v)
               }}
               title="从替补席更换场上人员"
@@ -1165,47 +1264,33 @@ export function BattleStage({
               <button
                 type="button"
                 className="choke-btn-mini"
-                onClick={() => setSpeedHigh((v) => !v)}
+                aria-label={hint}
+                title={hint}
+                onClick={cycle}
+                data-sfx="toggle"
               >
-                <GiHourglass />
-                <span>速度:{speedHigh ? "高速" : "常速"}</span>
+                <GiHourglass aria-hidden />
+                <span>{label}</span>
               </button>
               <button
                 type="button"
                 className="choke-btn-mini"
+                aria-pressed={logOpen}
                 onClick={() => setLogOpen((open) => !open)}
+                data-sfx="paper"
               >
                 <span>战报</span>
               </button>
             </div>
 
-            <a className="choke-btn-menu" href="/">
-              MENU
+            <a className="choke-btn-menu" href="/" data-sfx="close">
+              桌面
             </a>
           </aside>
 
           <div className="choke-party-grid">
             {battle.cards.map((card, index) => {
-              const isOpen = activeSlotIndex === index && !swapOpen
-              const tooltipInfo =
-                hoveredSkill && hoveredSkill.slotIndex === index ? hoveredSkill : null
-              // 卡面上的技能行实时反映当前回合的实际 AP（疲惫 / 累积 +1），加费时变红
-              const liveFace = {
-                ...card.face,
-                skills: card.skills.map((skill) => {
-                  if (skill.passive) {
-                    return { id: skill.id, name: skill.name, element: skill.element, ap: 0, passive: true }
-                  }
-                  const actualAp = effectiveApCost(battle, card, skill)
-                  return {
-                    id: skill.id,
-                    name: skill.name,
-                    element: skill.element,
-                    ap: actualAp,
-                    surcharged: actualAp > skill.ap,
-                  }
-                }),
-              }
+              const row = skillRows.cards[index]
 
               return (
                 <div
@@ -1214,85 +1299,23 @@ export function BattleStage({
                   ref={(node) => {
                     cardRefs.current[index] = node
                   }}
-                  data-selected={selectedSlot === index ? "true" : undefined}
-                  data-hovered={hoveredSlot === index ? "true" : undefined}
                   data-acted={card.acted ? "true" : undefined}
                   data-down={card.down ? "true" : undefined}
                   data-boost={card.trigger && !card.acted && !card.down ? card.trigger : undefined}
                   data-guarding={guardChipSlot === index ? "true" : undefined}
                   data-bursting={laserTargets.includes(index) ? "true" : undefined}
                   data-swap-target={swapOpen && swapOutIdx === index ? "true" : undefined}
-                  onClick={() => {
-                    if (swapOpen) {
-                      setSwapOutIdx(index)
-                    } else {
-                      setSelectedSlot(selectedSlot === index ? null : index)
-                    }
-                  }}
-                  onMouseEnter={() => setHoveredSlot(index)}
-                  onMouseLeave={() => {
-                    setHoveredSlot(null)
-                    setHoveredSkill(null)
-                    setPreviewAp(0)
-                  }}
+                  onClick={swapOpen ? () => { playSfx("tick"); setSwapOutIdx(index) } : undefined}
                 >
-                  {/* 悬浮技能详情 Tooltip（主动与被动鼠标描上去都有介绍） */}
-                  {tooltipInfo && (
-                    <div className="choke-tooltip choke-tooltip--skill">
-                      <div className="choke-tooltip-title">
-                        {tooltipInfo.skill.name}
-                        {tooltipInfo.skill.passive ? (
-                          <span className="choke-tooltip-badge choke-tooltip-badge--passive">
-                            被动常驻
-                          </span>
-                        ) : (
-                          costTagLabel(tooltipInfo.skill.costTag) && (
-                            <span className="choke-tooltip-badge">
-                              {costTagLabel(tooltipInfo.skill.costTag)}
-                            </span>
-                          )
-                        )}
-                        {!tooltipInfo.skill.passive &&
-                          card.lastTurnSkills.includes(tooltipInfo.skill.id) && (
-                            <span className="choke-tooltip-badge">疲惫 +1 AP</span>
-                          )}
-                      </div>
-                      <div className="choke-tooltip-sub">
-                        {tooltipInfo.skill.passive
-                          ? `${JOB_LABEL[card.job]} · 被动技能（无需点击，自动生效）`
-                          : `${elementLabel(tooltipInfo.skill.element)} · 消耗 ${tooltipInfo.actualAp} AP${
-                              tooltipInfo.actualAp > tooltipInfo.skill.ap
-                                ? `（原 ${tooltipInfo.skill.ap} AP）`
-                                : ""
-                            }${
-                              tooltipInfo.skill.hits && tooltipInfo.skill.hits > 1
-                                ? ` · ${tooltipInfo.skill.hits} 段连击`
-                                : ""
-                            }`}
-                      </div>
-                      <div className="choke-tooltip-desc">{describeSkill(tooltipInfo.skill)}</div>
-                      {!tooltipInfo.skill.passive && tooltipInfo.reason && (
-                        <div className="choke-tooltip-warn">⚠️ {tooltipInfo.reason}</div>
-                      )}
-                    </div>
-                  )}
 
                   {guardChipSlot === index && <span className="choke-guard-chip">嘲讽援护!</span>}
 
                   <div className="choke-card-frame">
-                    <GameCardFace card={liveFace} eager />
+                    <GameCardFace card={row.face} skillActions={swapOpen ? undefined : row.actions} eager />
 
                     {/* 兰斯10 风格：覆盖在未行动卡片中央的炫光艺术大字 BOOST / 必殺 / 連撃（见参考图第2张卡） */}
                     {card.trigger && !card.acted && !card.down && (
-                      <div className="choke-center-trigger" data-trigger={card.trigger}>
-                        <span>
-                          {card.trigger === "critical_art"
-                            ? "必殺 3.0×"
-                            : card.trigger === "double_cast"
-                              ? "連撃 ×2"
-                              : "BOOST"}
-                        </span>
-                      </div>
+                      <TriggerReadout trigger={card.trigger} label={card.trigger === "critical_art" ? "必殺 3.0×" : card.trigger === "double_cast" ? "連撃 ×2" : "BOOST"} />
                     )}
 
                     {/* DOWN 遮罩 */}
@@ -1318,56 +1341,6 @@ export function BattleStage({
                       </div>
                     )}
 
-                    {/* 主动与被动同款样式的技能指令行（紧贴卡面原技能区位置，主动可点，被动仅悬停看介绍） */}
-                    {playerTurn && isOpen && !card.acted && !card.down && (
-                      <div
-                        className="choke-card-overlay-skills"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        {card.skills.map((skill) => {
-                          const isPassive = Boolean(skill.passive)
-                          const actualAp = isPassive ? 0 : effectiveApCost(battle, card, skill)
-                          const reason = isPassive ? null : canUseSkillReason(battle, index, skill.id)
-                          const disabled = !isPassive && Boolean(reason)
-                          const surcharged = !isPassive && actualAp > skill.ap
-                          return (
-                            <button
-                              type="button"
-                              key={skill.id}
-                              className="choke-overlay-skill-btn"
-                              data-passive={isPassive ? "true" : undefined}
-                              data-surcharged={surcharged ? "true" : undefined}
-                              disabled={disabled}
-                              onMouseEnter={() => {
-                                setHoveredSkill({ slotIndex: index, skill, actualAp, reason })
-                                if (!isPassive && !disabled) setPreviewAp(actualAp)
-                              }}
-                              onMouseLeave={() => {
-                                setHoveredSkill(null)
-                                setPreviewAp(0)
-                              }}
-                              onClick={() => {
-                                if (isPassive || disabled) return
-                                setPreviewAp(0)
-                                setHoveredSkill(null)
-                                onPlay(index, skill.id)
-                              }}
-                            >
-                              <i
-                                style={
-                                  {
-                                    "--el": elementColor(skill.element),
-                                  } as CSSProperties
-                                }
-                              >
-                                {isPassive ? "◎" : actualAp}
-                              </i>
-                              <span>{skill.name}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
                   </div>
                 </div>
               )
@@ -1377,6 +1350,7 @@ export function BattleStage({
           {/* 右翼：1:1 兰斯10 单个蓝色【防御 / 1 Ap】大按键 + 底部红色【结束该轮】按键 */}
           <aside className="choke-wing choke-wing--right">
             <button
+              {...pointerCommand}
               type="button"
               className="choke-btn-defend"
               disabled={!canRaiseDefense}
@@ -1386,6 +1360,8 @@ export function BattleStage({
                 setPreviewAp(0)
                 onDefend()
               }}
+              // 架盾的金属声由 guard 事件出，这里不叠默认按键音
+              data-sfx="none"
               title={
                 battle.defenseTier >= maxDefenseTier
                   ? tankPresent
@@ -1404,9 +1380,13 @@ export function BattleStage({
             </button>
 
             <button
+              {...pointerCommand}
               type="button"
               className="choke-btn-end"
-              onClick={onEndTurn}
+              onClick={() => {
+                playSfx("whoosh")
+                onEndTurn()
+              }}
               disabled={!playerTurn}
             >
               结束该轮
@@ -1428,9 +1408,13 @@ export function BattleStage({
                 </span>
               </div>
               <button
+                {...pointerCommand}
                 type="button"
                 className="choke-swap-close"
-                onClick={() => setSwapOpen(false)}
+                onClick={() => {
+                  playSfx("close")
+                  setSwapOpen(false)
+                }}
               >
                 返回战斗 ✕
               </button>
@@ -1439,6 +1423,7 @@ export function BattleStage({
             <div className="choke-swap-targets">
               {battle.cards.map((c, idx) => (
                 <button
+                  {...pointerCommand}
                   key={c.uid}
                   type="button"
                   className="choke-swap-slot-pill"
@@ -1456,6 +1441,7 @@ export function BattleStage({
             <div className="choke-swap-grid">
               {battle.bench.map((b) => (
                 <button
+                  {...pointerCommand}
                   key={b.uid}
                   type="button"
                   className="choke-bench-item"
@@ -1465,6 +1451,7 @@ export function BattleStage({
                     (battle.hasActedThisTurn && !battle.cards[swapOutIdx]?.down)
                   }
                   onClick={() => {
+                    playSfx("whoosh")
                     onSwap(swapOutIdx, b.uid)
                     setSwapOpen(false)
                   }}
@@ -1481,37 +1468,19 @@ export function BattleStage({
           </div>
         )}
 
-        {/* ================= 5. 最底栏与 LOG 抽屉 ================= */}
+        {/* 最底栏只显示即时战况 */}
         <footer className="choke-footer">
-          <span className="choke-ticker">
-            {actionError
-              ? `⚠️ ${actionError}`
-              : tutorial && battle.phase === "player" && battle.hiddenFound.length === 0
-                ? "💡 教学提示：弱点条里的“？”是隐藏弱点，用对应属性打中一次才会揭开。幽灵最怕火；没有火属性的卡也不影响通关。"
-                : (battle.log[0] ?? "战斗开始")}
+          {/* key 用文字本身：战况换了一句，就重新顶上来一次 */}
+          <span className="choke-ticker" key={ticker} data-error={actionError ? "true" : undefined}>
+            {ticker}
           </span>
-          <button
-            type="button"
-            className="choke-log-toggle"
-            onClick={() => setLogOpen((open) => !open)}
-          >
-            {logOpen ? "▼ LOG ▼" : "▲ LOG ▲"}
-          </button>
         </footer>
 
-        {logOpen && (
-          <div className="choke-log-drawer">
-            {battle.log.map((line, index) => (
-              <div className="choke-log-line" key={`${index}-${line}`}>
-                {line}
-              </div>
-            ))}
-          </div>
-        )}
+        <SkillHint hint={skillHint} />
 
         {/* ================= 6. 战后结算层（三星评价） ================= */}
-        {(battle.phase === "won" || battle.phase === "lost") && (
-          <div className="choke-result-layer">
+        {(battle.phase === "won" || battle.phase === "lost") && resultShown && (
+          <div className="choke-result-layer" data-outcome={battle.phase}>
             <div className="choke-result-card">
               <div className="choke-result-badge">
                 {battle.phase === "won" ? <GiTrophy /> : <GiSkullCrossedBones />}
@@ -1526,7 +1495,12 @@ export function BattleStage({
               {battle.phase === "won" && (
                 <div className="choke-stars-grid">
                   {stars.stars.map(({ condition, met }, i) => (
-                    <div className="choke-star-item" data-achieved={met ? "true" : undefined} key={condition.type}>
+                    <div
+                      className="choke-star-item"
+                      data-achieved={met ? "true" : undefined}
+                      key={condition.type}
+                      style={{ "--star-at": `${RESULT_STAR_DELAY + i * RESULT_STAR_GAP}ms` } as CSSProperties}
+                    >
                       <GiRoundStar />
                       <b>
                         ★{i + 1} {describeStar(condition).title}
@@ -1538,7 +1512,7 @@ export function BattleStage({
               )}
 
               <div className="choke-result-actions">
-                <button type="button" onClick={onRestart}>
+                <button type="button" onClick={() => begin(onRestart)} data-sfx="none">
                   再来一场
                 </button>
                 <a href="/">返回桌面</a>

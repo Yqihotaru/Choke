@@ -1,7 +1,7 @@
 /* =========================================================
    亮色主题：<html class="light"> 时覆盖桌面、抽屉、面板（书页）、桌上实物和新手引导。
    整体是暖米色书桌：布垫是中间调，实物用各自的皮革 / 木头色，书页是暖白纸；
-   书封用深可可色皮革，品牌粉只留给按钮、选中和强调字。战斗页固定暗色，不受影响。
+   书封用深可可色皮革，品牌粉只留给按钮、选中和强调字。战斗控件共用书页色板。
    暗色的取值仍在各自的 css 里；这里只写亮色差异。
    ========================================================= */
 
@@ -24,6 +24,27 @@
   --bk-osu-text: #c8337a;
   --bk-good: #2f9a5c;
   --bk-bad: #d64545;
+}
+
+/* 战区保留深色谱面和警戒带，操作面板用亮色纸面承托文字。 */
+.light .choke-stage :is(.choke-stage-selector__trigger, .choke-test-toggle:not([data-active="true"]),
+  .choke-stage-selector__body, .choke-weakness-ribbon, .choke-boss-head,
+  .choke-intent, .choke-tooltip, .choke-panel, .choke-swap-drawer) {
+  background-color: var(--bk-paper);
+  color: var(--bk-ink);
+}
+.light .choke-stage[data-production] .choke-tool-btn {
+  background: var(--bk-raised);
+}
+.light .choke-stage[data-production] .choke-outcome-row b,
+.light .choke-stage .choke-prep-foe {
+  --bk-ink: #fff5f8;
+  --bk-dim: #f2dfe7;
+  --bk-osu-text: #ffc4df;
+  color: var(--bk-ink);
+}
+.light .choke-stage .choke-btn-start {
+  color: #28151e;
 }
 
 /* ---------- 房间、顶栏 ---------- */

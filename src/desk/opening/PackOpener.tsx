@@ -23,6 +23,7 @@ import { RARITY_COLOR } from "@/desk/lib/rarity"
 import type { CardData, PackPool, Rarity } from "@/desk/lib/types"
 import { PackArt } from "@/desk/opening/PackArt"
 import "@/desk/opening/opener.css"
+import "@/desk/opening/opener-fx.css"
 
 export interface OriginRect {
   left: number
@@ -65,14 +66,15 @@ const RITUAL: Partial<Record<Rarity, { charge: number; show: number }>> = {
   Prismatic: { charge: 650, show: 1000 },
 }
 const REDUCED_RITUAL = { charge: 80, show: 260 }
+/** 让翻转和放大先走完，防止连点直接收走手动亮相的卡。 */
+const MANUAL_FLIP_MS = 600
 /** 大包在开包层里的宽度（px），和 opener.css 的 .op__pack 一致 */
 const PACK_W = 240
 /** 撕开动画总长，和 opener.css 的 op-strip-off / op-pack-drop 对齐 */
 const TEAR_MS = 1000
 
 type Stage = "seal" | "torn" | "stack"
-/** stack 背面朝上叠着 → charge 抬起蓄光 → show 翻开停在中间 → slot 落到结果排里 */
-type CardPhase = "stack" | "charge" | "show" | "slot"
+type CardPhase = "stack" | "charge" | "show" | "hold" | "slot"
 
 const keyOf = (card: CardData) => String(card.userCardId ?? `${card.cardId}:${card.name}`)
 const OpenerFace = memo(function OpenerFace({ card }: { card: CardData }) {
@@ -82,7 +84,7 @@ const OpenerFace = memo(function OpenerFace({ card }: { card: CardData }) {
 /**
  * 开包：拖住撕条往左撕开（点一下也行）→ 5 张卡背朝上滑出叠成一摞 → 点最上面那张翻开（或全部翻开）。
  * 从低到高翻，最好的一张留到最后；E 以上翻开前先抬起蓄光，L 以上桌面还会暗下来、翻开时扫一道光。
- * 蓄光和展示阶段点一下或按空格可以提前结束。
+ * 手动亮相后等玩家确认；全部翻开则自动归位。
  */
 export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, remaining = 0, onOpenNext }: Props) {
   const [stage, setStage] = useState<Stage>("seal")
@@ -95,6 +97,9 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
   const [confirming, setConfirming] = useState(false)
   const [said, setSaid] = useState("")
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+  /** L 以上翻开那一下的全屏演出；id 每次加一，连着两张大卡时各播各的 */
+  const [burst, setBurst] = useState<{ id: number; rarity: Rarity } | null>(null)
+  const burstId = useRef(0)
   const tear = useRef<{ x: number; width: number; moved: boolean; tick: number; p: number } | null>(null)
   const torn = useRef(false)
   const timers = useRef<number[]>([])
@@ -129,6 +134,8 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
   }
 
   useEffect(() => {
+    // 大包从桌上飞到面前
+    playSfx("whoosh")
     const pending = timers.current
     return () => pending.forEach((id) => window.clearTimeout(id))
   }, [])
@@ -152,11 +159,17 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
   const phaseOf = (card: CardData): CardPhase => phases[keyOf(card)] ?? "stack"
   const unrevealed = sorted.filter((card) => phaseOf(card) === "stack")
   const next = stage === "stack" ? unrevealed[0] : undefined
-  const spotlight = sorted.find((card) => ["charge", "show"].includes(phaseOf(card)))
+  const spotlight = sorted.find((card) => {
+    const phase = phaseOf(card)
+    return phase === "charge" || phase === "show" || phase === "hold"
+  })
+  const spotlightPhase = spotlight && phaseOf(spotlight)
+  const waitingForFlip = !auto && spotlightPhase === "show"
   const allOpen = stage === "stack" && unrevealed.length === 0 && !spotlight
-  const pendingHigh = sorted.filter(
-    (card) => phaseOf(card) !== "slot" && RARITY_ORDER.indexOf(card.rarity) >= CONFIRM_FROM,
-  ).length
+  const pendingHigh = sorted.filter((card) => {
+    const phase = phaseOf(card)
+    return (phase === "stack" || phase === "charge") && RARITY_ORDER.indexOf(card.rarity) >= CONFIRM_FROM
+  }).length
   const asking = confirming && pendingHigh > 0
   const tally = useMemo(
     () =>
@@ -183,11 +196,26 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
     setPhase(card, "slot")
   }
 
+  /** 闪卡翻开后补一串亮音，和翻牌声错开一点 */
+  const sparkle = (card: CardData) => {
+    if (card.foil) later(140, () => playSfx("shine"))
+  }
+
   const show = (card: CardData) => {
     clearReveal()
     playReveal(card.rarity)
+    sparkle(card)
     setPhase(card, "show")
-    revealTimers.current.push(later(ritualOf(card.rarity)?.show ?? 0, () => settle(card)))
+    if (BIG[card.rarity] && !reduced) {
+      const id = ++burstId.current
+      setBurst({ id, rarity: card.rarity })
+      later(1100, () => setBurst((cur) => (cur?.id === id ? null : cur)))
+    }
+    if (auto) {
+      revealTimers.current.push(later(ritualOf(card.rarity)?.show ?? 0, () => settle(card)))
+    } else {
+      revealTimers.current.push(later(reduced ? 10 : MANUAL_FLIP_MS, () => setPhase(card, "hold")))
+    }
   }
 
   const reveal = (card: CardData) => {
@@ -195,7 +223,9 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
     setSaid(`${card.name}，${RARITY_LABEL[card.rarity]}，还剩 ${unrevealed.length - 1} 张`)
     const ritual = ritualOf(card.rarity)
     if (!ritual) {
-      playReveal(card.rarity)
+      // 连着翻的普通卡一张比一张高一点，听得出「在往上走」
+      playReveal(card.rarity, 1 + (sorted.length - unrevealed.length) * 0.05)
+      sparkle(card)
       setPhase(card, "slot")
       return
     }
@@ -204,10 +234,10 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
     revealTimers.current.push(later(ritual.charge, () => show(card)))
   }
 
-  /** 蓄力中点一下直接翻开，展示中点一下直接落位 */
+  /** 蓄力可跳过；手动翻牌要等卡面翻正才可归位。 */
   const skipReveal = () => {
-    if (!spotlight) return
-    if (phaseOf(spotlight) === "charge") show(spotlight)
+    if (!spotlight || waitingForFlip) return
+    if (spotlightPhase === "charge") show(spotlight)
     else settle(spotlight)
   }
 
@@ -219,13 +249,13 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
   })
 
   useEffect(() => {
-    live.current = { skip: skipReveal, canSkip: !!spotlight }
+    live.current = { skip: skipReveal, canSkip: !!spotlight && !waitingForFlip }
     finale.current = Math.max(...sorted.map((card) => RARITY_ORDER.indexOf(card.rarity)))
   })
 
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== " " && event.key !== "Enter") return
+      if (event.repeat || (event.key !== " " && event.key !== "Enter")) return
       if (event.target instanceof Element && event.target.closest("button, [role=button]")) return
       if (!live.current.canSkip) return
       event.preventDefault()
@@ -246,7 +276,18 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
     playSfx("tear")
     setProgress(1)
     setStage("torn")
-    later(reduced ? 80 : TEAR_MS, () => setStage("stack"))
+    if (reduced) {
+      later(80, () => setStage("stack"))
+      return
+    }
+    // 卡一张张从撕口抽出来（和 cardStyle 里每张 70ms 的错开对上），最后落成一摞
+    sorted.forEach((_, order) =>
+      later(180 + order * 70, () => playSfx("deal", { rate: 0.92 + order * 0.05, volume: 0.7 })),
+    )
+    later(TEAR_MS, () => {
+      playSfx("thud", { volume: 0.6 })
+      setStage("stack")
+    })
   }
 
   const onTearDown = (event: PointerEvent<HTMLButtonElement>) => {
@@ -306,7 +347,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
       setConfirming(false)
       return
     }
-    playSfx("click")
+    playSfx("close")
     if (pendingHigh > 0) setConfirming(true)
     else onQuick()
   }
@@ -349,7 +390,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
     } else if (phase === "charge") {
       scale = 1.12
       z = 300
-    } else if (phase === "show") {
+    } else if (phase === "show" || phase === "hold") {
       scale = 1.32
       z = 300
     } else {
@@ -371,13 +412,15 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
       ? "拖住右上角的撕条往左撕开，也可以直接点一下"
       : stage === "torn"
         ? ""
-        : spotlight
-          ? "点击或按空格跳过"
-          : next
-            ? `点最上面那张翻开 · 还剩 ${unrevealed.length} 张`
-            : allOpen
-              ? "把卡拖到下面的框里单张放到桌面，或者一次处理全部"
-              : ""
+        : spotlightPhase === "hold"
+          ? "点击卡面或按空格收起"
+          : spotlight
+            ? waitingForFlip ? "" : "点击或按空格跳过"
+            : next
+              ? `点最上面那张翻开 · 还剩 ${unrevealed.length} 张`
+              : allOpen
+                ? "把卡拖到下面的框里单张放到桌面，或者一次处理全部"
+                : ""
   const announce = stage === "stack" && !allOpen && said ? said : hint
   const dim = !!spotlight && BIG[spotlight.rarity]
 
@@ -399,17 +442,48 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
     >
       <div className="op__backdrop" onClick={skipReveal} />
       <i className="op__burst" data-rarity={dim ? spotlight?.rarity : undefined} aria-hidden />
+      {burst && (
+        <div
+          key={burst.id}
+          className="op__boom"
+          data-rarity={burst.rarity}
+          style={{ "--c": burst.rarity === "Prismatic" ? "#ffffff" : RARITY_COLOR[burst.rarity] } as CSSProperties}
+          aria-hidden
+        >
+          <i className="op__boom-flash" />
+          <i className="op__boom-ring" />
+          {Array.from({ length: 14 }, (_, i) => (
+            <i
+              key={i}
+              className="op__boom-spark"
+              style={{ "--a": `${i * (360 / 14)}deg`, "--i": i, "--far": `${-30 - (i % 2) * 14}vmin` } as CSSProperties}
+            />
+          ))}
+        </div>
+      )}
+      {/* E 以上亮相时在卡下方报出稀有度；key 用卡，换一张就重新砸一次 */}
+      {spotlight && (spotlightPhase === "show" || spotlightPhase === "hold") && (
+        <div
+          key={keyOf(spotlight)}
+          className="op__title"
+          data-rarity={spotlight.rarity}
+          style={{ "--c": RARITY_COLOR[spotlight.rarity] } as CSSProperties}
+          aria-hidden
+        >
+          {RARITY_LABEL[spotlight.rarity]}
+        </div>
+      )}
 
       <div className="op__table">
         {sorted.map((card, order) => {
           const phase = phaseOf(card)
-          const flipped = phase === "show" || phase === "slot"
-          const isTop = card === next
+          const flipped = phase === "show" || phase === "hold" || phase === "slot"
+          const isTop = card === next && !spotlight
           return (
             <div
               key={keyOf(card)}
               className={`op-card ${isTop ? "is-top" : ""}`}
-              data-phase={stage === "stack" ? phase : stage}
+              data-phase={stage === "stack" ? (phase === "hold" ? "show" : phase) : stage}
               data-rarity={card.rarity}
               style={cardStyle(card, order)}
               onPointerDown={(event) => {
@@ -420,7 +494,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
               }}
               onClick={() => {
                 if (isTop) reveal(card)
-                else if (phase === "charge" || phase === "show") skipReveal()
+                else if (card === spotlight) skipReveal()
               }}
               role={isTop ? "button" : flipped ? "group" : undefined}
               tabIndex={isTop ? 0 : undefined}
@@ -499,31 +573,31 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
 
       <div className="op__foot">
         {hint && (
-          <p className="op__hint" aria-hidden>
+          // key 用提示本身：换了一句就重新淡入
+          <p className="op__hint" key={hint} aria-hidden>
             {hint}
           </p>
         )}
-        {stage === "stack" && !allOpen && (
+        {stage === "stack" && !allOpen && (spotlight ? null : (
           <button
             type="button"
             className="op__btn op__btn--main"
             onClick={() => {
-              playSfx("click")
-              if (spotlight) skipReveal()
-              else setAuto(true)
+              playSfx("deal")
+              setAuto(true)
             }}
-            disabled={!spotlight && auto}
+            disabled={auto}
           >
-            {spotlight ? "跳过" : "全部翻开"}
+            全部翻开
           </button>
-        )}
+        ))}
         {allOpen && (
           <div className="op__actions">
             <button
               type="button"
               className="op__btn"
               onClick={() => {
-                playSfx("click")
+                playSfx("slide")
                 onQuick()
               }}
             >
@@ -533,7 +607,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
               type="button"
               className="op__btn op__btn--main"
               onClick={() => {
-                playSfx("click")
+                playSfx("whoosh")
                 onDone()
               }}
             >
@@ -544,7 +618,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
                 type="button"
                 className="op__btn op__btn--main"
                 onClick={() => {
-                  playSfx("click")
+                  playSfx("open")
                   onOpenNext()
                 }}
               >
@@ -569,7 +643,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
             type="button"
             className="op__btn op__btn--main"
             onClick={() => {
-              playSfx("click")
+              playSfx("close")
               onQuick()
             }}
           >

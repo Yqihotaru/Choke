@@ -11,9 +11,15 @@ interface Props {
 const TRACK_X = 4
 const TRACK_W = 452
 
+// 端盖每高 24 格横移 8 格。把填充区间映到斜切后的槽体两端，满血不留缝。
+const FILL_MATRIX = {
+  boss: `matrix(${(452 - 20 / 3) / 452} 0 ${-1 / 3} 1 ${4 + 26 / 3 - 4 * (452 - 20 / 3) / 452} 0)`,
+  party: `matrix(${(452 - 20 / 3) / 452} 0 ${1 / 3} 1 ${4 - 6 / 3 - 4 * (452 - 20 / 3) / 452} 0)`,
+}
+
 const PALETTE = {
-  boss: { from: "#8a0f0a", mid: "#e8451a", to: "#ffd859", track: "#140c0e", glow: "#ff6a3a" },
-  party: { from: "#7af4ff", mid: "#1e8de0", to: "#0d3b82", track: "#0b1118", glow: "#4cc8ff" },
+  boss: { from: "#9e1c3a", mid: "#e84568", to: "#ff8ab5", track: "#181014", glow: "#ff66aa" },
+  party: { from: "#7af4ff", mid: "#2b92e8", to: "#14458a", track: "#141016", glow: "#5cc8ff" },
 }
 
 /** 25/50/75% 刻度：x 为血量比例位置，y 为该位置所在台阶的上下沿 */
@@ -80,11 +86,13 @@ export function BentGauge({ side, polygon, pct, fillX, fillWidth }: Props) {
       <polygon points={polygon} fill={c.track} />
 
       <g clipPath={`url(#${clip})`}>
-        <rect className="choke-bent-ghost" x={fillX} y="0" width={fillWidth} height="54" fill={`url(#${flash})`} />
-        <rect className="choke-bent-fill" x={fillX} y="0" width={fillWidth} height="54" fill={`url(#${hp})`} />
-        <rect className="choke-bent-tube" x={fillX} y="0" width={fillWidth} height="54" fill={`url(#${tube})`} />
-        <g clipPath={`url(#${fillClip})`}>
-          <rect className="choke-bent-shine" x="-60" y="0" width="60" height="54" fill={`url(#${shine})`} />
+        <g transform={FILL_MATRIX[side]}>
+          <rect className="choke-bent-ghost" x={fillX} y="0" width={fillWidth} height="54" fill={`url(#${flash})`} />
+          <rect className="choke-bent-fill" x={fillX} y="0" width={fillWidth} height="54" fill={`url(#${hp})`} />
+          <rect className="choke-bent-tube" x={fillX} y="0" width={fillWidth} height="54" fill={`url(#${tube})`} />
+          <g clipPath={`url(#${fillClip})`}>
+            <rect className="choke-bent-shine" x="-60" y="0" width="60" height="54" fill={`url(#${shine})`} />
+          </g>
         </g>
         {/* 槽内侧阴影，压出凹陷感 */}
         <polygon points={polygon} fill="none" stroke="#000" strokeOpacity="0.55" strokeWidth="7" />
@@ -95,15 +103,15 @@ export function BentGauge({ side, polygon, pct, fillX, fillWidth }: Props) {
         return (
           <g key={t.p} className="choke-bent-tick" data-reached={reached ? "true" : undefined}>
             <line x1={t.x} x2={t.x} y1={t.y[0] + 1} y2={t.y[1] - 1} stroke="#000" strokeOpacity="0.6" strokeWidth="3" />
-            <line x1={t.x} x2={t.x} y1={t.y[0] + 1} y2={t.y[1] - 1} stroke={reached ? "#ffe9a8" : "#8a6f3a"} strokeWidth="1.4" />
+            <line x1={t.x} x2={t.x} y1={t.y[0] + 1} y2={t.y[1] - 1} stroke={reached ? "#ffe2ee" : "#6e5562"} strokeWidth="1.4" />
           </g>
         )
       })}
 
-      {/* 双层金属边：外深内亮 */}
-      <polygon points={polygon} fill="none" stroke="#3a2a10" strokeWidth="5" strokeLinejoin="bevel" />
-      <polygon points={polygon} fill="none" stroke="#d9b062" strokeWidth="2.4" strokeLinejoin="bevel" />
-      <polygon points={polygon} fill="none" stroke="#fff3c9" strokeOpacity="0.45" strokeWidth="0.8" strokeLinejoin="bevel" />
+      {/* 平涂梅子色边框 + 细高光线 */}
+      <polygon points={polygon} fill="none" stroke="#1c1216" strokeWidth="5" strokeLinejoin="bevel" />
+      <polygon points={polygon} fill="none" stroke="#6e4b5b" strokeWidth="2.2" strokeLinejoin="bevel" />
+      <polygon points={polygon} fill="none" stroke="#ffb3d4" strokeOpacity="0.38" strokeWidth="0.8" strokeLinejoin="bevel" />
     </svg>
   )
 }
