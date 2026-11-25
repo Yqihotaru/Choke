@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
 
 import { and, eq, getTableColumns, sql } from "drizzle-orm"
-import type { FastifyInstance, FastifyReply } from "fastify"
+import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
 import {
@@ -14,15 +14,15 @@ import {
 import {
   COOKIE_NAME,
   authorizeUrl,
-  consumeState,
   createState,
   exchangeCode,
   fetchMe,
   isLegacySession,
-  makeSession,
   readSession,
+  takeState,
 } from "../auth/osu"
-import { IS_PRODUCTION, SESSION_TTL_SECONDS, WEB_BASE } from "../auth/env"
+import { WEB_BASE } from "../auth/env"
+import { setSessionCookie } from "../auth/guard"
 import { rateLimit } from "../auth/rate-limit"
 import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
@@ -34,6 +34,7 @@ import { heroCardDef } from "../hero"
 import { upsertMirrorCard } from "../mirror"
 import { getPackCounts, grantPacks, grantStarterPacks } from "../packs/inventory"
 import { STARTER_PACKS } from "../gacha/packs"
+import { accountKind, beginBind } from "../account-binding"
 
 /** 登录时把 /me/osu 写成 hero-{id} 卡定义，并放进该用户的卡册 */
 async function claimHeroCard(
@@ -94,16 +95,6 @@ async function claimHeroCard(
 }
 
 export async function authRoutes(app: FastifyInstance) {
-  function setSessionCookie(reply: FastifyReply, userId: string) {
-    reply.setCookie(COOKIE_NAME, makeSession(userId), {
-      path: "/",
-      httpOnly: true,
-      sameSite: "lax",
-      secure: IS_PRODUCTION,
-      maxAge: SESSION_TTL_SECONDS,
-    })
-  }
-
   const loginLimit = rateLimit({ max: 10, windowMs: 60_000 })
   const registerLimit = rateLimit({ max: 5, windowMs: 10 * 60_000 })
   const guestLimit = rateLimit({ max: 10, windowMs: 60_000 })
@@ -242,7 +233,8 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.get("/auth/osu/callback", async (request, reply) => {
     const { code, state } = request.query as { code?: string; state?: string }
-    if (!code || !consumeState(state)) {
+    const entry = takeState(state)
+    if (!code || !entry) {
       return reply.code(400).send({
         ok: false,
         error: { code: "bad_callback", message: "state 或 code 无效" },
@@ -252,24 +244,42 @@ export async function authRoutes(app: FastifyInstance) {
     try {
       const accessToken = await exchangeCode(code)
       const me = await fetchMe(accessToken)
-      const userId = `osu-${me.id}`
 
-      const [user] = await db
-        .insert(users)
-        .values({
-          id: userId,
-          username: me.username,
-          osuId: me.id,
-          onboarded: false,
-          staminaUpdatedAt: Date.now(),
-        })
-        .onConflictDoUpdate({
-          target: users.id,
-          set: { username: me.username },
-        })
-        .returning()
+      if (entry.bindUserId) {
+        // 绑定：回来的必须还是发起绑定的那个登录态，防止别人把自己的 state 塞给你
+        if (readSession(request.cookies[COOKIE_NAME]) !== entry.bindUserId) {
+          return reply.redirect(`${WEB_BASE}/?bind=error&reason=session_changed`)
+        }
+        try {
+          await claimHeroCard(entry.bindUserId, me, false)
+        } catch (error) {
+          request.log.warn({ err: error }, "claim hero card failed")
+        }
+        const result = await beginBind(entry.bindUserId, me)
+        const outcome = result.kind === "rejected" ? `error&reason=${result.reason}` : result.kind
+        return reply.redirect(`${WEB_BASE}/?bind=${outcome}`)
+      }
 
+      // 按 osu! id 找人（邮箱号绑定过 osu! 之后，id 不再是 osu-xxx）；没有才建新号
+      let [user] = await db.select().from(users).where(eq(users.osuId, me.id)).limit(1)
+      if (user) {
+        await db.update(users).set({ username: me.username }).where(eq(users.id, user.id))
+      } else {
+        const [clash] = await db.select({ id: users.id }).from(users).where(eq(users.id, `osu-${me.id}`)).limit(1)
+        await db
+          .insert(users)
+          .values({
+            id: clash ? `osu-${me.id}-${randomBytes(3).toString("hex")}` : `osu-${me.id}`,
+            username: me.username,
+            osuId: me.id,
+            onboarded: false,
+            staminaUpdatedAt: Date.now(),
+          })
+          .onConflictDoNothing()
+        ;[user] = await db.select().from(users).where(eq(users.osuId, me.id)).limit(1)
+      }
       if (!user) throw new Error("用户写入失败")
+      const userId = user.id
 
       try {
         await claimHeroCard(userId, me, false)
@@ -337,6 +347,9 @@ export async function authRoutes(app: FastifyInstance) {
         username: user.username,
         osuId: user.osuId,
         email: user.email ?? null,
+        /** 账号类型：osu（绑定了 osu!，可能同时有邮箱）/ email / guest */
+        kind: accountKind(user),
+        hasEmail: !!user.email,
         /** 游客：既没有 osu! 也没有邮箱 */
         isGuest: user.osuId == null && !user.email,
         avatarUrl: user.osuId == null ? null : `https://a.ppy.sh/${user.osuId}`,

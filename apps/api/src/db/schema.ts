@@ -105,6 +105,11 @@ export const users = pgTable("users", {
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
   /** 管理员：只能在数据库里改（scripts/set-admin.ts），没有任何接口能设置 */
   isAdmin: boolean("is_admin").notNull().default(false),
+  /** 账号绑定时落选而被封存：不能登录，osu! id 和邮箱已释放，原值存在 sealed_*（见 migrations/0016） */
+  sealedAt: timestamp("sealed_at", { withTimezone: true }),
+  sealedInto: text("sealed_into"),
+  sealedOsuId: bigint("sealed_osu_id", { mode: "number" }),
+  sealedEmail: text("sealed_email"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 })
 

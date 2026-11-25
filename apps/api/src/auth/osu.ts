@@ -14,22 +14,30 @@ const AUTHORIZE = "https://osu.ppy.sh/oauth/authorize"
 const TOKEN = "https://osu.ppy.sh/oauth/token"
 const ME = "https://osu.ppy.sh/api/v2/me/osu"
 
-const states = new Set<string>()
+/** 一次 OAuth 往返的备注：bindUserId 有值说明这是「已登录账号绑定 osu!」，不是登录 */
+export interface OAuthState {
+  bindUserId?: string
+}
 
-export function createState(): string {
+const states = new Map<string, OAuthState>()
+
+export function createState(entry: OAuthState = {}): string {
   const state = crypto.randomBytes(16).toString("hex")
-  states.add(state)
+  states.set(state, entry)
   if (states.size > 500) {
-    const first = states.values().next().value
+    const first = states.keys().next().value
     if (first) states.delete(first)
   }
   return state
 }
 
-export function consumeState(state: string | undefined): boolean {
-  if (!state || !states.has(state)) return false
+/** 取出并作废；state 不存在返回 null */
+export function takeState(state: string | undefined): OAuthState | null {
+  if (!state) return null
+  const entry = states.get(state)
+  if (!entry) return null
   states.delete(state)
-  return true
+  return entry
 }
 
 export function authorizeUrl(state: string): string {

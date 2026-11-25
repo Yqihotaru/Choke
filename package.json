@@ -26,6 +26,7 @@
     "test:lineup": "pnpm --filter @choke/api exec tsx scripts/test-lineup.ts",
     "test:unlocks": "pnpm --filter @choke/api exec tsx scripts/test-unlocks.ts",
     "test:feature-locks": "pnpm --filter @choke/api exec tsx scripts/test-feature-locks.ts",
+    "test:account-binding": "pnpm --filter @choke/api exec tsx scripts/test-account-binding.ts",
     "test:mail": "pnpm --filter @choke/api exec tsx scripts/test-mail.ts",
     "test:p2": "pnpm --filter @choke/api exec tsx scripts/test-p2.ts",
     "test:quests": "pnpm --filter @choke/api exec tsx scripts/test-quests.ts",

@@ -6,6 +6,8 @@ import cookie from "@fastify/cookie"
 import Fastify from "fastify"
 
 import { authRoutes } from "./routes/auth"
+import { accountRoutes } from "./routes/account"
+import { rejectSealedSession } from "./account-binding"
 import { CORS_ORIGINS } from "./auth/env"
 import { handleError } from "./error-handler"
 import { battleRoutes } from "./routes/battle"
@@ -31,7 +33,10 @@ app.setErrorHandler(handleError)
 // 白名单见 auth/env.ts：CORS_ORIGINS > 开发环境本地端口 > 生产默认同源（不发 CORS 头）
 await app.register(cors, { origin: CORS_ORIGINS, credentials: true })
 await app.register(cookie)
+// 封存账号的登录态当作未登录处理（要在所有路由之前）
+app.addHook("onRequest", rejectSealedSession)
 await app.register(authRoutes)
+await app.register(accountRoutes)
 await app.register(packRoutes)
 await app.register(battleRoutes)
 await app.register(cardRoutes)

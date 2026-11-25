@@ -36,6 +36,7 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   "pack-open": "开包",
   starter: "新手礼包",
   "hero-claim": "领取本体卡",
+  "bind-osu": "绑定 osu! 补发",
   dungeon: "副本",
   expedition: "远征",
   "expedition-refund": "远征体力退回",

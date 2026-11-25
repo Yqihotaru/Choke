@@ -1,6 +1,18 @@
 import type { FastifyReply, FastifyRequest } from "fastify"
 
-import { COOKIE_NAME, readSession } from "./osu"
+import { IS_PRODUCTION, SESSION_TTL_SECONDS } from "./env"
+import { COOKIE_NAME, makeSession, readSession } from "./osu"
+
+/** 写登录态 cookie：登录、注册、绑定换号都走这里 */
+export function setSessionCookie(reply: FastifyReply, userId: string) {
+  reply.setCookie(COOKIE_NAME, makeSession(userId), {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: IS_PRODUCTION,
+    maxAge: SESSION_TTL_SECONDS,
+  })
+}
 
 /** 从签名 cookie 读出当前登录用户 id，未登录返回 null */
 export function readSessionUser(request: FastifyRequest): string | null {
