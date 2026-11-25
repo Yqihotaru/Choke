@@ -1167,13 +1167,13 @@
   width: 6.2cqw;
   height: 6.2cqw;
   cursor: pointer;
-  border-color: #ffb3d4;
-  background: var(--bk-osu);
-  color: var(--bk-well);
+  border-color: #f0c24b;
+  background: #c5162e;
+  color: #fff;
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.35),
-    0 0.24cqw 0 #b03a72,
-    0 0 1.6cqw rgb(255 102 170 / 0.55);
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    0 0.24cqw 0 #7a0f1e,
+    0 0 1.6cqw rgb(240 194 75 / 0.5);
 }
 .choke-orb-start { font-size: 1.12cqw; font-weight: 900; letter-spacing: 0.05em; }
 .choke-orb-round { font-style: normal; font-size: 0.66cqw; font-weight: 800; color: var(--bk-osu-text); letter-spacing: 0.08em; }
@@ -1381,7 +1381,7 @@
     0 0.16cqw 0 var(--bk-edge);
 }
 
-/* 右翼：平涂战术蓝【防御 / 1 Ap】+ 品牌粉【战斗开始 / 结束该轮】 */
+/* 右翼：平涂战术蓝【防御 / 1 Ap】+ 品牌粉【结束该轮】（准备阶段只有防御） */
 .choke-btn-defend {
   flex: 1 1 0;
   display: flex;

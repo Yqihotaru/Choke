@@ -878,9 +878,6 @@ export function BattleStage({
                 </div>
                 <span className="choke-defend-ap">1 Ap</span>
               </button>
-              <button type="button" className="choke-btn-end" onClick={startBattle}>
-                战斗开始
-              </button>
             </aside>
           </section>
 
