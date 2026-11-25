@@ -15,7 +15,7 @@ import {
   type MarketListing,
   type OwnMarketListing,
 } from "@/desk/session/api"
-import { Pages, useBook } from "@/desk/shell/BookPages"
+import { Pages, usePanel } from "@/desk/shell/PanelFrame"
 import { ConfirmBar } from "@/desk/shell/ConfirmBar"
 import { emitDeskData } from "@/desk/session/events"
 import "@/desk/panels/shop/market-panel.css"
@@ -37,7 +37,7 @@ export function MarketPanel({
   userId: string | null
   onOpenAlbum: () => void
 }) {
-  const book = useBook()
+  const panel = usePanel()
   const [listings, setListings] = useState<MarketListing[]>([])
   const [own, setOwn] = useState<OwnMarketListing[]>([])
   const [coins, setCoins] = useState<number | null>(null)
@@ -96,7 +96,7 @@ export function MarketPanel({
     try {
       const result = await buyMarketListing(userId, listing.id)
       playSfx("coin")
-      book.invalidate()
+      panel.invalidate()
       emitDeskData("packs")
       setCoins(result.coins)
       setNotice({ text: `买到了 ${result.card.name} · 花费 ${result.price} 金币` })

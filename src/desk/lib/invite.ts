@@ -1,12 +1,18 @@
-/** 邀请函：召唤事件 + 本地记忆（拆过没有、放在哪、收没收进抽屉、解锁过的成就）。成就只存在本机，没有后端。 */
+/** 邀请函：召唤事件 + 本地记忆（拆过没有、放在哪、解锁过的成就）。成就只存在本机，没有后端。 */
 
 /** 背包等处请求把邀请函从桌面底边重新弹出来 */
 export const INVITE_OPEN_EVENT = "choke:invite-open"
 
 const OPENED_KEY = "choke.invite.opened"
 const POS_KEY = "choke.invite.pos"
-const STOWED_KEY = "choke.invite.stowed"
 const ACHIEVEMENTS_KEY = "choke.achievements"
+
+// 邀请函不再能收进抽屉：清掉旧版本留下的标记
+try {
+  localStorage.removeItem("choke.invite.stowed")
+} catch {
+  // 隐私模式：没得清也无妨
+}
 
 export const ACHIEVEMENTS = {
   "invite-toss": "扔不掉的邀请函",
@@ -47,16 +53,6 @@ export function readInvitePos(): { x: number; y: number } | null {
 export function saveInvitePos(pos: { x: number; y: number } | null) {
   if (pos) localStorage.setItem(POS_KEY, JSON.stringify(pos))
   else localStorage.removeItem(POS_KEY)
-}
-
-/** 信收在桌沿的抽屉里：收着时不再从底边自动弹出 */
-export function readInviteStowed() {
-  return localStorage.getItem(STOWED_KEY) === "1"
-}
-
-export function saveInviteStowed(stowed: boolean) {
-  if (stowed) localStorage.setItem(STOWED_KEY, "1")
-  else localStorage.removeItem(STOWED_KEY)
 }
 
 function readAchievements(): AchievementId[] {

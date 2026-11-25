@@ -5,7 +5,7 @@ import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
 
 import { toFace, type ApiUserCard } from "@/desk/session/api"
-import { Pages } from "@/desk/shell/BookPages"
+import { Pages } from "@/desk/shell/PanelFrame"
 import { ConfirmBar } from "@/desk/shell/ConfirmBar"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
 import "@/desk/panels/player/account-panel.css"

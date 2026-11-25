@@ -1,9 +1,9 @@
-import type { PanelId } from "@/desk/shell/DeskBook"
+import type { PanelId } from "@/desk/lib/panels"
 
 import { MARKET_UNLOCK_LEVEL } from "./constants"
 import type { PlayerProgress } from "./types"
 
-/** 桌面上会出现锁的模块：九个书本章节 + 发牌按钮 + 邀请函 */
+/** 会上锁的模块：九个面板 + 发牌按钮 + 邀请函 */
 export type ModuleId = PanelId | "button" | "invite"
 
 /**
@@ -48,8 +48,8 @@ export function isModuleUnlocked(
   return progress.level >= MODULE_UNLOCK_LEVEL[id]
 }
 
-/** 桌面上是否画出这个物件；市场例外：永远画出，但呈锁定态 */
-export function isModuleVisibleOnDesk(
+/** 底栏 / 页签里是否显示这个入口；市场例外：永远显示，但呈锁定态 */
+export function isModuleVisible(
   id: ModuleId,
   progress: Pick<PlayerProgress, "level" | "tutorialDone">
 ): boolean {

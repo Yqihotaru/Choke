@@ -42,12 +42,10 @@ type Action =
   | { type: "front"; id: string }
   | { type: "spawn"; items: DeskItem[] }
   | { type: "remove"; id: string }
-  | { type: "stow"; id: string }
-  | { type: "unstow"; id: string; x: number; y: number }
   | { type: "reset" }
   | { type: "faces"; faces: Map<number, CardFaceData> }
 
-/** 旧存档里的卡册 / 市场方块换成新物件；缺的物件补到默认位置；只认物件上的 stowed === true */
+/** 旧存档里的入口物件（九个面板）和卡册 / 市场方块会被丢掉；缺的发牌按钮补到默认位置 */
 function migrate(items: DeskItem[]): DeskItem[] {
   const kept = items.flatMap((item): DeskItem[] => {
     if (!item || typeof item.kind !== "string") return []
@@ -55,8 +53,10 @@ function migrate(items: DeskItem[]): DeskItem[] {
     if (legacy === "album" || legacy === "market") return []
     if (item.kind === "object") {
       if (!item.object || !(item.object in OBJECT_META)) return []
-      const { stowed, ...rest } = item
-      return [stowed === true ? { ...rest, stowed } : rest]
+      // 旧存档里的 stowed（物件收进抽屉）已作废，剥掉
+      const rest: DeskItem & { stowed?: unknown } = { ...item }
+      delete rest.stowed
+      return [rest]
     }
     return item.kind === "card" || item.kind === "pack" ? [item] : []
   })
@@ -95,20 +95,6 @@ function reducer(state: DeskState, action: Action): DeskState {
       return { ...state, items: [...state.items, ...action.items] }
     case "remove":
       return { ...state, items: state.items.filter((it) => it.id !== action.id) }
-    case "stow":
-      return {
-        ...state,
-        items: state.items.map((it) => (it.id === action.id && it.kind === "object" ? { ...it, stowed: true } : it)),
-      }
-    case "unstow": {
-      const top = Math.max(0, ...state.items.map((it) => it.z)) + 1
-      return {
-        ...state,
-        items: state.items.map((it) =>
-          it.id === action.id ? { ...it, stowed: undefined, x: action.x, y: action.y, z: top } : it,
-        ),
-      }
-    }
     case "reset":
       // 带 token 的卡包已从背包预扣，丢掉就等于丢包：留在桌上，由调用方还给服务端后再移除
       return {
@@ -174,14 +160,8 @@ export function useDesk() {
     (faces: Map<number, CardFaceData>) => dispatch({ type: "faces", faces }),
     [],
   )
-  /** 物件收进抽屉 / 从抽屉拖回桌面（落在 x, y，放到最上面） */
-  const stow = useCallback((id: string) => dispatch({ type: "stow", id }), [])
-  const unstow = useCallback(
-    (id: string, x: number, y: number) => dispatch({ type: "unstow", id, x, y }),
-    [],
-  )
 
-  return { items: state.items, move, front, spawn, remove, reset, stow, unstow, refreshFaces }
+  return { items: state.items, move, front, spawn, remove, reset, refreshFaces }
 }
 
 export function cardsToItems(cards: CardData[], originX: number, originY: number): DeskItem[] {

@@ -423,26 +423,23 @@ export function TutorialOverlay({
       level: progress.level,
       tutorialDone: progress.tutorialDone,
     }
+    // 弹窗开着时优先找弹窗里的目标（页签、面板内按钮）；当前分组里没有，再退回底栏入口。
     const value =
       typeof script.target === "function"
         ? script.target(context)
         : Array.isArray(script.target) || typeof script.target === "string"
           ? script.target
           : context.bookOpen
-            ? script.target?.book
+            ? [script.target?.book ?? [], script.target?.desktop ?? []].flat()
             : script.target?.desktop
-    const candidates = Array.isArray(value) ? value : value ? [value] : []
+    const candidates: string[] = Array.isArray(value) ? value : value ? [value] : []
     for (const id of candidates) {
       const element = document.querySelector<HTMLElement>(
         `[data-tutorial-id="${CSS.escape(id)}"]`
       )
       if (!element || !element.isConnected) continue
       if (element.matches(":disabled, [aria-disabled='true']")) continue
-      if (
-        element.closest(
-          "[inert], [data-preload], .is-stowed, [aria-hidden='true']"
-        )
-      ) {
+      if (element.closest("[inert], [data-preload], [aria-hidden='true']")) {
         continue
       }
       const style = window.getComputedStyle(element)

@@ -46,7 +46,7 @@ import {
   type ApiUserCard,
   type ItemWallet,
 } from "@/desk/session/api"
-import "@/desk/book.css"
+import "@/desk/panel-ui.css"
 import { ConfirmBar } from "@/desk/shell/ConfirmBar"
 import { emitDeskData } from "@/desk/session/events"
 import "@/desk/panels/cards/card-detail.css"

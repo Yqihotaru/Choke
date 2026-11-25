@@ -16,7 +16,7 @@ import {
   type ApiDeck,
   type StaminaState,
 } from "@/desk/session/api"
-import { Pages } from "@/desk/shell/BookPages"
+import { Pages } from "@/desk/shell/PanelFrame"
 import { emitDeskData } from "@/desk/session/events"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
 import { useGameConfig } from "@/desk/session/useGameConfig"

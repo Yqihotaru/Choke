@@ -40,7 +40,7 @@
       "lines": [
         {
           "mood": "idle",
-          "text": "看到桌上那个卡包展架了吗？点它，抽卡面板就会翻开。"
+          "text": "看到底栏的「开包」了吗？点它，抽卡面板就会打开。"
         },
         {
           "mood": "smug",
@@ -104,7 +104,7 @@
       "lines": [
         {
           "mood": "idle",
-          "text": "点开卡组。右边是你的卡，左边是上阵的槽位。"
+          "text": "点开卡组。上面是上阵的槽位，下面是你的卡。"
         },
         {
           "mood": "smug",
@@ -207,7 +207,7 @@
         },
         {
           "mood": "serious",
-          "text": "继续做任务、打对战升级。到 Lv.{marketUnlockLevel}，市场木箱就会自己开锁。"
+          "text": "继续做任务、打对战升级。到 Lv.{marketUnlockLevel}，底栏的市场就会解锁。"
         },
         {
           "mood": "happy",

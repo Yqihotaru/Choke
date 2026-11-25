@@ -185,9 +185,9 @@ export function CardDragLayer({ root }: { root: RefObject<HTMLElement | null> })
       const hitTest = () => {
         frame = 0
         const hit = document.elementFromPoint(x, y)
-        if (!hit || hit.closest("[inert], [data-preload]")) return hover(null)
+        if (!hit || hit.closest("[inert]")) return hover(null)
         const slot = payload.userCardId == null ? null : hit.closest<HTMLElement>(".deck-slot[data-slot]")
-        const right = payload.fromSlot == null || !hit.closest(".book__page--right")
+        const right = payload.fromSlot == null || !hit.closest(".deck-picker")
           ? null : hit.closest<HTMLElement>(".deck-panel")
         const drop = source.closest(".op") ? hit.closest<HTMLElement>("[data-card-drop]") : null
         const desk = payload.card && !hit.closest(".book, .op") ? hit.closest<HTMLElement>(".desk-stage") : null

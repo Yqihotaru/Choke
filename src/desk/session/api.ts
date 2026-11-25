@@ -36,7 +36,17 @@ export interface ApiUserCard {
   obtainedAt?: string
 }
 
-export type CardSort = "recent" | "rarity" | "pp" | "name"
+export type CardSort = "recent" | "rarity" | "pp" | "name" | "level" | "rank"
+
+export interface UserCardFilters {
+  rarity?: Rarity[]
+  q?: string
+  country?: string
+  job?: Job
+  foil?: boolean
+  sort?: CardSort
+  dir?: "asc" | "desc"
+}
 
 export interface CardPage {
   rows: ApiUserCard[]
@@ -128,10 +138,7 @@ export class ApiError extends Error {
 
 export function fetchUserCards(
   userId: string,
-  params: {
-    rarity?: string
-    q?: string
-    sort?: CardSort
+  params: UserCardFilters & {
     page?: number
     limit?: number
     signal?: AbortSignal
@@ -139,14 +146,18 @@ export function fetchUserCards(
     ids?: number[]
   } = {},
 ): Promise<CardPage> {
-  const { rarity, q, sort = "recent", page = 0, limit = 24, signal, ids } = params
+  const { rarity, q, country, job, foil, sort = "recent", dir, page = 0, limit = 24, signal, ids } = params
   const search = new URLSearchParams({
     sort,
     limit: String(limit),
     offset: String(page * limit),
   })
-  if (rarity) search.set("rarity", rarity)
+  if (rarity?.length) search.set("rarity", rarity.join(","))
   if (q) search.set("q", q)
+  if (country) search.set("country", country)
+  if (job) search.set("job", job)
+  if (foil !== undefined) search.set("foil", foil ? "1" : "0")
+  if (dir) search.set("dir", dir)
   if (ids?.length) search.set("ids", ids.join(","))
   return request<CardPage>(`/api/users/${userId}/cards?${search.toString()}`, { signal })
 }
@@ -540,9 +551,10 @@ export function fetchUserCodexStats(userId: string, signal?: AbortSignal): Promi
 export function fetchCodexPage(
   params: {
     userId?: string | null
-    rarity?: string
+    rarity?: Rarity[]
     q?: string
     country?: string
+    job?: string
     sort?: string
     owned?: string
     limit?: number
@@ -550,11 +562,12 @@ export function fetchCodexPage(
     signal?: AbortSignal
   } = {},
 ): Promise<CardPage & { ownedTotal?: number }> {
-  const { userId, rarity, q, country, sort = "rarity", owned, limit = 24, offset = 0, signal } = params
+  const { userId, rarity, q, country, job, sort = "rarity", owned, limit = 24, offset = 0, signal } = params
   const search = new URLSearchParams({ sort, limit: String(limit), offset: String(offset) })
-  if (rarity) search.set("rarity", rarity)
+  if (rarity?.length) search.set("rarity", rarity.join(","))
   if (q) search.set("q", q)
   if (country) search.set("country", country)
+  if (job) search.set("job", job)
   if (owned) search.set("owned", owned)
   const url = userId
     ? `/api/users/${userId}/codex?${search.toString()}`

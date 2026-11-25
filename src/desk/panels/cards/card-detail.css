@@ -1,4 +1,4 @@
-/* 卡牌详情弹窗（fixed，盖在整页上）。颜色和按钮用 book.css 的 --bk-* / bk-*，
+/* 卡牌详情弹窗（fixed，盖在整页上）。颜色和按钮用 panel-ui.css 的 --bk-* / bk-*，
    这里只写布局和弹窗自己的东西 */
 .card-detail {
   position: fixed;

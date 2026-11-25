@@ -7,14 +7,13 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react"
-import { createPortal, flushSync } from "react-dom"
+import { flushSync } from "react-dom"
 
 import { RARITIES } from "@/card/types"
 import { playSfx } from "@/audio/sfx"
 import { useModal } from "@/ui/useModal"
 
 import { onboard } from "@/desk/session/api"
-import { cellScale, type DeskDrawerHandle } from "@/desk/shell/DeskDrawer"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
 import { EmailAuthForm } from "@/desk/login/EmailAuthForm"
 import {
@@ -54,12 +53,6 @@ interface Props {
   /** 新手礼包领到了：刷新用户和背包 */
   onClaimed: () => void
   onOpenBackpack: () => void
-  /** 信收在桌沿的抽屉里（桌面持有，重置桌面会放回桌上） */
-  stowed: boolean
-  onStow: (stowed: boolean) => void
-  drawer: RefObject<DeskDrawerHandle | null>
-  /** 抽屉里给信留的位置，收着时信封经 portal 画进去 */
-  drawerSlot: HTMLElement | null
   /** 教程毕业后即使新手礼包已领，也把邀请函留在桌上（日常任务入口） */
   forceVisible?: boolean
 }
@@ -90,7 +83,6 @@ function EnvelopeBody({ opened }: { opened: boolean }) {
 /**
  * 桌上的邀请函。没登录或没领新手礼包时从桌面底边弹上来；拆过一次之后一直留在桌上（开封的样子）。
  * 按住能拖，扔出桌面会重新从底边弹回来；登录用户第一次这么干会解锁一个本地成就，信的内容也跟着变。
- * 拖到桌沿的抽屉上就收进去，收着时不再自动弹出；在抽屉里点它照样拆开读，拖出来落在松手的地方。
  */
 export function InviteLetter({
   user,
@@ -100,10 +92,6 @@ export function InviteLetter({
   onToast,
   onClaimed,
   onOpenBackpack,
-  stowed,
-  onStow,
-  drawer,
-  drawerSlot,
   forceVisible = false,
 }: Props) {
   const [opened, setOpened] = useState(readInviteOpened)
@@ -111,8 +99,6 @@ export function InviteLetter({
   const [pos, setPos] = useState(() => readInvitePos() ?? DEFAULT_POS)
   /** 每弹一次 +1，换 key 让上升动画重播 */
   const [pops, setPops] = useState(0)
-  /** 从抽屉里拿出来的信直接摆在桌上，不再播从底边升上来的动画 */
-  const [rise, setRise] = useState(true)
   const [summoned, setSummoned] = useState(false)
   const [reading, setReading] = useState<{ sealed: boolean } | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -131,38 +117,25 @@ export function InviteLetter({
   useEffect(() => {
     const onSummon = () => {
       setSummoned(true)
-      setRise(true)
       setPos(DEFAULT_POS)
       saveInvitePos(null)
       setPops((value) => value + 1)
-      // 收在抽屉里：取出来弹上桌面，顺手拆开
-      if (stowed) {
-        onStow(false)
-        openLetter()
-      }
     }
     window.addEventListener(INVITE_OPEN_EVENT, onSummon)
     return () => window.removeEventListener(INVITE_OPEN_EVENT, onSummon)
-  }, [stowed, onStow, openLetter])
+  }, [])
 
   const needed = ready && (!user || !user.onboarded)
-  if (!stowed && (!ready || !(needed || opened || summoned || forceVisible)))
-    return null
+  if (!ready || !(needed || opened || summoned || forceVisible)) return null
 
   const left = clamp(pos.x * stageSize.w, 8, stageSize.w - ENV_W - 8)
   const top = clamp(pos.y * stageSize.h, 8, stageSize.h - ENV_H - 22)
-  const rising = rise && (needed || pops > 0 || forceVisible)
-
-  // 开封翻盖向上伸出本体高度的 62%；留出旋转边距后，按完整外形缩进抽屉格子。
-  const drawerFlap = opened ? ENV_H * 0.62 : 0
-  const drawerWidth = ENV_W + 16
-  const drawerHeight = ENV_H + drawerFlap + 16
+  const rising = needed || pops > 0 || forceVisible
 
   const toss = () => {
     playSfx("paper")
     setPos(DEFAULT_POS)
     saveInvitePos(null)
-    setRise(true)
     if (user) {
       if (unlockAchievement("invite-toss")) {
         playSfx("success")
@@ -173,7 +146,7 @@ export function InviteLetter({
     setPops((value) => value + 1)
   }
 
-  /** 拿着信封拖：拖到抽屉上就收进去（先于"扔出桌面"判定），扔出桌面就从底边弹回来，否则落在松手处 */
+  /** 拿着信封拖：扔出桌面就从底边弹回来，否则落在松手处 */
   const dragEnvelope = (
     el: HTMLDivElement,
     pointerId: number,
@@ -186,8 +159,6 @@ export function InviteLetter({
     if (!stage) return
     let moved = lifted
     let out = false
-    let overDrawer = false
-    let drawerTimer = 0
     let dx = 0
     let dy = 0
 
@@ -204,12 +175,6 @@ export function InviteLetter({
       )
       return (w * h) / Math.max(1, box.width * box.height)
     }
-    const hintDrawer = (next: boolean) => {
-      if (next === overDrawer) return
-      overDrawer = next
-      drawer.current?.hint(next)
-    }
-
     const onMove = (ev: PointerEvent) => {
       if (ev.pointerId !== pointerId) return
       dx = ev.clientX - startX
@@ -220,19 +185,7 @@ export function InviteLetter({
         setDragging(true)
       }
       el.style.transform = `translate(${dx}px, ${dy}px)`
-      // 信封自己压在指针下面，跳过它看底下是不是抽屉；停在合着的抽屉面上一会儿，抽屉自己拉开
-      const under = document
-        .elementsFromPoint(ev.clientX, ev.clientY)
-        .find((node) => !el.contains(node))
-      hintDrawer(!!under?.closest(".desk-drawer"))
-      if (under?.closest(".desk-drawer__front") && !drawer.current?.isOpen()) {
-        if (!drawerTimer)
-          drawerTimer = window.setTimeout(() => drawer.current?.open(), 450)
-      } else if (drawerTimer) {
-        window.clearTimeout(drawerTimer)
-        drawerTimer = 0
-      }
-      const nextOut = !overDrawer && insideFraction() < KEEP_VISIBLE
+      const nextOut = insideFraction() < KEEP_VISIBLE
       if (nextOut !== out) {
         out = nextOut
         setEscaping(out)
@@ -244,21 +197,10 @@ export function InviteLetter({
       el.removeEventListener("pointermove", onMove)
       el.removeEventListener("pointerup", onUp)
       el.removeEventListener("pointercancel", onUp)
-      if (drawerTimer) window.clearTimeout(drawerTimer)
-      const intoDrawer = overDrawer
-      hintDrawer(false)
       setDragging(false)
       setEscaping(false)
       if (!moved) {
         if (ev.type === "pointerup") openLetter()
-        return
-      }
-      if (intoDrawer && ev.type === "pointerup") {
-        el.style.transform = ""
-        onStow(true)
-        drawer.current?.bump()
-        playSfx("thud")
-        onToast("邀请函收进了抽屉")
         return
       }
       if (out && ev.type === "pointerup") {
@@ -296,57 +238,6 @@ export function InviteLetter({
     )
   }
 
-  /** 从抽屉里拿出来：信封换成原尺寸出现在指针下面，接着由桌上的拖动接手 */
-  const takeOut = (pointerId: number, x: number, y: number) => {
-    const stage = stageRef.current
-    if (!stage) return
-    const area = stage.getBoundingClientRect()
-    const base = {
-      left: clamp(x - area.left - ENV_W / 2, 8, area.width - ENV_W - 8),
-      top: clamp(y - area.top - ENV_H / 2, 8, area.height - ENV_H - 22),
-    }
-    flushSync(() => {
-      setPos({ x: base.left / area.width, y: base.top / area.height })
-      setRise(false)
-      setSummoned(true)
-      setDragging(true)
-      onStow(false)
-    })
-    const el = envRef.current
-    if (!el) return
-    el.setPointerCapture(pointerId)
-    dragEnvelope(el, pointerId, x, y, base, true)
-  }
-
-  // 抽屉里的那一格：没拖动就是点开读信，拖过阈值就拿出来
-  const onCellDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !event.isPrimary) return
-    event.preventDefault()
-    const pointerId = event.pointerId
-    const startX = event.clientX
-    const startY = event.clientY
-    const stop = () => {
-      window.removeEventListener("pointermove", onMove)
-      window.removeEventListener("pointerup", onUp)
-      window.removeEventListener("pointercancel", onUp)
-    }
-    const onMove = (ev: PointerEvent) => {
-      if (ev.pointerId !== pointerId) return
-      if (Math.abs(ev.clientX - startX) + Math.abs(ev.clientY - startY) < 4)
-        return
-      stop()
-      takeOut(pointerId, ev.clientX, ev.clientY)
-    }
-    const onUp = (ev: PointerEvent) => {
-      if (ev.pointerId !== pointerId) return
-      stop()
-      if (ev.type === "pointerup") openLetter()
-    }
-    window.addEventListener("pointermove", onMove)
-    window.addEventListener("pointerup", onUp)
-    window.addEventListener("pointercancel", onUp)
-  }
-
   const style = {
     left,
     top,
@@ -368,74 +259,25 @@ export function InviteLetter({
 
   return (
     <>
-      {!stowed && (
-        <div
-          ref={envRef}
-          key={pops}
-          className={classes}
-          style={style}
-          role="button"
-          tabIndex={0}
-          aria-label={
-            opened ? "邀请函（已拆开），点开再读一遍" : "邀请函，点开拆封"
-          }
-          onPointerDown={onPointerDown}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter" && event.key !== " ") return
-            event.preventDefault()
-            openLetter()
-          }}
-        >
-          <EnvelopeBody opened={opened} />
-        </div>
-      )}
-
-      {stowed &&
-        drawerSlot &&
-        createPortal(
-          <div
-            className="desk-drawer__cell"
-            data-stowed="invite"
-            role="button"
-            tabIndex={0}
-            aria-label={
-              opened
-                ? "邀请函（已拆开）：点开再读一遍，拖回桌面"
-                : "邀请函：点开拆封，拖回桌面"
-            }
-            onPointerDown={onCellDown}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter" && event.key !== " ") return
-              event.preventDefault()
-              openLetter()
-            }}
-          >
-            <div
-              className="desk-drawer__thing"
-              style={
-                {
-                  width: drawerWidth,
-                  height: drawerHeight,
-                  "--s": cellScale(drawerWidth, drawerHeight),
-                } as CSSProperties
-              }
-            >
-              <div
-                className={`invite-env ${opened ? "is-open" : ""}`}
-                style={{
-                  left: 8,
-                  top: drawerFlap + 8,
-                  width: ENV_W,
-                  height: ENV_H,
-                }}
-              >
-                <EnvelopeBody opened={opened} />
-              </div>
-            </div>
-            <span className="desk-drawer__tag">邀请函</span>
-          </div>,
-          drawerSlot
-        )}
+      <div
+        ref={envRef}
+        key={pops}
+        className={classes}
+        style={style}
+        role="button"
+        tabIndex={0}
+        aria-label={
+          opened ? "邀请函（已拆开），点开再读一遍" : "邀请函，点开拆封"
+        }
+        onPointerDown={onPointerDown}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return
+          event.preventDefault()
+          openLetter()
+        }}
+      >
+        <EnvelopeBody opened={opened} />
+      </div>
 
       {reading && (
         <LetterModal

@@ -16,7 +16,7 @@ import { useTutorialProgress } from "@/tutorial/store"
 
 import { ApiError, fetchPackInventory, openPack as apiOpenPack } from "@/desk/session/api"
 import { emitDeskData, onDeskData } from "@/desk/session/events"
-import { Pages } from "@/desk/shell/BookPages"
+import { Pages } from "@/desk/shell/PanelFrame"
 import {
   GACHA_OPEN_EVENT,
   startCardPointerDrag,

@@ -14,7 +14,7 @@ import {
   type ApiUserCard,
   type PackInventory,
 } from "@/desk/session/api"
-import { Pages } from "@/desk/shell/BookPages"
+import { Pages } from "@/desk/shell/PanelFrame"
 import { emitDeskData, onDeskData, onDeskHover } from "@/desk/session/events"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
 import { INVITE_OPEN_EVENT } from "@/desk/lib/invite"

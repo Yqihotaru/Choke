@@ -1,10 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react"
 
 import { GameCardFace } from "@/card/GameCardFace"
-import { RARITY_LABEL } from "@/card/data"
-import { RARITIES, type Rarity } from "@/card/types"
+import { JOB_LABEL, RARITY_LABEL } from "@/card/data"
+import type { Job, Rarity } from "@/card/types"
 
-import { Pages, useBook, usePageCache } from "@/desk/shell/BookPages"
+import { usePanel } from "@/desk/shell/PanelFrame"
 import { CardDetail } from "@/desk/panels/cards/CardDetail"
 import {
   defToFace,
@@ -15,20 +15,26 @@ import {
   type ApiCardDef,
   type ApiUserCard,
 } from "@/desk/session/api"
-import { RARITY_COLOR } from "@/desk/lib/rarity"
-import { FitArea } from "@/desk/shell/FitArea"
+import { CardGrid } from "@/desk/panels/cards/grid/CardGrid"
+import {
+  ActiveFilters,
+  CountrySelect,
+  JobSelect,
+  RarityChips,
+  SearchBox,
+  SortSelect,
+  countryLabel,
+} from "@/desk/panels/cards/grid/FilterBar"
+import { Pager } from "@/desk/panels/cards/grid/Pager"
+import { usePagedQuery } from "@/desk/panels/cards/grid/usePagedQuery"
+import "@/desk/panels/cards/grid/card-grid.css"
 import "@/desk/panels/cards/codex-panel.css"
 
-/** 一个跨页 = 一次请求：左页筛选下面 2 排，右页整页 3 排，每排 4 张 */
-const COLS = 4
-const LEFT_ROWS = 2
-const RIGHT_ROWS = 3
-const LEFT_COUNT = COLS * LEFT_ROWS
-const PAGE_SIZE = COLS * (LEFT_ROWS + RIGHT_ROWS)
+const PAGE_SIZE = 36
 const SORTS = [
-  { id: "rarity", label: "稀有度" },
-  { id: "pp", label: "pp" },
-  { id: "name", label: "名字" },
+  { id: "rarity", label: "稀有度", dir: "desc" },
+  { id: "pp", label: "pp", dir: "desc" },
+  { id: "name", label: "名字", dir: "asc" },
 ] as const
 const OWNED_FILTERS = [
   { id: "all", label: "全部" },
@@ -51,30 +57,23 @@ interface CodexStats {
   countries: { code: string; total: number; owned: number }[]
 }
 
-interface Result {
-  rows: ApiCardDef[]
-  total: number
-  ownedTotal: number
-  error: string | null
+interface CodexFilters {
+  rarity: Rarity[]
+  q: string
+  country: string
+  job: Job | ""
+  owned: OwnedFilter
+  sort: CodexSort
 }
 
-const regionNames =
-  typeof Intl !== "undefined" && "DisplayNames" in Intl
-    ? new Intl.DisplayNames(["zh-CN"], { type: "region" })
-    : null
-
-function countryLabel(code: string): string {
-  try {
-    return regionNames?.of(code) ?? code
-  } catch {
-    return code
-  }
-}
+const DEFAULT_FILTERS: CodexFilters = { rarity: [], q: "", country: "", job: "", owned: "all", sort: "rarity" }
 
 function percent(owned: number, total: number): number {
   if (total <= 0) return 0
   return Math.round((owned / total) * 1000) / 10
 }
+
+const num = (value: number) => value.toLocaleString("en-US")
 
 function toPseudoCard(row: ApiCardDef): ApiUserCard {
   return {
@@ -88,19 +87,15 @@ function toPseudoCard(row: ApiCardDef): ApiUserCard {
 }
 
 export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string | null }) {
-  const book = useBook()
-  const [rarity, setRarity] = useState("")
-  const [query, setQuery] = useState("")
-  const [deferredQuery, setDeferredQuery] = useState("")
-  const [sort, setSort] = useState<CodexSort>("rarity")
-  const [country, setCountry] = useState("")
-  const [ownedFilter, setOwnedFilter] = useState<OwnedFilter>("all")
+  const panel = usePanel()
+  const [filters, setFilters] = useState<CodexFilters>(DEFAULT_FILTERS)
   const [page, setPage] = useState(0)
   const [dimUnseen, setDimUnseen] = useState(false)
   const [stats, setStats] = useState<CodexStats | null>(null)
   const [statsError, setStatsError] = useState<string | null>(null)
   const [statsReload, setStatsReload] = useState(0)
   const [detail, setDetail] = useState<ApiCardDef | null>(null)
+  const [ownedTotal, setOwnedTotal] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -142,267 +137,207 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
       .catch(onFail)
 
     return () => controller.abort()
-  }, [userId, book.revision, statsReload])
+  }, [userId, panel.revision, statsReload])
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDeferredQuery(query.trim())
-      setPage(0)
-    }, 280)
-    return () => window.clearTimeout(timer)
-  }, [query])
+  const update = useCallback((patch: Partial<CodexFilters>) => {
+    setFilters((current) => ({ ...current, ...patch }))
+    setPage(0)
+  }, [])
+  const setQuery = useCallback((q: string) => update({ q }), [update])
 
-  const effectiveOwned = userId ? ownedFilter : "all"
-  const key = `${userId ?? "guest"}|${rarity}|${deferredQuery}|${country}|${effectiveOwned}|${sort}|${book.revision}`
-  const loadPage = useCallback(async (index: number, signal: AbortSignal): Promise<Result> => {
-    try {
-      const pageData = await fetchCodexPage({
-        userId,
-        rarity,
-        q: deferredQuery,
-        country,
-        sort,
-        owned: effectiveOwned,
-        limit: PAGE_SIZE,
-        offset: index * PAGE_SIZE,
-        signal,
-      })
-      return {
-        rows: userId ? pageData.rows : pageData.rows.map((row) => ({ ...row, owned: false })),
-        total: pageData.total,
-        ownedTotal: userId ? (pageData.ownedTotal ?? 0) : 0,
-        error: null,
-      }
-    } catch (reason) {
-      if (signal.aborted) throw reason
-      return { rows: [], total: 0, ownedTotal: 0, error: reason instanceof Error ? reason.message : "加载图鉴失败" }
+  const owned = userId ? filters.owned : "all"
+  const key = JSON.stringify([userId ?? "guest", filters, owned, panel.revision])
+  const query = usePagedQuery(key, page, async (index, signal) => {
+    const data = await fetchCodexPage({
+      userId,
+      rarity: filters.rarity,
+      q: filters.q,
+      country: filters.country,
+      job: filters.job,
+      sort: filters.sort,
+      owned,
+      limit: PAGE_SIZE,
+      offset: index * PAGE_SIZE,
+      signal,
+    })
+    setOwnedTotal(userId ? (data.ownedTotal ?? 0) : 0)
+    // 图鉴接口返回的是卡定义 + owned 标记，不是用户的卡实例
+    const rows = data.rows as unknown as ApiCardDef[]
+    return {
+      rows: userId ? rows : rows.map((row) => ({ ...row, owned: false })),
+      total: data.total,
     }
-  }, [userId, rarity, deferredQuery, country, effectiveOwned, sort])
-  const cachedPages = usePageCache(key, page, PAGE_SIZE, loadPage)
+  })
+
+  const totalPages = Math.max(1, Math.ceil(query.total / PAGE_SIZE))
+  if (!query.loading && query.rows && page > totalPages - 1) setPage(totalPages - 1)
+
   const detailCard = useMemo(() => (detail ? toPseudoCard(detail) : null), [detail])
+  const poolBase = owned === "unseen" ? query.total + ownedTotal : query.total
 
-  const renderPage = (index: number, result: Result | null) => {
-  const ready = result !== null
-  const total = result?.total ?? 0
-  const ownedTotal = result?.ownedTotal ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const currentPage = Math.min(index, totalPages - 1)
-  const poolBase = effectiveOwned === "unseen" ? total + ownedTotal : total
-
-  const num = (value: number) => value.toLocaleString("en-US")
-  const filterLabel = rarity ? RARITY_LABEL[rarity as Rarity] : "全部品质"
-  const rows = result && !result.error ? result.rows : []
-
-  const renderGrid = (list: ApiCardDef[], gridRows: number, skeleton: number) => (
-    <FitArea className="codex-fit" cols={COLS} rows={gridRows} gapX={10} gapY={12} slack={2} style={{ "--rows": gridRows } as CSSProperties}>
-      <div className="bk-cards" style={{ "--cols": COLS, visibility: ready ? undefined : "hidden" } as CSSProperties} aria-busy={!ready}>
-        {list.map((row) =>
-              row.owned ? (
-                <CodexSlot key={row.id} row={row} onDetail={setDetail} />
-              ) : (
-                <div
-                  className={`bk-slot codex-unknown ${dimUnseen ? "is-dimmed" : ""}`}
-                  key={row.id}
-                  aria-label="未收集的卡"
-                >
-                  ?
-                </div>
-              ),
-        )}
-      </div>
-      <div className="bk-cards codex-fit__loading" style={{ "--cols": COLS, visibility: ready ? "hidden" : undefined } as CSSProperties} aria-hidden>
-        {Array.from({ length: skeleton }, (_, i) => <div className="bk-slot" key={i} />)}
-      </div>
-    </FitArea>
-  )
+  const chips = [
+    ...filters.rarity.map((rarity) => ({
+      label: RARITY_LABEL[rarity],
+      onClear: () => update({ rarity: filters.rarity.filter((item) => item !== rarity) }),
+    })),
+    ...(filters.q ? [{ label: `「${filters.q}」`, onClear: () => update({ q: "" }) }] : []),
+    ...(filters.job ? [{ label: JOB_LABEL[filters.job], onClear: () => update({ job: "" as const }) }] : []),
+    ...(filters.country ? [{ label: countryLabel(filters.country), onClear: () => update({ country: "" }) }] : []),
+    ...(userId && filters.owned !== "all"
+      ? [{ label: OWNED_FILTERS.find((item) => item.id === filters.owned)!.label, onClear: () => update({ owned: "all" as const }) }]
+      : []),
+  ]
+  const clearFilters = () => update({ rarity: [], q: "", country: "", job: "", owned: "all" })
+  const rarityCounts = Object.fromEntries(
+    Object.entries(stats?.byRarity ?? {}).map(([rarity, tier]) => [
+      rarity,
+      userId ? `${num(tier.owned)}/${num(tier.total)}` : num(tier.total),
+    ]),
+  ) as Partial<Record<Rarity, string>>
 
   return (
-    <Pages
-      key={index}
-      preload={index !== page}
-      className="codex-panel"
-      ready={ready}
-      pager={{ page: currentPage + 1, pages: totalPages, onPage: (next) => setPage(next - 1) }}
-      left={
-        <>
-          <div className="codex-filters">
-            <div className="codex-progress">
-              <div className="codex-progress__line">
-                <span className="bk-label">{userId ? "收集进度" : "全部卡牌"}</span>
-                <span className="bk-num">
-                  {!stats
-                    ? "—"
-                    : userId
-                      ? `${num(stats.owned)} / ${num(stats.total)} · ${percent(stats.owned, stats.total)}%`
-                      : `${num(stats.total)} 张`}
-                </span>
-              </div>
-              <div
-                className="bk-bar"
-                style={{ "--p": stats ? percent(stats.owned, stats.total) : 0 } as CSSProperties}
-              >
-                <i />
-              </div>
-              {statsError && (
-                <div className="codex-stats-error" role="alert">
-                  <span className="bk-error">统计加载失败：{statsError}</span>
-                  <button
-                    type="button"
-                    className="bk-btn bk-btn--sm"
-                    onClick={() => {
-                      setStatsError(null)
-                      setStatsReload((value) => value + 1)
-                    }}
-                  >
-                    重试
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="bk-chips codex-rarity" role="group" aria-label="品质筛选">
+    <div className="codex-panel split-panel">
+      <aside className="filter-side" aria-label="筛选">
+        <div className="codex-progress">
+          <div className="codex-progress__line">
+            <span className="bk-label">{userId ? "收集进度" : "全部卡牌"}</span>
+            <span className="bk-num">
+              {!stats
+                ? "—"
+                : userId
+                  ? `${num(stats.owned)} / ${num(stats.total)} · ${percent(stats.owned, stats.total)}%`
+                  : `${num(stats.total)} 张`}
+            </span>
+          </div>
+          <div className="bk-bar" style={{ "--p": stats ? percent(stats.owned, stats.total) : 0 } as CSSProperties}>
+            <i />
+          </div>
+          {statsError && (
+            <div className="codex-stats-error" role="alert">
+              <span className="bk-error">统计加载失败：{statsError}</span>
               <button
                 type="button"
-                className="bk-chip"
-                aria-pressed={rarity === ""}
+                className="bk-btn bk-btn--sm"
                 onClick={() => {
-                  setRarity("")
-                  setPage(0)
+                  setStatsError(null)
+                  setStatsReload((value) => value + 1)
                 }}
               >
-                全部
+                重试
               </button>
-              {RARITIES.map((item) => {
-                const tier = stats?.byRarity[item]
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    className="bk-chip"
-                    aria-pressed={rarity === item}
-                    onClick={() => {
-                      setRarity(item)
-                      setPage(0)
-                    }}
-                  >
-                    <i style={{ "--c": RARITY_COLOR[item] } as CSSProperties} aria-hidden />
-                    {RARITY_LABEL[item]}
-                    {tier && <small>{userId ? `${num(tier.owned)}/${num(tier.total)}` : num(tier.total)}</small>}
-                  </button>
-                )
-              })}
             </div>
-
-            <div className="codex-toolbar">
-              <input
-                className="bk-input codex-toolbar__search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索玩家名"
-                aria-label="搜索玩家名"
-              />
-              <select
-                className="bk-select codex-toolbar__country"
-                value={country}
-                onChange={(event) => {
-                  setCountry(event.target.value)
-                  setPage(0)
-                }}
-                aria-label="国家或地区"
-              >
-                <option value="">全部国家 / 地区</option>
-                {stats?.countries.map((item) => (
-                  <option key={item.code} value={item.code}>
-                    {countryLabel(item.code)}（{item.code}） · {num(item.total)}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="bk-select"
-                value={sort}
-                onChange={(event) => {
-                  setSort(event.target.value as CodexSort)
-                  setPage(0)
-                }}
-                aria-label="排序"
-              >
-                {SORTS.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    按{item.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="codex-toolbar">
-              {userId && (
-                <div className="bk-seg" role="group" aria-label="收集筛选">
-                  {OWNED_FILTERS.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      aria-pressed={ownedFilter === item.id}
-                      onClick={() => {
-                        setOwnedFilter(item.id)
-                        setPage(0)
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button
-                type="button"
-                className="bk-chip"
-                aria-pressed={dimUnseen}
-                onClick={() => setDimUnseen((value) => !value)}
-                title="未见卡只保留问号，并进一步压暗"
-              >
-                暗化未见
-              </button>
-              <p className="bk-note codex-count">
-                {filterLabel} <b className="bk-num">{ready ? num(total) : "—"}</b> 张
-                {userId && ready && total > 0 && (
-                  <>
-                    {" · 已收集 "}
-                    <span className="bk-num">
-                      {effectiveOwned === "owned"
-                        ? num(ownedTotal)
-                        : `${num(ownedTotal)} / ${num(poolBase)} · ${percent(ownedTotal, poolBase)}%`}
-                    </span>
-                  </>
-                )}
-              </p>
+          )}
+        </div>
+        <div className="filter-side__group">
+          <span className="bk-label">搜索</span>
+          <SearchBox value={filters.q} onChange={setQuery} />
+        </div>
+        <div className="filter-side__group">
+          <span className="bk-label">稀有度</span>
+          <RarityChips value={filters.rarity} onChange={(rarity) => update({ rarity })} counts={rarityCounts} />
+        </div>
+        <div className="filter-side__group">
+          <span className="bk-label">职业</span>
+          <JobSelect value={filters.job} onChange={(job) => update({ job })} />
+        </div>
+        <div className="filter-side__group">
+          <span className="bk-label">国家 / 地区</span>
+          <CountrySelect
+            value={filters.country}
+            onChange={(country) => update({ country })}
+            options={stats?.countries ?? []}
+          />
+        </div>
+        {userId && (
+          <div className="filter-side__group">
+            <span className="bk-label">收集</span>
+            <div className="bk-seg" role="group" aria-label="收集筛选">
+              {OWNED_FILTERS.map((item) => (
+                <button key={item.id} type="button" aria-pressed={filters.owned === item.id} onClick={() => update({ owned: item.id })}>
+                  {item.label}
+                </button>
+              ))}
             </div>
           </div>
+        )}
+        <div className="filter-side__group">
+          <span className="bk-label">排序</span>
+          <SortSelect
+            value={filters.sort}
+            dir="desc"
+            options={SORTS}
+            fixedDir
+            onChange={(sort) => update({ sort })}
+          />
+        </div>
+        <button
+          type="button"
+          className="bk-chip"
+          aria-pressed={dimUnseen}
+          onClick={() => setDimUnseen((value) => !value)}
+          title="未见卡只保留问号，并进一步压暗"
+        >
+          暗化未见
+        </button>
+      </aside>
 
-          {renderGrid(rows.slice(0, LEFT_COUNT), LEFT_ROWS, LEFT_COUNT)}
+      <section className="filter-main">
+        <div className="filter-row">
+          <p className="bk-note codex-count">
+            <b className="bk-num">{query.rows ? num(query.total) : "—"}</b> 张
+            {userId && query.rows && query.total > 0 && (
+              <>
+                {" · 已收集 "}
+                <span className="bk-num">
+                  {owned === "owned"
+                    ? num(ownedTotal)
+                    : `${num(ownedTotal)} / ${num(poolBase)} · ${percent(ownedTotal, poolBase)}%`}
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+        <ActiveFilters chips={chips} onClearAll={clearFilters} />
+        <CardGrid
+          rows={query.rows}
+          loading={query.loading}
+          error={query.error}
+          onRetry={query.retry}
+          getKey={(row) => row.id}
+          renderCard={(row) =>
+            row.owned ? (
+              <CodexSlot row={row} onDetail={setDetail} />
+            ) : (
+              <div className={`bk-slot codex-unknown ${dimUnseen ? "is-dimmed" : ""}`} aria-label="未收集的卡">
+                ?
+              </div>
+            )
+          }
+          empty={
+            <>
+              <span>没有符合条件的卡</span>
+              {chips.length > 0 && (
+                <button type="button" className="bk-btn" onClick={clearFilters}>
+                  清除筛选
+                </button>
+              )}
+            </>
+          }
+        />
+        <Pager page={page} pages={totalPages} onPage={setPage} />
+      </section>
 
-          {book.active && index === page && detailCard && (
-            <CardDetail
-              key={`codex-${detailCard.id}`}
-              card={detailCard}
-              userId={userId}
-              readOnly
-              onClose={() => setDetail(null)}
-            />
-          )}
-        </>
-      }
-      right={
-        ready && result.error ? (
-          <div className="bk-empty bk-error">{result.error}</div>
-        ) : ready && rows.length === 0 ? (
-          <div className="bk-empty">没有符合条件的卡</div>
-        ) : (
-          renderGrid(rows.slice(LEFT_COUNT), RIGHT_ROWS, PAGE_SIZE - LEFT_COUNT)
-        )
-      }
-    />
+      {detailCard && (
+        <CardDetail
+          key={`codex-${detailCard.id}`}
+          card={detailCard}
+          userId={userId}
+          readOnly
+          onClose={() => setDetail(null)}
+        />
+      )}
+    </div>
   )
-  }
-  return cachedPages.map(([index, result]) => renderPage(index, result))
 })
 
 const CodexSlot = memo(function CodexSlot({

@@ -5,7 +5,7 @@ import { playSfx } from "@/audio/sfx"
 import { useModal } from "@/ui/useModal"
 import { usePresence } from "@/ui/usePresence"
 
-import { Pages } from "@/desk/shell/BookPages"
+import { Pages } from "@/desk/shell/PanelFrame"
 import "@/desk/panels/player/about-panel.css"
 
 const TOOLS = [

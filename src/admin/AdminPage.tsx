@@ -24,7 +24,7 @@ import {
   type AdminUserRow,
 } from "./api"
 
-import "@/desk/book.css"
+import "@/desk/panel-ui.css"
 import "./admin.css"
 
 type Gate = "loading" | "anon" | "denied" | "error" | "ok"

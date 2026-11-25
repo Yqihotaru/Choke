@@ -1,0 +1,123 @@
+/* 底栏入口 + 顶栏状态。颜色用 desk.css 的 --d-* 变量，亮色主题在 light.css 覆盖。 */
+
+.desk-dock {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  height: 64px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border-top: 1px solid var(--d-line);
+  background: #231a1f;
+}
+.dock-btn {
+  position: relative;
+  min-width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #34272d;
+  color: var(--d-ink);
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--ui-fast), color var(--ui-fast), scale var(--ui-fast);
+}
+.dock-btn b {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+.dock-btn small {
+  color: var(--d-ink-dim);
+  font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1;
+}
+.dock-btn:hover {
+  background: #43343b;
+}
+.dock-btn[aria-pressed="true"] {
+  background: rgb(255 102 170 / 0.18);
+  color: #ffb3d4;
+  box-shadow: inset 0 -2px 0 var(--d-osu);
+}
+.dock-btn[data-locked] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+/* 拖着卡 / 卡包时：能接住的那个按钮先描虚线，悬上去再换成实线 */
+.dock-btn.is-drop-armed {
+  outline: 2px dashed rgb(255 102 170 / 0.6);
+  outline-offset: 2px;
+}
+.dock-btn.is-drop-hot {
+  outline: 2px solid var(--d-osu);
+  outline-offset: 2px;
+  scale: 1.06;
+}
+/* 东西落进来：弹一下 */
+.dock-btn.is-receiving {
+  animation: dock-bump 540ms var(--ui-ease-spring);
+}
+@keyframes dock-bump {
+  30% {
+    scale: 1.14;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock-btn.is-receiving {
+    animation: none;
+  }
+}
+
+.desk-wallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #34272d;
+  color: var(--d-ink);
+  font-family: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+.desk-wallet i {
+  color: #f2c14e;
+  font-style: normal;
+  font-size: 10px;
+}
+.desk-wallet--essence i {
+  color: #8fd3ff;
+}
+.desk-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 50%;
+  background: #34272d;
+  color: var(--d-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.desk-avatar:hover {
+  box-shadow: 0 0 0 2px var(--d-osu);
+}
+.desk-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

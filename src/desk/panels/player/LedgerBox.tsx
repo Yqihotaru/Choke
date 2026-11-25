@@ -18,7 +18,7 @@ import { usePresence } from "@/ui/usePresence"
 
 import { fetchLedger } from "@/desk/session/api"
 
-import "@/desk/book.css"
+import "@/desk/panel-ui.css"
 import "@/desk/panels/mail/mail-box.css"
 import "@/desk/panels/player/ledger-box.css"
 

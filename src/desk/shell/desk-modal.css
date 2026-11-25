@@ -1,0 +1,211 @@
+/* =========================================================
+   面板弹窗：居中的扁平大弹窗，顶部页签，下面是当前面板。
+   颜色用 panel-ui.css 的 --bk-*；亮色主题已在 light.css 覆盖这些变量。
+   ========================================================= */
+
+/* 只压暗桌面，不拦截指针：面板打开时仍要把桌面卡拖进卡册 / 卡组槽 */
+.desk-modal-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  background: rgb(12 8 10 / 0.35);
+  pointer-events: none;
+  animation: ui-fade-in var(--ui-base) var(--ui-ease-out) both;
+}
+
+.desk-modal {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(92vw, 1440px);
+  height: min(calc(100% - 32px), 920px);
+  contain: layout style;
+  border: 1px solid var(--bk-line);
+  border-radius: 14px;
+  background: var(--bk-paper);
+  color: var(--bk-ink);
+  font-family: "Outfit Variable", "Outfit", sans-serif;
+  box-shadow: 0 30px 60px -20px rgb(0 0 0 / 0.6);
+  animation: desk-modal-in var(--ui-base) var(--ui-ease-out) both;
+}
+.desk-modal:focus {
+  outline: none;
+}
+.desk-modal.is-leaving {
+  animation: desk-modal-out 0.17s var(--ui-ease-in) both;
+  pointer-events: none;
+}
+@keyframes desk-modal-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+@keyframes desk-modal-out {
+  to {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .desk-modal,
+  .desk-modal.is-leaving,
+  .desk-modal-scrim {
+    animation-duration: 0.01s !important;
+  }
+}
+
+.desk-modal__head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 52px;
+  padding: 0 14px 0 16px;
+  border-bottom: 1px solid var(--bk-line);
+}
+.desk-modal__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.desk-modal__tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.desk-modal__tab {
+  flex: 0 0 auto;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bk-dim);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background var(--ui-fast), color var(--ui-fast);
+}
+.desk-modal__tab:hover {
+  background: var(--bk-raised);
+  color: var(--bk-ink);
+}
+.desk-modal__tab[aria-selected="true"] {
+  background: var(--bk-osu-soft);
+  color: var(--bk-osu-text);
+}
+.desk-modal__tab[data-locked] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.desk-modal__lock {
+  font-family: var(--bk-mono);
+  font-size: 11px;
+}
+.desk-modal__close {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bk-raised);
+  color: var(--bk-ink);
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--ui-fast), color var(--ui-fast);
+}
+.desk-modal__close:hover {
+  background: var(--bk-osu);
+  color: var(--bk-well);
+}
+
+.desk-modal__body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 16px 20px;
+}
+.desk-modal__body > * {
+  height: 100%;
+}
+
+.desk-modal__locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed rgb(255 102 170 / 0.35);
+  border-radius: 10px;
+  text-align: center;
+}
+.desk-modal__locked h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+}
+.desk-modal__locked p {
+  margin: 0 0 6px;
+  color: var(--bk-osu-text);
+  font-size: 12px;
+}
+.bk-eyebrow {
+  color: var(--bk-osu);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  line-height: 1;
+}
+
+/* 未重写面板的两栏外壳 */
+.panel-split {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 20px;
+  min-height: 0;
+}
+@media (min-width: 900px) {
+  .panel-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.panel-split__col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bk-raised) transparent;
+}
+
+/* 密集卡格里的闪卡扫光只在悬停时动，省得几十张卡同时重绘 */
+.desk-modal :is(.album-panel, .deck-panel, .codex-panel) .card-foil__sweep {
+  animation-play-state: paused;
+  will-change: transform;
+}
+.desk-modal
+  :is(.album-panel, .deck-panel, .codex-panel)
+  :is(.album-slot, .deck-slot, .deck-pick, .codex-slot):hover
+  .card-foil__sweep {
+  animation-play-state: running;
+}

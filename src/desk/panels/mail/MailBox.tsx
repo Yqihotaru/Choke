@@ -30,7 +30,7 @@ import {
   type MailSummary,
 } from "@/desk/session/api"
 
-import "@/desk/book.css"
+import "@/desk/panel-ui.css"
 import "@/desk/panels/mail/mail-box.css"
 
 const SUMMARY_POLL_MS = 60_000

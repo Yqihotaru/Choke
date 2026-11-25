@@ -1,6 +1,6 @@
 import { EmailAuthForm } from "@/desk/login/EmailAuthForm"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
-import "@/desk/book.css"
+import "@/desk/panel-ui.css"
 import "@/desk/login/login-page.css"
 
 /** 独立登录页：osu! / 邮箱 / 游客三条入口。osu! 是主入口，只有它带本体卡。

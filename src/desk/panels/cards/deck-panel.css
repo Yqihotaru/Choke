@@ -1,10 +1,31 @@
-/* 卡组：左页 7 个槽位，右页可放入的卡 */
-
-/* 槽里的卡拖到右页：右页盖一层提示，松开就移出卡组 */
-.deck-panel .book__page--right {
+/* 卡组：上方阵容条（7 个槽位），下方选卡区 */
+.deck-panel {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
 }
-.deck-panel .book__page--right::after {
+.deck-panel--guest {
+  align-items: stretch;
+}
+.deck-lineup-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.deck-picker {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 槽里的卡拖到选卡区：选卡区盖一层提示，松开就移出卡组 */
+.deck-panel .deck-picker::after {
   content: "松开 · 移出卡组";
   position: absolute;
   inset: 0;
@@ -19,11 +40,11 @@
   pointer-events: none;
   visibility: hidden;
 }
-.deck-panel.is-return-target .book__page--right::after {
+.deck-panel.is-return-target .deck-picker::after {
   visibility: visible;
 }
 
-/* ----- 左页 ----- */
+/* ----- 阵容条 ----- */
 .deck-summary {
   display: flex;
   align-items: flex-end;
@@ -38,13 +59,19 @@
   margin-left: auto;
   white-space: nowrap;
 }
-.deck-grid {
+.deck-summary .deck-actions {
+  align-items: center;
+}
+.deck-lineup {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px 10px;
-  flex: 0 0 auto;
-  /* 选中 / 拖放高亮的描边在槽外 5px（outline-offset 3 + 宽 2），左页 .book__body 会滚动、会裁掉贴边的部分 */
-  padding: 5px;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(96px, 112px);
+  gap: 12px;
+  overflow-x: auto;
+  /* 选中 / 拖放高亮的描边在槽外 5px（outline-offset 3 + 宽 2），滚动容器会裁掉贴边的部分 */
+  padding: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bk-raised) transparent;
 }
 .deck-slot {
   position: relative;
@@ -159,7 +186,7 @@
   gap: 10px;
 }
 
-/* ----- 右页 ----- */
+/* ----- 选卡区 ----- */
 .deck-target {
   display: flex;
   align-items: center;
@@ -167,31 +194,8 @@
   gap: 10px;
   min-height: 28px;
 }
-.deck-filters {
-  display: flex;
-  gap: 8px;
-}
-.deck-filters .bk-input {
-  flex: 1 1 0;
-}
-/* 候选卡一页 4×3，占满右页剩下的高度不滚动；--w 由 FitArea 写入（px） */
-.deck-picks {
-  flex: 1 1 0;
-  min-height: 240px;
-  contain: size layout style;
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
-.deck-picks__grid {
-  display: grid;
-  grid-template-columns: repeat(4, var(--w, 0px));
-  gap: 12px 10px;
-  align-content: start;
-}
-.deck-picks__loading {
-  position: absolute;
-  top: 0;
+.deck-target__hint {
+  margin-left: auto;
 }
 .deck-pick {
   position: relative;
@@ -251,7 +255,7 @@
   color: var(--bk-faint);
 }
 
-/* 窄屏：左页摘要换行，按钮和筛选不撑破页宽 */
+/* 窄屏：摘要换行，按钮不撑破宽度 */
 @media (max-width: 900px) {
   .deck-summary {
     flex-wrap: wrap;
@@ -260,15 +264,8 @@
   .deck-summary__saved {
     margin-left: 0;
   }
-  .deck-grid {
-    gap: 8px 6px;
-  }
   .deck-actions,
-  .deck-filters,
   .deck-target {
     flex-wrap: wrap;
-  }
-  .deck-filters .bk-select {
-    flex: 1 1 100px;
   }
 }

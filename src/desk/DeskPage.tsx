@@ -10,17 +10,21 @@ import {
 } from "react"
 
 import { DeskObject, type DealButtonState } from "@/desk/shell/DeskObject"
-import { DeskDrawer, type DeskDrawerHandle } from "@/desk/shell/DeskDrawer"
+import { DeskModal, type DeskModalHandle } from "@/desk/shell/DeskModal"
 import {
-  DeskBook,
+  NAV_GROUPS,
   PANEL_IDS,
-  type DeskBookHandle,
+  PANEL_META,
+  groupOf,
+  navGroupOf,
+  type NavGroupId,
   type PanelId,
-} from "@/desk/shell/DeskBook"
+} from "@/desk/lib/panels"
 import { DragGhost } from "@/desk/shell/DragGhost"
 import {
   ApiError,
   claimTutorialPack,
+  fetchDeck,
   fetchUserCards,
   onboard,
   openPack,
@@ -42,8 +46,9 @@ import { useDeskSession } from "@/desk/session/useDeskSession"
 import { MailBox } from "@/desk/panels/mail/MailBox"
 import { LedgerBox } from "@/desk/panels/player/LedgerBox"
 import { InviteLetter } from "@/desk/panels/invite/InviteLetter"
-import { INVITE_OPEN_EVENT, readInviteStowed, saveInviteStowed } from "@/desk/lib/invite"
-import { OBJECT_META, type DeskObjectId } from "@/desk/lib/objects"
+import { INVITE_OPEN_EVENT } from "@/desk/lib/invite"
+import { DeskDock, DeskTopbarStatus } from "@/desk/shell/DeskNav"
+import { OBJECT_META } from "@/desk/lib/objects"
 import {
   emitTutorialEvent,
   TUTORIAL_CLOSE_BOOK_EVENT,
@@ -53,7 +58,6 @@ import { useTutorialProgress } from "@/tutorial/store"
 import { TutorialOverlay } from "@/tutorial/TutorialOverlay"
 import {
   isModuleUnlocked,
-  isModuleVisibleOnDesk,
   lockHintOf,
   unlockLevelOf,
 } from "@/tutorial/unlocks"
@@ -72,7 +76,8 @@ import { UI_SCALE_STEPS, useUiScale } from "@/desk/lib/ui-scale"
 import {
   POOL_KEY,
   SERVER_POOL,
-  acceptsDrop,
+  dockTargetFor,
+  type DockDropGroup,
   readSavedPool,
   tiltOf,
   type FlightSlot,
@@ -92,7 +97,7 @@ interface PackReturnResult {
 }
 
 export function DeskPage() {
-  const { items, move, front, spawn, remove, reset, stow, unstow, refreshFaces } = useDesk()
+  const { items, move, front, spawn, remove, reset, refreshFaces } = useDesk()
   const { resolvedTheme, setTheme } = useTheme()
   const { step: uiStep, setStep: setUiStep } = useUiScale()
   const stageRef = useRef<HTMLDivElement>(null)
@@ -121,7 +126,6 @@ export function DeskPage() {
   const [pressId, setPressId] = useState(0)
   /** 按压动画结束后，请求仍可能进行中；继续拦住重复 /take。 */
   const dealBusy = useRef(false)
-  const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [collecting, setCollecting] = useState<{
     id: string
     left: number
@@ -138,10 +142,11 @@ export function DeskPage() {
   const collectionRef = useRef<HTMLDivElement>(null)
   /** 正在飞的那一件的收尾函数；新的飞行开始时先让上一件落定 */
   const flightDone = useRef<(() => void) | null>(null)
-  /** 卡包正飞过来、翻盖先掀开等着的物件 */
-  const [awaiting, setAwaiting] = useState<DeskObjectId | null>(null)
-  /** 刚接住东西、正在回弹的物件 */
-  const [receiving, setReceiving] = useState<DeskObjectId | null>(null)
+  /** 刚接住东西、正在回弹的底栏按钮 */
+  const [receiving, setReceiving] = useState<DockDropGroup | null>(null)
+  /** 拖动中悬在它上面、松手会被接住的底栏按钮 / 先提示可以接住的按钮 */
+  const [dockHot, setDockHot] = useState<DockDropGroup | null>(null)
+  const [dockArmed, setDockArmed] = useState<DockDropGroup | null>(null)
   const receiveTimer = useRef<number | null>(null)
   const [quickTargets, setQuickTargets] = useState<Record<
     string,
@@ -170,26 +175,13 @@ export function DeskPage() {
     logout,
   } = useDeskSession()
   const progress = useTutorialProgress(user?.id ?? null)
-  const [book, setBook] = useState<{
-    panel: PanelId
-    origin: { x: number; y: number } | null
-  } | null>(() => {
+  const [panel, setPanel] = useState<PanelId | null>(() => {
     const query = new URLSearchParams(window.location.search).get(
       "panel"
     ) as PanelId | null
-    return query && PANEL_IDS.includes(query)
-      ? { panel: query, origin: null }
-      : null
+    return query && PANEL_IDS.includes(query) ? query : null
   })
-  const bookRef = useRef<DeskBookHandle>(null)
-  const drawerRef = useRef<DeskDrawerHandle>(null)
-  /** 抽屉里留给邀请函的位置；信收没收着由桌面持有，重置桌面时一起放回来 */
-  const [inviteSlot, setInviteSlot] = useState<HTMLDivElement | null>(null)
-  const [inviteStowed, setInviteStowed] = useState(readInviteStowed)
-  const stowInvite = useCallback((stowed: boolean) => {
-    saveInviteStowed(stowed)
-    setInviteStowed(stowed)
-  }, [])
+  const modalRef = useRef<DeskModalHandle>(null)
   const collectTimer = useRef<number | null>(null)
   const quickTimer = useRef<number | null>(null)
   const toastTimer = useRef<number | null>(null)
@@ -208,7 +200,7 @@ export function DeskPage() {
 
   // 背包里点「打开邀请函」：先合上书，让信封从桌面底边弹上来时看得见
   useEffect(() => {
-    const handler = () => bookRef.current?.close()
+    const handler = () => modalRef.current?.close()
     window.addEventListener(INVITE_OPEN_EVENT, handler)
     return () => window.removeEventListener(INVITE_OPEN_EVENT, handler)
   }, [])
@@ -228,7 +220,7 @@ export function DeskPage() {
         return
       }
       openingBusy.current = true
-      bookRef.current?.close()
+      modalRef.current?.close()
       setOpening({ key: newId("gacha"), x: 0.45, y: 0.3, cards, pool, rect })
     }
     window.addEventListener(GACHA_OPEN_EVENT, handler)
@@ -314,7 +306,7 @@ export function DeskPage() {
 
   const finishTutorial = useCallback(
     (reason: "complete" | "skip") => {
-      bookRef.current?.close()
+      modalRef.current?.close()
       void ensureStarter()
       showToast(
         reason === "skip"
@@ -333,32 +325,52 @@ export function DeskPage() {
   }, [ensureStarter])
 
   useEffect(() => {
-    const handler = () => bookRef.current?.close()
+    const handler = () => modalRef.current?.close()
     window.addEventListener(TUTORIAL_CLOSE_BOOK_EVENT, handler)
     return () => window.removeEventListener(TUTORIAL_CLOSE_BOOK_EVENT, handler)
   }, [])
 
-  // 只在当前步骤需要时，把收进抽屉的目标放回桌面
+  /** 底栏「卡组」按钮上的「已上阵 / 总槽位」：登录后、卡牌数据变化和关闭面板后重新取 */
+  const [deckFilled, setDeckFilled] = useState<{ filled: number; size: number } | null>(null)
+  const deckUserId = user?.id ?? null
+  const [deckReload, setDeckReload] = useState(0)
   useEffect(() => {
-    if (progress.tutorialDone || progress.tutorialStep === "idle") return
-    const needed: Record<string, DeskObjectId> = {
-      "gacha-entry": "packs",
-      "gacha-open": "packs",
-      album: "album",
-      "album-view": "album",
-      deck: "deck",
-      "deck-view": "deck",
-      "deck-review": "deck",
-      "battle-tab": "battle",
-      "battle-view": "battle",
+    if (!deckUserId) return
+    const controller = new AbortController()
+    fetchDeck(deckUserId, controller.signal)
+      .then((deck) =>
+        setDeckFilled({
+          filled: deck.slots.filter((slot) => slot.card).length,
+          size: deck.slots.length,
+        })
+      )
+      .catch(() => {
+        if (!controller.signal.aborted) setDeckFilled(null)
+      })
+    return () => controller.abort()
+  }, [deckUserId, deckReload, panel])
+  useEffect(() => onDeskData(null, () => setDeckReload((value) => value + 1)), [])
+
+  const packTotal =
+    packState && packState.userId === user?.id
+      ? Object.values(packState.data).reduce((sum, count) => sum + count, 0)
+      : 0
+
+  /** 底栏入口：同一组再点一次关闭；锁定的弹提示 */
+  const openGroup = (id: NavGroupId) => {
+    const group = NAV_GROUPS.find((entry) => entry.id === id)!
+    if (panel && navGroupOf(panel) === id) {
+      modalRef.current?.close()
+      return
     }
-    const id = needed[progress.tutorialStep]
-    if (!id) return
-    const item = items.find((entry) => entry.object === id && entry.stowed)
-    if (item) {
-      unstow(item.id, OBJECT_META[id].x, OBJECT_META[id].y)
+    if (!isModuleUnlocked(group.panel, progress)) {
+      playSfx("deny")
+      showToast(`${group.label} · ${lockHintOf(group.panel, progress)}`)
+      return
     }
-  }, [progress.tutorialStep, progress.tutorialDone, items, unstow])
+    playSfx("tab")
+    setPanel(group.panel)
+  }
 
   const itemsRef = useRef(items)
   useEffect(() => {
@@ -469,70 +481,45 @@ export function DeskPage() {
     return () => stage.removeEventListener(CARD_POINTER_DROP_EVENT, onDrop)
   }, [spawnCards, showToast])
 
-  // 收进抽屉的物件不在桌上：飞向它们的东西改落进抽屉
-  const album = items.find((it) => it.object === "album" && !it.stowed)
-  const backpack = items.find((it) => it.object === "backpack" && !it.stowed)
-
-  /** 卡册 / 纸盒收在抽屉里时的落点：抽屉开着是它那一格，合着是抽屉面 */
-  const drawerSlot = (
-    object: DeskObjectId,
+  /** 卡飞进底栏「收藏」按钮中心时的左上角；按钮在舞台之外，飞行中的卡会被舞台下沿裁掉，像落进了底栏 */
+  const dockSlot = (
+    group: DockDropGroup,
     size: { w: number; h: number }
   ): FlightSlot | null => {
-    const box = drawerRef.current?.targetRect(object)
+    const btn = document.querySelector<HTMLElement>(`.dock-btn[data-group="${group}"]`)
     const stage = stageRef.current?.getBoundingClientRect()
-    if (!box || !stage) return null
+    if (!btn || !stage) return null
+    const box = btn.getBoundingClientRect()
     return {
       left: box.left - stage.left + box.width / 2 - size.w / 2,
       top: box.top - stage.top + box.height / 2 - size.h / 2,
     }
   }
+  const albumSlot = () => dockSlot("collection", ITEM_SIZE.card)
+  const backpackSlot = () => dockSlot("open", ITEM_SIZE.pack)
 
-  /** 卡飞进活页夹中心时的左上角 */
-  const albumSlot = (): FlightSlot | null => {
-    if (!album) return drawerSlot("album", ITEM_SIZE.card)
-    const size = OBJECT_META.album
-    return {
-      left: album.x * stageSize.w + size.w / 2 - ITEM_SIZE.card.w / 2,
-      top: album.y * stageSize.h + size.h / 2 - ITEM_SIZE.card.h / 2,
-    }
-  }
-
-  /** 卡包飞进卡盒翻盖下沿时的左上角（翻盖高度见 desk-objects.css 的 .obj-box__lid） */
-  const backpackSlot = (): FlightSlot | null => {
-    if (!backpack) return drawerSlot("backpack", ITEM_SIZE.pack)
-    const size = OBJECT_META.backpack
-    return {
-      left: backpack.x * stageSize.w + size.w / 2 - ITEM_SIZE.pack.w / 2,
-      top: backpack.y * stageSize.h + size.h * 0.46 - ITEM_SIZE.pack.h / 2,
-    }
-  }
-
-  /** 东西落进 receiver：翻盖扣回去（过冲），物件被砸得一沉再弹回；receiver 收在抽屉里就是抽屉弹一下 */
-  const land = (receiver: DeskObjectId) => {
-    setAwaiting(null)
+  /** 东西落进底栏按钮：按钮弹一下，落进去的那一声 */
+  const land = (receiver: DockDropGroup) => {
     setReceiving(receiver)
-    // 掉进盒子里的那一下
     playSfx("thud", { volume: 0.55, rate: 1.2 })
     if (receiveTimer.current) window.clearTimeout(receiveTimer.current)
     receiveTimer.current = window.setTimeout(() => setReceiving(null), 540)
-    if (itemsRef.current.some((it) => it.object === receiver && it.stowed))
-      drawerRef.current?.bump()
   }
 
   /**
    * 从松手的位置缩小飞到 slot，落地后把物件从桌面拿走。
-   * 返回的 Promise 在落地时完成；receiver 是接住它的桌面物件：起飞时先掀开翻盖，落地时扣回并弹一下。
+   * 返回的 Promise 在落地时完成；receiver 是接住它的底栏按钮，落地时弹一下。
    */
   const flyInto = (
     item: DeskItem,
     source: FlightSource,
     slot: FlightSlot,
-    receiver?: DeskObjectId
+    receiver?: DockDropGroup
   ) =>
     new Promise<void>((resolve) => {
       // 上一件还在飞：让它立刻落定，不然会被这一件顶掉、永远留在桌上
       flightDone.current?.()
-      setDropTarget(null)
+      setDockHot(null)
       playSfx("paper")
       setCollecting({
         id: item.id,
@@ -542,7 +529,6 @@ export function DeskPage() {
         scale: slot.scale ?? 0.16,
         fade: slot.fade ?? true,
       })
-      if (receiver) setAwaiting(receiver)
       const done = () => {
         if (flightDone.current !== done) return
         flightDone.current = null
@@ -563,7 +549,7 @@ export function DeskPage() {
     destination = albumSlot()
   ) => {
     if (!destination) return
-    void flyInto(item, source, destination, album ? undefined : "album").then(
+    void flyInto(item, source, destination, "collection").then(
       () => showToast("已收入卡册")
     )
   }
@@ -579,9 +565,7 @@ export function DeskPage() {
     stage: DOMRect
   ) => {
     const size = sizeOf(item)
-    const spread = document.querySelector<HTMLElement>(
-      ".book__spread.album-panel:not([data-preload])"
-    )
+    const spread = document.querySelector<HTMLElement>(".album-panel")
     const userCardId = item.card?.userCardId
     const slotEl =
       userCardId == null
@@ -590,7 +574,7 @@ export function DeskPage() {
             `.album-slot[data-user-card="${userCardId}"]`
           )
     const target =
-      slotEl ?? spread?.querySelector<HTMLElement>(".book__folio") ?? spread
+      slotEl ?? spread?.querySelector<HTMLElement>(".album-pager") ?? spread
     if (!target) return collectCard(item, source)
     const box = target.getBoundingClientRect()
     const slot: FlightSlot = {
@@ -697,14 +681,6 @@ export function DeskPage() {
         })
       )
     )
-    if (packs.length) {
-      // 第一个卡包起飞时掀开翻盖（卡包排在卡后面起飞），全部落地时扣回
-      if (receiveTimer.current) window.clearTimeout(receiveTimer.current)
-      receiveTimer.current = window.setTimeout(
-        () => setAwaiting("backpack"),
-        cards.length * 24
-      )
-    }
     if (quickTimer.current) window.clearTimeout(quickTimer.current)
     quickTimer.current = window.setTimeout(
       async () => {
@@ -712,8 +688,8 @@ export function DeskPage() {
         flying
           .filter((it) => it.kind !== "pack" || !it.token)
           .forEach((it) => remove(it.id))
-        if (packs.length) land("backpack")
-        if (cards.length && !album) drawerRef.current?.bump()
+        if (packs.length) land("open")
+        if (cards.length) land("collection")
         setQuickTargets(null)
         const parts: string[] = []
         if (cards.length) parts.push(`${cards.length} 张卡收入卡册`)
@@ -864,7 +840,7 @@ export function DeskPage() {
    */
   const returnPack = async (
     item: DeskItem,
-    flight?: { source: FlightSource; slot: FlightSlot; receiver?: DeskObjectId }
+    flight?: { source: FlightSource; slot: FlightSlot; receiver?: DockDropGroup }
   ) => {
     if (item.token && !user) {
       showToast("请先登录，卡包留在桌面")
@@ -914,20 +890,8 @@ export function DeskPage() {
     if (!stage) return
     const rect = stage.getBoundingClientRect()
     const size = sizeOf(item)
-    // 从抽屉里拿出来：按原尺寸抓在物件正中
-    const fromDrawer = !!item.stowed
-    const originX = fromDrawer
-      ? Math.min(
-          Math.max(e.clientX - rect.left - size.w / 2, 0),
-          rect.width - size.w
-        )
-      : item.x * rect.width
-    const originY = fromDrawer
-      ? Math.min(
-          Math.max(e.clientY - rect.top - size.h / 2, 0),
-          rect.height - size.h
-        )
-      : item.y * rect.height
+    const originX = item.x * rect.width
+    const originY = item.y * rect.height
     const startX = e.clientX
     const startY = e.clientY
     const grab = {
@@ -943,7 +907,9 @@ export function DeskPage() {
     let moved = false
     let nx = originX
     let ny = originY
-    let target: DeskObjectId | undefined
+    /** 底栏上能接住它的入口；只有指针真的悬在那个按钮上才成立 */
+    const accepts = dockTargetFor(item)
+    let target: DockDropGroup | undefined
     let deckSlot: number | null = null
     let albumPanelHover = false
     let backpackPanelHover = false
@@ -952,19 +918,6 @@ export function DeskPage() {
       (item.card?.isHero ? user?.hero?.userCardId : undefined)
     const canAssign = item.kind === "card" && assignId != null
     front(item.id)
-    /** 抽屉收得下它：桌上的物件收进去；卡册 / 纸盒在抽屉里时，卡和卡包也算收进它们 */
-    const stowedIds = new Set(
-      itemsRef.current.flatMap((it) =>
-        it.stowed && it.object ? [it.object] : []
-      )
-    )
-    const drawerTakes =
-      item.kind === "object"
-        ? !fromDrawer
-        : stowedIds.has(item.kind === "card" ? "album" : "backpack")
-    let overDrawer = false
-    let drawerHot = false
-    let drawerTimer = 0
 
     let hitFrame = 0
     let hitX = startX
@@ -975,7 +928,7 @@ export function DeskPage() {
       let slotEl: HTMLElement | null = null
       let overAlbum = false
       let overBackpack = false
-      let hovered: DeskObjectId | undefined
+      let hovered: string | undefined
       for (const el of elements) {
         if (canAssign && !slotEl)
           slotEl = el.closest<HTMLElement>("[data-slot]")
@@ -984,9 +937,7 @@ export function DeskPage() {
         if (item.kind === "pack" && !overBackpack)
           overBackpack = !!el.closest(".backpack-panel")
         if (!hovered) {
-          const object = el.closest<HTMLElement>(".desk-item[data-object]")
-          if (object && object.dataset.id !== item.id)
-            hovered = object.dataset.object as DeskObjectId
+          hovered = el.closest<HTMLElement>(".dock-btn[data-group]")?.dataset.group
         }
       }
       const parsed = slotEl ? Number(slotEl.dataset.slot) : Number.NaN
@@ -1003,31 +954,10 @@ export function DeskPage() {
         backpackPanelHover = overBackpack
         emitDeskHover("backpack", overBackpack)
       }
-      // 抽屉压在物件层上面：指在抽屉上时不算悬在底下的桌面物件
-      overDrawer = !!elements[0]?.closest(".desk-drawer")
-      if (overDrawer) hovered = undefined
-      const hot = overDrawer && drawerTakes
-      if (hot !== drawerHot) {
-        drawerHot = hot
-        drawerRef.current?.hint(hot)
-        if (hot) playSfx("tick")
-      }
-      // 拖着物件停在合着的抽屉面上一会儿：抽屉自己拉开
-      const onFront =
-        hot &&
-        item.kind === "object" &&
-        !!elements[0]?.closest(".desk-drawer__front")
-      if (onFront && !drawerRef.current?.isOpen()) {
-        if (!drawerTimer)
-          drawerTimer = window.setTimeout(() => drawerRef.current?.open(), 450)
-      } else if (drawerTimer) {
-        window.clearTimeout(drawerTimer)
-        drawerTimer = 0
-      }
-      const next = acceptsDrop(hovered, item) ? hovered : undefined
+      const next = accepts && hovered === accepts ? accepts : undefined
       if (next !== target) {
         target = next
-        setDropTarget(next ?? null)
+        setDockHot(next ?? null)
         if (next) playSfx("tick")
       }
     }
@@ -1043,18 +973,17 @@ export function DeskPage() {
       if (deckSlot != null) emitDeskHover("deck", null)
       if (albumPanelHover) emitDeskHover("album", false)
       if (backpackPanelHover) emitDeskHover("backpack", false)
-      setDropTarget(null)
-      if (drawerTimer) window.clearTimeout(drawerTimer)
-      if (drawerHot) drawerRef.current?.hint(false)
+      setDockHot(null)
+      setDockArmed(null)
     }
-    /** Esc / 窗口失焦：放弃这次拖动，物件回到拿起之前（桌上的不动，抽屉里的还在抽屉里） */
+    /** Esc / 窗口失焦：放弃这次拖动，物件回到拿起之前 */
     const abort = () => {
       if (hitFrame) cancelAnimationFrame(hitFrame)
       release()
     }
     const onKey = (ev: KeyboardEvent) => {
       if (ev.key !== "Escape") return
-      // 只放弃拖动，不让同一下 Esc 把底下的书 / 抽屉也关了
+      // 只放弃拖动，不让同一下 Esc 把底下的面板也关了
       ev.stopPropagation()
       abort()
     }
@@ -1070,6 +999,8 @@ export function DeskPage() {
         playSfx("lift", { rate: item.kind === "object" ? 0.72 : item.kind === "pack" ? 0.9 : 1.12 })
         liftPointer.current = { x: rect.left + originX, y: rect.top + originY }
         setLifted({ item, grab })
+        // 先把能接住它的底栏按钮轻轻提示出来
+        setDockArmed(accepts)
       }
       nx = Math.min(Math.max(originX + dx, 0), rect.width - size.w)
       ny = Math.min(Math.max(originY + dy, 0), rect.height - size.h)
@@ -1100,43 +1031,24 @@ export function DeskPage() {
         return
       }
       if (ev.type === "pointercancel") {
-        if (!fromDrawer) move(item.id, nx / rect.width, ny / rect.height)
+        move(item.id, nx / rect.width, ny / rect.height)
         return
       }
-      if (drawerHot) {
-        if (item.kind === "object" && item.object) {
-          stow(item.id)
-          playSfx("thud")
-          drawerRef.current?.bump()
-          showToast(`${OBJECT_META[item.object].thing}收进了抽屉`)
-        } else if (item.kind === "card") {
-          collectCard(item, source)
-        } else {
-          const slot = backpackSlot()
-          void returnPack(
-            item,
-            slot ? { source, slot, receiver: "backpack" } : undefined
-          )
-        }
-        return
-      }
-      // 从抽屉里拿起又放回抽屉上：原样收着
-      if (fromDrawer && overDrawer) return
       if (albumPanelHover && item.kind === "card") {
         collectIntoAlbum(item, source, rect)
         return
       }
       if (backpackPanelHover && item.kind === "pack") {
-        const panel = document
+        const panelBox = document
           .querySelector(".backpack-panel")
           ?.getBoundingClientRect()
-        const slot = panel
+        const slot = panelBox
           ? {
-              left: panel.left - rect.left + panel.width / 2 - size.w / 2,
+              left: panelBox.left - rect.left + panelBox.width / 2 - size.w / 2,
               top:
-                panel.top -
+                panelBox.top -
                 rect.top +
-                Math.min(panel.height / 2, 180) -
+                Math.min(panelBox.height / 2, 180) -
                 size.h / 2,
             }
           : backpackSlot()
@@ -1153,21 +1065,20 @@ export function DeskPage() {
         showToast(`已放入卡组第 ${deckSlot + 1} 槽`)
         return
       }
-      if (target === "album") {
+      if (target === "collection") {
         collectCard(item, source)
         return
       }
-      if (target === "backpack") {
+      if (target === "open") {
         const slot = backpackSlot()
         void returnPack(
           item,
-          slot ? { source, slot, receiver: "backpack" } : undefined
+          slot ? { source, slot, receiver: "open" } : undefined
         )
         return
       }
-      // 落桌：轻轻弹一下，影子收紧；从抽屉里拖出来的就落在松手的地方
-      if (fromDrawer) unstow(item.id, nx / rect.width, ny / rect.height)
-      else move(item.id, nx / rect.width, ny / rect.height)
+      // 落桌：轻轻弹一下，影子收紧
+      move(item.id, nx / rect.width, ny / rect.height)
       // 卡是轻轻一拍，卡包略沉，物件是闷的一声
       if (item.kind === "card") playSfx("deal")
       else if (item.kind === "pack") playSfx("drop", { rate: 0.88 })
@@ -1183,57 +1094,25 @@ export function DeskPage() {
     window.addEventListener("blur", abort)
   }
 
-  const openBook = (panel: PanelId, item: DeskItem) => {
-    const stage = stageRef.current
-    const size = sizeOf(item)
-    const rect = stage?.getBoundingClientRect()
-    // 收在抽屉里的物件从它那一格翻开
-    const cell =
-      item.stowed && item.object
-        ? drawerRef.current?.targetRect(item.object)
-        : null
-    setBook({
-      panel,
-      origin: cell
-        ? { x: cell.left + cell.width / 2, y: cell.top + cell.height / 2 }
-        : rect
-          ? {
-              x: rect.left + item.x * rect.width + size.w / 2,
-              y: rect.top + item.y * rect.height + size.h / 2,
-            }
-          : null,
-    })
-  }
-
   const onTap = async (item: DeskItem) => {
-    if (item.kind === "object" && item.object) {
-      if (item.object === "button") {
-        if (!user) {
-          showToast("请先登录（osu! 或游客）")
-          return
-        }
-        if (poolPacks <= 0) {
-          showToast(`背包里没有${POOL_META[pool].label}`)
-          return
-        }
-        if (dealBusy.current) return
-        // 上一次按压动画还没走完：直接吞掉这次点击，避免 class 在同一帧里被反复擦写
-        if (pressingRef.current) return
-        pressingRef.current = true
-        pressHandled.current = false
-        playSfx("click")
-        setPressing(true)
-        setPressId((id) => id + 1)
+    if (item.kind === "object") {
+      // 桌上唯一的物件是发牌按钮
+      if (!user) {
+        showToast("请先登录（osu! 或游客）")
         return
       }
-      if (!isModuleUnlocked(item.object, progress)) {
-        playSfx("deny")
-        showToast(
-          `${OBJECT_META[item.object].label} · ${lockHintOf(item.object, progress)}`
-        )
+      if (poolPacks <= 0) {
+        showToast(`背包里没有${POOL_META[pool].label}`)
         return
       }
-      openBook(item.object, item)
+      if (dealBusy.current) return
+      // 上一次按压动画还没走完：直接吞掉这次点击，避免 class 在同一帧里被反复擦写
+      if (pressingRef.current) return
+      pressingRef.current = true
+      pressHandled.current = false
+      playSfx("click")
+      setPressing(true)
+      setPressId((id) => id + 1)
       return
     }
 
@@ -1437,21 +1316,8 @@ export function DeskPage() {
   }
 
   const visibleItems = user
-    ? items.filter((item) => {
-        if (item.card?.isHero && !user.hero) return false
-        if (item.kind === "object" && item.object) {
-          return isModuleVisibleOnDesk(item.object, progress)
-        }
-        return true
-      })
+    ? items.filter((item) => !(item.card?.isHero && !user.hero))
     : []
-  const stowedItems = items.filter((item) => {
-    if (!item.stowed) return false
-    if (item.kind === "object" && item.object) {
-      return isModuleVisibleOnDesk(item.object, progress)
-    }
-    return true
-  })
   const poolPacks =
     packState && packState.userId === user?.id
       ? (packState.data[SERVER_POOL[pool]] ?? 0)
@@ -1470,12 +1336,9 @@ export function DeskPage() {
       return (
         <DeskObject
           id={item.object}
-          username={user?.username ?? null}
-          avatarUrl={user?.avatarUrl ?? null}
-          dropping={dropTarget === item.object}
           deal={deal}
-          locked={!isModuleUnlocked(item.object, progress)}
-          unlockLevel={unlockLevelOf(item.object)}
+          locked={!isModuleUnlocked("button", progress)}
+          unlockLevel={unlockLevelOf("button")}
         />
       )
     }
@@ -1519,13 +1382,12 @@ export function DeskPage() {
     const kept = items.filter((it) => it.kind === "pack" && it.token).length
     reset()
     playSfx("whoosh")
-    stowInvite(false)
     showToast(
       kept ? `桌面已重置 · ${kept} 个卡包还在桌上，可放回背包` : "桌面已重置"
     )
   }
 
-  /** 键盘操作桌上的物件：方向键挪动（Shift 大步）；Delete / Backspace 收走，和拖进抽屉 / 卡册 / 背包走同一套 */
+  /** 键盘操作桌上的物件：方向键挪动（Shift 大步）；Delete / Backspace 收走卡 / 卡包，和拖到底栏走同一套 */
   const onItemKey = (event: ReactKeyboardEvent<HTMLDivElement>, item: DeskItem) => {
     const rect = stageRef.current?.getBoundingClientRect()
     if (!rect) return
@@ -1546,13 +1408,8 @@ export function DeskPage() {
     }
     if (event.key !== "Delete" && event.key !== "Backspace") return
     event.preventDefault()
-    if (item.kind === "object" && item.object) {
-      stow(item.id)
-      playSfx("thud")
-      drawerRef.current?.bump()
-      showToast(`${OBJECT_META[item.object].thing}收进了抽屉`)
-      return
-    }
+    // 发牌按钮不能收走
+    if (item.kind === "object") return
     const source: FlightSource = {
       left: item.x * rect.width,
       top: item.y * rect.height,
@@ -1566,7 +1423,7 @@ export function DeskPage() {
       return
     }
     const slot = backpackSlot()
-    void returnPack(item, slot ? { source, slot, receiver: "backpack" } : undefined)
+    void returnPack(item, slot ? { source, slot, receiver: "open" } : undefined)
   }
 
   return (
@@ -1586,6 +1443,10 @@ export function DeskPage() {
             {user && <LevelMeter level={progress.level} exp={progress.exp} />}
           </div>
           <div className="desk-topbar__actions">
+            <DeskTopbarStatus
+              user={user}
+              onOpenProfile={() => setPanel("account")}
+            />
             <div className="desk-zoom" role="group" aria-label="界面大小" data-sfx="tick">
               <button
                 type="button"
@@ -1689,12 +1550,11 @@ export function DeskPage() {
             return
           if (
             event.target.closest(
-              ".desk-item, .book, .desk-drawer, .invite-env, .invite-modal"
+              ".desk-item, .book, .invite-env, .invite-modal"
             )
           )
             return
-          bookRef.current?.close()
-          drawerRef.current?.close()
+          modalRef.current?.close()
         }}
       >
         <div className="desk-layer">
@@ -1723,12 +1583,9 @@ export function DeskPage() {
             const classes = [
               "desk-item",
               (lifted?.item.id === item.id || isCollecting) && "is-lifted",
-              item.stowed && "is-stowed",
               settling === item.id && "is-settling",
               flying && "is-collecting",
               locked && "is-level-locked",
-              awaiting != null && awaiting === item.object && "is-opening",
-              receiving != null && receiving === item.object && "is-receiving",
             ]
               .filter(Boolean)
               .join(" ")
@@ -1739,29 +1596,17 @@ export function DeskPage() {
                 style={style}
                 data-id={item.id}
                 data-object={item.object}
-                data-tutorial-id={
-                  item.kind === "object" && item.object
-                    ? `${item.object}-entry`
-                    : undefined
-                }
                 data-locked={locked || undefined}
                 aria-disabled={locked || undefined}
                 onPointerDown={(e) => {
-                  if (e.button !== 0 || flying || item.stowed) return
+                  if (e.button !== 0 || flying) return
                   e.preventDefault()
                   e.currentTarget.setPointerCapture(e.pointerId)
                   startDrag(e, item)
                 }}
-                tabIndex={
-                  !item.stowed && !flying ? 0 : undefined
-                }
+                tabIndex={flying ? undefined : 0}
                 onKeyDown={(event) => {
-                  if (
-                    event.target !== event.currentTarget ||
-                    item.stowed ||
-                    flying
-                  )
-                    return
+                  if (event.target !== event.currentTarget || flying) return
                   if (event.key === "Enter" || event.key === " ") {
                     if (event.repeat) return
                     event.preventDefault()
@@ -1776,36 +1621,12 @@ export function DeskPage() {
                     : "button"
                 }
                 aria-label={labelOf(item)}
-                aria-hidden={item.stowed || undefined}
               >
-                {/* 收进抽屉的物件留着空壳不卸载，拖回桌面时不会再播一遍落桌动画；物件本身画在抽屉里 */}
-                <div className="desk-body">
-                  {item.stowed ? null : renderItem(item)}
-                </div>
+                <div className="desk-body">{renderItem(item)}</div>
               </div>
             )
           })}
         </div>
-
-        <DeskDrawer
-          ref={drawerRef}
-          items={stowedItems}
-          liftedId={lifted?.item.id ?? null}
-          render={renderItem}
-          onItemPointerDown={(e, item) => {
-            if (e.button !== 0) return
-            e.preventDefault()
-            e.currentTarget.setPointerCapture(e.pointerId)
-            startDrag(e, item)
-          }}
-          onActivate={(item) => {
-            if (!item.object) return
-            unstow(item.id, OBJECT_META[item.object].x, OBJECT_META[item.object].y)
-            playSfx("drop")
-          }}
-          extra={inviteStowed ? 1 : 0}
-          slotRef={setInviteSlot}
-        />
 
         {(!user || isModuleUnlocked("invite", progress)) && (
           <InviteLetter
@@ -1819,11 +1640,7 @@ export function DeskPage() {
             stageRef={stageRef}
             onToast={showToast}
             onClaimed={onInviteClaimed}
-            onOpenBackpack={() => setBook({ panel: "backpack", origin: null })}
-            stowed={inviteStowed}
-            onStow={stowInvite}
-            drawer={drawerRef}
-            drawerSlot={inviteSlot}
+            onOpenBackpack={() => setPanel("backpack")}
             forceVisible={!user || isModuleUnlocked("invite", progress)}
           />
         )}
@@ -1833,11 +1650,11 @@ export function DeskPage() {
           <b>放到桌面</b>
         </div>
 
-        {book && (
-          <DeskBook
-            ref={bookRef}
-            panel={book.panel}
-            origin={book.origin}
+        {panel && (
+          <DeskModal
+            ref={modalRef}
+            panel={panel}
+            tabs={groupOf(panel)}
             userId={user?.id ?? null}
             username={user?.username ?? null}
             publicId={user?.publicId ?? null}
@@ -1847,29 +1664,36 @@ export function DeskPage() {
             hero={user?.hero ?? null}
             level={progress.level}
             tutorialDone={progress.tutorialDone}
-            onSelect={(panel) => {
-              if (!isModuleUnlocked(panel, progress)) {
-                showToast(
-                  `${OBJECT_META[panel].label} · ${lockHintOf(panel, progress)}`
-                )
+            onSelect={(next) => {
+              if (!isModuleUnlocked(next, progress)) {
+                showToast(`${PANEL_META[next].label} · ${lockHintOf(next, progress)}`)
                 return
               }
-              setBook((prev) => ({ panel, origin: prev?.origin ?? null }))
+              setPanel(next)
             }}
-            onLocked={(panel) =>
-              showToast(
-                `${OBJECT_META[panel].label} · ${lockHintOf(panel, progress)}`
-              )
+            onLocked={(next) =>
+              showToast(`${PANEL_META[next].label} · ${lockHintOf(next, progress)}`)
             }
-            onClose={() => setBook(null)}
+            onClose={() => setPanel(null)}
             onLogout={() => {
               logout()
-              bookRef.current?.close()
+              modalRef.current?.close()
             }}
             onHeroClaimed={refreshUser}
           />
         )}
       </main>
+
+      <DeskDock
+        receiving={receiving}
+        active={navGroupOf(panel)}
+        progress={progress}
+        packCount={packTotal}
+        deckFilled={deckUserId ? deckFilled : null}
+        hot={dockHot}
+        armed={dockArmed}
+        onOpen={openGroup}
+      />
 
       {opening && (
         <PackOpener

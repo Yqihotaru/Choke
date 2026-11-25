@@ -1,5 +1,4 @@
 import type { ApiUserCard } from "@/desk/session/api"
-import type { DeskObjectId } from "@/desk/lib/objects"
 import { EVENT_POOLS, POOL_META } from "@/desk/lib/rarity"
 import type { DeskItem, PackPool } from "@/desk/lib/types"
 
@@ -67,10 +66,11 @@ export function tiltOf(id: string) {
   return ((h % 7) - 3) * 0.8
 }
 
-/** 卡只能收进卡册，卡包只能放回纸盒 */
-export function acceptsDrop(target: DeskObjectId | undefined, item: DeskItem) {
-  return (
-    (target === "album" && item.kind === "card") ||
-    (target === "backpack" && item.kind === "pack")
-  )
+/** 底栏上能接住拖动物的入口：卡收进「收藏」，卡包放回「开包」 */
+export type DockDropGroup = "collection" | "open"
+
+export function dockTargetFor(item: DeskItem): DockDropGroup | null {
+  if (item.kind === "card") return "collection"
+  if (item.kind === "pack") return "open"
+  return null
 }
