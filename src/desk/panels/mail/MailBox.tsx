@@ -10,6 +10,7 @@ import {
   GiOpenTreasureChest,
   GiPin,
   GiTwoCoins,
+  GiUpgrade,
 } from "react-icons/gi"
 
 import { MAIL_RETENTION_DAYS, type MailAttachmentLine, type MailKind, type MailView } from "@choke/shared/mail"
@@ -43,6 +44,7 @@ const ATTACHMENT_ICON = {
   coins: GiTwoCoins,
   essence: GiCutDiamond,
   stamina: GiLightningArc,
+  playerExp: GiUpgrade,
   item: GiCrystalShine,
   pack: GiOpenTreasureChest,
   card: GiCardRandom,

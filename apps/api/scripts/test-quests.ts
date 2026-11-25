@@ -47,6 +47,7 @@ const { nextReset, periodKey, resetDayKey, resetMonthDay, resetMonthKey, resetWe
   "@choke/shared/reset"
 )
 const { daysInMonthKey, mergeQuestRewards, signInRewardFor, questPeriodKey } = await import("@choke/shared/quests")
+const { expToNextPlayerLevel } = await import("@choke/shared/player")
 
 const app = Fastify()
 app.setErrorHandler(handleError)
@@ -109,6 +110,13 @@ const progressOf = async (userId: string, questId: string) =>
   (await rowsOf(userId)).filter((row) => row.questId === questId).reduce((sum, row) => sum + row.progress, 0)
 const defOf = (questId: string) => QUEST_CONTENT.quests[questId]!
 const rewardCoins = (questId: string) => defOf(questId).rewards.coins ?? 0
+/** 玩家总经验：升过级的经验换算回去，等级变化不影响比较 */
+const expOf = async (userId: string) => {
+  const [row] = await db.select({ level: users.playerLevel, exp: users.playerExp }).from(users).where(eq(users.id, userId))
+  let total = row!.exp
+  for (let level = 1; level < row!.level; level += 1) total += expToNextPlayerLevel(level)
+  return total
+}
 
 console.log("quest tests")
 
@@ -196,6 +204,54 @@ await test("多种奖励（金币 + 道具）一起发，流水逐项对得上",
     const logged = (await ledgerOf(userId)).filter((e) => e.kind === "item" && e.ref === itemId)
     assert.equal(logged.reduce((sum, e) => sum + e.delta, 0), count)
   }
+})
+
+await test("玩家经验：领任务才到账、只到账一次，不进流水，能带着升级", async () => {
+  const t = bj(2026, 11, 24, 10)
+  const gain = defOf("daily-osu-beatmap").rewards.playerExp!
+  assert.ok(gain > 0)
+  const userId = await newUser({ playerLevel: 5, playerExp: 0 })
+  await recordQuestEvent(db, userId, "osu-daily-pass", { now: t })
+  const before = await expOf(userId)
+  assert.equal(before, await expOf(await newUser({ playerLevel: 5, playerExp: 0 })), "只记进度不会加经验")
+  const result = await quests.claimQuest(userId, "daily-osu-beatmap", t)
+  assert.deepEqual(
+    result.rewards.find((line) => line.kind === "playerExp"),
+    { kind: "playerExp", label: "玩家经验", count: gain },
+  )
+  assert.equal((await expOf(userId)) - before, gain)
+  await rejectsWith(quests.claimQuest(userId, "daily-osu-beatmap", t), "already_claimed")
+  assert.equal((await expOf(userId)) - before, gain, "重复领不会再加")
+  assert.ok(!(await ledgerOf(userId)).some((entry) => entry.kind === ("playerExp" as never)), "经验不写流水")
+
+  // 差一点就升级：领完等级要涨，多出来的经验留在新等级里
+  const near = await newUser({ playerLevel: 5, playerExp: expToNextPlayerLevel(5) - 1 })
+  await recordQuestEvent(db, near, "osu-daily-pass", { now: t })
+  await quests.claimQuest(near, "daily-osu-beatmap", t)
+  const [row] = await db.select({ level: users.playerLevel, exp: users.playerExp }).from(users).where(eq(users.id, near))
+  assert.equal(row!.level, 6)
+  assert.equal(row!.exp, gain - 1)
+})
+
+await test("玩家经验：活跃度宝箱、一键全领也会发，合并成一行展示", async () => {
+  const t = bj(2026, 11, 24, 10)
+  const userId = await newUser({ playerLevel: 5, playerExp: 0 })
+  for (const event of ["sign-in", "pack-open", "feed", "fuse", "dismantle", "dungeon-run", "market-buy", "market-sell"] as const) {
+    await recordQuestEvent(db, userId, event, { now: t })
+  }
+  const before = await expOf(userId)
+  const all = await quests.claimAllQuests(userId, t)
+  assert.ok(all.chests.length > 0, "攒够点数解锁了宝箱")
+  const expected = mergeQuestRewards([
+    ...all.claimed.map((id) => defOf(id).rewards),
+    ...all.chests.map((key) => {
+      const [period, at] = key.split("-") as ["daily", string]
+      return QUEST_CONTENT.activity[period]!.find((chest) => chest.at === Number(at))!.rewards
+    }),
+  ]).playerExp!
+  assert.ok(expected > 0)
+  assert.deepEqual(all.rewards.filter((line) => line.kind === "playerExp"), [{ kind: "playerExp", label: "玩家经验", count: expected }])
+  assert.equal((await expOf(userId)) - before, expected)
 })
 
 await test("并发领取同一条任务只成功一次", async () => {
@@ -421,6 +477,7 @@ await test("新手四日补给：按账号累计签到发放，跨月不断、�
 
 await test("过期没领的奖励合成一封邮件发到邮箱，只发一次；没完成的作废", async () => {
   const userId = await newUser()
+  const before0 = await expOf(userId)
   const t = bj(2026, 11, 24, 10)
   await recordQuestEvent(db, userId, "feed", { now: t })
   await recordQuestEvent(db, userId, "dungeon-run", { now: t })
@@ -436,8 +493,10 @@ await test("过期没领的奖励合成一封邮件发到邮箱，只发一次�
   await quests.getQuests(userId, bj(2026, 11, 25, 4, 0))
   const sent = await mailsOf(userId)
   assert.equal(sent.length, 1)
-  const expected = mergeQuestRewards([defOf("daily-feed").rewards, defOf("daily-dungeon").rewards])
-  assert.deepEqual(sent[0]!.attachment, expected)
+  const { playerExp: expectedExp = 0, ...expected } = mergeQuestRewards([defOf("daily-feed").rewards, defOf("daily-dungeon").rewards])
+  assert.deepEqual(sent[0]!.attachment, expected, "玩家经验不进邮件附件")
+  assert.ok(expectedExp > 0)
+  assert.equal((await expOf(userId)) - before0, expectedExp + (defOf("daily-open-pack").rewards.playerExp ?? 0), "经验在转邮件时直接到账")
   assert.equal(sent[0]!.claimedAt, null, "邮件要玩家自己去领")
   assert.equal(await coinsOf(userId), coinsBefore, "邮件本身不直接发金币")
 
@@ -657,7 +716,8 @@ await test("活跃度宝箱：并发领同一个宝箱只发一次", async () =>
 })
 
 await test("一键全领：任务和宝箱一起领，活跃点封顶 100，五档全开", async () => {
-  const userId = await newUser()
+  // 从低等级起步：日常经验领完会升级，别让它顺手碰到「达到 Lv10」成就影响 claimable
+  const userId = await newUser({ playerLevel: 3 })
   const t = bj(2026, 11, 24, 10)
   for (const [id, def] of Object.entries(QUEST_CONTENT.quests)) if (def.period === "daily") await completeQuest(userId, id, t)
 
@@ -706,7 +766,9 @@ await test("过期没领的宝箱也会转成邮件，已领的不会重发", as
   await quests.getQuests(userId, bj(2026, 11, 25, 10))
   const sent = await mailsOf(userId)
   assert.equal(sent.length, 1)
-  assert.deepEqual(sent[0]!.attachment, mergeQuestRewards([dailyChests[0]!.rewards]))
+  const { playerExp: chestExp = 0, ...chestAttachment } = mergeQuestRewards([dailyChests[0]!.rewards])
+  assert.deepEqual(sent[0]!.attachment, chestAttachment)
+  assert.ok(chestExp > 0)
   await quests.getQuests(userId, bj(2026, 11, 26, 10))
   assert.equal((await mailsOf(userId)).length, 1)
   const overview = await quests.getQuests(userId, bj(2026, 11, 26, 10))

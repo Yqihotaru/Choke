@@ -64,7 +64,7 @@ export function isAttachmentEmpty(attachment: MailAttachment | null | undefined)
 
 /** 列表里给界面看的附件行：服务端把名字都解析好，前端只管显示 */
 export interface MailAttachmentLine {
-  kind: "coins" | "essence" | "stamina" | "item" | "pack" | "card"
+  kind: "coins" | "essence" | "stamina" | "playerExp" | "item" | "pack" | "card"
   label: string
   count: number
   foil?: boolean

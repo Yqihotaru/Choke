@@ -30,6 +30,8 @@ import { db } from "./db/client"
 import { questProgress, users } from "./db/schema"
 import { MYSTERY_PACK, PACKS } from "./gacha/packs"
 import { sendMail } from "./mail"
+import type { LedgerSource } from "./ledger"
+import { addPlayerExperience } from "./player-exp"
 import { QUESTS, recordQuestEvent } from "./quest-events"
 import { grantAttachment } from "./rewards"
 import { TxAbort, lockUser, type Tx } from "./tx"
@@ -40,6 +42,13 @@ const EXPIRED_SWEEP_LIMIT = 200
 
 /** 奖励在 schema 里已经核对过物品和卡包都存在，这里只是换成发奖函数认的类型 */
 const asAttachment = (reward: QuestReward) => reward as MailAttachment
+
+/** 发任务奖励：玩家经验直接加到账号上（不进邮件附件和流水），其余走发奖函数 */
+async function grantQuestReward(tx: Tx, userId: string, reward: QuestReward, origin: LedgerSource, now: number) {
+  const { playerExp = 0, ...rest } = reward
+  if (Object.keys(rest).length > 0) await grantAttachment(tx, userId, asAttachment(rest), origin)
+  await addPlayerExperience(tx, userId, playerExp, now)
+}
 
 const chestsOf = (period: ResettingPeriod) => QUEST_CONTENT.activity[period] ?? []
 
@@ -117,6 +126,7 @@ function rewardLines(reward: QuestReward): MailAttachmentLine[] {
   if (reward.coins) lines.push({ kind: "coins", label: "金币", count: reward.coins })
   if (reward.essence) lines.push({ kind: "essence", label: "闪卡精华", count: reward.essence })
   if (reward.stamina) lines.push({ kind: "stamina", label: "体力", count: reward.stamina })
+  if (reward.playerExp) lines.push({ kind: "playerExp", label: "玩家经验", count: reward.playerExp })
   for (const { itemId, count } of reward.items ?? []) {
     lines.push({ kind: "item", label: ITEMS[itemId as keyof typeof ITEMS]?.name ?? itemId, count })
   }
@@ -248,7 +258,7 @@ async function addActivity(tx: Tx, userId: string, period: QuestPeriod, points: 
 
 async function claimRow(tx: Tx, userId: string, questId: string, row: Row, now: number): Promise<QuestReward> {
   const def = QUEST_CONTENT.quests[questId]!
-  await grantAttachment(tx, userId, asAttachment(def.rewards), { source: "quest", sourceRef: `${questId}@${row.periodKey}` })
+  await grantQuestReward(tx, userId, def.rewards, { source: "quest", sourceRef: `${questId}@${row.periodKey}` }, now)
   await tx
     .update(questProgress)
     .set({ claimedAt: new Date(now), updatedAt: new Date(now) })
@@ -261,7 +271,7 @@ async function claimRow(tx: Tx, userId: string, questId: string, row: Row, now: 
 async function claimChestRow(tx: Tx, userId: string, row: Row, now: number): Promise<QuestReward> {
   const rule = ruleOf(row.questId)
   if (!rule?.reward) throw new TxAbort(404, "not_found", "没有这个宝箱")
-  await grantAttachment(tx, userId, asAttachment(rule.reward), { source: "quest-chest", sourceRef: `${row.questId}@${row.periodKey}` })
+  await grantQuestReward(tx, userId, rule.reward, { source: "quest-chest", sourceRef: `${row.questId}@${row.periodKey}` }, now)
   await tx
     .update(questProgress)
     .set({ claimedAt: new Date(now), updatedAt: new Date(now) })
@@ -350,7 +360,7 @@ export async function signIn(userId: string, now = Date.now()) {
       .onConflictDoNothing()
       .returning({ periodKey: questProgress.periodKey })
     if (inserted.length === 0) throw new TxAbort(400, "already_signed", "今天已经签到过了")
-    await grantAttachment(tx, userId, asAttachment(reward), { source: "sign-in", sourceRef: dayKey })
+    await grantQuestReward(tx, userId, reward, { source: "sign-in", sourceRef: dayKey }, now)
     await recordQuestEvent(tx, userId, "sign-in", { now })
     return { day, rewards: rewardLines(reward) }
   })
@@ -417,13 +427,17 @@ export async function mailExpiredRewards(userId: string, now = Date.now()): Prom
       names.push(rule.name)
     }
     if (rewards.length === 0) return 0
+    const { playerExp = 0, ...attachment } = mergeQuestRewards(rewards)
+    await addPlayerExperience(tx, userId, playerExp, now)
     await sendMail(
       userId,
       {
         kind: "reward",
         title: "任务奖励补发",
-        body: `这些任务在重置前完成了，但没来得及领取，奖励随这封邮件发给你：\n${names.join("、")}`,
-        attachment: asAttachment(mergeQuestRewards(rewards)),
+        body: `这些任务在重置前完成了，但没来得及领取，奖励随这封邮件发给你：\n${names.join("、")}${
+          playerExp > 0 ? `\n另有 ${playerExp} 点玩家经验已直接加到账号上。` : ""
+        }`,
+        attachment: asAttachment(attachment),
       },
       tx,
     )

@@ -49,7 +49,6 @@ import type {
 } from "@choke/shared/expedition/view"
 import { isAttachmentEmpty } from "@choke/shared/mail"
 import { dungeonByMapId } from "@choke/shared/dungeons"
-import { addPlayerExp } from "@choke/shared/player"
 import { lockMessage, lockReason } from "@choke/shared/unlocks"
 import { randomSeed } from "@choke/shared/rng"
 import { nextReset } from "@choke/shared/reset"
@@ -70,6 +69,7 @@ import {
 import { recordLedger } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
 import { sendMail } from "../mail"
+import { addPlayerExperience } from "../player-exp"
 import { grantAttachment } from "../rewards"
 import { TxAbort, lockUser, type Tx } from "../tx"
 import { assertFeature, loadUnlockContext } from "../unlocks"
@@ -654,21 +654,6 @@ export async function retryBattle(userId: string, now = Date.now()): Promise<Exp
 }
 
 // ---------- 结算 ----------
-
-async function addPlayerExperience(tx: Tx, userId: string, amount: number, now: number) {
-  if (amount <= 0) return
-  const [row] = await tx
-    .select({ level: users.playerLevel, exp: users.playerExp })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
-  if (!row) return
-  const next = addPlayerExp({ level: row.level, exp: row.exp }, amount)
-  await tx
-    .update(users)
-    .set({ playerLevel: next.level, playerExp: next.exp, progressUpdatedAt: now })
-    .where(eq(users.id, userId))
-}
 
 /**
  * 结束一次出征：算奖励、发奖励、处理体力、写图鉴之外的记录。必须在事务里，且已经锁了用户和这条出征。
