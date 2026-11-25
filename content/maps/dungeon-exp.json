@@ -1,5 +1,6 @@
 {
   "kind": "daily",
+  "unlock": "dungeons",
   "name": "练习室 · 节拍试炼",
   "summary": "经验资源小远征：首通后可扫荡练习室。可在校准仪、激进强敌路线与休整密道之间抉择。",
   "staminaCost": 20,

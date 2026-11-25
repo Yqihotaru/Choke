@@ -49,6 +49,7 @@ import { grantItems, loadItems, mergeStacks, spendItems } from "../items"
 import { recordLedger, type LedgerEntryInput } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
 import { TxAbort, lockUser, runTx, type Tx } from "../tx"
+import { requireFeature } from "../unlocks"
 
 const feedBodySchema = z
   .object({
@@ -293,6 +294,7 @@ export async function progressionRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "fuse"))) return
     const body = constellationBodySchema.parse(request.body)
     const { userCardId } = params
     const target = await loadCard(userId, userCardId)
@@ -518,6 +520,7 @@ export async function progressionRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "feed"))) return
     const { userCardId } = params
     const body = feedBodySchema.parse(request.body)
     const stacks = mergeStacks(body.items as ItemStack[])
@@ -657,6 +660,7 @@ export async function progressionRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "foil"))) return
     const { userCardId } = params
     const body = z
       .object({ action: z.enum(["foil"]) })
@@ -740,6 +744,7 @@ export async function progressionRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "dismantle"))) return
     const { userCardId } = params
 
     const target = await loadCard(userId, userCardId)
@@ -830,6 +835,7 @@ export async function progressionRoutes(app: FastifyInstance) {
     const { userId: paramUserId } = z.object({ userId: z.string() }).parse(request.params)
     const userId = requireSelf(request, reply, paramUserId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "npc-recycle"))) return
 
     const dayKey = resetDayKey(Date.now())
     const usedToday = await countRecycledToday(db, userId, dayKey)
@@ -848,6 +854,7 @@ export async function progressionRoutes(app: FastifyInstance) {
     const { userId: paramUserId } = z.object({ userId: z.string() }).parse(request.params)
     const userId = requireSelf(request, reply, paramUserId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "npc-recycle"))) return
 
     const body = z
       .object({

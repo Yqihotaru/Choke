@@ -49,7 +49,7 @@ function auth(userId: string) {
 
 await test("挂机包：每日领取上限 60 包，领完后拦截", async () => {
   const userId = "p1-idle-user"
-  await db.insert(users).values({ id: userId, username: userId, staminaUpdatedAt: Date.now() })
+  await db.insert(users).values({ id: userId, username: userId, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
 
   const r1 = await app.inject({
     method: "POST",
@@ -81,7 +81,7 @@ await test("挂机包：每日领取上限 60 包，领完后拦截", async () =
 
 await test("NPC 回收：按稀有度给金币、每日限 20 张、本体卡禁止回收", async () => {
   const userId = "p1-recycle-user"
-  await db.insert(users).values({ id: userId, username: userId, coins: 0, staminaUpdatedAt: Date.now() })
+  await db.insert(users).values({ id: userId, username: userId, coins: 0, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
   await db.insert(cards).values([
     { id: "p1-c", name: "C卡", rarity: "C", job: "tank", no: 1, total: 1 },
     { id: "p1-l", name: "L卡", rarity: "L", job: "warrior", no: 2, total: 1 },
@@ -131,7 +131,7 @@ await test("NPC 回收：按稀有度给金币、每日限 20 张、本体卡禁
 
   // 培养过的卡回收时按返还经验每 1000 点 +1 金币
   const trainedUser = "p1-recycle-trained"
-  await db.insert(users).values({ id: trainedUser, username: trainedUser, coins: 0, staminaUpdatedAt: Date.now() })
+  await db.insert(users).values({ id: trainedUser, username: trainedUser, coins: 0, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
   const [trainedCard] = await db
     .insert(userCards)
     .values({ userId: trainedUser, cardId: "p1-c", level: 40, exp: 0, serial: 1 })
@@ -155,7 +155,7 @@ await test("卡牌 40+ 突破金币消耗：40→41 扣 300 金币", async () =>
   assert.equal(breakthroughCoinCost(40, true), 0)
 
   const userId = "p1-bt-user"
-  await db.insert(users).values({ id: userId, username: userId, coins: 200, staminaUpdatedAt: Date.now() })
+  await db.insert(users).values({ id: userId, username: userId, coins: 200, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
   await db.insert(cards).values({ id: "p1-bt-c", name: "突破卡", rarity: "C", job: "tank", no: 1, total: 1 })
   const [uc] = await db
     .insert(userCards)

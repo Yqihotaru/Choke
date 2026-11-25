@@ -8,7 +8,7 @@ export const FEATURE_IDS = Object.keys(CONTENT.unlocks) as FeatureId[]
 export interface UnlockContext {
   level: number
   tutorialDone: boolean
-  /** 绑定了 osu! 或邮箱；游客是 false */
+  /** 绑定了 osu!；游客和只有邮箱的账号是 false */
   linkedAccount: boolean
 }
 

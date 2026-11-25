@@ -24,6 +24,7 @@ import { grantItems } from "../items"
 import { recordLedger } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
 import { TxAbort, lockUser, runTx, type Tx } from "../tx"
+import { requireFeature } from "../unlocks"
 
 const paramsSchema = z.object({ userId: z.string() })
 const runParamsSchema = z.object({ userId: z.string(), dungeonId: z.string() })
@@ -92,6 +93,7 @@ export async function dungeonRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "stamina-potion"))) return
 
     const now = Date.now()
     const dayKey = resetDayKey(now)
@@ -196,6 +198,7 @@ export async function dungeonRoutes(app: FastifyInstance) {
     const params = runParamsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "dungeons"))) return
 
     const dungeon = dungeonById(params.dungeonId)
     if (!dungeon) {

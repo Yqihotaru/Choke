@@ -7,6 +7,7 @@ import { requireSelf } from "../auth/guard"
 import { checkOsuDaily, getOsuDaily } from "../osu-daily"
 import { claimAllQuests, claimChest, claimQuest, getQuests, signIn } from "../quests"
 import { guardAbort } from "../tx"
+import { requireFeature } from "../unlocks"
 
 const paramsSchema = z.object({ userId: z.string() })
 const questParamsSchema = z.object({ userId: z.string(), questId: z.string().min(1).max(64) })
@@ -21,6 +22,7 @@ export async function questRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "quests"))) return
     return { ok: true, data: await getQuests(userId) }
   })
 
@@ -28,6 +30,7 @@ export async function questRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "quests"))) return
     const result = await guardAbort(reply, () => claimAllQuests(userId))
     if (!result) return
     return { ok: true, data: result }
@@ -37,6 +40,7 @@ export async function questRoutes(app: FastifyInstance) {
     const params = chestParamsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "quests"))) return
     const result = await guardAbort(reply, () => claimChest(userId, params.period, params.at))
     if (!result) return
     return { ok: true, data: result }
@@ -46,6 +50,7 @@ export async function questRoutes(app: FastifyInstance) {
     const params = questParamsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "quests"))) return
     const result = await guardAbort(reply, () => claimQuest(userId, params.questId))
     if (!result) return
     return { ok: true, data: result }
@@ -55,6 +60,7 @@ export async function questRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "quests"))) return
     return { ok: true, data: await getOsuDaily(userId) }
   })
 
@@ -62,6 +68,7 @@ export async function questRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "quests"))) return
     const result = await guardAbort(reply, () => checkOsuDaily(userId))
     if (!result) return
     return { ok: true, data: result }
@@ -71,6 +78,7 @@ export async function questRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
+    if (!(await requireFeature(reply, userId, "quests"))) return
     const result = await guardAbort(reply, () => signIn(userId))
     if (!result) return
     return { ok: true, data: result }

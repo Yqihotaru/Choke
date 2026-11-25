@@ -111,7 +111,7 @@ export const unlocksSchema = z.record(
     level: positiveInt,
     /** 要先完成新手引导 */
     tutorial: z.boolean().optional(),
-    /** 要绑定 osu!（或邮箱）的正式账号，游客只能看 */
+    /** 要绑定 osu! 的账号；游客和只有邮箱的账号只能看 */
     linkedAccount: z.boolean().optional(),
   }),
 )

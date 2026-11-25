@@ -9,6 +9,7 @@ import {
   nextTutorialStep,
 } from "@choke/shared/player"
 import { TUTORIAL_STEPS, type TutorialStep } from "@choke/shared/tutorial"
+import { FEATURE_IDS, lockMessage, lockReason, unlockLevelOf } from "@choke/shared/unlocks"
 
 import { requireSelf } from "../auth/guard"
 import { db } from "../db/client"
@@ -23,6 +24,7 @@ const progressColumns = {
   tutorialStep: users.tutorialStep,
   tutorialDone: users.tutorialDone,
   progressUpdatedAt: users.progressUpdatedAt,
+  osuId: users.osuId,
 }
 
 type ProgressRow = {
@@ -31,6 +33,23 @@ type ProgressRow = {
   tutorialStep: string
   tutorialDone: boolean
   progressUpdatedAt: number
+  osuId: number | null
+}
+
+/** 每个功能现在锁不锁：null = 已解锁；否则给原因、所需等级和一句话提示，前端直接用 */
+function locksOf(row: ProgressRow) {
+  const ctx = { level: row.playerLevel, tutorialDone: row.tutorialDone, linkedAccount: row.osuId != null }
+  return Object.fromEntries(
+    FEATURE_IDS.map((id) => {
+      const reason = lockReason(id, ctx)
+      return [
+        id,
+        reason
+          ? { reason: reason.kind, level: unlockLevelOf(id), message: lockMessage(id, reason) }
+          : null,
+      ]
+    }),
+  )
 }
 
 function payload(row: ProgressRow) {
@@ -40,6 +59,7 @@ function payload(row: ProgressRow) {
     tutorialStep: row.tutorialStep,
     tutorialDone: row.tutorialDone,
     updatedAt: row.progressUpdatedAt,
+    locks: locksOf(row),
   }
 }
 

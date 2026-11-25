@@ -105,6 +105,7 @@ async function newPlayer(patch: Partial<typeof users.$inferInsert> = {}) {
     id,
     username: id,
     email: `${id}@test.local`,
+    osuId: 700_000 + seq,
     tutorialDone: true,
     playerLevel: 50,
     stamina: 200,
@@ -256,7 +257,7 @@ await test("开始出征：数量、重复、别人的卡、权限都在服务�
 })
 
 await test("等级不够点数：服务端按玩家等级算，不信前端", async () => {
-  const me = await newPlayer({ playerLevel: 1 })
+  const me = await newPlayer({ playerLevel: 5 })
   const res = await start(me.id, "test-trial", me.ids, FULL)
   assert.equal(res.status, 400)
   assert.equal(await current(me.id), null)

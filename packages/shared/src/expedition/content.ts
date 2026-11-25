@@ -1,6 +1,6 @@
 import { prettifyError, z } from "zod"
 
-import { CONTENT, MYSTERY_PACK_ID } from "../content"
+import { CONTENT, MYSTERY_PACK_ID, type FeatureId } from "../content"
 import { mailAttachmentSchema } from "../mail"
 import type { BattleContent } from "../battle/content"
 import { DEFAULT_HP_MULT, DEFAULT_LOOT_MULT, DEFAULT_THRESHOLDS, MAX_THREAT, TIER_COUNT } from "./difficulty"
@@ -232,9 +232,18 @@ export const mapSchema = z.strictObject({
   difficulty: difficultySchema.optional(),
   /** 写了通关目标：通关星数 = 达成的目标数（决定星级加成档位）；不写还是按战斗星数折算 */
   objectives: z.array(objectiveSchema).max(3).optional(),
+  /** 开始这张图要先解锁的功能（unlocks.json 的 id）；不写就按 kind：main 看 mainline，season 看 season，日常和周常不设限 */
+  unlock: id.optional(),
 })
 export type MapDef = z.infer<typeof mapSchema>
 export type MapNode = z.infer<typeof mapNodeSchema>
+
+const KIND_FEATURE: Partial<Record<MapKind, FeatureId>> = { main: "mainline", season: "season" }
+
+/** 这张图要解锁哪个功能才能开始；没有限制返回 null */
+export function mapFeature(map: Pick<MapDef, "kind" | "unlock">): FeatureId | null {
+  return (map.unlock as FeatureId | undefined) ?? KIND_FEATURE[map.kind] ?? null
+}
 
 export interface WorldContent {
   maps: Record<string, MapDef>
@@ -358,7 +367,9 @@ export function parseWorldContent(
       issue([...base, "staminaCost"], "主线和赛季地图不消耗体力，staminaCost 必须是 0")
     }
     if (map.rewards && !world.rewards[map.rewards]) issue([...base, "rewards"], `掉落表 ${map.rewards} 不存在`)
-
+    if (map.unlock && !Object.hasOwn(CONTENT.unlocks, map.unlock)) {
+      issue([...base, "unlock"], `功能 ${map.unlock} 不在 unlocks.json 里`)
+    }
     for (const [poolId, entries] of Object.entries(map.pools ?? {})) {
       entries.forEach((entry, i) => {
         const path = [...base, "pools", poolId, i, "node"]

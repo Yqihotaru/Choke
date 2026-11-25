@@ -21,6 +21,7 @@ import {
   countMapFights,
   isFightNode,
   isTerminal,
+  mapFeature,
   maxMapStars,
   unsupportedNode,
   type MapDef,
@@ -49,6 +50,7 @@ import type {
 import { isAttachmentEmpty } from "@choke/shared/mail"
 import { dungeonByMapId } from "@choke/shared/dungeons"
 import { addPlayerExp } from "@choke/shared/player"
+import { lockMessage, lockReason } from "@choke/shared/unlocks"
 import { randomSeed } from "@choke/shared/rng"
 import { nextReset } from "@choke/shared/reset"
 import { spendStamina } from "@choke/shared/stamina"
@@ -70,6 +72,7 @@ import { recordQuestEvent } from "../quest-events"
 import { sendMail } from "../mail"
 import { grantAttachment } from "../rewards"
 import { TxAbort, lockUser, type Tx } from "../tx"
+import { assertFeature, loadUnlockContext } from "../unlocks"
 import { listedUserCardIds } from "./locks"
 
 type Exec = Tx | typeof db
@@ -242,6 +245,8 @@ export async function startExpedition(userId: string, input: StartInput, now = D
 
   const rawMap = WORLD_CONTENT.maps[input.mapId]
   if (!rawMap) throw new TxAbort(404, "unknown_map", "没有这张地图")
+  const feature = mapFeature(rawMap)
+  if (feature) await assertFeature(userId, feature)
 
   return db.transaction(async (tx) => {
     await lockUser(tx, userId)
@@ -874,6 +879,8 @@ export interface MapListing {
   /** 现在开始的话，这次出征什么时候结束；离换图不足一小时前端要提示 */
   endsAt: string
   startable: boolean
+  /** 没解锁时的原因（一句话）；可以开始时是 null */
+  lockedReason: string | null
   clears: number
   bestStars: number
   /** 这张图有几个通关目标、历史最多达成几个（没写目标是 0 / 0） */
@@ -884,20 +891,26 @@ export interface MapListing {
 export async function listMaps(userId: string, now = Date.now()): Promise<MapListing[]> {
   const records = await db.select().from(mapClears).where(eq(mapClears.userId, userId))
   const byMap = new Map(records.map((row) => [row.mapId, row]))
-  return Object.entries(WORLD_CONTENT.maps).map(([id, map]) => ({
-    id,
-    kind: map.kind,
-    name: map.name,
-    summary: map.summary,
-    staminaCost: map.staminaCost,
-    deckSize: map.deckSize,
-    fights: countMapFights(map),
-    maxStars: maxMapStars(map),
-    endsAt: new Date(expiryOf(map, now)).toISOString(),
-    startable: true,
-    clears: byMap.get(id)?.clears ?? 0,
-    bestStars: byMap.get(id)?.bestStars ?? 0,
-    objectiveCount: map.objectives?.length ?? 0,
-    bestObjectives: byMap.get(id)?.bestObjectives ?? 0,
-  }))
+  const unlockCtx = await loadUnlockContext(userId)
+  return Object.entries(WORLD_CONTENT.maps).map(([id, map]) => {
+    const feature = mapFeature(map)
+    const reason = feature && unlockCtx ? lockReason(feature, unlockCtx) : null
+    return {
+      id,
+      kind: map.kind,
+      name: map.name,
+      summary: map.summary,
+      staminaCost: map.staminaCost,
+      deckSize: map.deckSize,
+      fights: countMapFights(map),
+      maxStars: maxMapStars(map),
+      endsAt: new Date(expiryOf(map, now)).toISOString(),
+      startable: reason === null,
+      lockedReason: feature && reason ? lockMessage(feature, reason) : null,
+      clears: byMap.get(id)?.clears ?? 0,
+      bestStars: byMap.get(id)?.bestStars ?? 0,
+      objectiveCount: map.objectives?.length ?? 0,
+      bestObjectives: byMap.get(id)?.bestObjectives ?? 0,
+    }
+  })
 }

@@ -11,7 +11,6 @@ import {
 } from "@choke/shared/economy"
 
 import { MARKET_MAX_PRICE } from "../shared/cards"
-import { MARKET_UNLOCK_LEVEL } from "../shared/tutorial"
 import { requireSelf } from "../auth/guard"
 import { db } from "../db/client"
 import { EXPEDITION_LOCK_MESSAGE, anyLocked } from "../expedition/locks"
@@ -19,6 +18,7 @@ import { cards, deckSlots, marketListings, userCards, users } from "../db/schema
 import { recordLedger } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
 import { TxAbort, runTx } from "../tx"
+import { requireFeature } from "../unlocks"
 
 const cardColumns = {
   ...getTableColumns(cards),
@@ -34,24 +34,6 @@ const cardColumns = {
 
 const paramsSchema = z.object({ userId: z.string() })
 const listingParams = z.object({ userId: z.string(), listingId: z.coerce.number().int().positive() })
-
-/** 市场是等级门槛功能：上架和购买都要服务端校验，不能只靠前端藏按钮 */
-async function marketDenyReason(userId: string): Promise<"guest_market" | "market_locked" | null> {
-  const [row] = await db
-    .select({
-      level: users.playerLevel,
-      done: users.tutorialDone,
-      osuId: users.osuId,
-      email: users.email,
-    })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
-  // 游客（无 osu!、无邮箱）不能用市场：否则市场与卡牌稀缺性都失去意义。
-  if (!row || (!row.osuId && !row.email)) return "guest_market"
-  if (!row.done || row.level < MARKET_UNLOCK_LEVEL) return "market_locked"
-  return null
-}
 
 async function loadCard(userId: string, userCardId: number) {
   const [row] = await db
@@ -246,19 +228,7 @@ export async function marketRoutes(app: FastifyInstance) {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
-    const deny = await marketDenyReason(userId)
-    if (deny) {
-      return reply.code(403).send({
-        ok: false,
-        error: {
-          code: deny,
-          message:
-            deny === "guest_market"
-              ? "游客账号不能使用市场，请先用 osu! 或邮箱登录"
-              : `市场达到 Lv.${MARKET_UNLOCK_LEVEL} 解锁后才能上架`,
-        },
-      })
-    }
+    if (!(await requireFeature(reply, userId, "market"))) return
     const body = z
       .object({
         userCardId: z.number().int().positive(),
@@ -437,19 +407,7 @@ export async function marketRoutes(app: FastifyInstance) {
     const params = listingParams.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
-    const deny = await marketDenyReason(userId)
-    if (deny) {
-      return reply.code(403).send({
-        ok: false,
-        error: {
-          code: deny,
-          message:
-            deny === "guest_market"
-              ? "游客账号不能使用市场，请先用 osu! 或邮箱登录"
-              : `市场达到 Lv.${MARKET_UNLOCK_LEVEL} 解锁后才能购买`,
-        },
-      })
-    }
+    if (!(await requireFeature(reply, userId, "market"))) return
 
     // 若已过 7 天有效期，先把超期挂单自动取消并退还押金（上架税不退）
     await expireStaleListings()

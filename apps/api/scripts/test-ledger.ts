@@ -26,7 +26,6 @@ const { dungeonRoutes } = await import("../src/routes/dungeons")
 const { marketRoutes } = await import("../src/routes/market")
 const { packRoutes } = await import("../src/routes/packs")
 const { shardItemId, SHARDS_PER_DISMANTLE } = await import("@choke/shared/items")
-const { MARKET_UNLOCK_LEVEL } = await import("@choke/shared/player")
 
 const app = Fastify()
 app.setErrorHandler(handleError)
@@ -76,7 +75,7 @@ async function newUser(patch: Partial<typeof users.$inferInsert> = {}) {
   const id = `ledger-test-${seq}`
   await db
     .insert(users)
-    .values({ id, username: id, email: `${id}@test.local`, tutorialDone: true, playerLevel: MARKET_UNLOCK_LEVEL, staminaUpdatedAt: Date.now(), ...patch })
+    .values({ id, username: id, email: `${id}@test.local`, osuId: 800_000 + seq, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now(), ...patch })
   return id
 }
 

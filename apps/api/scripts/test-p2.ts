@@ -77,6 +77,8 @@ await test("体力药水：100 金币换 60 体力，每日限 2 次，可进溢
   await db.insert(users).values({
     id: userId,
     username: userId,
+    tutorialDone: true,
+    playerLevel: 60,
     coins: 500,
     stamina: STAMINA_MAX,
     staminaUpdatedAt: Date.now(),
@@ -125,6 +127,8 @@ await test("本体卡命座上限 8 与吞噬镜像共鸣（职业/MOD映射、�
   await db.insert(users).values({
     id: userId,
     username: userId,
+    tutorialDone: true,
+    playerLevel: 60,
     staminaUpdatedAt: Date.now(),
   })
 

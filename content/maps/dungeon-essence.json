@@ -1,5 +1,6 @@
 {
   "kind": "daily",
+  "unlock": "dungeons",
   "name": "精华回廊 · 镜光回响",
   "summary": "精华资源小远征：首通后可扫荡精华回廊。选择硬闯镜面精英拿高倍率掉落，或借校准仪稳步突围。",
   "staminaCost": 20,

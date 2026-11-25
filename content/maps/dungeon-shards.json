@@ -1,5 +1,6 @@
 {
   "kind": "daily",
+  "unlock": "dungeons",
   "name": "碎片矿脉 · 裂隙深采",
   "summary": "碎片资源小远征：首通后可扫荡碎片矿脉。决定是否耗血取钥匙，或直接冲击高威胁矿井。",
   "staminaCost": 20,
