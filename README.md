@@ -127,6 +127,7 @@ pnpm build:cards     # 由 rankings 生成 choke-cards.json
 - `Design/备忘录.md`：所有"以后再做""等别人""还没定"的事
 - `Design/功能解锁表 v0.1.md`：各功能什么时候解锁、经验曲线目标（草案）
 - `Design/经济与养成系统 v0.3.md`：经济、养成、卡包
+- `Design/经济研究任务书 v0.1.md`：给 antigravity 的经济研究任务（内测前，范围和约束）
 - `Design/卡牌数值与战斗机制 v0.1.md`：回合制战斗
 - `Design/职业与技能总表 v0.1.md`：4 大职业与全部技能（代码实装快照）
 - `Design/技能定义指南 v0.1.md`：怎么写技能
