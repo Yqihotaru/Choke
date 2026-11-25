@@ -1259,7 +1259,7 @@ export const SKILLS: Record<string, SkillDef> = {
   summoner_poison: S({
     id: "summoner_poison",
     job: "mage",
-    name: "哈尼队",
+    name: "陶俑军团",
     element: "earth",
     ap: 2,
     kind: "summon",
@@ -1267,7 +1267,7 @@ export const SKILLS: Record<string, SkillDef> = {
     target: "self",
     supportDef: {
       kind: "attack",
-      name: "哈尼突击队",
+      name: "陶俑突击队",
       element: "earth",
       power: 0.5,
       hits: 2,
@@ -1276,7 +1276,7 @@ export const SKILLS: Record<string, SkillDef> = {
       roleText: "65% 概率回合初 2 连击 +2 Combo",
     },
     minRarity: "L",
-    desc: "在右侧支援栏部署【哈尼突击队】，回合初发动 2 段支援连击快速垫高 Combo",
+    desc: "在右侧支援栏部署【陶俑突击队】，回合初发动 2 段支援连击快速垫高 Combo",
   }),
   summoner_ward: S({
     id: "summoner_ward",
@@ -2666,7 +2666,7 @@ export const SKILLS: Record<string, SkillDef> = {
     kind: "summon",
     costTag: "normal",
     target: "self",
-    supportDef: { kind: "attack", name: "哈尼突击队", element: "earth", power: 0.35, hits: 2, combo: 1, procRate: 0.4, roleText: "40% 概率回合初 2 连击 +2 Combo", tier: 1 },
+    supportDef: { kind: "attack", name: "陶俑突击队", element: "earth", power: 0.35, hits: 2, combo: 1, procRate: 0.4, roleText: "40% 概率回合初 2 连击 +2 Combo", tier: 1 },
     maxRarity: "UC",
   }),
   summoner_poison_mid: S({
@@ -2678,7 +2678,7 @@ export const SKILLS: Record<string, SkillDef> = {
     kind: "summon",
     costTag: "normal",
     target: "self",
-    supportDef: { kind: "attack", name: "哈尼突击队", element: "earth", power: 0.45, hits: 2, combo: 1, procRate: 0.55, roleText: "55% 概率回合初 2 连击 +2 Combo", tier: 1 },
+    supportDef: { kind: "attack", name: "陶俑突击队", element: "earth", power: 0.45, hits: 2, combo: 1, procRate: 0.55, roleText: "55% 概率回合初 2 连击 +2 Combo", tier: 1 },
     minRarity: "R",
     maxRarity: "E",
   }),

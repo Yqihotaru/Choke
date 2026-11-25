@@ -69,7 +69,7 @@ const down = (state: BattleState) => {
   check("技能校验：缺少必填字段会报错", checkSkill({ ...SKILLS.berserker_cleave!, hits: undefined }).length > 0)
   check("自动描述：每个技能都能生成非空文案", all.every((s) => autoDescribeSkill(s).length > 0))
   check("describeSkill：没有手写文案时用自动生成", describeSkill({ ...SKILLS.berserker_cleave!, desc: undefined }) === autoDescribeSkill(SKILLS.berserker_cleave!))
-  check("技能名没有旧 demo 名字", !all.some((s) => /六色破坏光线|毗沙门天剑|哈尼军团|专拐激昂曲|全军军师阵/.test(s.name)))
+  check("技能名没有旧 demo 名字", !all.some((s) => /六色破坏光线|毗沙门天剑|哈尼军团|哈尼队|哈尼突击队|专拐激昂曲|全军军师阵/.test(s.name)))
   if (process.argv.includes("--descs")) {
     for (const s of all) console.log(`  ${s.id}\n    手写：${s.desc ?? "（无）"}\n    自动：${autoDescribeSkill(s)}`)
   }
