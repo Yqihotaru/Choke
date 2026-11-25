@@ -9,11 +9,13 @@ import { refreshProgress, useTutorialProgress } from "@/tutorial/store"
 
 import {
   fetchDeck,
+  fetchDungeons,
   fetchEncounters,
   fetchStamina,
-  runDungeon,
+  sweepDungeon,
   toFace,
   type ApiDeck,
+  type DungeonStatus,
   type StaminaState,
 } from "@/desk/session/api"
 import { Pages } from "@/desk/shell/BookPages"
@@ -35,6 +37,7 @@ export function BattlePanel({
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null)
   const [encounters, setEncounters] = useState<EncounterSummary[] | null>(null)
   const [stamina, setStamina] = useState<StaminaState | null>(null)
+  const [dungeonStatuses, setDungeonStatuses] = useState<DungeonStatus[] | null>(null)
   const [dungeonBusy, setDungeonBusy] = useState<string | null>(null)
   const [dungeonMessage, setDungeonMessage] = useState<{ text: string; error?: boolean } | null>(null)
   const [reload, setReload] = useState(0)
@@ -45,6 +48,9 @@ export function BattlePanel({
     const controller = new AbortController()
     fetchStamina(userId, controller.signal)
       .then((data) => setStamina(data))
+      .catch(() => {})
+    fetchDungeons(userId, controller.signal)
+      .then((data) => setDungeonStatuses(data))
       .catch(() => {})
     return () => controller.abort()
   }, [userId])
@@ -66,7 +72,7 @@ export function BattlePanel({
     setDungeonBusy(dungeonId)
     setDungeonMessage(null)
     try {
-      const result = await runDungeon(userId, dungeonId)
+      const result = await sweepDungeon(userId, dungeonId)
       setStamina(result.stamina)
       const parts: string[] = []
       if (result.rewards.essence) parts.push(`精华 +${result.rewards.essence}`)
@@ -324,9 +330,10 @@ export function BattlePanel({
           )}
 
           <div className="dungeon-list">
-            {DUNGEONS.map((dungeon) => {
+            {(dungeonStatuses ?? DUNGEONS.map((d) => ({ ...d, clears: 0, sweepUnlocked: !d.mapId }))).map((dungeon) => {
+              const unlocked = dungeon.sweepUnlocked
               const disabled =
-                !stamina || stamina.value < dungeon.cost || dungeonBusy !== null
+                !unlocked || !stamina || stamina.value < dungeon.cost || dungeonBusy !== null
               return (
                 <div className="dungeon-row" key={dungeon.id}>
                   <div className="dungeon-row__text">
@@ -337,9 +344,14 @@ export function BattlePanel({
                     type="button"
                     className="bk-btn bk-btn--sm"
                     disabled={disabled}
+                    title={unlocked ? undefined : "需先首通对应资源远征关卡"}
                     onClick={() => void runDungeonById(dungeon.id)}
                   >
-                    {dungeonBusy === dungeon.id ? "挑战中…" : `${dungeon.cost} 体力`}
+                    {dungeonBusy === dungeon.id
+                      ? "扫荡中…"
+                      : unlocked
+                        ? `扫荡 · ${dungeon.cost} 体力`
+                        : "需先首通远征"}
                   </button>
                 </div>
               )

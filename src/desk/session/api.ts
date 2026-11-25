@@ -1,10 +1,11 @@
 import { faceFromDef, type CardDef } from "@/card/def"
 import type { CardFaceData, CardSkillRef, Job, Rarity } from "@/card/types"
 import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
-import type { DungeonRewards } from "@choke/shared/dungeons"
+import type { DungeonId, DungeonRewards } from "@choke/shared/dungeons"
 import type { ItemId, ItemStack } from "@choke/shared/items"
 import type { MailView } from "@choke/shared/mail"
 import type { LedgerKind, LedgerPage } from "@choke/shared/ledger"
+import type { QuestsOverview } from "@choke/shared/quests"
 
 export type ItemWallet = Partial<Record<ItemId, number>>
 /** `/users/:id/cards` 和 `/users/:id/deck` 共用的卡行 */
@@ -613,10 +614,49 @@ export interface DungeonRunResult {
   player?: { level: number; exp: number; gained: number }
 }
 
+export interface DungeonStatus {
+  id: DungeonId
+  name: string
+  summary: string
+  cost: number
+  rewards: DungeonRewards
+  mapId?: string
+  clears: number
+  sweepUnlocked: boolean
+}
+
+export function fetchDungeons(userId: string, signal?: AbortSignal): Promise<DungeonStatus[]> {
+  return request<DungeonStatus[]>(`/api/users/${userId}/dungeons`, { signal })
+}
+
 export function runDungeon(userId: string, dungeonId: string): Promise<DungeonRunResult> {
   return request<DungeonRunResult>(`/api/users/${userId}/dungeons/${dungeonId}/run`, {
     method: "POST",
   })
+}
+
+export function sweepDungeon(userId: string, dungeonId: string): Promise<DungeonRunResult> {
+  return request<DungeonRunResult>(`/api/users/${userId}/dungeons/${dungeonId}/sweep`, {
+    method: "POST",
+  })
+}
+
+/* ============================ 签到 / 任务 ============================ */
+
+export function fetchQuests(userId: string, signal?: AbortSignal): Promise<QuestsOverview> {
+  return request<QuestsOverview>(`/api/users/${userId}/quests`, { signal })
+}
+
+export function signIn(
+  userId: string,
+): Promise<{ day: number; rewards: { label: string; count: number }[] }> {
+  return request(`/api/users/${userId}/sign-in`, { method: "POST" })
+}
+
+export function claimAllQuests(
+  userId: string,
+): Promise<{ claimed: string[]; chests: string[]; rewards: { label: string; count: number }[] }> {
+  return request(`/api/users/${userId}/quests/claim-all`, { method: "POST" })
 }
 
 export function dismantleCard(

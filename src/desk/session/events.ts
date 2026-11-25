@@ -25,7 +25,7 @@ export const DECK_ASSIGN_EVENT = "choke:deck-assign"
 /** 抽卡面板开出卡后交给桌面播放开包动画 */
 export const GACHA_OPEN_EVENT = "choke:gacha-open"
 
-export type DeskDataScope = "packs" | "cards" | "items"
+export type DeskDataScope = "packs" | "cards" | "items" | "user"
 
 export interface DeskDataDetail<T = unknown> {
   scope: DeskDataScope

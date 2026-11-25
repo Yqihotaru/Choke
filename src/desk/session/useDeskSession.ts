@@ -92,6 +92,10 @@ export function useDeskSession() {
     return onDeskData("packs", () => refreshPacks())
   }, [refreshPacks])
 
+  useEffect(() => {
+    return onDeskData("user", () => refreshUser())
+  }, [refreshUser])
+
   /** 取包 / 还包 / 开包的响应比进行中的库存刷新新：直接写入并让旧请求作废 */
   const applyPackState = useCallback((next: DeskPackState | null) => {
     packSeq.current += 1

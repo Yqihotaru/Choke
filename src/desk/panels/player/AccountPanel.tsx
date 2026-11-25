@@ -1,10 +1,12 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
+import type { QuestsOverview } from "@choke/shared/quests"
 
-import { toFace, type ApiUserCard } from "@/desk/session/api"
+import { claimAllQuests, fetchQuests, signIn, toFace, type ApiUserCard } from "@/desk/session/api"
+import { emitDeskData } from "@/desk/session/events"
 import { Pages } from "@/desk/shell/BookPages"
 import { ConfirmBar } from "@/desk/shell/ConfirmBar"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
@@ -34,8 +36,63 @@ export function AccountPanel({
   /** 记下加载失败的那个地址：换了头像地址就自然不算失败 */
   const [failedAvatar, setFailedAvatar] = useState<string | null>(null)
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const [quests, setQuests] = useState<QuestsOverview | null>(null)
+  const [questBusy, setQuestBusy] = useState<"sign-in" | "claim-all" | null>(null)
+  const [questMessage, setQuestMessage] = useState<{ text: string; error?: boolean } | null>(null)
   const avatarError = failedAvatar === avatarUrl
   const isGuest = !!userId?.startsWith("guest-")
+
+  useEffect(() => {
+    if (!userId) return
+    const controller = new AbortController()
+    fetchQuests(userId, controller.signal)
+      .then((data) => setQuests(data))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [userId])
+
+  const handleSignIn = async () => {
+    if (!userId || questBusy) return
+    setQuestBusy("sign-in")
+    setQuestMessage(null)
+    try {
+      await signIn(userId)
+      const next = await fetchQuests(userId)
+      setQuests(next)
+      emitDeskData("user")
+      emitDeskData("packs")
+      emitDeskData("items")
+      playSfx("success")
+      setQuestMessage({ text: "今日已签到，可继续一键领任务与新手补给。" })
+    } catch (reason) {
+      playSfx("error")
+      setQuestMessage({ text: reason instanceof Error ? reason.message : "签到失败", error: true })
+    } finally {
+      setQuestBusy(null)
+    }
+  }
+
+  const handleClaimAll = async () => {
+    if (!userId || questBusy) return
+    setQuestBusy("claim-all")
+    setQuestMessage(null)
+    try {
+      const res = await claimAllQuests(userId)
+      const next = await fetchQuests(userId)
+      setQuests(next)
+      emitDeskData("user")
+      emitDeskData("packs")
+      emitDeskData("items")
+      playSfx("levelup")
+      const summary = res.rewards.map((r) => `${r.label} ×${r.count}`).join(" · ")
+      setQuestMessage({ text: summary ? `已领取：${summary}` : "当前没有可领奖励" })
+    } catch (reason) {
+      playSfx("error")
+      setQuestMessage({ text: reason instanceof Error ? reason.message : "领取失败", error: true })
+    } finally {
+      setQuestBusy(null)
+    }
+  }
 
   if (!username) {
     return (
@@ -101,6 +158,44 @@ export function AccountPanel({
               <b>{coins.toLocaleString("en-US")}</b>
               <span>金币</span>
             </div>
+          </div>
+
+          <div className="bk-box account-quests">
+            <div className="account-quests__head">
+              <span className="bk-label">每日签到与奖励</span>
+              {quests && (
+                <span className="bk-num">
+                  {quests.claimable > 0 ? `可领 ${quests.claimable} 项` : "暂无待领"}
+                </span>
+              )}
+            </div>
+            <div className="account-quests__actions">
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm bk-btn--main"
+                disabled={!quests || quests.signIn.signedToday || questBusy !== null}
+                onClick={() => void handleSignIn()}
+              >
+                {questBusy === "sign-in"
+                  ? "签到中…"
+                  : quests?.signIn.signedToday
+                    ? "今日已签"
+                    : "每日签到"}
+              </button>
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                disabled={!quests || quests.claimable === 0 || questBusy !== null}
+                onClick={() => void handleClaimAll()}
+              >
+                {questBusy === "claim-all" ? "领取中…" : "一键领奖励"}
+              </button>
+            </div>
+            {questMessage && (
+              <span className={`account-quests__msg ${questMessage.error ? "bk-error" : ""}`}>
+                {questMessage.text}
+              </span>
+            )}
           </div>
 
           <div className="bk-list">
