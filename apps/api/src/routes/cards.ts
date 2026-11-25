@@ -32,6 +32,18 @@ const RARITY_RANK = sql`CASE ${cards.rarity}
 END`
 
 const SORTS = ["recent", "rarity", "pp", "name"] as const
+const USER_CARD_SORTS = ["recent", "rarity", "pp", "name", "level", "rank"] as const
+const JOBS = ["tank", "warrior", "mage", "support"] as const
+const RARITY_LIST = ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"] as const
+
+/** 逗号分隔的稀有度多选；非法值直接忽略。 */
+function rarityFilter(raw: string | undefined) {
+  const list = (raw ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => (RARITY_LIST as readonly string[]).includes(s))
+  return list.length === 0 ? undefined : list.length === 1 ? eq(cards.rarity, list[0]) : inArray(cards.rarity, list)
+}
 
 interface PublicCardsPayload {
   rows: (typeof cards.$inferSelect)[]
@@ -71,18 +83,21 @@ async function queryPublicCards(query: {
   rarity?: string
   q?: string
   country?: string
+  job?: string
   sort: (typeof SORTS)[number]
   limit: number
   offset: number
 }) {
   const filters = [eq(cards.cardType, CARD_TYPES.pool)]
-  if (query.rarity) filters.push(eq(cards.rarity, query.rarity))
+  const rarity = rarityFilter(query.rarity)
+  if (rarity) filters.push(rarity)
   if (query.country) filters.push(eq(cards.country, query.country))
+  if (query.job) filters.push(eq(cards.job, query.job))
   if (query.q) filters.push(ilike(cards.name, `%${query.q}%`))
   const where = and(...filters)
-  const countKey = JSON.stringify({ rarity: query.rarity, q: query.q, country: query.country })
+  const countKey = JSON.stringify({ rarity: query.rarity, q: query.q, country: query.country, job: query.job })
   const cachedTotal = publicCountCache.get(countKey)
-    ?? (!query.rarity && !query.country && !query.q ? publicStats?.total : undefined)
+    ?? (!query.rarity && !query.country && !query.q && !query.job ? publicStats?.total : undefined)
   const orderBy =
     query.sort === "rarity"
       ? [desc(RARITY_RANK), sql`${cards.pp} desc nulls last`]
@@ -138,6 +153,7 @@ export async function cardRoutes(app: FastifyInstance) {
         rarity: z.string().optional(),
         q: z.string().optional(),
         country: z.string().max(8).optional(),
+        job: z.enum(JOBS).optional(),
         sort: z.enum(SORTS).default("pp"),
         limit: z.coerce.number().int().min(1).max(200).default(48),
         offset: z.coerce.number().int().min(0).default(0),
@@ -260,6 +276,7 @@ export async function cardRoutes(app: FastifyInstance) {
         rarity: z.string().optional(),
         q: z.string().optional(),
         country: z.string().max(8).optional(),
+        job: z.enum(JOBS).optional(),
         owned: z.enum(["all", "owned", "unseen"]).default("all"),
         sort: z.enum(SORTS).default("rarity"),
         limit: z.coerce.number().int().min(1).max(200).default(24),
@@ -274,8 +291,10 @@ export async function cardRoutes(app: FastifyInstance) {
       .as("owned_cards")
 
     const baseFilters = [eq(cards.cardType, CARD_TYPES.pool)]
-    if (query.rarity) baseFilters.push(eq(cards.rarity, query.rarity))
+    const rarity = rarityFilter(query.rarity)
+    if (rarity) baseFilters.push(rarity)
     if (query.country) baseFilters.push(eq(cards.country, query.country))
+    if (query.job) baseFilters.push(eq(cards.job, query.job))
     if (query.q) baseFilters.push(ilike(cards.name, `%${query.q}%`))
 
     const filters = [...baseFilters]
@@ -344,17 +363,25 @@ export async function cardRoutes(app: FastifyInstance) {
     const query = z
       .object({
         rarity: z.string().optional(),
-        q: z.string().optional(),
-        sort: z.enum(SORTS).default("recent"),
-        limit: z.coerce.number().int().min(1).max(60).default(24),
+        q: z.string().trim().max(40).optional(),
+        country: z.string().max(8).optional(),
+        job: z.enum(JOBS).optional(),
+        foil: z.enum(["1", "0"]).optional(),
+        sort: z.enum(USER_CARD_SORTS).default("recent"),
+        dir: z.enum(["asc", "desc"]).optional(),
+        limit: z.coerce.number().int().min(1).max(200).default(24),
         offset: z.coerce.number().int().min(0).default(0),
         ids: z.string().optional(),
       })
       .parse(request.query)
 
     const filters = [eq(userCards.userId, userId)]
-    if (query.rarity) filters.push(eq(cards.rarity, query.rarity))
+    const rarity = rarityFilter(query.rarity)
+    if (rarity) filters.push(rarity)
     if (query.q) filters.push(ilike(cards.name, `%${query.q}%`))
+    if (query.country) filters.push(eq(cards.country, query.country.toUpperCase()))
+    if (query.job) filters.push(eq(cards.job, query.job))
+    if (query.foil) filters.push(eq(userCards.foil, query.foil === "1"))
     // 按实例 id 刷新桌面卡面快照；所有筛选仍限制在当前用户名下。
     if (query.ids) {
       const ids = query.ids.split(",").map(Number).filter((id) => Number.isInteger(id) && id > 0)
@@ -362,14 +389,24 @@ export async function cardRoutes(app: FastifyInstance) {
     }
     const where = and(...filters)
 
+    // 不传 dir 时：名字、排名升序，其余降序。次排序固定 id，保证分页稳定。
+    const dir = query.dir ?? (query.sort === "name" || query.sort === "rank" ? "asc" : "desc")
+    const by = dir === "asc" ? asc : desc
+    const nullsLast = (column: typeof cards.pp | typeof cards.globalRank) =>
+      dir === "asc" ? sql`${column} asc nulls last` : sql`${column} desc nulls last`
     const orderBy =
       query.sort === "rarity"
-        ? [desc(RARITY_RANK), sql`${cards.pp} desc nulls last`]
+        ? [by(RARITY_RANK), sql`${cards.pp} desc nulls last`]
         : query.sort === "pp"
-          ? [sql`${cards.pp} desc nulls last`]
+          ? [nullsLast(cards.pp)]
           : query.sort === "name"
-            ? [asc(cards.name)]
-            : [desc(userCards.obtainedAt)]
+            ? [by(cards.name)]
+            : query.sort === "level"
+              ? [by(userCards.level), by(userCards.constellation)]
+              : query.sort === "rank"
+                ? [nullsLast(cards.globalRank)]
+                : [by(userCards.obtainedAt)]
+    orderBy.push(desc(userCards.id))
 
     const rows = await db
       .select({
