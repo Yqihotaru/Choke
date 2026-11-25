@@ -15,7 +15,7 @@ const { eq } = await import("drizzle-orm")
 const { default: Fastify } = await import("fastify")
 const { default: cookie } = await import("@fastify/cookie")
 const { db } = await import("../src/db/client")
-const { users, cards, ledgerEntries, userPacks } = await import("../src/db/schema")
+const { users, cards, ledgerEntries, mapClears, userPacks } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
 const { grantCard } = await import("../src/gacha/open")
@@ -96,8 +96,17 @@ const userOf = async (userId: string) => (await db.select().from(users).where(eq
 
 console.log("ledger tests")
 
-await test("副本：体力、精华、卡包、道具都记账，且与余额对得上（副本不产金币）", async () => {
+await test("副本：体力、精华、卡包、道具都记账，且与余额对得上（副本不产金币）；未首通拦截不记账", async () => {
+  const locked = await newUser({ stamina: 200 })
+  const lockedRes = await call(locked, "POST", `/users/${locked}/dungeons/shards/sweep`)
+  assert.equal(lockedRes.status, 400)
+  assert.equal(lockedRes.body.error.code, "first_clear_required")
+  assert.equal((await entriesOf(locked)).length, 0)
+
   const userId = await newUser({ coins: 0, essence: 0, stamina: 200 })
+  for (const mapId of ["dungeon-shards", "dungeon-essence", "dungeon-packs", "dungeon-exp"]) {
+    await db.insert(mapClears).values({ userId, mapId, clears: 1, bestStars: 9, bestObjectives: 2 })
+  }
   for (const dungeon of ["shards", "essence", "packs", "exp"]) {
     const res = await call(userId, "POST", `/users/${userId}/dungeons/${dungeon}/run`)
     assert.equal(res.status, 200, JSON.stringify(res.body))
@@ -116,6 +125,7 @@ await test("副本：体力、精华、卡包、道具都记账，且与余额�
 
 await test("体力不够时副本不记账", async () => {
   const userId = await newUser({ stamina: 0 })
+  await db.insert(mapClears).values({ userId, mapId: "dungeon-shards", clears: 1, bestStars: 9, bestObjectives: 0 })
   const res = await call(userId, "POST", `/users/${userId}/dungeons/shards/run`)
   assert.equal(res.status, 400)
   assert.equal((await entriesOf(userId)).length, 0)

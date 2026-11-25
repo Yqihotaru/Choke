@@ -2,10 +2,6 @@
   "signIn": {
     "base": { "coins": 50 },
     "bonus": {
-      "1": { "coins": 100, "items": [{ "itemId": "exp-medium", "count": 2 }], "packs": [{ "pool": "normal", "count": 15 }, { "pool": "golden", "count": 2 }] },
-      "2": { "coins": 150, "items": [{ "itemId": "exp-large", "count": 1 }], "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 4 }] },
-      "3": { "coins": 200, "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 4 }, { "pool": "radiant", "count": 1 }] },
-      "4": { "coins": 200, "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 5 }, { "pool": "radiant", "count": 1 }] },
       "7": { "coins": 100, "packs": [{ "pool": "normal", "count": 5 }, { "pool": "golden", "count": 1 }] },
       "14": { "coins": 100, "packs": [{ "pool": "golden", "count": 2 }] },
       "21": { "coins": 100, "packs": [{ "pool": "normal", "count": 5 }, { "pool": "golden", "count": 1 }] },
@@ -689,6 +685,46 @@
       "event": "pack-open",
       "target": 1000,
       "rewards": { "coins": 3000, "packs": [{ "pool": "radiant", "count": 1 }] },
+      "points": 0
+    },
+    "ach-starter-1": {
+      "period": "once",
+      "group": "新手",
+      "name": "新手补给 · 第一日",
+      "desc": "累计签到 1 天",
+      "event": "sign-in",
+      "target": 1,
+      "rewards": { "coins": 100, "items": [{ "itemId": "exp-medium", "count": 2 }], "packs": [{ "pool": "normal", "count": 15 }, { "pool": "golden", "count": 2 }] },
+      "points": 0
+    },
+    "ach-starter-2": {
+      "period": "once",
+      "group": "新手",
+      "name": "新手补给 · 第二日",
+      "desc": "累计签到 2 天",
+      "event": "sign-in",
+      "target": 2,
+      "rewards": { "coins": 150, "items": [{ "itemId": "exp-large", "count": 1 }], "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 4 }] },
+      "points": 0
+    },
+    "ach-starter-3": {
+      "period": "once",
+      "group": "新手",
+      "name": "新手补给 · 第三日",
+      "desc": "累计签到 3 天",
+      "event": "sign-in",
+      "target": 3,
+      "rewards": { "coins": 200, "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 4 }, { "pool": "radiant", "count": 1 }] },
+      "points": 0
+    },
+    "ach-starter-4": {
+      "period": "once",
+      "group": "新手",
+      "name": "新手补给 · 第四日",
+      "desc": "累计签到 4 天",
+      "event": "sign-in",
+      "target": 4,
+      "rewards": { "coins": 200, "packs": [{ "pool": "normal", "count": 20 }, { "pool": "golden", "count": 5 }, { "pool": "radiant", "count": 1 }] },
       "points": 0
     },
     "ach-sign-7": {

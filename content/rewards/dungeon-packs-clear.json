@@ -1,0 +1,14 @@
+{
+  "fixed": {
+    "playerExp": 600,
+    "packs": [{ "pool": "normal", "count": 1 }]
+  },
+  "starBonus": {
+    "2": { "coins": 80 },
+    "3": { "packs": [{ "pool": "normal", "count": 1 }] }
+  },
+  "firstClear": {
+    "coins": 300,
+    "packs": [{ "pool": "golden", "count": 1 }]
+  }
+}

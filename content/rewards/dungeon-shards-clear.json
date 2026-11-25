@@ -1,0 +1,18 @@
+{
+  "fixed": {
+    "playerExp": 200,
+    "items": [
+      { "itemId": "shard-C", "count": 4 },
+      { "itemId": "shard-UC", "count": 2 }
+    ]
+  },
+  "starBonus": {
+    "2": { "items": [{ "itemId": "shard-UC", "count": 1 }] },
+    "3": { "items": [{ "itemId": "shard-R", "count": 1 }] }
+  },
+  "firstClear": {
+    "coins": 200,
+    "items": [{ "itemId": "shard-R", "count": 3 }],
+    "packs": [{ "pool": "normal", "count": 2 }]
+  }
+}

@@ -30,7 +30,7 @@ for (const event of ["market-buy", "market-sell"] as const) {
 }
 
 const { db } = await import("../src/db/client")
-const { users, cards, userCards, userPacks, userItems, ledgerEntries, mails, questProgress } = await import(
+const { users, cards, userCards, userPacks, userItems, ledgerEntries, mails, mapClears, questProgress } = await import(
   "../src/db/schema"
 )
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
@@ -98,6 +98,8 @@ async function newUser(patch: Partial<typeof users.$inferInsert> = {}) {
 }
 
 const coinsOf = async (userId: string) => (await db.select({ v: users.coins }).from(users).where(eq(users.id, userId)))[0]!.v
+const packsOf = async (userId: string, pool: string) =>
+  (await db.select().from(userPacks).where(and(eq(userPacks.userId, userId), eq(userPacks.pool, pool))))[0]?.count ?? 0
 const ledgerOf = (userId: string) => db.select().from(ledgerEntries).where(eq(ledgerEntries.userId, userId))
 const mailsOf = (userId: string) => db.select().from(mails).where(eq(mails.userId, userId))
 const rowsOf = (userId: string) => db.select().from(questProgress).where(eq(questProgress.userId, userId))
@@ -367,6 +369,53 @@ await test("签到：并发只成功一次；每月 1 日 4:00 才换月", async
   assert.equal(day1.day, 1)
 })
 
+await test("新手四日补给：按账号累计签到发放，跨月不断、老号次月不重领", async () => {
+  const starterIds = ["ach-starter-1", "ach-starter-2", "ach-starter-3", "ach-starter-4"]
+  const expected = mergeQuestRewards(starterIds.map((id) => defOf(id).rewards))
+
+  const runFourDays = async (dates: [number, number, number][]) => {
+    const userId = await newUser()
+    for (const [y, m, d] of dates) await quests.signIn(userId, bj(y, m, d, 10))
+    const overview = await quests.getQuests(userId, bj(dates[3]![0], dates[3]![1], dates[3]![2], 12))
+    assert.equal(
+      starterIds.every((id) => overview.quests.find((q) => q.id === id)?.claimable),
+      true,
+      `建号组 ${dates[0]!.join("-")} 到第 4 次签到应全可领`,
+    )
+    const claimed = await quests.claimAllQuests(userId, bj(dates[3]![0], dates[3]![1], dates[3]![2], 12))
+    for (const id of starterIds) assert.ok(claimed.claimed.includes(id), `应领到 ${id}`)
+
+    const afterStarter = {
+      normal: await packsOf(userId, "normal"),
+      golden: await packsOf(userId, "golden"),
+      radiant: await packsOf(userId, "radiant"),
+    }
+
+    // 老号跨到下个月 1-4 日再签 4 天，不会重复拿到新手四档
+    const nextMonth = dates[3]![1] === 12 ? [dates[3]![0] + 1, 1] : [dates[3]![0], dates[3]![1] + 1]
+    for (let d = 1; d <= 4; d += 1) await quests.signIn(userId, bj(nextMonth[0]!, nextMonth[1]!, d, 10))
+    const secondPass = await quests.claimAllQuests(userId, bj(nextMonth[0]!, nextMonth[1]!, 4, 12))
+    for (const id of starterIds) assert.equal(secondPass.claimed.includes(id), false, `老号次月不应重领 ${id}`)
+    return afterStarter
+  }
+
+  const expectedNormal = expected.packs!.find((p) => p.pool === "normal")!.count
+  const expectedGolden = expected.packs!.find((p) => p.pool === "golden")!.count
+  const expectedRadiant = expected.packs!.find((p) => p.pool === "radiant")!.count
+
+  // 月初、月中、跨月三个建号场景都拿到完全一致的 75 普 + 15 金 + 2 璀璨
+  for (const dates of [
+    [[2026, 11, 1], [2026, 11, 2], [2026, 11, 3], [2026, 11, 4]],
+    [[2026, 11, 24], [2026, 11, 25], [2026, 11, 26], [2026, 11, 27]],
+    [[2026, 11, 30], [2026, 12, 1], [2026, 12, 2], [2026, 12, 3]],
+  ] as [number, number, number][][]) {
+    const got = await runFourDays(dates)
+    assert.equal(got.normal, expectedNormal)
+    assert.equal(got.golden, expectedGolden)
+    assert.equal(got.radiant, expectedRadiant)
+  }
+})
+
 // ---------- 过期没领 ----------
 
 await test("过期没领的奖励合成一封邮件发到邮箱，只发一次；没完成的作废", async () => {
@@ -517,6 +566,10 @@ await test("埋点：分解", async () => {
 await test("埋点：副本通关（体力不够不算）", async () => {
   const poor = await newUser({ stamina: 0, playerLevel: 50 })
   const rich = await newUser({ playerLevel: 50 })
+  await db.insert(mapClears).values([
+    { userId: poor, mapId: "dungeon-shards", clears: 1, bestStars: 9, bestObjectives: 0 },
+    { userId: rich, mapId: "dungeon-shards", clears: 1, bestStars: 9, bestObjectives: 0 },
+  ])
   let res = await call(poor, "POST", `/users/${poor}/dungeons/shards/run`)
   assert.equal(res.status, 400)
   assert.equal(await progressNow(poor, "daily-dungeon"), 0)
@@ -547,8 +600,6 @@ await test("埋点：市场买入和卖出（只挂单不算，成交才算双�
 
 // ---------- 活跃度宝箱 ----------
 
-const packsOf = async (userId: string, pool: string) =>
-  (await db.select().from(userPacks).where(and(eq(userPacks.userId, userId), eq(userPacks.pool, pool))))[0]?.count ?? 0
 const dailyChests = QUEST_CONTENT.activity.daily!
 const completeQuest = (userId: string, questId: string, t: number) => {
   const def = defOf(questId)
@@ -620,10 +671,13 @@ await test("一键全领：任务和宝箱一起领，活跃点封顶 100，五�
   assert.equal(overview.claimable, 0)
   const again = await quests.claimAllQuests(userId, t)
   assert.deepEqual([again.claimed, again.chests], [[], []])
-  // 宝箱奖励按内容算：这里只对一下卡包总数
+  // 宝箱奖励按内容算：这里只对一下卡包总数（同时确认所有日常任务都被领了）
+  for (const [id, def] of Object.entries(QUEST_CONTENT.quests)) {
+    if (def.period === "daily") assert.ok(result.claimed.includes(id), `应领到日常 ${id}`)
+  }
   const normalPacks = dailyChests.reduce((sum, c) => sum + (c.rewards.packs?.find((p) => p.pool === "normal")?.count ?? 0), 0)
-  const taskPacks = Object.values(QUEST_CONTENT.quests)
-    .filter((def) => def.period === "daily")
+  const taskPacks = result.claimed
+    .map((id) => QUEST_CONTENT.quests[id]!)
     .reduce((sum, def) => sum + (def.rewards.packs?.find((p) => p.pool === "normal")?.count ?? 0), 0)
   assert.equal(await packsOf(userId, "normal"), normalPacks + taskPacks)
 })
@@ -827,7 +881,7 @@ await test("接口：总览、领取、一键全领、签到；只能操作自�
   assert.equal(res.body.error.code, "already_signed")
   res = await call(userId, "POST", `/users/${userId}/quests/claim-all`)
   assert.equal(res.status, 200)
-  assert.deepEqual(res.body.data.claimed, ["daily-sign-in"], "签到顺带完成了日常签到")
+  assert.deepEqual(res.body.data.claimed.sort(), ["ach-starter-1", "daily-sign-in"], "签到顺带完成了日常签到和新手首日补给")
 })
 
 console.log(`\n${passed} quest tests passed`)

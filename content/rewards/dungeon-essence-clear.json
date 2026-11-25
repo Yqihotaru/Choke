@@ -1,0 +1,15 @@
+{
+  "fixed": {
+    "playerExp": 200,
+    "essence": 50
+  },
+  "starBonus": {
+    "2": { "essence": 15 },
+    "3": { "essence": 25 }
+  },
+  "firstClear": {
+    "coins": 200,
+    "essence": 100,
+    "packs": [{ "pool": "normal", "count": 2 }]
+  }
+}

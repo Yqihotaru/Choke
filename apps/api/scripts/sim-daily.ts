@@ -159,10 +159,12 @@ function runSlice(start: number, end: number, days: number, snapshots: number[])
       const random = seededRandom(`daily-${n}-day-${day}`)
       const stamina = day === 1 ? STAMINA_MAX : STAMINA_PER_DAY
       let extraExp = Math.floor(stamina / EXP_RUN_COST) * EXP_RUN_REWARD
+      const starterBonus = QUEST_CONTENT.quests[`ach-starter-${day}`]?.rewards
       const signInBonus = QUEST_CONTENT.signIn.bonus[String(day)]
-      if (signInBonus) {
-        extraExp += sumRewardExp(signInBonus.items)
-        for (const pk of signInBonus.packs ?? []) {
+      for (const reward of [starterBonus, signInBonus]) {
+        if (!reward) continue
+        extraExp += sumRewardExp(reward.items)
+        for (const pk of reward.packs ?? []) {
           p.pending.push(...openPacks(pk.pool as PoolId, pk.count, random))
         }
       }

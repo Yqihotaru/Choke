@@ -3,6 +3,7 @@
     "name": "练习室",
     "summary": "只产经验乐谱，比喂卡更省：一次 3,200 经验。",
     "cost": 20,
+    "mapId": "dungeon-exp",
     "rewards": {
       "items": [
         { "itemId": "exp-medium", "count": 3 },
@@ -14,12 +15,14 @@
     "name": "精华回廊",
     "summary": "稳定的精华来源，用来给卡镀闪。",
     "cost": 20,
+    "mapId": "dungeon-essence",
     "rewards": { "essence": 50 }
   },
   "shards": {
     "name": "碎片矿脉",
     "summary": "产出基础养成碎片，不产金币。",
     "cost": 20,
+    "mapId": "dungeon-shards",
     "rewards": {
       "items": [
         { "itemId": "shard-C", "count": 4 },
@@ -31,6 +34,7 @@
     "name": "卡包补给",
     "summary": "用体力换 1 个普通卡包，不触发保底。",
     "cost": 60,
+    "mapId": "dungeon-packs",
     "rewards": { "packs": 1 }
   }
 }

@@ -1,8 +1,8 @@
 import { and, eq, gte, sql } from "drizzle-orm"
-import type { FastifyInstance } from "fastify"
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"
 import { z } from "zod"
 
-import { dungeonById } from "@choke/shared/dungeons"
+import { DUNGEONS, dungeonById } from "@choke/shared/dungeons"
 import { PLAYER_EXP_PER_STAMINA, addPlayerExp } from "@choke/shared/player"
 import { resetDayKey } from "@choke/shared/reset"
 import {
@@ -17,8 +17,9 @@ import {
 } from "@choke/shared/stamina"
 
 import { requireSelf } from "../auth/guard"
+import { WORLD_CONTENT } from "../content"
 import { db } from "../db/client"
-import { dungeonRuns, ledgerEntries, userPacks, users } from "../db/schema"
+import { dungeonRuns, ledgerEntries, mapClears, userPacks, users } from "../db/schema"
 import { grantItems } from "../items"
 import { recordLedger } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
@@ -167,7 +168,31 @@ export async function dungeonRoutes(app: FastifyInstance) {
     return { ok: true, data: result }
   })
 
-  app.post("/users/:userId/dungeons/:dungeonId/run", async (request, reply) => {
+  app.get("/users/:userId/dungeons", async (request, reply) => {
+    const params = paramsSchema.parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+
+    const rows = await db
+      .select({ mapId: mapClears.mapId, clears: mapClears.clears })
+      .from(mapClears)
+      .where(eq(mapClears.userId, userId))
+    const clearsByMap = new Map(rows.map((r) => [r.mapId, r.clears]))
+
+    return {
+      ok: true,
+      data: DUNGEONS.map((d) => {
+        const clears = d.mapId ? (clearsByMap.get(d.mapId) ?? 0) : 0
+        return {
+          ...d,
+          clears,
+          sweepUnlocked: !d.mapId || clears > 0,
+        }
+      }),
+    }
+  })
+
+  async function handleDungeonSweep(request: FastifyRequest, reply: FastifyReply) {
     const params = runParamsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
@@ -178,6 +203,24 @@ export async function dungeonRoutes(app: FastifyInstance) {
         ok: false,
         error: { code: "unknown_dungeon", message: "没有这个副本" },
       })
+    }
+
+    if (dungeon.mapId) {
+      const [clear] = await db
+        .select({ clears: mapClears.clears })
+        .from(mapClears)
+        .where(and(eq(mapClears.userId, userId), eq(mapClears.mapId, dungeon.mapId)))
+        .limit(1)
+      if (!clear || clear.clears <= 0) {
+        const mapName = WORLD_CONTENT.maps[dungeon.mapId]?.name ?? dungeon.mapId
+        return reply.code(400).send({
+          ok: false,
+          error: {
+            code: "first_clear_required",
+            message: `需先首通远征「${mapName}」才可扫荡`,
+          },
+        })
+      }
     }
 
     const { essence = 0, coins = 0, packs = 0, items = [] } = dungeon.rewards
@@ -296,5 +339,8 @@ export async function dungeonRoutes(app: FastifyInstance) {
       ok: false,
       error: { code: "busy", message: "操作太频繁，请稍后再试" },
     })
-  })
+  }
+
+  app.post("/users/:userId/dungeons/:dungeonId/sweep", handleDungeonSweep)
+  app.post("/users/:userId/dungeons/:dungeonId/run", handleDungeonSweep)
 }

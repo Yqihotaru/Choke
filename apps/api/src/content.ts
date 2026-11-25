@@ -8,7 +8,7 @@ import { parseQuestContent } from "@choke/shared/quest-content"
 import { parseOsuDailyContent, type OsuDailyContent } from "@choke/shared/osu-daily"
 import type { QuestsContent } from "@choke/shared/quests"
 // import 时即完成 schema + 交叉引用校验；失败会直接抛错，服务端拒绝启动
-import { CONTENT_FILES } from "@choke/shared/content"
+import { CONTENT, CONTENT_FILES } from "@choke/shared/content"
 
 export const CONTENT_DIR = path.resolve(import.meta.dirname, "../../../content")
 
@@ -115,6 +115,14 @@ export function loadContentDir(root: string): {
   )
   const quests = parseQuestContent(readJson(root, QUESTS_FILE), world)
   const osuDaily = parseOsuDailyContent(readJson(root, OSU_DAILY_FILE))
+  for (const [dungeonId, dungeon] of Object.entries(CONTENT.dungeons)) {
+    if (!dungeon.mapId) continue
+    const map = world.maps[dungeon.mapId]
+    if (!map) throw new Error(`dungeons.${dungeonId} 绑定的地图 ${dungeon.mapId} 不存在`)
+    if (map.staminaCost !== dungeon.cost) {
+      throw new Error(`dungeons.${dungeonId} 消耗体力（${dungeon.cost}）与地图 ${dungeon.mapId}（${map.staminaCost}）不一致`)
+    }
+  }
   return { version: hashContent(root, files), battle, world, quests, osuDaily }
 }
 

@@ -14,6 +14,8 @@ export interface DungeonDef {
   summary: string
   /** 体力消耗 */
   cost: number
+  /** 绑定的资源远征地图 id；配置后需首通才允许扫荡 */
+  mapId?: string
   rewards: DungeonRewards
 }
 
@@ -24,4 +26,8 @@ export const DUNGEONS: DungeonDef[] = Object.entries(CONTENT.dungeons).map(([id,
 
 export function dungeonById(id: string): DungeonDef | undefined {
   return DUNGEONS.find((dungeon) => dungeon.id === id)
+}
+
+export function dungeonByMapId(mapId: string): DungeonDef | undefined {
+  return DUNGEONS.find((dungeon) => dungeon.mapId === mapId)
 }

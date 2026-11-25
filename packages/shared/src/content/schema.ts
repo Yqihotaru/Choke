@@ -97,6 +97,8 @@ export const dungeonsSchema = z.record(
     summary: z.string(),
     /** 体力消耗 */
     cost: positiveInt,
+    /** 绑定的小远征地图 id；配置后需首通该地图才解锁扫荡 */
+    mapId: id.optional(),
     rewards: dungeonRewardsSchema,
   }),
 )
