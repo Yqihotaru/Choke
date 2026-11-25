@@ -133,6 +133,7 @@ pnpm build:cards     # 由 rankings 生成 choke-cards.json
 - `Design/内容层结构 v0.1.md`：`content/` 目录和各 JSON 的格式
 - `Design/测试说明 v0.1.md`：测试怎么跑
 - `Design/任务前端对接清单 v0.1.md`、`出征前端对接清单 v0.1.md`、`养成与经济前端对接清单 v0.1.md`：给前端的接口说明
+- `Design/界面动效与音效 v0.1.md`：全站动效、弹层离场、按键音的共用约定（来自 PR #7）
 - `Design/M1-验收清单.md`、`架构重整 v0.1.md`：历史记录
 
 PR #3 的实时边线战斗在独立 worktree 试验，不在 `master`。
