@@ -13,6 +13,7 @@
     "./items": "./src/items.ts",
     "./tutorial": "./src/tutorial.ts",
     "./player": "./src/player.ts",
+    "./unlocks": "./src/unlocks.ts",
     "./pool/types": "./src/pool/types.ts",
     "./pool/score": "./src/pool/score.ts",
     "./pool/rarity": "./src/pool/rarity.ts",

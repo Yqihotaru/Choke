@@ -24,6 +24,7 @@
     "test:skills": "pnpm --filter @choke/api exec tsx scripts/test-skills.ts",
     "test:expedition": "pnpm --filter @choke/api exec tsx scripts/test-expedition.ts",
     "test:lineup": "pnpm --filter @choke/api exec tsx scripts/test-lineup.ts",
+    "test:unlocks": "pnpm --filter @choke/api exec tsx scripts/test-unlocks.ts",
     "test:mail": "pnpm --filter @choke/api exec tsx scripts/test-mail.ts",
     "test:p2": "pnpm --filter @choke/api exec tsx scripts/test-p2.ts",
     "test:quests": "pnpm --filter @choke/api exec tsx scripts/test-quests.ts",

@@ -49,7 +49,7 @@ export const progressionSchema = z.strictObject({
   }),
   player: z.strictObject({
     maxLevel: positiveInt,
-    /** 第 i 项 = 从 Lv.(i+1) 升到下一级的经验；表之后按最后一项 × rate^n 增长 */
+    /** 第 i 项 = 从 Lv.(i+1) 升到下一级的经验；要写满 Lv1 到满级（maxLevel - 1 项），表之后才按最后一项 × rate^n 增长 */
     expTable: z.array(positiveInt).min(1),
     expGrowthRate: z.number().min(1),
     /** 跳过 / 走完教程后的等级 */
@@ -58,7 +58,6 @@ export const progressionSchema = z.strictObject({
     tutorialStepExp: z.partialRecord(z.enum(TUTORIAL_STEPS), positiveInt),
     /** 副本每消耗 1 点体力给的玩家经验 */
     expPerStamina: nonNegative,
-    marketUnlockLevel: positiveInt,
   }),
   expedition: z.strictObject({
     /** 免费卡槽数；slotCosts 的第 i 项 = 买第 baseSlots+i+1 个卡槽的点数 */
@@ -100,6 +99,20 @@ export const dungeonsSchema = z.record(
     /** 绑定的小远征地图 id；配置后需首通该地图才解锁扫荡 */
     mapId: id.optional(),
     rewards: dungeonRewardsSchema,
+  }),
+)
+
+/** 功能解锁表：功能 id → 解锁条件。条件之间是"且"；服务端和前端共用这一份 */
+export const unlocksSchema = z.record(
+  id,
+  z.strictObject({
+    name: z.string().min(1),
+    /** 玩家等级至少到这一级 */
+    level: positiveInt,
+    /** 要先完成新手引导 */
+    tutorial: z.boolean().optional(),
+    /** 要绑定 osu!（或邮箱）的正式账号，游客只能看 */
+    linkedAccount: z.boolean().optional(),
   }),
 )
 
@@ -148,6 +161,7 @@ export const contentSchema = z
     dungeons: dungeonsSchema,
     economy: economySchema,
     packs: packsSchema,
+    unlocks: unlocksSchema,
   })
   .superRefine((content, ctx) => {
     const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message })
@@ -162,8 +176,19 @@ export const contentSchema = z
     if (player.tutorialGraduateLevel > player.maxLevel) {
       issue(["progression", "player", "tutorialGraduateLevel"], "不能超过玩家等级上限")
     }
-    if (player.marketUnlockLevel > player.maxLevel) {
-      issue(["progression", "player", "marketUnlockLevel"], "不能超过玩家等级上限")
+    if (player.expTable.length < player.maxLevel - 1) {
+      issue(["progression", "player", "expTable"], `要写满 Lv1 到 Lv${player.maxLevel}，至少 ${player.maxLevel - 1} 项`)
+    }
+    for (const [featureId, feature] of Object.entries(content.unlocks)) {
+      if (feature.level > player.maxLevel) {
+        issue(["unlocks", featureId, "level"], "不能超过玩家等级上限")
+      }
+      if (!feature.tutorial && feature.level > player.tutorialGraduateLevel) {
+        issue(["unlocks", featureId, "level"], `不要求完成引导的功能，等级不能高于毕业等级 ${player.tutorialGraduateLevel}`)
+      }
+    }
+    if (!content.unlocks.market) {
+      issue(["unlocks", "market"], "缺少 market（市场的解锁条件）")
     }
 
     const { expedition } = content.progression

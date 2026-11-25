@@ -29,16 +29,20 @@
   },
   "player": {
     "maxLevel": 60,
-    "expTable": [100, 150, 250, 400, 600, 900],
-    "expGrowthRate": 1.22,
+    "expTable": [
+      100, 150, 200, 230, 265, 295, 325, 360, 390, 425, 455, 485, 520, 550,
+      560, 560, 560, 565, 565, 565, 565, 570, 570, 570, 570, 575, 575, 575, 575, 580,
+      580, 580, 580, 580, 585, 585, 585, 585, 590, 590, 590, 590, 595, 595, 595, 595, 600, 600, 600,
+      2500, 2800, 3140, 3510, 3930, 4410, 4930, 5530, 6190, 6930
+    ],
+    "expGrowthRate": 1.12,
     "tutorialGraduateLevel": 3,
     "tutorialStepExp": {
       "album-view": 100,
       "deck-view": 80,
       "battle-view": 70
     },
-    "expPerStamina": 1,
-    "marketUnlockLevel": 3
+    "expPerStamina": 1
   },
   "expedition": {
     "baseSlots": 4,

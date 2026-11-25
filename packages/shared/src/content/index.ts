@@ -5,6 +5,7 @@ import economyRaw from "../../../../content/economy.json" with { type: "json" }
 import itemsRaw from "../../../../content/items.json" with { type: "json" }
 import packsRaw from "../../../../content/packs.json" with { type: "json" }
 import progressionRaw from "../../../../content/progression.json" with { type: "json" }
+import unlocksRaw from "../../../../content/unlocks.json" with { type: "json" }
 import type { Rarity } from "../types"
 import { MYSTERY_PACK_ID, contentSchema, type ContentData } from "./schema"
 
@@ -24,8 +25,10 @@ export const CONTENT_FILES = [
   "items.json",
   "packs.json",
   "progression.json",
+  "unlocks.json",
 ] as const
 
+export type FeatureId = keyof typeof unlocksRaw
 export type ItemId = keyof typeof itemsRaw
 export type DungeonId = keyof typeof dungeonsRaw
 export type PackId = keyof typeof packsRaw.packs
@@ -49,6 +52,7 @@ export interface Content {
     }
   >
   economy: Data["economy"]
+  unlocks: Record<FeatureId, Data["unlocks"][string]>
   packs: Omit<Data["packs"], "packs" | "starterGrant" | "starterGuarantee"> & {
     packs: Record<PackId, PackData>
     starterGrant: Partial<Record<PackId | typeof MYSTERY_PACK_ID, number>>
@@ -63,6 +67,7 @@ function load(): Content {
     dungeons: dungeonsRaw,
     economy: economyRaw,
     packs: packsRaw,
+    unlocks: unlocksRaw,
   })
   if (!result.success) {
     throw new Error(`content/ 校验失败：\n${prettifyError(result.error)}`)
