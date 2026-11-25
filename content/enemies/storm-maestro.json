@@ -23,10 +23,10 @@
     }
   ],
   "stats": {
-    "hp": 110000,
-    "atk": 1050,
-    "int": 1150,
-    "def": 2500
+    "hp": 150000,
+    "atk": 820,
+    "int": 880,
+    "def": 1950
   },
   "ai": {
     "moves": {
@@ -44,7 +44,7 @@
         "kind": "magic",
         "label": "雷霆连奏",
         "element": "thunder",
-        "power": 0.55,
+        "power": 0.4,
         "hits": 3,
         "desc": "3 段雷属性魔法"
       },

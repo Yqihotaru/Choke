@@ -6,8 +6,11 @@ import {
   DEFENSE_REDUCTION_NORMAL,
   DEFENSE_REDUCTION_TANK,
   ELEMENT_CYCLE,
+  ELEMENT_CYCLE_MULT,
   MITIGATION_CAP,
   MITIGATION_K,
+  PHYSICAL_SPIRIT_MULT,
+  WEAKNESS_BONUS,
 } from "./config"
 import type { EnemyIntent, EnemyTrait } from "./types"
 
@@ -40,7 +43,7 @@ export function defenseReductionOf(tier: number, tankPresent: boolean): number {
 /**
  * 九属性相克环（§1.2）：
  * 顺时针 1 位 +25%，顺时针 2 位 +10%，逆时针 1 位 -20%，逆时针 2 位 -10%，同属性 -10%。
- * 物理对灵体（spirit 特性）+20%；命中弱点至少 +30%。
+ * 物理对灵体（spirit 特性）+20%；命中弱点在属性乘区内加算 +15%（WEAKNESS_BONUS）。
  */
 export function elementMultiplier(
   attack: Element,
@@ -51,22 +54,22 @@ export function elementMultiplier(
   let mult = 1
   if (attack === "physical") {
     if (traits.includes("spirit")) {
-      mult = 1.2
+      mult = PHYSICAL_SPIRIT_MULT
     }
   } else if (defend !== "physical") {
     const ai = ELEMENT_CYCLE.indexOf(attack)
     const di = ELEMENT_CYCLE.indexOf(defend)
     if (ai >= 0 && di >= 0) {
       const diff = (ai - di + ELEMENT_CYCLE.length) % ELEMENT_CYCLE.length
-      if (diff === 0) mult = 0.9
-      else if (diff === 1) mult = 1.25
-      else if (diff === 2) mult = 1.1
-      else if (diff === ELEMENT_CYCLE.length - 1) mult = 0.8
-      else if (diff === ELEMENT_CYCLE.length - 2) mult = 0.9
+      if (diff === 0) mult = ELEMENT_CYCLE_MULT.same
+      else if (diff === 1) mult = ELEMENT_CYCLE_MULT.counter1
+      else if (diff === 2) mult = ELEMENT_CYCLE_MULT.counter2
+      else if (diff === ELEMENT_CYCLE.length - 1) mult = ELEMENT_CYCLE_MULT.resisted1
+      else if (diff === ELEMENT_CYCLE.length - 2) mult = ELEMENT_CYCLE_MULT.resisted2
     }
   }
   if (weaknesses.includes(attack)) {
-    mult = Math.max(mult, 1.3)
+    mult = Number((mult + WEAKNESS_BONUS).toFixed(4))
   }
   return mult
 }

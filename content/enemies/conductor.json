@@ -22,10 +22,10 @@
     }
   ],
   "stats": {
-    "hp": 120000,
-    "atk": 1080,
-    "int": 1180,
-    "def": 2800
+    "hp": 160000,
+    "atk": 840,
+    "int": 900,
+    "def": 2100
   },
   "ai": {
     "moves": {
@@ -88,7 +88,13 @@
         "otherwise": "beam"
       },
       {
-        "always": "inferno"
+        "when": {
+          "turnMod": [
+            2,
+            1
+          ]
+        },
+        "use": "inferno"
       },
       {
         "when": {

@@ -129,8 +129,10 @@ export const userCards = pgTable(
     serial: integer("serial").notNull().default(0),
     /** 实例个体值，千分比：970–1030；抽到时掷一次，之后不变 */
     rollBp: integer("roll_bp").notNull().default(1000),
-    /** 这张卡自己的技能 id：[{ skillId }]；发卡时掷一次，之后固定。技能挂在实例上，不在卡定义里 */
+    /** 这张卡自己的技能 id：[{ skillId }]；发卡时掷一次，可消耗碎片+金币重洗 */
     skillRefs: jsonb("skill_refs").$type<CardSkillRef[]>().notNull().default(sql`'[]'::jsonb`),
+    /** 单卡技能重洗保底计数：0..(pityInterval-2) 为随机洗，达到 pityInterval-1 时下一次触发自选并归零 */
+    skillRerollCount: integer("skill_reroll_count").notNull().default(0),
     mods: jsonb("mods").notNull().default(sql`'[]'::jsonb`),
     obtainedAt: timestamp("obtained_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -178,6 +180,19 @@ export const userItems = pgTable(
     count: integer("count").notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.userId, table.itemId] })],
+)
+
+/** 统一商店周期限购计数（日/周/月重置周期见 @choke/shared/reset） */
+export const shopPurchases = pgTable(
+  "shop_purchases",
+  {
+    userId: text("user_id").notNull(),
+    itemId: text("item_id").notNull(),
+    periodKey: text("period_key").notNull(),
+    count: integer("count").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.itemId, table.periodKey] })],
 )
 
 export const packTokens = pgTable(

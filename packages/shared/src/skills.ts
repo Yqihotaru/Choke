@@ -78,6 +78,10 @@ export interface SkillDef {
   hits?: number
   /** 伤害吃哪个面板：不写则按职业默认（战士、坦克吃 ATK；法师、辅助看属性，物理吃 ATK 其余吃 INT）。只管"用谁的攻击力"，敌人那边的减伤仍按属性算 */
   scaleStat?: "atk" | "int"
+  /** 专职削盾格数：不写时弱点命中默认削 1 格；写 2/3 可做破盾流派技能 */
+  shieldBreak?: number
+  /** 无视弱点强行削盾（破盾流派专用） */
+  shieldBreakAny?: boolean
   /** 治疗量：占队伍最大生命的比例（不随卡牌等级变）；只用于 heal 技能 */
   healPct?: number
   target?: "enemy" | "self" | "ally" | "team"
@@ -2929,6 +2933,68 @@ export const SKILLS: Record<string, SkillDef> = {
     minRarity: "R",
     maxRarity: "E",
   }),
+
+  // ==================== 破盾流派（Break）====================
+  bulwark_shatter: S({
+    id: "bulwark_shatter",
+    job: "tank",
+    name: "破拍重盾",
+    element: "physical",
+    ap: 2,
+    kind: "damage",
+    costTag: "normal",
+    power: 1.25,
+    hits: 1,
+    shieldBreak: 2,
+    shieldBreakAny: true,
+    target: "enemy",
+    minRarity: "R",
+  }),
+  breaker_rend: S({
+    id: "breaker_rend",
+    job: "warrior",
+    name: "裂拍斩",
+    element: "physical",
+    ap: 2,
+    kind: "damage",
+    costTag: "normal",
+    power: 1.5,
+    hits: 1,
+    shieldBreak: 3,
+    executeBonus: 0.5,
+    executeWhen: ["vulnerable"],
+    target: "enemy",
+    minRarity: "E",
+  }),
+  prism_fracture: S({
+    id: "prism_fracture",
+    job: "mage",
+    name: "棱光碎拍",
+    element: "light",
+    ap: 2,
+    kind: "damage",
+    costTag: "normal",
+    power: 1.35,
+    hits: 1,
+    shieldBreak: 2,
+    shieldBreakAny: true,
+    target: "enemy",
+    minRarity: "E",
+  }),
+  tempo_crack: S({
+    id: "tempo_crack",
+    job: "support",
+    name: "失拍震音",
+    element: "thunder",
+    ap: 1,
+    kind: "damage",
+    costTag: "normal",
+    power: 0.75,
+    hits: 1,
+    shieldBreak: 2,
+    target: "enemy",
+    minRarity: "R",
+  }),
 }
 
 export function hashOf(seed: string): number {
@@ -2978,6 +3044,12 @@ export function rollActiveCount(rarity: Rarity, random: () => number): number {
 export function skillDealtTo(skill: SkillDef, rarity: Rarity): boolean {
   const at = RARITIES.indexOf(rarity)
   return at >= RARITIES.indexOf(skill.minRarity ?? "C") && at <= RARITIES.indexOf(skill.maxRarity ?? "Prismatic")
+}
+
+/** 单卡重洗技能时的合法候选池：同职业 + 品质范围匹配 + 排除卡上当前已拥有的技能 */
+export function rerollSkillPool(job: Job, rarity: Rarity, currentRefs: readonly CardSkillRef[]): SkillDef[] {
+  const owned = new Set(currentRefs.map((ref) => ref.skillId))
+  return Object.values(SKILLS).filter((skill) => skill.job === job && skillDealtTo(skill, rarity) && !owned.has(skill.id))
 }
 
 /**

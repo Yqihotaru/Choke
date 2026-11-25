@@ -27,6 +27,7 @@ export const DAMAGE: Record<string, [Face, Face]> = {
   combo: [card("combo-a", "warrior", ["ranger_zero", "ranger_volley"]), card("combo-b", "mage", ["warlock_cadence", "warlock_overclock"])],
   control: [card("control-a", "mage", ["binder_charm", "binder_focus"]), card("control-b", "mage", ["warlock_starfire", "binder_bind"])],
   holy: [card("holy-a", "warrior", ["paladin_judgment", "paladin_aura"]), card("holy-b", "mage", ["life_renew", "life_regen"])],
+  break: [card("break-a", "warrior", ["breaker_rend", "ranger_swift"]), card("break-b", "mage", ["prism_fracture", "warlock_overclock"])],
 }
 
 export const SUPPORT: Record<string, Face> = {
@@ -59,6 +60,7 @@ export const PROBE_LABEL: Record<string, string> = {
   combo: "连击",
   control: "控制",
   holy: "圣光",
+  break: "破盾",
   sustain: "续航反伤",
 }
 

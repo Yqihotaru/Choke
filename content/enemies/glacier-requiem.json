@@ -20,10 +20,10 @@
     }
   ],
   "stats": {
-    "hp": 115000,
-    "atk": 900,
-    "int": 1250,
-    "def": 2400
+    "hp": 155000,
+    "atk": 740,
+    "int": 900,
+    "def": 1900
   },
   "ai": {
     "moves": {
@@ -75,7 +75,7 @@
         "kind": "magic",
         "label": "冰壳破裂",
         "element": "ice",
-        "power": 0.7,
+        "power": 0.55,
         "hits": 3,
         "desc": "二阶段：冰壳碎裂，3 段冰属性魔法"
       }
@@ -107,7 +107,10 @@
       },
       {
         "when": {
-          "hpBelow": 0.5
+          "all": [
+            { "hpBelow": 0.5 },
+            { "turnMod": [2, 0] }
+          ]
         },
         "use": "shatter"
       }

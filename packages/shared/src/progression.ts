@@ -90,22 +90,46 @@ export function applyExp(
   return { level: nextLevel, exp: nextExp, wasted: 0 }
 }
 
-/** 40+ 突破金币消耗（v0.3 §6.3）：40→50: 300, 50→60: 500, 60→70: 500, 70→80: 700，合计 2000 */
-export const BREAKTHROUGH_COIN_COST: Readonly<Record<number, number>> = {
-  40: 300,
-  50: 500,
-  60: 500,
-  70: 700,
+function toNumericMap(raw: Readonly<Record<string, number>>): Readonly<Record<number, number>> {
+  return Object.fromEntries(Object.entries(raw).map(([k, v]) => [Number(k), v]))
 }
+
+/** 40+ 突破金币消耗（数值在 content/progression.json 的 card.breakthroughCoins） */
+export const BREAKTHROUGH_COIN_COST: Readonly<Record<number, number>> = toNumericMap(CARD.breakthroughCoins)
+
+/** 40+ 突破同品质碎片消耗（数值在 content/progression.json 的 card.breakthroughShards） */
+export const BREAKTHROUGH_SHARD_COST: Readonly<Record<Rarity, Readonly<Record<number, number>>>> = Object.fromEntries(
+  Object.entries(CARD.breakthroughShards).map(([r, table]) => [r, toNumericMap(table)]),
+) as Record<Rarity, Readonly<Record<number, number>>>
 
 export function breakthroughCoinCost(level: number, isHero: boolean): number {
   if (isHero) return 0
   return BREAKTHROUGH_COIN_COST[level] ?? 0
 }
 
+export function breakthroughShardCost(level: number, rarity: Rarity, isHero: boolean): number {
+  if (isHero) return 0
+  return BREAKTHROUGH_SHARD_COST[rarity]?.[level] ?? 0
+}
+
+/** 技能重洗「逢 N 自选」周期（数值在 content/progression.json 的 card.skillReroll） */
+export const SKILL_REROLL_PITY_INTERVAL = CARD.skillReroll.pityInterval
+
+export function skillRerollCost(rarity: Rarity): { shards: number; coins: number } {
+  return {
+    shards: CARD.skillReroll.shards[rarity],
+    coins: CARD.skillReroll.coins[rarity],
+  }
+}
+
+/** 单卡重洗计数是否已到自选档（例如逢 5：count === 4 时下一次洗为自选） */
+export function isSkillRerollSelectReady(count: number): boolean {
+  return count >= SKILL_REROLL_PITY_INTERVAL - 1
+}
+
 /**
- * 喂养连续升级（含 40+ 突破金币消耗）：
- * 若经验够升到突破下一级但金币不足，则停在当前突破级，剩余经验保留在 exp 中。
+ * 喂养连续升级（含 40+ 突破金币与同品质碎片消耗）：
+ * 若经验够升到突破下一级但金币或碎片不足，则停在当前突破级，剩余经验保留在 exp 中。
  */
 export function applyExpWithBreakthrough(
   level: number,
@@ -114,28 +138,46 @@ export function applyExpWithBreakthrough(
   rarity: Rarity,
   isHero: boolean,
   availableCoins: number,
-): { level: number; exp: number; wasted: number; coinsSpent: number; blockedCost: number } {
+  availableShards = Number.POSITIVE_INFINITY,
+): {
+  level: number
+  exp: number
+  wasted: number
+  coinsSpent: number
+  shardsSpent: number
+  blockedCost: number
+  blockedShards: number
+} {
   const cap = levelCap(isHero)
   let nextLevel = level
   let nextExp = exp + gained
   let coinsLeft = Math.max(0, availableCoins)
+  let shardsLeft = Math.max(0, availableShards)
   let coinsSpent = 0
+  let shardsSpent = 0
   let blockedCost = 0
+  let blockedShards = 0
 
   while (nextLevel < cap) {
     const need = expToNext(nextLevel, rarity, isHero)
     if (nextExp < need) break
     const coinCost = breakthroughCoinCost(nextLevel, isHero)
-    if (coinCost > coinsLeft) {
-      blockedCost = coinCost
+    const shardCost = breakthroughShardCost(nextLevel, rarity, isHero)
+    if (coinCost > coinsLeft || shardCost > shardsLeft) {
+      blockedCost = coinCost > coinsLeft ? coinCost : 0
+      blockedShards = shardCost > shardsLeft ? shardCost : 0
       break
     }
     nextExp -= need
     coinsLeft -= coinCost
+    shardsLeft -= shardCost
     coinsSpent += coinCost
+    shardsSpent += shardCost
     nextLevel += 1
   }
 
-  if (nextLevel >= cap) return { level: cap, exp: 0, wasted: nextExp, coinsSpent, blockedCost: 0 }
-  return { level: nextLevel, exp: nextExp, wasted: 0, coinsSpent, blockedCost }
+  if (nextLevel >= cap) {
+    return { level: cap, exp: 0, wasted: nextExp, coinsSpent, shardsSpent, blockedCost: 0, blockedShards: 0 }
+  }
+  return { level: nextLevel, exp: nextExp, wasted: 0, coinsSpent, shardsSpent, blockedCost, blockedShards }
 }

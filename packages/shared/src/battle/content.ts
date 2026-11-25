@@ -127,6 +127,8 @@ export const enemySchema = z.strictObject({
   /** 隐藏弱点：一直生效，打中一次才显示 */
   hiddenWeaknesses: z.array(element).default([]),
   weaknessWindows: z.array(weaknessWindowSchema).default([]),
+  /** 弱点护盾最大格数（不填按档位默认 SHIELD_MAX_BY_TIER，填 0 表示无护盾） */
+  shieldMax: z.number().int().min(0).max(20).optional(),
   traits: z.array(z.enum(ENEMY_TRAITS)).default([]),
   stats: z.strictObject({ hp: int.positive(), atk: int.min(0), int: int.min(0), def: int.min(0) }),
   enrageOnInterrupt: z.boolean().optional(),

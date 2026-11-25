@@ -15,9 +15,14 @@ import {
   type ItemStack,
 } from "@choke/shared/items"
 import {
+  SKILL_REROLL_PITY_INTERVAL,
   applyExpWithBreakthrough,
   breakthroughCoinCost,
+  breakthroughShardCost,
+  isSkillRerollSelectReady,
+  skillRerollCost,
 } from "@choke/shared/progression"
+import { cardSkillOf, rerollSkillPool } from "@choke/shared/skills"
 import {
   RESONANCE_ATTR_CAP,
   RESONANCE_TOTAL_CAP,
@@ -94,6 +99,7 @@ const cardColumns = {
   serial: userCards.serial,
   rollBp: userCards.rollBp,
   skillRefs: userCards.skillRefs,
+  skillRerollCount: userCards.skillRerollCount,
   foil: userCards.foil,
   obtainedAt: userCards.obtainedAt,
 }
@@ -231,7 +237,10 @@ export async function progressionRoutes(app: FastifyInstance) {
       })
     }
 
+    const rarity = target.rarity as Rarity
     const coinCost = breakthroughCoinCost(target.level, hero)
+    const shardCost = breakthroughShardCost(target.level, rarity, hero)
+    const shardId = shardItemId(rarity)
     const result = await runTx(reply, async (tx) => {
       await lockUser(tx, userId)
       if (coinCost > 0) {
@@ -248,6 +257,9 @@ export async function progressionRoutes(app: FastifyInstance) {
             coins,
           })
         }
+      }
+      if (shardCost > 0) {
+        await spendItems(tx, userId, [{ itemId: shardId, count: shardCost }])
       }
 
       const [leveled] = await tx
@@ -266,8 +278,11 @@ export async function progressionRoutes(app: FastifyInstance) {
         throw new TxAbort(409, "conflict", "卡牌状态刚刚变化了，请刷新后重试")
       }
 
-      if (coinCost > 0) {
-        await recordLedger(tx, userId, [{ kind: "coins", delta: -coinCost }], {
+      const btLedger: LedgerEntryInput[] = []
+      if (coinCost > 0) btLedger.push({ kind: "coins", delta: -coinCost })
+      if (shardCost > 0) btLedger.push({ kind: "item", ref: shardId, delta: -shardCost })
+      if (btLedger.length > 0) {
+        await recordLedger(tx, userId, btLedger, {
           source: "breakthrough",
           sourceRef: String(userCardId),
         })
@@ -275,7 +290,7 @@ export async function progressionRoutes(app: FastifyInstance) {
 
       const [u] = await tx.select({ coins: users.coins }).from(users).where(eq(users.id, userId)).limit(1)
       await recordQuestEvent(tx, userId, "card-level", { value: target.level + 1 })
-      return { coins: u?.coins ?? 0 }
+      return { coins: u?.coins ?? 0, items: await loadItems(userId, tx) }
     })
     if (!result) return
 
@@ -285,7 +300,10 @@ export async function progressionRoutes(app: FastifyInstance) {
         card: await loadCard(userId, userCardId),
         spent: need,
         coinsSpent: coinCost,
+        shardsSpent: shardCost,
+        shardItemId: shardCost > 0 ? shardId : undefined,
         coins: result.coins,
+        items: result.items,
       },
     }
   })
@@ -593,14 +611,19 @@ export async function progressionRoutes(app: FastifyInstance) {
         .where(eq(users.id, userId))
         .limit(1)
       const availableCoins = userRow?.coins ?? 0
+      const targetRarity = target.rarity as Rarity
+      const targetShardId = shardItemId(targetRarity)
+      const walletBeforeBt = await loadItems(userId, tx)
+      const availableShards = targetHero ? 0 : (walletBeforeBt[targetShardId] ?? 0)
 
       const next = applyExpWithBreakthrough(
         target.level,
         target.exp,
         gained,
-        target.rarity as Rarity,
+        targetRarity,
         targetHero,
         availableCoins,
+        availableShards,
       )
       await tx
         .update(userCards)
@@ -616,6 +639,10 @@ export async function progressionRoutes(app: FastifyInstance) {
           .returning({ coins: users.coins })
         coins = coinWallet?.coins ?? availableCoins - next.coinsSpent
         ledger.push({ kind: "coins", delta: -next.coinsSpent })
+      }
+      if (next.shardsSpent > 0) {
+        await spendItems(tx, userId, [{ itemId: targetShardId, count: next.shardsSpent }])
+        ledger.push({ kind: "item", ref: targetShardId, delta: -next.shardsSpent })
       }
 
       let essence: number | undefined
@@ -637,7 +664,10 @@ export async function progressionRoutes(app: FastifyInstance) {
         wasted: next.wasted,
         levelsGained: next.level - target.level,
         coinsSpent: next.coinsSpent,
+        shardsSpent: next.shardsSpent,
+        shardItemId: next.shardsSpent > 0 ? targetShardId : undefined,
         blockedCost: next.blockedCost,
+        blockedShards: next.blockedShards,
         coins,
         essenceGained,
         essence,
@@ -925,5 +955,193 @@ export async function progressionRoutes(app: FastifyInstance) {
     if (!recycled) return
 
     return { ok: true, data: recycled }
+  })
+
+  /** 查询单卡洗技能状态（单卡独立逢 N 自选计数、单次消耗与合法候选技能池） */
+  app.get("/users/:userId/cards/:userCardId/reroll-skill", async (request, reply) => {
+    const params = paramsSchema.parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+    const { userCardId } = params
+    const target = await loadCard(userId, userCardId)
+    if (!target) {
+      return reply.code(404).send({
+        ok: false,
+        error: { code: "not_found", message: "卡不在这个账号的卡册里" },
+      })
+    }
+    if (target.cardType === "hero" || isHeroCardId(target.id)) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "hero_protected", message: "本体卡不能重洗技能" },
+      })
+    }
+
+    const rarity = target.rarity as Rarity
+    const cost = skillRerollCost(rarity)
+    const shardId = shardItemId(rarity)
+    const pool = rerollSkillPool(target.job as Job, rarity, target.skillRefs ?? [])
+    const selectReady = isSkillRerollSelectReady(target.skillRerollCount)
+
+    return {
+      ok: true,
+      data: {
+        userCardId,
+        skillRerollCount: target.skillRerollCount,
+        pityInterval: SKILL_REROLL_PITY_INTERVAL,
+        remainingUntilSelect: Math.max(0, SKILL_REROLL_PITY_INTERVAL - 1 - target.skillRerollCount),
+        selectReady,
+        cost: {
+          coins: cost.coins,
+          shards: cost.shards,
+          shardItemId: shardId,
+        },
+        candidates: pool.map((def) => ({ ...cardSkillOf(def), desc: def.desc ?? "" })),
+      },
+    }
+  })
+
+  /** 碎片 + 金币「逢 5 自选」洗技能（单卡独立计数，严格吃同品质碎片） */
+  app.post("/users/:userId/cards/:userCardId/reroll-skill", async (request, reply) => {
+    const params = paramsSchema.parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+    const { userCardId } = params
+    const body = z
+      .object({
+        slot: z.number().int().min(0).max(2),
+        skillId: z.string().min(1).optional(),
+      })
+      .parse(request.body)
+
+    const result = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+
+      const [fresh] = await tx
+        .select({
+          id: userCards.id,
+          cardId: cards.id,
+          cardType: cards.cardType,
+          job: cards.job,
+          rarity: cards.rarity,
+          skillRefs: userCards.skillRefs,
+          skillRerollCount: userCards.skillRerollCount,
+        })
+        .from(userCards)
+        .innerJoin(cards, eq(cards.id, userCards.cardId))
+        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+        .limit(1)
+      if (!fresh) throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
+      if (fresh.cardType === "hero" || isHeroCardId(fresh.cardId)) {
+        throw new TxAbort(400, "hero_protected", "本体卡不能重洗技能")
+      }
+      if (await anyLocked(tx, userId, [userCardId])) {
+        throw new TxAbort(400, "in_expedition", EXPEDITION_LOCK_MESSAGE)
+      }
+      const [listed] = await tx
+        .select({ id: marketListings.id })
+        .from(marketListings)
+        .where(and(eq(marketListings.userCardId, userCardId), eq(marketListings.status, "active")))
+        .limit(1)
+      if (listed) {
+        throw new TxAbort(400, "card_listed", "挂在市场上的卡不能重洗技能")
+      }
+
+      const refs = fresh.skillRefs ?? []
+      if (body.slot >= refs.length) {
+        throw new TxAbort(400, "invalid_slot", `技能槽位越界：该卡只有 ${refs.length} 个技能槽`)
+      }
+
+      const rarity = fresh.rarity as Rarity
+      const pool = rerollSkillPool(fresh.job as Job, rarity, refs)
+      if (pool.length === 0) {
+        throw new TxAbort(400, "empty_skill_pool", "没有可替换的候选技能")
+      }
+
+      const selectReady = isSkillRerollSelectReady(fresh.skillRerollCount)
+      let pickedId: string
+      let nextCount: number
+      let mode: "random" | "select"
+      if (selectReady) {
+        if (!body.skillId) {
+          throw new TxAbort(400, "skill_id_required", `已触发逢 ${SKILL_REROLL_PITY_INTERVAL} 自选，请指定目标技能`)
+        }
+        if (!pool.some((s) => s.id === body.skillId)) {
+          throw new TxAbort(400, "invalid_skill_id", "所选技能不在该卡合法候选池内，或已装备在卡上")
+        }
+        pickedId = body.skillId
+        nextCount = 0
+        mode = "select"
+      } else {
+        if (body.skillId) {
+          throw new TxAbort(
+            400,
+            "select_not_ready",
+            `当前为第 ${fresh.skillRerollCount + 1}/${SKILL_REROLL_PITY_INTERVAL} 次随机洗技能，满 ${SKILL_REROLL_PITY_INTERVAL} 次才可自选`,
+          )
+        }
+        pickedId = pool[Math.floor(Math.random() * pool.length)]!.id
+        nextCount = fresh.skillRerollCount + 1
+        mode = "random"
+      }
+
+      const cost = skillRerollCost(rarity)
+      const shardId = shardItemId(rarity)
+      if (cost.coins > 0) {
+        const [wallet] = await tx
+          .update(users)
+          .set({ coins: sql`${users.coins} - ${cost.coins}` })
+          .where(and(eq(users.id, userId), gte(users.coins, cost.coins)))
+          .returning({ coins: users.coins })
+        if (!wallet) {
+          const [u] = await tx.select({ coins: users.coins }).from(users).where(eq(users.id, userId)).limit(1)
+          const coins = u?.coins ?? 0
+          throw new TxAbort(400, "not_enough_coins", `洗技能金币不足：${coins} / ${cost.coins}`, {
+            need: cost.coins,
+            coins,
+          })
+        }
+      }
+      await spendItems(tx, userId, [{ itemId: shardId, count: cost.shards }])
+
+      const previousSkillId = refs[body.slot]!.skillId
+      const nextRefs = refs.map((ref, idx) => (idx === body.slot ? { skillId: pickedId } : ref))
+      await tx
+        .update(userCards)
+        .set({ skillRefs: nextRefs, skillRerollCount: nextCount })
+        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+
+      const ledgerEntriesToAdd: LedgerEntryInput[] = [{ kind: "item", ref: shardId, delta: -cost.shards }]
+      if (cost.coins > 0) ledgerEntriesToAdd.push({ kind: "coins", delta: -cost.coins })
+      await recordLedger(tx, userId, ledgerEntriesToAdd, {
+        source: "skill-reroll",
+        sourceRef: String(userCardId),
+      })
+
+      const [u] = await tx.select({ coins: users.coins }).from(users).where(eq(users.id, userId)).limit(1)
+      return {
+        slot: body.slot,
+        mode,
+        previousSkillId,
+        newSkillId: pickedId,
+        skillRerollCount: nextCount,
+        pityInterval: SKILL_REROLL_PITY_INTERVAL,
+        selectReady: isSkillRerollSelectReady(nextCount),
+        coinsSpent: cost.coins,
+        shardsSpent: cost.shards,
+        shardItemId: shardId,
+        coins: u?.coins ?? 0,
+        items: await loadItems(userId, tx),
+      }
+    })
+    if (!result) return
+
+    return {
+      ok: true,
+      data: {
+        card: await loadCard(userId, userCardId),
+        ...result,
+      },
+    }
   })
 }

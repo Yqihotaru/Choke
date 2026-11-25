@@ -1,4 +1,5 @@
 import type { Element, Rarity } from "../types"
+import type { StatusEffect } from "./types"
 
 /**
  * 战斗数值。敌人与关卡在 content/enemies、content/encounters。
@@ -16,6 +17,33 @@ export const ELEMENT_CYCLE: Element[] = [
   "light",
   "dark",
 ]
+
+/** 九属性相克环倍率（§1.2）：同属性 / 顺时针 1·2 位 / 逆时针 1·2 位 */
+export const ELEMENT_CYCLE_MULT = {
+  same: 0.9,
+  counter1: 1.25,
+  counter2: 1.1,
+  resisted1: 0.8,
+  resisted2: 0.9,
+} as const
+
+/** 物理命中灵体（spirit 特性）的倍率 */
+export const PHYSICAL_SPIRIT_MULT = 1.2
+
+/** 命中敌人弱点时加算到属性乘区的额外加成（+15%，配合弱点破防机制） */
+export const WEAKNESS_BONUS = 0.15
+
+/** 残血增强类被动的队伍血量比例阈值 */
+export const LOW_HP_THRESHOLD = 0.3
+
+/** 硬壳支援：单段伤害低于门槛时的保底伤害 */
+export const SHELL_MIN_DAMAGE = 100
+
+/** 弱点破防（Break）护盾默认格数：按敌人档位，可在敌人 JSON 里用 shieldMax 单独覆盖（0 = 无盾） */
+export const SHIELD_MAX_BY_TIER = { normal: 3, elite: 5, boss: 7 } as const
+
+/** 破盾时给敌人施加「脆弱」状态的持续回合数（仅提供伤害窗口，不返 AP、不抢打断位） */
+export const SHIELD_BREAK_VULNERABLE_TURNS = 2
 
 /**
  * Combo 曲线（§9.2）：凸曲线，封顶 +50%。
@@ -103,3 +131,44 @@ export const SUPPORT_MAX_SLOTS = 7
 /** 抢攻基础概率（§10.2，基础 4%，这里给到 14% 便于内测体验） */
 export const PREEMPTIVE_RATE = 0.14
 export const PREEMPTIVE_POWER = 0.7
+
+/** 每回合触发灯（Boost / 必杀 / 连击）基础概率与 MOD/诗人被动系数（§10.1） */
+export const CARD_TRIGGER_CONFIG = {
+  modBonusPerMod: 0.03,
+  criticalArtBase: 0.04,
+  criticalArtModScale: 0.5,
+  criticalArtBardScale: 0.3,
+  doubleCastBase: 0.05,
+  doubleCastModScale: 0.5,
+  doubleCastBardScale: 0.3,
+  boostBase: 0.12,
+} as const
+
+/** 敌方异常/增益状态默认模板（§11.1） */
+export const ENEMY_STATUS_TEMPLATES: Readonly<Record<string, StatusEffect>> = {
+  freeze: { id: "freeze", name: "冻结", amount: 0.2, turns: 2, isDebuff: true },
+  shock: { id: "shock", name: "触电", amount: 0.3, turns: 3, isDebuff: true },
+  burn: { id: "burn", name: "燃烧", amount: 0.03, turns: 3, isDebuff: true },
+  poison: { id: "poison", name: "中毒", amount: 0.03, turns: 4, isDebuff: true },
+  fear: { id: "fear", name: "恐惧", amount: 1, turns: 3, isDebuff: true },
+  charm: { id: "charm", name: "魅惑", amount: 0.5, turns: 2, isDebuff: true },
+  bleed: { id: "bleed", name: "流血", amount: 0.01, turns: 3, stacks: 1, isDebuff: true },
+  confuse: { id: "confuse", name: "混乱", amount: 0.3, turns: 2, isDebuff: true },
+  curse: { id: "curse", name: "诅咒", amount: 0.15, turns: 3, isDebuff: true },
+  silence: { id: "silence", name: "沉默", amount: 1, turns: 2, isDebuff: true },
+  armor_break: { id: "armor_break", name: "破防", stat: "def", amount: -0.2, turns: 3, stacks: 1, isDebuff: true },
+  weaken: { id: "weaken", name: "衰弱", stat: "atk", amount: -0.2, turns: 2, isDebuff: true },
+  vulnerable: { id: "vulnerable", name: "脆弱", amount: 0.3, turns: 2, isDebuff: true },
+  enrage: { id: "enrage", name: "狂暴", stat: "atk", amount: 0.4, turns: 99, isDebuff: false },
+  vigilant: { id: "vigilant", name: "警觉", amount: 1, turns: 3, isDebuff: false },
+}
+
+/** 敌方挂在我方队伍上的异常状态默认数值与回合 */
+export const TEAM_STATUS_DEFAULT = { amount: 0.03, turns: 3 } as const
+
+/** Down 抵抗公式参数（§7.3 & §6.8）：坦克基础 45% + 每档防御 +15%；非坦克每档防御 +12% */
+export const DOWN_RESIST_CONFIG = {
+  tankBase: 0.45,
+  tankPerDefTier: 0.15,
+  otherPerDefTier: 0.12,
+} as const

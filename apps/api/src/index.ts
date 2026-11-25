@@ -23,6 +23,7 @@ import { packRoutes } from "./routes/packs"
 import { progressionRoutes } from "./routes/progression"
 import { progressRoutes } from "./routes/progress"
 import { questRoutes } from "./routes/quests"
+import { shopRoutes } from "./routes/shop"
 import { client, sql } from "./db/client"
 
 const app = Fastify({ logger: true })
@@ -50,6 +51,7 @@ await app.register(dungeonRoutes)
 await app.register(expeditionRoutes)
 await app.register(questRoutes)
 await app.register(progressRoutes)
+await app.register(shopRoutes)
 
 app.get("/health", async () => ({ ok: true, data: { status: "up", contentVersion: CONTENT_VERSION } }))
 

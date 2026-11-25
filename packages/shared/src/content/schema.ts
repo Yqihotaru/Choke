@@ -17,6 +17,7 @@ const positiveInt = int.positive()
 const nonNegative = z.number().nonnegative()
 const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]*$/, "id 只能用字母、数字和连字符")
 const perRarity = <T extends z.ZodType>(value: T) => z.record(rarity, value)
+const levelCostMap = z.record(z.string().regex(/^[1-9][0-9]*$/, "突破等级必须是正整数"), positiveInt)
 
 /** 升级曲线：[等级, 占满级总经验的比例]，分段线性 */
 const levelCurve = z
@@ -46,6 +47,16 @@ export const progressionSchema = z.strictObject({
     refundRate: z.number().min(0).max(1),
     /** 分解一张卡得到的同品质碎片个数 */
     shardsPerDismantle: positiveInt,
+    /** 特定等级突破金币消耗：等级 → 金币 */
+    breakthroughCoins: levelCostMap,
+    /** 特定等级突破同品质碎片消耗：品质 → (等级 → 碎片数) */
+    breakthroughShards: perRarity(levelCostMap),
+    /** 碎片+金币「逢 N 自选」洗技能配置 */
+    skillReroll: z.strictObject({
+      pityInterval: int.min(2),
+      shards: perRarity(positiveInt),
+      coins: perRarity(nonNegative),
+    }),
   }),
   player: z.strictObject({
     maxLevel: positiveInt,
@@ -153,6 +164,53 @@ export const packsSchema = z.strictObject({
   mirror: z.strictObject({ rate: z.number().min(0).max(1), activeDays: positiveInt }),
 })
 
+const shopPackStack = z.strictObject({ pool: id, count: positiveInt })
+
+const shopCostSchema = z
+  .strictObject({
+    coins: positiveInt.optional(),
+    items: z.array(itemStack).min(1).optional(),
+  })
+  .refine((c) => Boolean(c.coins) || Boolean(c.items?.length), "商品必须至少消耗金币或一种物品")
+
+const shopRewardSchema = z.discriminatedUnion("kind", [
+  z
+    .strictObject({
+      kind: z.literal("fixed"),
+      stamina: positiveInt.optional(),
+      items: z.array(itemStack).min(1).optional(),
+      packs: z.array(shopPackStack).min(1).optional(),
+    })
+    .refine(
+      (r) => Boolean(r.stamina) || Boolean(r.items?.length) || Boolean(r.packs?.length),
+      "固定商品必须至少包含体力、物品或卡包之一",
+    ),
+  z.strictObject({
+    kind: z.literal("gamble"),
+    pool: z
+      .array(
+        z.strictObject({
+          weight: z.number().positive(),
+          items: z.array(itemStack).min(1),
+        }),
+      )
+      .min(2),
+  }),
+])
+
+export const shopSchema = z.record(
+  id,
+  z.strictObject({
+    name: z.string().min(1),
+    summary: z.string().min(1),
+    section: z.enum(["supply", "gamble", "pity"]),
+    period: z.enum(["daily", "weekly", "monthly"]),
+    limit: positiveInt,
+    cost: shopCostSchema,
+    reward: shopRewardSchema,
+  }),
+)
+
 /** 整个 content/：先各自校验，再检查跨文件引用和经济上的硬约束 */
 export const contentSchema = z
   .strictObject({
@@ -162,6 +220,7 @@ export const contentSchema = z
     economy: economySchema,
     packs: packsSchema,
     unlocks: unlocksSchema,
+    shop: shopSchema,
   })
   .superRefine((content, ctx) => {
     const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message })
@@ -171,6 +230,18 @@ export const contentSchema = z
       const curve = card.levelCurve[kind]
       if (curve[curve.length - 1]![0] !== card.levelCap[kind]) {
         issue(["progression", "card", "levelCurve", kind], `曲线最后一个点必须是满级 ${card.levelCap[kind]}`)
+      }
+    }
+    for (const lvlStr of Object.keys(card.breakthroughCoins)) {
+      if (Number(lvlStr) >= card.levelCap.normal) {
+        issue(["progression", "card", "breakthroughCoins", lvlStr], `突破等级必须小于普通卡满级 ${card.levelCap.normal}`)
+      }
+    }
+    for (const r of RARITIES) {
+      for (const lvlStr of Object.keys(card.breakthroughShards[r])) {
+        if (Number(lvlStr) >= card.levelCap.normal) {
+          issue(["progression", "card", "breakthroughShards", r, lvlStr], `突破等级必须小于普通卡满级 ${card.levelCap.normal}`)
+        }
       }
     }
     if (player.tutorialGraduateLevel > player.maxLevel) {
@@ -251,6 +322,37 @@ export const contentSchema = z
     for (const grantId of Object.keys(starterGrant)) {
       if (grantId !== MYSTERY_PACK_ID && !packIds.includes(grantId)) {
         issue(["packs", "starterGrant", grantId], `卡包 ${grantId} 不存在`)
+      }
+    }
+
+    // 商店跨文件引用与「产出严禁进市场」硬约束（仅允许绑定挂机包 idle）
+    for (const [shopId, entry] of Object.entries(content.shop)) {
+      entry.cost.items?.forEach((stack, i) => {
+        if (!Object.hasOwn(content.items, stack.itemId)) {
+          issue(["shop", shopId, "cost", "items", i, "itemId"], `物品 ${stack.itemId} 不存在`)
+        }
+      })
+      if (entry.reward.kind === "fixed") {
+        entry.reward.items?.forEach((stack, i) => {
+          if (!Object.hasOwn(content.items, stack.itemId)) {
+            issue(["shop", shopId, "reward", "items", i, "itemId"], `物品 ${stack.itemId} 不存在`)
+          }
+        })
+        entry.reward.packs?.forEach((pack, i) => {
+          if (!packIds.includes(pack.pool)) {
+            issue(["shop", shopId, "reward", "packs", i, "pool"], `卡包 ${pack.pool} 不存在`)
+          } else if (pack.pool !== "idle") {
+            issue(["shop", shopId, "reward", "packs", i, "pool"], "商店仅允许发放绑定卡包（idle），禁止发放可交易卡包")
+          }
+        })
+      } else {
+        entry.reward.pool.forEach((opt, i) => {
+          opt.items.forEach((stack, j) => {
+            if (!Object.hasOwn(content.items, stack.itemId)) {
+              issue(["shop", shopId, "reward", "pool", i, "items", j, "itemId"], `物品 ${stack.itemId} 不存在`)
+            }
+          })
+        })
       }
     }
   })

@@ -154,17 +154,17 @@
     "name": "荆冠",
     "kind": "thorns",
     "element": "wood",
-    "atk": 380,
+    "atk": 220,
     "power": 1,
-    "roleText": "反伤支援 · 每受1段反伤 380"
+    "roleText": "反伤支援 · 每受1段反伤 220"
   },
   "enemy-sup-matriarch-bark": {
     "name": "树皮甲",
     "kind": "armor",
     "element": "wood",
-    "defenseTier": 2,
+    "defenseTier": 1,
     "tier": 2,
-    "roleText": "常驻防御 II 档 (−40%) · 强度 2，普通拆除拆不动"
+    "roleText": "常驻防御 I 档 (−20%) · 强度 2，普通拆除拆不动"
   },
   "enemy-sup-metronome-shell": {
     "name": "巨像硬壳",

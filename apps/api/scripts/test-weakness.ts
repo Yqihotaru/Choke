@@ -18,7 +18,9 @@ const deck = DECKS.normal!
 const ALL: Element[] = [...ELEMENTS]
 
 /** 把 ghost 的弱点清空再按 patch 覆盖，其余不变，这样「有弱点」和「没弱点」只差一个因素 */
-function enemyWith(patch: Partial<Pick<EnemyDef, "weaknesses" | "hiddenWeaknesses" | "weaknessWindows">>): EncounterSpec {
+function enemyWith(
+  patch: Partial<Pick<EnemyDef, "weaknesses" | "hiddenWeaknesses" | "weaknessWindows" | "shieldMax">>,
+): EncounterSpec {
   return { ...ghost, enemy: { ...ghost.enemy, weaknesses: [], hiddenWeaknesses: [], weaknessWindows: [], ...patch } }
 }
 
@@ -153,6 +155,44 @@ function findHit(state: BattleState): BattleAction {
   check("内容：教学幽灵带一个隐藏弱点（教程里有引导）", BATTLE_CONTENT.enemies["tutorial-ghost"]!.hiddenWeaknesses.length === 1)
   const covered = new Set(Object.values(BATTLE_CONTENT.enemies).map((e) => e.element))
   check("内容：敌人覆盖全部 9 种属性", ALL.every((el) => covered.has(el)), ALL.filter((el) => !covered.has(el)).join())
+}
+
+// ---------- 6. 弱点破盾 ----------
+{
+  const defaultShield = start(enemyWith({ weaknesses: ALL }))
+  check("破盾：普通怪默认 3 格护盾", defaultShield.enemy.shieldMax === 3 && defaultShield.enemy.shield === 3)
+
+  // 非弱点命中不削盾
+  const noWeak = start(enemyWith({ weaknesses: [], shieldMax: 2 }))
+  const afterNoWeak = apply(noWeak, findHit(noWeak))
+  check("破盾：未命中弱点时不削盾", afterNoWeak.enemy.shield === 2)
+
+  // 弱点命中削盾，归零施加脆弱并发 shield_break 事件，敌方回合结束后回满盾
+  const oneShield = start(enemyWith({ weaknesses: ALL, shieldMax: 1 }))
+  const broken = apply(oneShield, findHit(oneShield))
+  check("破盾：弱点命中削至 0 格", broken.enemy.shield === 0)
+  check("破盾：归零施加 2 回合脆弱", broken.enemy.statuses.some((s) => s.id === "vulnerable" && s.turns === 2))
+  check("破盾：发出一次 shield_break 事件", broken.events.filter((e) => e.type === "shield_break").length === 1)
+
+  const nextTurn = apply(broken, { type: "endTurn" })
+  check("破盾：敌方回合结束后护盾回满", nextTurn.enemy.shield === 1 && nextTurn.enemy.shieldMax === 1)
+
+  // 专职破盾技能：无视弱点强削 2 格（bulwark_shatter）+ 命中弱点一击削 3 格（breaker_rend）
+  const breakCards = [
+    { ...deck[0]!, face: { ...deck[0]!.face, job: "tank" as const, skills: [{ id: "bulwark_shatter", name: "破拍重盾", element: "physical" as const, ap: 2 }] } },
+    { ...deck[1]!, face: { ...deck[1]!.face, job: "warrior" as const, skills: [{ id: "breaker_rend", name: "裂拍斩", element: "physical" as const, ap: 2 }] } },
+  ]
+  const sAny = createBattle(enemyWith({ weaknesses: [], shieldMax: 5 }), breakCards, { seed: "break-any-1", apMax: 6 })
+  const afterAny = apply(sAny, { type: "skill", card: 0, skill: "bulwark_shatter" })
+  check("破盾技：bulwark_shatter 无视弱点强削 2 格（5 → 3）", afterAny.enemy.shield === 3, String(afterAny.enemy.shield))
+
+  const sRend = createBattle(enemyWith({ weaknesses: ["physical"], shieldMax: 3 }), breakCards, { seed: "break-rend-1", apMax: 6 })
+  const afterRend = apply(sRend, { type: "skill", card: 1, skill: "breaker_rend" })
+  check(
+    "破盾技：breaker_rend 命中弱点一击削 3 格直接破盾并挂脆弱",
+    afterRend.enemy.shield === 0 && afterRend.enemy.statuses.some((s) => s.id === "vulnerable"),
+    `shield=${afterRend.enemy.shield}`,
+  )
 }
 
 console.log(`\n${count} 项检查，未通过 ${failures.length}`)

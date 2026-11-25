@@ -3,7 +3,7 @@
     "playerExp": 200,
     "items": [
       { "itemId": "exp-medium", "count": 3 },
-      { "itemId": "exp-small", "count": 1 }
+      { "itemId": "exp-small", "count": 5 }
     ]
   },
   "starBonus": {

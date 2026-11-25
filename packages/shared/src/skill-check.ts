@@ -62,6 +62,8 @@ const skillSchema = z
     selfHpCostPct: ratio.optional(),
     piercePct: ratio.optional(),
     scaleStat: z.enum(["atk", "int"]).optional(),
+    shieldBreak: z.int().min(1).max(5).optional(),
+    shieldBreakAny: z.boolean().optional(),
     executeBonus: z.number().positive().max(3).optional(),
     executeWhen: z.array(z.enum(["vulnerable", "lowHp"])).min(1).max(2).optional(),
     clearEnemySupports: z.int().min(1).max(5).optional(),
@@ -113,7 +115,7 @@ const skillSchema = z
       if (def.kind !== "passive") fail("passive 为真时 kind 必须是 passive")
       if (def.ap !== 0) fail("被动技能 ap 必须是 0")
       if (!PASSIVE_KEYS.some(has)) fail("被动技能必须声明至少一个效果字段")
-      for (const key of ["power", "hits", "statusId", "unlockTurn", "cleanse", "boostAllies", "revive", "selfStatus", "supportDef", "debuffScale", "comboThreshold", "comboDamageBonus", "comboBoostAllies"] as const) {
+      for (const key of ["power", "hits", "statusId", "unlockTurn", "cleanse", "boostAllies", "revive", "selfStatus", "supportDef", "debuffScale", "comboThreshold", "comboDamageBonus", "comboBoostAllies", "shieldBreak", "shieldBreakAny"] as const) {
         if (has(key)) fail(`被动技能不能带主动字段 ${key}`)
       }
       return
@@ -247,6 +249,8 @@ export function autoDescribeSkill(def: SkillDef): string {
       }
       if (def.selfHpCostPct) parts.push(`消耗队伍 ${pct(def.selfHpCostPct)} 生命`)
       if (def.clearEnemySupports) parts.push(`清除敌方 ${def.clearEnemySupports} 个强度 ≤${def.breakTier ?? 1} 的侧面支援`)
+      if (def.shieldBreakAny) parts.push(`无视弱点削减 ${def.shieldBreak ?? 1} 格护盾`)
+      else if (def.shieldBreak && def.shieldBreak > 1) parts.push(`命中弱点削减 ${def.shieldBreak} 格护盾`)
       if (def.kind === "interrupt") parts.push("打断敌方蓄力")
       break
     case "heal":

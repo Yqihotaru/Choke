@@ -184,6 +184,9 @@ export interface Enemy {
   weaknessWindows: WeaknessWindow[]
   /** 本回合露出的窗口弱点；回合开始时算一次，整回合固定 */
   exposed: Element[]
+  /** 弱点护盾当前格数 / 最大格数（0 表示无盾或已破盾） */
+  shield?: number
+  shieldMax?: number
   traits: EnemyTrait[]
   hp: number
   hpMax: number
@@ -299,6 +302,10 @@ export type BattleEvent =
   | {
       type: "weakness_found"
       element: Element
+    }
+  | {
+      type: "shield_break"
+      vulnerableTurns: number
     }
   | {
       type: "won" | "lost"

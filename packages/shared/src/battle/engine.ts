@@ -20,6 +20,10 @@ import {
 } from "./types"
 
 import {
+  CARD_TRIGGER_CONFIG,
+  DEFENSE_REDUCTION_TANK,
+  DOWN_RESIST_CONFIG,
+  ENEMY_STATUS_TEMPLATES,
   EXECUTE_LOW_HP_RATIO,
   HARD_CONTROL_BASE_RATE,
   HARD_CONTROL_HARD_FACTOR,
@@ -32,11 +36,17 @@ import {
   INTERRUPT_RARITY_FACTOR,
   INTERRUPT_RATE_MAX,
   INTERRUPT_RATE_MIN,
+  LOW_HP_THRESHOLD,
+  PREEMPTIVE_POWER,
   PREEMPTIVE_RATE,
   REGEN_TEAM_CAP,
   ARMOR_RESIST_PER_TIER,
+  SHELL_MIN_DAMAGE,
+  SHIELD_BREAK_VULNERABLE_TURNS,
+  SHIELD_MAX_BY_TIER,
   STATUS_CHANCE_BY_TIER,
   SUPPORT_PROC_RATE,
+  TEAM_STATUS_DEFAULT,
   TEAM_STATUS_NAME,
   TEAM_DAMAGE_REDUCE_CAP,
   DEBUFF_SCALE_MAX_KINDS,
@@ -194,7 +204,7 @@ function statusBonus(statuses: StatusEffect[], stat: "atk" | "int" | "def"): num
 
 export function statOf(state: BattleState, card: BattleCard, stat: "atk" | "int" | "def"): number {
   let value = card.stats[stat]
-  const lowHp = state.teamHp / Math.max(1, state.teamHpMax) < 0.3
+  const lowHp = state.teamHp / Math.max(1, state.teamHpMax) < LOW_HP_THRESHOLD
   if (stat !== "def" && lowHp) {
     for (const skill of passivesOf(card)) if (skill.lowHpMul) value *= skill.lowHpMul
   }
@@ -267,7 +277,7 @@ function enemyDefence(state: BattleState, magic: boolean): number {
   const breakStacks = state.enemy.statuses.find((s) => s.id === "armor_break")?.stacks ?? 0
   const defBreakPenalty =
     !magic && !enemyArmor && breakStacks > 0
-      ? -([0, 0.2, 0.4, 0.7, 0.9][Math.min(breakStacks, 4)] ?? 0)
+      ? -(DEFENSE_REDUCTION_TANK[Math.min(breakStacks, DEFENSE_REDUCTION_TANK.length - 1)] ?? 0)
       : 0
   return Math.max(1, Math.round(base * Math.max(0.1, 1 + bonus + enragePenalty + defBreakPenalty)))
 }
@@ -275,6 +285,7 @@ function enemyDefence(state: BattleState, magic: boolean): number {
 /** 由遭遇数据生成敌人与敌方支援；意图在战斗状态建好后由脚本生成 */
 function makeEnemyAndSupports(spec: EncounterSpec): { enemy: Enemy; enemySupports: SideSupportUnit[] } {
   const def = spec.enemy
+  const shieldMax = def.shieldMax ?? SHIELD_MAX_BY_TIER[def.tier]
   const enemy: Enemy = {
     id: def.id,
     name: def.name,
@@ -285,6 +296,8 @@ function makeEnemyAndSupports(spec: EncounterSpec): { enemy: Enemy; enemySupport
     hiddenWeaknesses: [...def.hiddenWeaknesses],
     weaknessWindows: structuredClone(def.weaknessWindows),
     exposed: [],
+    shield: shieldMax,
+    shieldMax,
     traits: [...def.traits],
     hp: def.stats.hp,
     hpMax: def.stats.hp,
@@ -342,11 +355,18 @@ function rollCardTriggers(state: BattleState) {
   for (const card of state.cards) {
     card.trigger = null
     if (card.down) continue
-    const modBonus = card.face.mods.length * 0.03
+    const modBonus = card.face.mods.length * CARD_TRIGGER_CONFIG.modBonusPerMod
     const r = roll(state, "player")
-    const critArtChance = 0.04 + modBonus * 0.5 + bardBonus * 0.3
-    const doubleChance = critArtChance + 0.05 + modBonus * 0.5 + bardBonus * 0.3
-    const boostChance = doubleChance + 0.12 + modBonus + bardBonus
+    const critArtChance =
+      CARD_TRIGGER_CONFIG.criticalArtBase +
+      modBonus * CARD_TRIGGER_CONFIG.criticalArtModScale +
+      bardBonus * CARD_TRIGGER_CONFIG.criticalArtBardScale
+    const doubleChance =
+      critArtChance +
+      CARD_TRIGGER_CONFIG.doubleCastBase +
+      modBonus * CARD_TRIGGER_CONFIG.doubleCastModScale +
+      bardBonus * CARD_TRIGGER_CONFIG.doubleCastBardScale
+    const boostChance = doubleChance + CARD_TRIGGER_CONFIG.boostBase + modBonus + bardBonus
     if (r < critArtChance) {
       card.trigger = "critical_art"
     } else if (r < doubleChance) {
@@ -472,24 +492,7 @@ function addOrStackStatus(list: StatusEffect[], incoming: StatusEffect, maxStack
 }
 
 function applyEnemyStatusById(state: BattleState, statusId: StatusId, turns = 2) {
-  const map: Record<string, StatusEffect> = {
-    freeze: { id: "freeze", name: "冻结", amount: 0.2, turns: 2, isDebuff: true },
-    shock: { id: "shock", name: "触电", amount: 0.3, turns: 3, isDebuff: true },
-    burn: { id: "burn", name: "燃烧", amount: 0.03, turns: 3, isDebuff: true },
-    poison: { id: "poison", name: "中毒", amount: 0.03, turns: 4, isDebuff: true },
-    fear: { id: "fear", name: "恐惧", amount: 1, turns: 3, isDebuff: true },
-    charm: { id: "charm", name: "魅惑", amount: 0.5, turns: 2, isDebuff: true },
-    bleed: { id: "bleed", name: "流血", amount: 0.01, turns: 3, stacks: 1, isDebuff: true },
-    confuse: { id: "confuse", name: "混乱", amount: 0.3, turns: 2, isDebuff: true },
-    curse: { id: "curse", name: "诅咒", amount: 0.15, turns: 3, isDebuff: true },
-    silence: { id: "silence", name: "沉默", amount: 1, turns: 2, isDebuff: true },
-    armor_break: { id: "armor_break", name: "破防", stat: "def", amount: -0.2, turns: 3, stacks: 1, isDebuff: true },
-    weaken: { id: "weaken", name: "衰弱", stat: "atk", amount: -0.2, turns: turns, isDebuff: true },
-    vulnerable: { id: "vulnerable", name: "脆弱", amount: 0.3, turns: 2, isDebuff: true },
-    enrage: { id: "enrage", name: "狂暴", stat: "atk", amount: 0.4, turns: 99, isDebuff: false },
-    vigilant: { id: "vigilant", name: "警觉", amount: 1, turns: 3, isDebuff: false },
-  }
-  const template = map[statusId]
+  const template = ENEMY_STATUS_TEMPLATES[statusId]
   if (!template) return
   addOrStackStatus(state.enemy.statuses, { ...template, turns: turns || template.turns })
 }
@@ -529,7 +532,7 @@ function applyDamageToEnemy(
   const rawEnemyDef = enemyDefence(state, magic)
   const effectiveDef = skill.piercePct ? Math.round(rawEnemyDef * (1 - skill.piercePct)) : rawEnemyDef
   const enemyArmorTier = effectiveEnemyDefenseTier(state)
-  const enemyArmorRed = [0, 0.2, 0.4, 0.7, 0.9][Math.min(enemyArmorTier, 4)] ?? 0
+  const enemyArmorRed = DEFENSE_REDUCTION_TANK[Math.min(enemyArmorTier, DEFENSE_REDUCTION_TANK.length - 1)] ?? 0
 
   const hits = skill.hits ?? 1
   const skillPower = skill.power ?? 1
@@ -562,6 +565,7 @@ function applyDamageToEnemy(
     skill.comboThreshold && skill.comboDamageBonus && state.combo >= skill.comboThreshold ? 1 + skill.comboDamageBonus : 1
 
   let total = 0
+  let hitCount = 0
   let thornsReflectedCount = 0
   const enemyThorns = state.enemySupports.find((s) => s.kind === "thorns" && !s.bannedTurns)
 
@@ -589,7 +593,7 @@ function applyDamageToEnemy(
       (state.enemy.statuses.some((s) => s.id === "vulnerable")
         ? passivesOf(card).reduce((sum, s) => sum + (s.critVsVulnerable ?? 0), 0)
         : 0) +
-      (element !== "physical" && state.teamHp / state.teamHpMax < 0.3
+      (element !== "physical" && state.teamHp / state.teamHpMax < LOW_HP_THRESHOLD
         ? passivesOf(card).reduce((sum, s) => sum + (s.spellCrit ?? 0), 0)
         : 0)
     const crit = roll(state, "player") * 100 < card.stats.crit + bonusCrit
@@ -614,9 +618,10 @@ function applyDamageToEnemy(
     )
 
     if (damage < shellThreshold(state)) {
-      damage = 100
+      damage = SHELL_MIN_DAMAGE
     }
 
+    hitCount += 1
     total += damage
     state.enemy.hp = Math.max(0, state.enemy.hp - damage)
     emit(state, {
@@ -670,6 +675,22 @@ function applyDamageToEnemy(
   const lifesteal = passivesOf(card).reduce((sum, s) => sum + (s.lifesteal ?? 0), 0)
   if (total > 0 && lifesteal > 0) {
     healParty(state, Math.round(total * lifesteal), `${card.name} 吸血`)
+  }
+
+  // 弱点破防（Break）：技能实际命中且命中弱点（或带 shieldBreakAny）时削减护盾；归零施加脆弱（不返 AP、不抢打断）
+  if (hitCount > 0 && state.enemy.hp > 0 && (state.enemy.shield ?? 0) > 0) {
+    const weakHit = activeWeaknesses(state.enemy).includes(element)
+    if (weakHit || skill.shieldBreakAny) {
+      const breakAmt = skill.shieldBreak ?? 1
+      if (breakAmt > 0) {
+        state.enemy.shield = Math.max(0, (state.enemy.shield ?? 0) - breakAmt)
+        if (state.enemy.shield === 0) {
+          applyEnemyStatusById(state, "vulnerable", SHIELD_BREAK_VULNERABLE_TURNS)
+          emit(state, { type: "shield_break", vulnerableTurns: SHIELD_BREAK_VULNERABLE_TURNS })
+          log(state, `💥 击破 ${state.enemy.name} 的弱点护盾！施加 ${SHIELD_BREAK_VULNERABLE_TURNS} 回合【脆弱】！`)
+        }
+      }
+    }
   }
 
   if (state.enemy.hp <= 0) {
@@ -1206,7 +1227,7 @@ function runPlayerTurnStartSequence(state: BattleState) {
         1,
         Math.round(
           statOf(state, card, "atk") *
-            0.7 *
+            PREEMPTIVE_POWER *
             comboMultiplier(state.combo) *
             elementMultiplier("physical", state.enemy.element, state.enemy.traits, activeWeaknesses(state.enemy)) *
             (1 - mitigation(enemyDefence(state, false))) *
@@ -1468,8 +1489,8 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
     addOrStackStatus(state.teamStatuses, {
       id: intent.statusId,
       name: TEAM_STATUS_NAME[intent.statusId] ?? "负面",
-      amount: 0.03,
-      turns: 3,
+      amount: TEAM_STATUS_DEFAULT.amount,
+      turns: TEAM_STATUS_DEFAULT.turns,
       stacks: 1,
       isDebuff: true,
     })
@@ -1478,7 +1499,9 @@ function executeEnemyIntent(state: BattleState, intent: EnemyIntent) {
   // 高额攻击附带 Down 判定（§7.3 & §6.8：坦克开高档防御时可抵御 Down）
   if (intent.causesDown && state.teamHp > 0 && !primaryTarget.down) {
     const resistChance =
-      primaryTarget.job === "tank" ? 0.45 + defTier * 0.15 : defTier * 0.12
+      primaryTarget.job === "tank"
+        ? DOWN_RESIST_CONFIG.tankBase + defTier * DOWN_RESIST_CONFIG.tankPerDefTier
+        : defTier * DOWN_RESIST_CONFIG.otherPerDefTier
     if (roll(state, "enemy") > resistChance) {
       primaryTarget.down = true
       primaryTarget.downTurns = 3
@@ -1657,6 +1680,11 @@ export function endTurn(state: BattleState): string | null {
 
     for (const st of card.statuses) st.turns -= 1
     card.statuses = card.statuses.filter((st) => st.turns > 0)
+  }
+
+  // 若上一轮护盾已被击破，敌方行动结束后回满进入下一轮
+  if ((state.enemy.shieldMax ?? 0) > 0 && (state.enemy.shield ?? 0) === 0) {
+    state.enemy.shield = state.enemy.shieldMax
   }
 
   // 生成敌方新一轮意图预告
