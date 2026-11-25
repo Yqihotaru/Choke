@@ -570,6 +570,7 @@ export interface ServerProgress {
   exp: number
   tutorialStep: string
   tutorialDone: boolean
+  linkedAccount?: boolean
   updatedAt: number
 }
 

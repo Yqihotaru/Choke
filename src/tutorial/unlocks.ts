@@ -1,75 +1,48 @@
 import type { PanelId } from "@/desk/shell/DeskBook"
+import { lockReason, unlockLevelOf as featureLevel } from "@choke/shared/unlocks"
 
-import { MARKET_UNLOCK_LEVEL } from "./constants"
 import type { PlayerProgress } from "./types"
 
-/** 桌面上会出现锁的模块：九个书本章节 + 发牌按钮 + 邀请函 */
+/** 桌面上会出现锁的模块：九个书本章节 + 发牌按钮 + 邀请函；每个都是 content/unlocks.json 里的一个功能 */
 export type ModuleId = PanelId | "button" | "invite"
 
 /**
- * 等级解锁表——桌面物件和书本左右标签页共用这一份。
- * 教程流程只负责把等级推到 2 / 3，不另写一套“教程解锁”。
+ * 解锁条件不在前端写：等级、是否要完成引导、是否要绑定 osu! 都在 content/unlocks.json，
+ * 服务端校验用的是同一份。教程流程只负责把等级推到 2 / 3。
  */
-export const MODULE_UNLOCK_LEVEL: Record<ModuleId, number> = {
-  account: 1,
-  about: 1,
-  packs: 1,
-  album: 1,
-  deck: 2,
-  battle: 2,
-  backpack: 3,
-  codex: 3,
-  invite: 3,
-  button: 3,
-  market: MARKET_UNLOCK_LEVEL,
-}
+export type UnlockProgress = Pick<PlayerProgress, "level" | "tutorialDone" | "linkedAccount">
 
-/**
- * 日常模块在教程毕业前不开放，避免玩家在 Step 1 就绕去背包 / 图鉴。
- * 市场始终在桌面上显示锁定态，作为等级解锁的预告。
- */
-const AFTER_TUTORIAL: ModuleId[] = [
-  "backpack",
-  "codex",
-  "invite",
-  "button",
-  "market",
-]
+const contextOf = (progress: UnlockProgress) => ({
+  level: progress.level,
+  tutorialDone: progress.tutorialDone,
+  linkedAccount: progress.linkedAccount,
+})
 
 export function unlockLevelOf(id: ModuleId): number {
-  return MODULE_UNLOCK_LEVEL[id]
+  return featureLevel(id)
 }
 
-export function isModuleUnlocked(
-  id: ModuleId,
-  progress: Pick<PlayerProgress, "level" | "tutorialDone">
-): boolean {
-  if (AFTER_TUTORIAL.includes(id) && !progress.tutorialDone) return false
-  return progress.level >= MODULE_UNLOCK_LEVEL[id]
+export function isModuleUnlocked(id: ModuleId, progress: UnlockProgress): boolean {
+  return lockReason(id, contextOf(progress)) === null
 }
 
 /** 桌面上是否画出这个物件；市场例外：永远画出，但呈锁定态 */
-export function isModuleVisibleOnDesk(
-  id: ModuleId,
-  progress: Pick<PlayerProgress, "level" | "tutorialDone">
-): boolean {
+export function isModuleVisibleOnDesk(id: ModuleId, progress: UnlockProgress): boolean {
   if (id === "market") return true
   return isModuleUnlocked(id, progress)
 }
 
-export function lockHintOf(
-  id: ModuleId,
-  progress: Pick<PlayerProgress, "level" | "tutorialDone">
-): string {
-  const need = MODULE_UNLOCK_LEVEL[id]
-  if (AFTER_TUTORIAL.includes(id) && !progress.tutorialDone) {
-    return progress.level < need
-      ? `需要 Lv.${need} + 完成新手教程`
-      : "先完成新手教程解锁"
+export function lockHintOf(id: ModuleId, progress: UnlockProgress): string {
+  const need = featureLevel(id)
+  const reason = lockReason(id, contextOf(progress))
+  switch (reason?.kind) {
+    case "account":
+      return "绑定 osu! 账号后才能使用，游客和邮箱号只能看"
+    case "tutorial":
+      return progress.level < need ? `需要 Lv.${need} + 完成新手教程` : "先完成新手教程解锁"
+    case "level":
+      return `需要 Lv.${need} 解锁，还差 ${need - progress.level} 级`
+    default:
+      return `需要 Lv.${need} 解锁`
   }
-  if (progress.level < need) {
-    const gap = need - progress.level
-    return `需要 Lv.${need} 解锁，还差 ${gap} 级`
-  }
-  return `需要 Lv.${need} 解锁`
 }

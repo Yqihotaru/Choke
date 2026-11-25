@@ -31,7 +31,7 @@ import {
 import { useModal } from "@/ui/useModal"
 
 import { useTutorialProgress } from "@/tutorial/store"
-import { isModuleUnlocked, unlockLevelOf } from "@/tutorial/unlocks"
+import { isModuleUnlocked, lockHintOf } from "@/tutorial/unlocks"
 
 import {
   ascendCard,
@@ -106,7 +106,6 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [essence, setEssence] = useState<number | null>(null)
   const [items, setItems] = useState<ItemWallet | null>(null)
   const [coins, setCoins] = useState<number | null>(null)
-  const [isGuest, setIsGuest] = useState(false)
   const [price, setPrice] = useState("30")
   const progress = useTutorialProgress(userId)
   const marketUnlocked = isModuleUnlocked("market", progress)
@@ -142,7 +141,6 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
           setEssence(data.essence)
           setItems(data.items ?? {})
           setCoins(data.coins)
-          setIsGuest(!!data.isGuest)
         }
       })
       .catch(() => {})
@@ -316,7 +314,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const askList = () => {
     if (!userId || busy !== null) return
     if (!marketUnlocked) {
-      setMessage({ text: `市场达到 Lv.${unlockLevelOf("market")} 解锁后才能上架`, error: true })
+      setMessage({ text: `${lockHintOf("market", progress)}，现在不能上架`, error: true })
       return
     }
     const value = Number(price)
@@ -585,11 +583,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
           {!readOnly && !hero && (
             <div className="card-detail__market">
               <div className="bk-label">市场 · 金币 {coins ?? "—"}</div>
-              {isGuest ? (
-                <p className="bk-note">
-                  游客账号不能使用市场。请先退出，用 osu! 或邮箱登录后再交易。
-                </p>
-              ) : marketUnlocked ? (
+              {marketUnlocked ? (
                 <>
                   <div className="card-detail__market-row">
                     <input
@@ -624,9 +618,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   </p>
                 </>
               ) : (
-                <p className="bk-note">
-                  市场达到 Lv.{unlockLevelOf("market")} 解锁后才能上架。
-                </p>
+                <p className="bk-note">{lockHintOf("market", progress)}，现在不能上架。</p>
               )}
             </div>
           )}

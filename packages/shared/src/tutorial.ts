@@ -84,6 +84,8 @@ export interface PlayerProgress {
   exp: number
   tutorialStep: TutorialStep
   tutorialDone: boolean
+  /** 绑定了 osu!（服务端判定）；市场等功能要它，游客和邮箱号是 false */
+  linkedAccount: boolean
   /** 服务端最后写入时间；多标签页之间按它取较新的缓存 */
   updatedAt: number
 }

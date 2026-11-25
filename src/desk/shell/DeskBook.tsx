@@ -80,6 +80,7 @@ interface Props {
   /** 玩家等级 / 教程毕业状态：桌面物件和书本标签页共用同一套解锁规则 */
   level: number
   tutorialDone: boolean
+  linkedAccount: boolean
   onLocked?: (id: PanelId, need: number) => void
 }
 
@@ -131,6 +132,7 @@ export function DeskBook({
   onHeroClaimed,
   level,
   tutorialDone,
+  linkedAccount,
   onLocked,
 }: Props) {
   const [gachaPool, setGachaPool] = useState<PoolId>("normal")
@@ -248,7 +250,7 @@ export function DeskBook({
   }, [])
 
   const unlocked = (id: PanelId) =>
-    isModuleUnlocked(id, { level, tutorialDone })
+    isModuleUnlocked(id, { level, tutorialDone, linkedAccount })
 
   const selectPanel = (id: PanelId) => {
     if (id === panel) return

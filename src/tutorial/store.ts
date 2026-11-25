@@ -30,6 +30,7 @@ function createDefault(ownerId: string | null): PlayerProgress {
     exp: 0,
     tutorialStep: "idle",
     tutorialDone: false,
+    linkedAccount: false,
     updatedAt: 0,
   }
 }
@@ -59,6 +60,7 @@ function normalize(
     exp: Math.max(0, Math.round(typeof raw.exp === "number" ? raw.exp : 0)),
     tutorialStep,
     tutorialDone: raw.tutorialDone === true || tutorialStep === "done",
+    linkedAccount: raw.linkedAccount === true,
     updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : 0,
   }
 }

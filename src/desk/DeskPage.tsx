@@ -1847,6 +1847,7 @@ export function DeskPage() {
             hero={user?.hero ?? null}
             level={progress.level}
             tutorialDone={progress.tutorialDone}
+            linkedAccount={progress.linkedAccount}
             onSelect={(panel) => {
               if (!isModuleUnlocked(panel, progress)) {
                 showToast(

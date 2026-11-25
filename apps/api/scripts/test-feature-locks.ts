@@ -221,6 +221,7 @@ await test("/progress 带上每个功能的锁状态，和服务端实际校验�
   const user = await newUser({ playerLevel: 5, tutorialDone: true, osuId: null })
   const res = await call(user, "GET", `/users/${user}/progress`)
   assert.equal(res.status, 200, JSON.stringify(res.body))
+  assert.equal(res.body.data.linkedAccount, false, "没绑 osu! 的号要告诉前端")
   const locks = res.body.data.locks as Record<string, { reason: string; level: number; message: string } | null>
   assert.deepEqual(Object.keys(locks).sort(), [...FEATURE_IDS].sort())
   assert.equal(locks["feed"], null)

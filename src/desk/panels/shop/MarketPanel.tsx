@@ -18,6 +18,8 @@ import {
 import { Pages, useBook } from "@/desk/shell/BookPages"
 import { ConfirmBar } from "@/desk/shell/ConfirmBar"
 import { emitDeskData } from "@/desk/session/events"
+import { useTutorialProgress } from "@/tutorial/store"
+import { isModuleUnlocked, lockHintOf } from "@/tutorial/unlocks"
 import "@/desk/panels/shop/market-panel.css"
 
 /** 接口一次返回全部在售（服务端上限内），分页只在前端：每次多显示一批 */
@@ -41,7 +43,9 @@ export function MarketPanel({
   const [listings, setListings] = useState<MarketListing[]>([])
   const [own, setOwn] = useState<OwnMarketListing[]>([])
   const [coins, setCoins] = useState<number | null>(null)
-  const [isGuest, setIsGuest] = useState(false)
+  const progress = useTutorialProgress(userId)
+  /** 能看不能买：游客、邮箱号（没绑 osu!）、没完成引导的账号；规则在 content/unlocks.json，服务端同一份 */
+  const tradeLocked = userId != null && !isModuleUnlocked("market", progress)
   const [loadedKey, setLoadedKey] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [busy, setBusy] = useState<number | null>(null)
@@ -65,7 +69,6 @@ export function MarketPanel({
       tasks.push(
         fetchMe(controller.signal).then((data) => {
           setCoins(data.coins)
-          setIsGuest(!!data.isGuest)
         }),
       )
       tasks.push(
@@ -167,9 +170,9 @@ export function MarketPanel({
             {!userId && " 登录后才能买卖。"}
           </p>
 
-          {isGuest && (
+          {tradeLocked && (
             <div className="bk-box market-message">
-              游客账号不能使用市场。请先退出，用 osu! 或邮箱登录后再交易。
+              {lockHintOf("market", progress)}。现在只能浏览。
             </div>
           )}
 
@@ -341,13 +344,13 @@ export function MarketPanel({
                           type="button"
                           className="bk-btn bk-btn--sm bk-btn--block"
                           onClick={() => setPendingBuy(listing)}
-                          disabled={busy !== null || refreshing || !userId || isGuest || !afford}
+                          disabled={busy !== null || refreshing || !userId || tradeLocked || !afford}
                           title={!afford ? `金币不足：${coins} / ${listing.price}` : undefined}
                         >
                           {busy === listing.id
                             ? "购买中…"
-                            : isGuest
-                              ? "游客不可购买"
+                            : tradeLocked
+                              ? "未解锁交易"
                               : !afford
                                 ? "金币不足"
                                 : "购买"}

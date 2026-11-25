@@ -59,6 +59,7 @@ function payload(row: ProgressRow) {
     tutorialStep: row.tutorialStep,
     tutorialDone: row.tutorialDone,
     updatedAt: row.progressUpdatedAt,
+    linkedAccount: row.osuId != null,
     locks: locksOf(row),
   }
 }
