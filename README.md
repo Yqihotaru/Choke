@@ -93,8 +93,8 @@ API 启动会自动补列和旧卡序号：已有号码不变，未编号实例�
 ```text
 src/                前端（Vite root）
   desk/             桌面
-    shell/          翻页书本、抽屉、拖拽
-    panels/         书页面板（cards / shop / player / mail / battle / invite）
+    shell/          面板弹窗、顶栏 / 底栏、拖拽
+    panels/         面板（cards / shop / player / mail / battle / invite）
     session/        请求、状态、轮询
     lib/            桌面纯工具
     login/          登录页
