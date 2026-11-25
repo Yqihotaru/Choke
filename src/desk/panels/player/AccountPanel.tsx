@@ -5,12 +5,42 @@ import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
 import type { QuestsOverview } from "@choke/shared/quests"
 
-import { claimAllQuests, fetchQuests, signIn, toFace, type ApiUserCard } from "@/desk/session/api"
+import {
+  bindEmail,
+  claimAllQuests,
+  fetchMe,
+  fetchPendingBind,
+  fetchQuests,
+  signIn,
+  toFace,
+  type AccountKind,
+  type AccountMe,
+  type ApiUserCard,
+  type PendingBind,
+} from "@/desk/session/api"
 import { emitDeskData } from "@/desk/session/events"
 import { Pages } from "@/desk/shell/BookPages"
 import { ConfirmBar } from "@/desk/shell/ConfirmBar"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
+import { BindChoice } from "@/desk/panels/player/BindChoice"
+import {
+  bindErrorText,
+  markBindReturnConsumed,
+  peekBindReturn,
+} from "@/desk/panels/player/bind-return"
 import "@/desk/panels/player/account-panel.css"
+
+const KIND_TEXT: Record<AccountKind, string> = {
+  osu: "已连接 osu!",
+  email: "邮箱账号（未绑定 osu!）",
+  guest: "游客账户（未绑定 osu!）",
+}
+
+function kindOf(me: AccountMe): AccountKind {
+  if (me.kind) return me.kind
+  if (me.osuId != null) return "osu"
+  return me.email ? "email" : "guest"
+}
 
 export function AccountPanel({
   userId,
@@ -40,7 +70,68 @@ export function AccountPanel({
   const [questBusy, setQuestBusy] = useState<"sign-in" | "claim-all" | null>(null)
   const [questMessage, setQuestMessage] = useState<{ text: string; error?: boolean } | null>(null)
   const avatarError = failedAvatar === avatarUrl
-  const isGuest = !!userId?.startsWith("guest-")
+  /** 账号类型以服务端为准（绑定之后邮箱号的 id 前缀不会变），没取回来前是 null */
+  const [meState, setMe] = useState<AccountMe | null>(null)
+  const [pendingState, setPending] = useState<PendingBind | null>(null)
+  const me = userId ? meState : null
+  const pending = userId ? pendingState : null
+  const kind = me ? kindOf(me) : null
+  const isGuest = kind === "guest"
+  /** 从 osu! 授权回来的结果：只在面板第一次打开时显示一次 */
+  const [bindReturn] = useState(peekBindReturn)
+  const [bindMessage, setBindMessage] = useState<{ text: string; error?: boolean } | null>(() =>
+    bindReturn?.result === "linked"
+      ? { text: "已绑定 osu! 账号。去背包开神秘卡包，领取你的本体卡。" }
+      : bindReturn?.result === "error"
+        ? { text: bindErrorText(bindReturn.reason), error: true }
+        : null,
+  )
+  const [emailForm, setEmailForm] = useState({ email: "", password: "" })
+  const [emailBusy, setEmailBusy] = useState(false)
+
+  useEffect(() => {
+    markBindReturnConsumed()
+    if (bindReturn?.result === "linked") {
+      emitDeskData("user")
+      emitDeskData("packs")
+    }
+  }, [bindReturn])
+
+  useEffect(() => {
+    if (!userId) return
+    const controller = new AbortController()
+    fetchMe(controller.signal)
+      .then((data) => setMe(data))
+      .catch(() => {})
+    fetchPendingBind(controller.signal)
+      .then((data) => {
+        setPending(data.pending)
+        if (bindReturn?.result === "choose" && !data.pending) {
+          setBindMessage({ text: "这次绑定的确认已经过期，请重新点一次绑定 osu!", error: true })
+        }
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [userId, bindReturn])
+
+  const handleBindEmail = async () => {
+    if (emailBusy) return
+    setEmailBusy(true)
+    setBindMessage(null)
+    try {
+      const res = await bindEmail(emailForm.email.trim(), emailForm.password)
+      setEmailForm({ email: "", password: "" })
+      setMe(await fetchMe())
+      emitDeskData("user")
+      playSfx("success")
+      setBindMessage({ text: `已绑定邮箱 ${res.email}，之后可以用它登录这个账号。` })
+    } catch (reason) {
+      playSfx("error")
+      setBindMessage({ text: reason instanceof Error ? reason.message : "绑定邮箱失败", error: true })
+    } finally {
+      setEmailBusy(false)
+    }
+  }
 
   useEffect(() => {
     if (!userId) return
@@ -117,6 +208,30 @@ export function AccountPanel({
           </>
         }
         right={<div className="bk-empty">登录后，这里会显示你的本体卡。</div>}
+      />
+    )
+  }
+
+  if (pending) {
+    return (
+      <BindChoice
+        pending={pending}
+        onResolved={(kept) => {
+          setPending(null)
+          setBindMessage({
+            text:
+              kept === "keep-current"
+                ? "已绑定 osu! 账号，原来的 osu! 账号已封存。去背包开神秘卡包，领取你的本体卡。"
+                : "已切换到 osu! 账号，刚才的账号已封存。",
+          })
+          emitDeskData("user")
+          emitDeskData("packs")
+          emitDeskData("items")
+        }}
+        onClosed={(message) => {
+          setPending(null)
+          if (message) setBindMessage({ text: message, error: true })
+        }}
       />
     )
   }
@@ -201,23 +316,83 @@ export function AccountPanel({
           <div className="bk-list">
             <div className="bk-row account-row">
               <span>登录状态</span>
-              <b>{isGuest ? "游客账户（未绑定 osu!）" : "已连接 osu!"}</b>
+              <b>
+                {kind ? KIND_TEXT[kind] : "…"}
+                {kind === "osu" && me?.hasEmail ? " · 已绑定邮箱" : ""}
+              </b>
             </div>
             <div className="bk-row account-row">
               <span>osu! 主页</span>
-              {userId?.startsWith("osu-") ? (
+              {me?.osuId != null ? (
                 <a
-                  href={`https://osu.ppy.sh/users/${userId.replace("osu-", "")}`}
+                  href={`https://osu.ppy.sh/users/${me.osuId}`}
                   target="_blank"
                   rel="noreferrer"
                 >
                   打开 ›
                 </a>
               ) : (
-                <b>{isGuest ? "未绑定" : "演示账号"}</b>
+                <b>未绑定</b>
               )}
             </div>
           </div>
+
+          {kind && (kind !== "osu" || !me?.hasEmail || bindMessage) && (
+            <div className="bk-box account-bind">
+              <span className="bk-label">账号绑定</span>
+              {kind !== "osu" && (
+                <>
+                  <p className="account-hint">
+                    绑定 osu! 账号后才能在市场买卖，还会补发一个神秘卡包领本体卡。进度会保留；如果那个 osu! 账号已经玩过，会让你二选一。
+                  </p>
+                  <a className="bk-btn bk-btn--main bk-btn--sm account-action" href="/auth/osu/bind">
+                    绑定 osu! 账号
+                  </a>
+                </>
+              )}
+              {me && !me.hasEmail && (
+                <form
+                  className="account-bind__email"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void handleBindEmail()
+                  }}
+                >
+                  <p className="account-hint">
+                    绑定邮箱后，换设备也能用邮箱和密码登录这个账号。
+                  </p>
+                  <input
+                    className="bk-input"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="邮箱"
+                    value={emailForm.email}
+                    onChange={(event) => setEmailForm((f) => ({ ...f, email: event.target.value }))}
+                  />
+                  <input
+                    className="bk-input"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="密码（至少 8 位）"
+                    value={emailForm.password}
+                    onChange={(event) => setEmailForm((f) => ({ ...f, password: event.target.value }))}
+                  />
+                  <button
+                    type="submit"
+                    className="bk-btn bk-btn--sm account-action"
+                    disabled={emailBusy || !emailForm.email.trim() || emailForm.password.length < 8}
+                  >
+                    {emailBusy ? "绑定中…" : "绑定邮箱"}
+                  </button>
+                </form>
+              )}
+              {bindMessage && (
+                <span className={`account-quests__msg ${bindMessage.error ? "bk-error" : ""}`}>
+                  {bindMessage.text}
+                </span>
+              )}
+            </div>
+          )}
 
           {confirmLogout ? (
             <div className="account-logout">
@@ -268,16 +443,18 @@ export function AccountPanel({
             <span className="bk-label">我的本体卡</span>
             <div className="account-hero__face bk-slot">?</div>
             <b className="account-hero__name">
-              {isGuest ? "游客没有本体卡" : "还没有获得"}
+              {kind && kind !== "osu" ? "还没有本体卡" : "还没有获得"}
             </b>
             <p className="bk-note">
-              {isGuest
-                ? "本体卡来自 osu! 账号数据。用 osu! 登录后会生成你的本体卡；游客期间的卡包和进度不会转移。"
-                : "本体卡在背包的「神秘卡包」里。开启后才会进入卡册和桌面。"}
+              {kind === "guest"
+                ? "本体卡来自 osu! 账号数据。绑定 osu! 账号后会补发神秘卡包，开启就能得到你的本体卡，现在的进度会保留。"
+                : kind === "email"
+                  ? "本体卡来自 osu! 账号数据。绑定 osu! 账号后，背包里的神秘卡包就能领出你的本体卡，现在的进度会保留。"
+                  : "本体卡在背包的「神秘卡包」里。开启后才会进入卡册和桌面。"}
             </p>
-            {isGuest ? (
-              <a className="bk-btn bk-btn--main" href="/auth/osu">
-                用 osu! 登录
+            {kind && kind !== "osu" ? (
+              <a className="bk-btn bk-btn--main" href="/auth/osu/bind">
+                绑定 osu! 账号
               </a>
             ) : (
               <button

@@ -332,6 +332,9 @@ export interface AccountMe {
   email?: string | null
   /** 游客：既没有 osu! 也没有邮箱 */
   isGuest?: boolean
+  /** osu：绑定了 osu!（可能同时有邮箱）；email：只有邮箱；guest：游客。旧后端没有 */
+  kind?: AccountKind
+  hasEmail?: boolean
   /** 只决定要不要显示后台入口；真正的权限在服务端 */
   isAdmin?: boolean
   avatarUrl: string | null
@@ -369,6 +372,62 @@ export function emailLogin(
 
 export function fetchMe(signal?: AbortSignal): Promise<AccountMe> {
   return request<AccountMe>("/auth/me", { signal })
+}
+
+/* ============================ 账号绑定 ============================ */
+
+export type AccountKind = "guest" | "email" | "osu"
+
+/** 二选一界面里一边账号的对比数据 */
+export interface BindAccountSummary {
+  id: string
+  username: string
+  kind: AccountKind
+  level: number
+  tutorialDone: boolean
+  coins: number
+  cardCount: number
+  bestRarity: string | null
+  lastSeenAt: string
+  createdAt: string
+}
+
+export interface PendingBind {
+  osuId: number
+  osuUsername: string
+  /** 毫秒时间戳，过了要重新点绑定 */
+  expiresAt: number
+  /** 现在登录的账号 */
+  current: BindAccountSummary
+  /** 已经占着这个 osu! 号的账号 */
+  osu: BindAccountSummary
+}
+
+export function fetchPendingBind(signal?: AbortSignal): Promise<{ pending: PendingBind | null }> {
+  return request("/auth/bind/pending", { signal })
+}
+
+export function resolveBind(
+  choice: "keep-current" | "keep-osu",
+): Promise<{ userId: string; sealedUserId: string; kept: "current" | "osu" }> {
+  return request("/auth/bind/resolve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ choice, confirm: true }),
+  })
+}
+
+export function cancelBind(): Promise<null> {
+  return request("/auth/bind/cancel", { method: "POST" })
+}
+
+/** 给没有邮箱的账号补邮箱和密码 */
+export function bindEmail(email: string, password: string): Promise<{ email: string }> {
+  return request("/auth/email/bind", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  })
 }
 
 export function enhanceCard(

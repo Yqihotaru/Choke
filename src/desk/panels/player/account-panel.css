@@ -139,3 +139,39 @@
   color: var(--bk-dim);
   font-size: 13px;
 }
+
+/* 账号绑定 */
+.account-hint {
+  margin: 0;
+  color: var(--bk-dim);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.account-bind {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.account-bind__email {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 二选一：两边账号的对比卡 */
+.bind-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bind-summary__name {
+  overflow: hidden;
+  font-size: 20px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bind-summary__kind {
+  color: var(--bk-dim);
+  font-size: 12px;
+}

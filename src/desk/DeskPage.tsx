@@ -39,6 +39,7 @@ import {
 } from "@/desk/lib/drag"
 import { emitDeskData, emitDeskHover, onDeskData } from "@/desk/session/events"
 import { useDeskSession } from "@/desk/session/useDeskSession"
+import { hasBindReturn } from "@/desk/panels/player/bind-return"
 import { MailBox } from "@/desk/panels/mail/MailBox"
 import { LedgerBox } from "@/desk/panels/player/LedgerBox"
 import { InviteLetter } from "@/desk/panels/invite/InviteLetter"
@@ -174,6 +175,8 @@ export function DeskPage() {
     panel: PanelId
     origin: { x: number; y: number } | null
   } | null>(() => {
+    // 从 osu! 绑定授权回来：直接翻开账号面板（二选一或结果提示在里面）
+    if (hasBindReturn()) return { panel: "account", origin: null }
     const query = new URLSearchParams(window.location.search).get(
       "panel"
     ) as PanelId | null
