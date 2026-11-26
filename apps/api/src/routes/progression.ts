@@ -845,6 +845,94 @@ export async function progressionRoutes(app: FastifyInstance) {
     }
   })
 
+  /** 批量分解：一次最多 60 张非本体且未出征锁定的卡，合并发放同品质碎片、闪卡精华与 75% 返还经验乐谱 */
+  app.post("/users/:userId/cards/dismantle", async (request, reply) => {
+    const { userId: paramUserId } = z.object({ userId: z.string() }).parse(request.params)
+    const userId = requireSelf(request, reply, paramUserId)
+    if (!userId) return
+    if (!(await requireFeature(reply, userId, "dismantle"))) return
+
+    const body = z
+      .object({
+        userCardIds: z.array(z.number().int().positive()).min(1).max(60),
+      })
+      .refine((b) => new Set(b.userCardIds).size === b.userCardIds.length, "卡不能重复")
+      .parse(request.body)
+
+    const dismantled = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+
+      const targets = await tx
+        .select({
+          id: userCards.id,
+          cardId: userCards.cardId,
+          level: userCards.level,
+          exp: userCards.exp,
+          foil: userCards.foil,
+          rarity: cards.rarity,
+          cardType: cards.cardType,
+        })
+        .from(userCards)
+        .innerJoin(cards, eq(cards.id, userCards.cardId))
+        .where(and(eq(userCards.userId, userId), inArray(userCards.id, body.userCardIds)))
+
+      if (targets.length !== body.userCardIds.length) {
+        throw new TxAbort(404, "not_found", "有卡不在这个账号的卡册里")
+      }
+      if (targets.some((t) => t.cardType === "hero" || isHeroCardId(t.cardId))) {
+        throw new TxAbort(400, "hero_protected", "本体卡不能分解")
+      }
+
+      const rawItems: ItemStack[] = []
+      let essenceGained = 0
+      const ledger: LedgerEntryInput[] = []
+      for (const target of targets) {
+        await removeUserCard(tx, userId, target.id)
+        const rarity = target.rarity as Rarity
+        rawItems.push({ itemId: shardItemId(rarity), count: SHARDS_PER_DISMANTLE })
+        rawItems.push(...expToItems(refundExpOf(target.level, target.exp, rarity, false)))
+        essenceGained += essenceOf(rarity, target.foil)
+        ledger.push({ kind: "card", ref: target.cardId, delta: -1, userCardId: target.id })
+      }
+
+      const itemsGained = mergeStacks(rawItems)
+      if (itemsGained.length > 0) {
+        await grantItems(tx, userId, itemsGained)
+        for (const { itemId, count } of itemsGained) {
+          ledger.push({ kind: "item", ref: itemId, delta: count })
+        }
+      }
+
+      let essence: number
+      if (essenceGained > 0) {
+        const [wallet] = await tx
+          .update(users)
+          .set({ essence: sql`${users.essence} + ${essenceGained}` })
+          .where(eq(users.id, userId))
+          .returning({ essence: users.essence })
+        essence = wallet?.essence ?? 0
+        ledger.push({ kind: "essence", delta: essenceGained })
+      } else {
+        const [wallet] = await tx.select({ essence: users.essence }).from(users).where(eq(users.id, userId)).limit(1)
+        essence = wallet?.essence ?? 0
+      }
+
+      await recordLedger(tx, userId, ledger, { source: "dismantle", sourceRef: "batch" })
+      await recordQuestEvent(tx, userId, "dismantle", { amount: targets.length })
+
+      return {
+        removedUserCardIds: targets.map((t) => t.id),
+        itemsGained,
+        essenceGained,
+        items: await loadItems(userId, tx),
+        essence,
+      }
+    })
+    if (!dismantled) return
+
+    return { ok: true, data: dismantled }
+  })
+
   async function countRecycledToday(executor: Tx | typeof db, userId: string, dayKey: string): Promise<number> {
     const [row] = await executor
       .select({ count: sql<number>`count(*)::int` })

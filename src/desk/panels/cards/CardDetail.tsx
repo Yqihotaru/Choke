@@ -13,21 +13,25 @@ import {
 } from "@/card/data"
 import { FOIL_COST, MARKET_MAX_PRICE, essenceOf } from "@/card/economy"
 import {
+  breakthroughCoinCost,
+  breakthroughShardCost,
   constellationCap,
   expToNext,
   feedExpOf,
   isHeroCardId,
   levelCap,
   refundExpOf,
-} from "@/card/progression"
+} from "@choke/shared/progression"
 import {
   EXP_ITEMS,
   ITEMS,
   SHARDS_PER_DISMANTLE,
-  SHARD_ITEMS,
   expToItems,
+  shardItemId,
+  type ItemId,
   type ItemStack,
 } from "@choke/shared/items"
+import { skillById } from "@choke/shared/skills"
 import { useModal } from "@/ui/useModal"
 
 import { useTutorialProgress } from "@/tutorial/store"
@@ -40,11 +44,14 @@ import {
   feedCard,
   fetchFuel,
   fetchMe,
+  fetchSkillRerollInfo,
   levelUpCard,
   listMarketCard,
+  rerollCardSkill,
   toFace,
   type ApiUserCard,
   type ItemWallet,
+  type SkillRerollInfo,
 } from "@/desk/session/api"
 import "@/desk/book.css"
 import { ConfirmBar } from "@/desk/shell/ConfirmBar"
@@ -74,11 +81,11 @@ interface Message {
 /** 分解成功后留这么久给玩家看反馈，再关弹窗 */
 const DISMANTLE_CLOSE_MS = 1100
 
-/** 先用经验道具、再用碎片，按单价从小到大凑够 need；尽量少溢出，也少动作为材料的碎片 */
-function pickTopUp(wallet: ItemWallet, need: number): ItemStack[] {
+/** 仅使用经验乐谱按单价从小到大凑够 need，绝不误消耗作为突破/洗技能材料的碎片 */
+function pickExpTopUp(wallet: ItemWallet, need: number): ItemStack[] {
   const picks: ItemStack[] = []
   let left = need
-  const order = [...[...EXP_ITEMS].sort((a, b) => a.exp - b.exp), ...SHARD_ITEMS]
+  const order = [...EXP_ITEMS].sort((a, b) => a.exp - b.exp)
   for (const item of order) {
     if (left <= 0) break
     const owned = wallet[item.id] ?? 0
@@ -106,6 +113,8 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [essence, setEssence] = useState<number | null>(null)
   const [items, setItems] = useState<ItemWallet | null>(null)
   const [coins, setCoins] = useState<number | null>(null)
+  const [rerollInfo, setRerollInfo] = useState<SkillRerollInfo | null>(null)
+  const [selectingSlot, setSelectingSlot] = useState<number | null>(null)
   const [price, setPrice] = useState("30")
   const progress = useTutorialProgress(userId)
   const marketUnlocked = isModuleUnlocked("market", progress)
@@ -174,6 +183,17 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
     return () => controller.abort()
   }, [readOnly, userId, card.userCardId])
 
+  useEffect(() => {
+    if (readOnly || !userId || isHeroCardId(card.id)) return
+    const controller = new AbortController()
+    fetchSkillRerollInfo(userId, card.userCardId, controller.signal)
+      .then((info) => {
+        if (!controller.signal.aborted) setRerollInfo(info)
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [readOnly, userId, card.id, card.userCardId])
+
   useEffect(() => () => fuelController.current?.abort(), [])
 
   const hero = isHeroCardId(current.id)
@@ -182,15 +202,16 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const need = expToNext(current.level, current.rarity, hero)
   const maxed = current.level >= cap
   const canLevel = !maxed && current.exp >= need
+  const btCoins = breakthroughCoinCost(current.level, hero)
+  const btShards = breakthroughShardCost(current.level, current.rarity, hero)
+  const ownShardId = shardItemId(current.rarity)
+  const ownShardCount = items?.[ownShardId] ?? 0
   const sameCardFuel = fuel.filter((row) => row.id === current.id).length
   const canAscend = current.constellation < conCap && sameCardFuel > 0
   const expPct = maxed ? 100 : Math.min(100, (current.exp / Math.max(1, need)) * 100)
-  /** 物品只补到够升下一级为止，不多扣 */
-  const topUpPicks = maxed || canLevel ? [] : pickTopUp(items ?? {}, need - current.exp)
-  const itemExpTotal = Object.entries(items ?? {}).reduce(
-    (sum, [id, count]) => sum + ITEMS[id as keyof typeof ITEMS].exp * (count ?? 0),
-    0,
-  )
+  /** 仅用经验乐谱补到够升下一级为止，绝不误吃碎片 */
+  const topUpPicks = maxed || canLevel ? [] : pickExpTopUp(items ?? {}, need - current.exp)
+  const expScrollTotal = EXP_ITEMS.reduce((sum, item) => sum + item.exp * (items?.[item.id] ?? 0), 0)
   const dismantleRefund = expToItems(refundExpOf(current.level, current.exp, current.rarity, hero))
   const dismantleEssence = essenceOf(current.rarity, current.foil)
   const bp = battlePower(face)
@@ -208,9 +229,10 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       const result = await action()
       sound()
       setCurrent(result.card)
-      const maybeWallet = result as { essence?: number; items?: ItemWallet }
+      const maybeWallet = result as { essence?: number; items?: ItemWallet; coins?: number }
       if (typeof maybeWallet.essence === "number") setEssence(maybeWallet.essence)
       if (maybeWallet.items) setItems(maybeWallet.items)
+      if (typeof maybeWallet.coins === "number") setCoins(maybeWallet.coins)
       setMessage({ text: done(result) })
       onChanged?.()
       loadFuel(result.card.userCardId)
@@ -270,6 +292,43 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       feedDone,
       () => playSfx("melt"),
     )
+  }
+
+  const feedOneExpItem = (itemId: ItemId) => {
+    if (!userId || maxed || (items?.[itemId] ?? 0) <= 0) return
+    return run(
+      `exp-${itemId}`,
+      () => feedCard(userId, current.userCardId, { items: [{ itemId, count: 1 }] }),
+      feedDone,
+      () => playSfx("melt"),
+    )
+  }
+
+  const doReroll = async (slot: number, skillId?: string) => {
+    if (!userId || busy !== null) return
+    setBusy(`reroll-${slot}`)
+    setMessage(null)
+    try {
+      const result = await rerollCardSkill(userId, current.userCardId, { slot, skillId })
+      playSfx("shine")
+      setCurrent(result.card)
+      setCoins(result.coins)
+      setItems(result.items)
+      setSelectingSlot(null)
+      const prevName = skillById(result.previousSkillId)?.name ?? result.previousSkillId
+      const nextName = skillById(result.newSkillId)?.name ?? result.newSkillId
+      setMessage({
+        text: `${result.mode === "select" ? "自选洗技能" : "随机洗技能"}：${prevName} → ${nextName}`,
+      })
+      onChanged?.()
+      const freshInfo = await fetchSkillRerollInfo(userId, current.userCardId)
+      setRerollInfo(freshInfo)
+    } catch (error) {
+      playSfx("error")
+      setMessage({ text: error instanceof Error ? error.message : "洗技能失败", error: true })
+    } finally {
+      setBusy(null)
+    }
   }
 
   const enhance = () => {
@@ -435,14 +494,20 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                 <i />
               </div>
               <div className="card-detail__actions">
-                <button
-                  type="button"
-                  className="bk-btn bk-btn--main"
-                  onClick={() => void levelUp()}
-                  disabled={!canLevel || busy !== null}
-                >
-                  {busy === "level" ? "升级中…" : maxed ? "已满级" : `升级 · ${need} EXP`}
-                </button>
+                {canLevel && (
+                  <button
+                    type="button"
+                    className="bk-btn bk-btn--main"
+                    onClick={() => void levelUp()}
+                    disabled={busy !== null}
+                  >
+                    {busy === "level"
+                      ? "突破中…"
+                      : btCoins > 0 || btShards > 0
+                        ? `突破升级（${btCoins}金币${btShards > 0 ? ` + ${btShards}${current.rarity}碎片` : ""}）`
+                        : `升级 · ${need} EXP`}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="bk-btn"
@@ -463,39 +528,58 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                 </button>
               </div>
               <div className="card-detail__wallet">
-                <span>碎片 / 经验乐谱</span>
-                <b className="bk-num">{items ? itemExpTotal.toLocaleString("en-US") : "—"}</b>
-                <em>可折算 EXP</em>
+                <span>经验乐谱</span>
+                <b className="bk-num">{items ? expScrollTotal.toLocaleString("en-US") : "—"}</b>
+                <em>可提供 EXP · 不消耗碎片</em>
               </div>
-              <div className="card-detail__actions">
-                <button
-                  type="button"
-                  className="bk-btn"
-                  onClick={() => void topUp()}
-                  disabled={topUpPicks.length === 0 || busy !== null}
-                  title={topUpPicks.length > 0 ? describeStacks(topUpPicks) : undefined}
-                >
-                  {busy === "items"
-                    ? "补经验中…"
-                    : maxed
-                      ? "已满级"
-                      : canLevel
-                        ? "经验已够升级"
-                        : topUpPicks.length > 0
-                          ? "补到下一级"
-                          : "没有可用物品"}
-                </button>
-                {!hero && (
-                  <button
-                    type="button"
-                    className="bk-btn bk-btn--danger"
-                    onClick={() => setPending({ kind: "dismantle" })}
-                    disabled={busy !== null}
-                  >
-                    {busy === "dismantle" ? "分解中…" : `分解 · ${SHARDS_PER_DISMANTLE} 碎片`}
-                  </button>
-                )}
-              </div>
+              {!maxed && (
+                <>
+                  <div className="card-detail__exp-items">
+                    {[...EXP_ITEMS].sort((a, b) => a.exp - b.exp).map((item) => {
+                      const owned = items?.[item.id] ?? 0
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="bk-btn bk-btn--sm"
+                          disabled={owned <= 0 || busy !== null}
+                          onClick={() => void feedOneExpItem(item.id)}
+                          title={`使用 1 个${item.name}（+${item.exp} EXP）`}
+                        >
+                          {item.name} ×{owned} (+{item.exp})
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="card-detail__actions">
+                    <button
+                      type="button"
+                      className="bk-btn bk-btn--main"
+                      onClick={() => void topUp()}
+                      disabled={topUpPicks.length === 0 || busy !== null}
+                    >
+                      {busy === "items"
+                        ? "补经验中…"
+                        : canLevel
+                          ? "经验已够升级"
+                          : topUpPicks.length > 0
+                            ? `补到下一级（用 ${describeStacks(topUpPicks)}）`
+                            : "经验乐谱不足"}
+                    </button>
+                  </div>
+                </>
+              )}
+              {!hero && (
+                <div className="card-detail__wallet">
+                  <span>{current.rarity} 碎片</span>
+                  <b className="bk-num">{items ? ownShardCount : "—"}</b>
+                  <em>
+                    {btShards > 0
+                      ? `本级突破需 ${btShards} 片`
+                      : "用于 40+ 突破与洗技能"}
+                  </em>
+                </div>
+              )}
               <div className="card-detail__wallet">
                 <span>闪卡精华</span>
                 <b className="bk-num">{essence ?? "—"}</b>
@@ -515,15 +599,6 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                 <ConfirmBar
                   confirmLabel="确认升命座"
                   message={`升命座：消耗 1 张同名卡（还剩 ${sameCardFuel} 张），${current.name} 的命座 ${current.constellation} → ${current.constellation + 1}。消耗的卡不会返还。`}
-                  onCancel={() => setPending(null)}
-                  onConfirm={confirmPending}
-                />
-              )}
-              {pending?.kind === "dismantle" && (
-                <ConfirmBar
-                  danger
-                  confirmLabel="确认分解"
-                  message={`分解这张 ${current.name}？获得 ${SHARDS_PER_DISMANTLE} 个 ${current.rarity} 碎片${dismantleRefund.length > 0 ? `，返还 ${describeStacks(dismantleRefund)}` : ""}${dismantleEssence > 0 ? ` + ${dismantleEssence} 精华` : ""}，卡会消失。`}
                   onCancel={() => setPending(null)}
                   onConfirm={confirmPending}
                 />
@@ -633,22 +708,114 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
           </div>
 
           <div className="card-detail__skills">
-            <div className="bk-label">技能</div>
-            {face.skills.map((skill, i) => (
-              <div className="card-detail__skill" key={i}>
-                <span
-                  className="card-detail__element"
-                  style={{ "--el": ELEMENT_COLOR[skill.element] } as CSSProperties}
-                  title={ELEMENT_LABEL[skill.element]}
-                />
-                <b>{skill.name}</b>
-                <em>{ELEMENT_LABEL[skill.element]}</em>
-                <span className="card-detail__cost">
-                  {skill.passive ? "被动" : `${skill.ap} AP`}
+            <div className="card-detail__reroll-head">
+              <div className="bk-label">技能</div>
+              {!readOnly && !hero && rerollInfo && (
+                <span className="card-detail__reroll-pity">
+                  {rerollInfo.selectReady
+                    ? `★ 已触发逢 ${rerollInfo.pityInterval} 自选`
+                    : `洗技能保底 ${rerollInfo.skillRerollCount}/${rerollInfo.pityInterval - 1}`}
+                  {" · "}
+                  {rerollInfo.cost.shards}{current.rarity}碎片 + {rerollInfo.cost.coins}金币
                 </span>
-              </div>
-            ))}
+              )}
+            </div>
+            {face.skills.map((skill, i) => {
+              const def = skillById(skill.id)
+              const canReroll = !readOnly && !hero && rerollInfo && rerollInfo.candidates.length > 0
+              const isPicking = selectingSlot === i && rerollInfo?.selectReady
+              return (
+                <div className="card-detail__skill" key={`${skill.id}-${i}`}>
+                  <div className="card-detail__skill-head">
+                    <span
+                      className="card-detail__element"
+                      style={{ "--el": ELEMENT_COLOR[skill.element] } as CSSProperties}
+                      title={ELEMENT_LABEL[skill.element]}
+                    />
+                    <b>{skill.name}</b>
+                    <em>{ELEMENT_LABEL[skill.element]}</em>
+                    <span className="card-detail__cost">
+                      {skill.passive ? "被动" : `${skill.ap} AP`}
+                    </span>
+                    {canReroll && (
+                      <button
+                        type="button"
+                        className={`bk-btn bk-btn--sm ${rerollInfo.selectReady ? "bk-btn--main" : "bk-btn--ghost"}`}
+                        disabled={busy !== null}
+                        onClick={() => {
+                          if (rerollInfo.selectReady) {
+                            setSelectingSlot(isPicking ? null : i)
+                          } else {
+                            void doReroll(i)
+                          }
+                        }}
+                      >
+                        {busy === `reroll-${i}`
+                          ? "洗技能中…"
+                          : rerollInfo.selectReady
+                            ? isPicking
+                              ? "收起自选"
+                              : "自选替换"
+                            : "重洗"}
+                      </button>
+                    )}
+                  </div>
+                  {def?.desc && <p className="card-detail__skill-desc">{def.desc}</p>}
+                  {isPicking && rerollInfo && (
+                    <div className="card-detail__reroll-pool">
+                      {rerollInfo.candidates.map((cand) => (
+                        <button
+                          key={cand.id}
+                          type="button"
+                          className="card-detail__reroll-opt"
+                          disabled={busy !== null}
+                          onClick={() => void doReroll(i, cand.id)}
+                        >
+                          <div className="card-detail__reroll-opt-top">
+                            <span
+                              className="card-detail__element"
+                              style={{ "--el": ELEMENT_COLOR[cand.element] } as CSSProperties}
+                            />
+                            <b>{cand.name}</b>
+                            <em>{ELEMENT_LABEL[cand.element]}</em>
+                            <span className="card-detail__cost">
+                              {cand.passive ? "被动" : `${cand.ap} AP`}
+                            </span>
+                          </div>
+                          {cand.desc && <p>{cand.desc}</p>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
+
+          {!readOnly && !hero && (
+            <div className="card-detail__dispose">
+              <div className="bk-label">处置</div>
+              <div className="card-detail__actions">
+                <button
+                  type="button"
+                  className="bk-btn bk-btn--danger"
+                  onClick={() => setPending({ kind: "dismantle" })}
+                  disabled={busy !== null}
+                >
+                  {busy === "dismantle" ? "分解中…" : `分解此卡 · 得 ${SHARDS_PER_DISMANTLE} ${current.rarity}碎片`}
+                </button>
+              </div>
+              {pending?.kind === "dismantle" && (
+                <ConfirmBar
+                  danger
+                  confirmLabel="确认分解"
+                  message={`分解这张 ${current.name}？获得 ${SHARDS_PER_DISMANTLE} 个 ${current.rarity} 碎片${dismantleRefund.length > 0 ? `，返还 ${describeStacks(dismantleRefund)}` : ""}${dismantleEssence > 0 ? ` + ${dismantleEssence} 精华` : ""}，卡会消失。`}
+                  onCancel={() => setPending(null)}
+                  onConfirm={confirmPending}
+                />
+              )}
+            </div>
+          )}
 
           <p className="bk-note">
             {readOnly

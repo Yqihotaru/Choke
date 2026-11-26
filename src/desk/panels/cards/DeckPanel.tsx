@@ -29,6 +29,7 @@ import {
 import { onDeskHover } from "@/desk/session/events"
 import { pickLineup } from "@/desk/lib/lineup"
 import { Pages, useBook, usePageCache } from "@/desk/shell/BookPages"
+import { CardDetail } from "@/desk/panels/cards/CardDetail"
 import { ConfirmBar } from "@/desk/shell/ConfirmBar"
 import { FitArea } from "@/desk/shell/FitArea"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
@@ -71,6 +72,7 @@ export const DeckPanel = memo(function DeckPanel({
   const deckSize = config?.deckSize ?? 0
 
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
+  const [detail, setDetail] = useState<ApiUserCard | null>(null)
   const [query, setQuery] = useState("")
   const [deferredQuery, setDeferredQuery] = useState("")
   const [rarity, setRarity] = useState<Rarity | "">("")
@@ -462,6 +464,11 @@ export const DeckPanel = memo(function DeckPanel({
                     onClick={() =>
                       setPickerSlot(pickerSlot === index ? null : index)
                     }
+                    onDoubleClick={() => {
+                      if (!slot.card) return
+                      playSfx("pick")
+                      setDetail(slot.card)
+                    }}
                   >
                     {/* 键盘入口：铺满槽位的透明按钮，不接指针（指针仍走外层，拖拽不受影响）；Enter / 空格的 click 冒泡到外层 */}
                     <button
@@ -481,17 +488,33 @@ export const DeckPanel = memo(function DeckPanel({
                     )}
                     <span className="deck-slot__no">{index + 1}</span>
                     {slot.card && (
-                      <button
-                        type="button"
-                        className="deck-slot__remove"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          remove(index)
-                        }}
-                        aria-label={`移出第 ${index + 1} 槽`}
-                      >
-                        ×
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="deck-slot__detail"
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            playSfx("pick")
+                            setDetail(slot.card)
+                          }}
+                          aria-label={`查看 ${slot.card.name} 详情并升级`}
+                        >
+                          详情
+                        </button>
+                        <button
+                          type="button"
+                          className="deck-slot__remove"
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            remove(index)
+                          }}
+                          aria-label={`移出第 ${index + 1} 槽`}
+                        >
+                          ×
+                        </button>
+                      </>
                     )}
                     {isDropTarget ? (
                       <span className="deck-slot__flag">松开放入</span>
@@ -675,6 +698,19 @@ export const DeckPanel = memo(function DeckPanel({
                           }}
                         >
                           <DeckFace row={row} />
+                          <button
+                            type="button"
+                            className="deck-slot__detail deck-pick__detail"
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              playSfx("pick")
+                              setDetail(row)
+                            }}
+                            aria-label={`查看 ${row.name} 详情并升级`}
+                          >
+                            详情
+                          </button>
                           {used && (
                             <span className="deck-pick__used">已在卡组</span>
                           )}
@@ -693,10 +729,23 @@ export const DeckPanel = memo(function DeckPanel({
                   </div>
                 </FitArea>
                 <p className="bk-note">
-                  点一下放入，或拖到左页的槽位。按战力排序，共{" "}
+                  点一下放入，或拖到左页的槽位；点「详情」或双击已上阵卡可直接升级。共{" "}
                   {pickerResult.total} 张。
                 </p>
               </>
+            )}
+
+            {book.active && index === pickPage && detail && (
+              <CardDetail
+                key={detail.userCardId}
+                card={detail}
+                userId={userId}
+                onClose={() => setDetail(null)}
+                onChanged={() => {
+                  book.invalidate()
+                  setReload((n) => n + 1)
+                }}
+              />
             )}
           </>
         }

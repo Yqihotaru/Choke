@@ -487,6 +487,7 @@ await test("统一商店：日/周限购、体力药共用上限、碎片博弈�
   assert.equal(buyLowBox.statusCode, 200)
   assert.equal(buyLowBox.json().data.items["shard-C"], 20)
   assert.ok(buyLowBox.json().data.granted.items.length > 0)
+  const eAfterLowBox: number = buyLowBox.json().data.items["shard-E"] ?? 0
 
   // 限量 L 碎片包：买 2 次后周限耗尽，共获得 4 片 L 碎片
   const buyPity = await app.inject({
@@ -497,7 +498,7 @@ await test("统一商店：日/周限购、体力药共用上限、碎片博弈�
   })
   assert.equal(buyPity.statusCode, 200)
   assert.equal(buyPity.json().data.remaining, 0)
-  assert.equal(buyPity.json().data.items["shard-E"], 10)
+  assert.equal(buyPity.json().data.items["shard-E"], eAfterLowBox - 40)
   assert.ok((buyPity.json().data.items["shard-L"] ?? 0) >= 4)
 
   const overPity = await app.inject({
@@ -521,6 +522,53 @@ await test("统一商店：日/周限购、体力药共用上限、碎片博弈�
   assert.equal(failHighBox.json().error.code, "not_enough_items")
   const [uAfterFail] = await db.select({ coins: users.coins }).from(users).where(eq(users.id, userId))
   assert.equal(uAfterFail!.coins, coinsBeforeFail)
+})
+
+await test("批量分解：合并产出同品质碎片与闪卡精华、拦截本体卡", async () => {
+  const userId = "p1-batch-dismantle"
+  await db.insert(users).values({
+    id: userId,
+    username: userId,
+    coins: 0,
+    essence: 0,
+    tutorialDone: true,
+    playerLevel: 60,
+    staminaUpdatedAt: Date.now(),
+  })
+  await db.insert(cards).values([
+    { id: "p1-bd-c", name: "批量C", rarity: "C", job: "tank", no: 1, total: 1 },
+    { id: "p1-bd-e", name: "批量E", rarity: "E", job: "mage", no: 2, total: 1 },
+    { id: "hero-999", name: "本体999", rarity: "L", job: "warrior", no: 3, total: 1, cardType: "hero" },
+  ])
+  const [c1] = await db.insert(userCards).values({ userId, cardId: "p1-bd-c", serial: 1, foil: false }).returning()
+  const [c2] = await db.insert(userCards).values({ userId, cardId: "p1-bd-c", serial: 2, foil: true }).returning()
+  const [e1] = await db.insert(userCards).values({ userId, cardId: "p1-bd-e", serial: 1, foil: false }).returning()
+  const [hero] = await db.insert(userCards).values({ userId, cardId: "hero-999", serial: 1 }).returning()
+
+  // 含本体卡整批拦截
+  const heroRes = await app.inject({
+    method: "POST",
+    url: `/users/${userId}/cards/dismantle`,
+    headers: auth(userId),
+    payload: { userCardIds: [c1!.id, hero!.id] },
+  })
+  assert.equal(heroRes.statusCode, 400)
+  assert.equal(heroRes.json().error.code, "hero_protected")
+
+  // 一次分解 2 张 C（其中 1 张闪卡）+ 1 张 E → 8 片 C 碎片 + 4 片 E 碎片 + 3 精华
+  const okRes = await app.inject({
+    method: "POST",
+    url: `/users/${userId}/cards/dismantle`,
+    headers: auth(userId),
+    payload: { userCardIds: [c1!.id, c2!.id, e1!.id] },
+  })
+  assert.equal(okRes.statusCode, 200)
+  const d = okRes.json().data
+  assert.equal(d.removedUserCardIds.length, 3)
+  assert.equal(d.items["shard-C"], 8)
+  assert.equal(d.items["shard-E"], 4)
+  assert.equal(d.essenceGained, 3)
+  assert.equal(d.essence, 3)
 })
 
 console.log(`\n${passed} p1 tests passed`)

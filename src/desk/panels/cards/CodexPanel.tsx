@@ -96,7 +96,7 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
   const [country, setCountry] = useState("")
   const [ownedFilter, setOwnedFilter] = useState<OwnedFilter>("all")
   const [page, setPage] = useState(0)
-  const [dimUnseen, setDimUnseen] = useState(false)
+  const [dimUnseen, setDimUnseen] = useState(true)
   const [stats, setStats] = useState<CodexStats | null>(null)
   const [statsError, setStatsError] = useState<string | null>(null)
   const [statsReload, setStatsReload] = useState(0)
@@ -196,19 +196,15 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
   const renderGrid = (list: ApiCardDef[], gridRows: number, skeleton: number) => (
     <FitArea className="codex-fit" cols={COLS} rows={gridRows} gapX={10} gapY={12} slack={2} style={{ "--rows": gridRows } as CSSProperties}>
       <div className="bk-cards" style={{ "--cols": COLS, visibility: ready ? undefined : "hidden" } as CSSProperties} aria-busy={!ready}>
-        {list.map((row) =>
-              row.owned ? (
-                <CodexSlot key={row.id} row={row} onDetail={setDetail} />
-              ) : (
-                <div
-                  className={`bk-slot codex-unknown ${dimUnseen ? "is-dimmed" : ""}`}
-                  key={row.id}
-                  aria-label="未收集的卡"
-                >
-                  ?
-                </div>
-              ),
-        )}
+        {list.map((row) => (
+          <CodexSlot
+            key={row.id}
+            row={row}
+            unseen={!row.owned}
+            dimmed={!row.owned && dimUnseen}
+            onDetail={setDetail}
+          />
+        ))}
       </div>
       <div className="bk-cards codex-fit__loading" style={{ "--cols": COLS, visibility: ready ? "hidden" : undefined } as CSSProperties} aria-hidden>
         {Array.from({ length: skeleton }, (_, i) => <div className="bk-slot" key={i} />)}
@@ -407,17 +403,21 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
 
 const CodexSlot = memo(function CodexSlot({
   row,
+  unseen,
+  dimmed,
   onDetail,
 }: {
   row: ApiCardDef
+  unseen: boolean
+  dimmed: boolean
   onDetail: (row: ApiCardDef) => void
 }) {
   return (
     <div
-      className="codex-slot"
+      className={`codex-slot ${unseen ? "is-unseen" : ""} ${dimmed ? "is-dimmed" : ""}`}
       role="button"
       tabIndex={0}
-      aria-label={`${row.name}，${RARITY_LABEL[row.rarity]}，查看图鉴详情`}
+      aria-label={`${row.name}，${RARITY_LABEL[row.rarity]}${unseen ? "，未收集" : ""}，查看图鉴详情`}
       onClick={() => onDetail(row)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {

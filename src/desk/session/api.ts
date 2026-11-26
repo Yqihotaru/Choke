@@ -1,5 +1,5 @@
 import { faceFromDef, type CardDef } from "@/card/def"
-import type { CardFaceData, CardSkillRef, Job, Rarity } from "@/card/types"
+import type { CardFaceData, CardSkillRef, Element as CardElement, Job, Rarity } from "@/card/types"
 import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
 import type { DungeonId, DungeonRewards } from "@choke/shared/dungeons"
 import type { ItemId, ItemStack } from "@choke/shared/items"
@@ -731,6 +731,82 @@ export function dismantleCard(
 }> {
   return request(`/api/users/${userId}/cards/${userCardId}/dismantle`, {
     method: "POST",
+  })
+}
+
+export function dismantleCardsBatch(
+  userId: string,
+  userCardIds: number[],
+): Promise<{
+  removedUserCardIds: number[]
+  itemsGained: ItemStack[]
+  essenceGained: number
+  items: ItemWallet
+  essence: number
+}> {
+  return request(`/api/users/${userId}/cards/dismantle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userCardIds }),
+  })
+}
+
+export interface SkillRerollCandidate {
+  id: string
+  name: string
+  element: CardElement
+  ap: number
+  passive?: boolean
+  desc: string
+}
+
+export interface SkillRerollInfo {
+  userCardId: number
+  skillRerollCount: number
+  pityInterval: number
+  remainingUntilSelect: number
+  selectReady: boolean
+  cost: {
+    coins: number
+    shards: number
+    shardItemId: ItemId
+  }
+  candidates: SkillRerollCandidate[]
+}
+
+export interface SkillRerollResult {
+  card: ApiUserCard
+  slot: number
+  mode: "random" | "select"
+  previousSkillId: string
+  newSkillId: string
+  skillRerollCount: number
+  pityInterval: number
+  selectReady: boolean
+  coinsSpent: number
+  shardsSpent: number
+  shardItemId: ItemId
+  coins: number
+  items: ItemWallet
+}
+
+export function fetchSkillRerollInfo(
+  userId: string,
+  userCardId: number,
+  signal?: AbortSignal,
+): Promise<SkillRerollInfo> {
+  return request<SkillRerollInfo>(`/api/users/${userId}/cards/${userCardId}/reroll-skill`, { signal })
+}
+
+export function rerollCardSkill(
+  userId: string,
+  userCardId: number,
+  input: { slot: number; skillId?: string },
+): Promise<SkillRerollResult> {
+  return request<SkillRerollResult>(`/api/users/${userId}/cards/${userCardId}/reroll-skill`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
   })
 }
 

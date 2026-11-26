@@ -73,11 +73,14 @@
 .codex-slot .card-face a {
   pointer-events: none;
 }
-.codex-unknown {
-  user-select: none;
+.codex-slot.is-unseen.is-dimmed .card-face {
+  opacity: 0.42;
+  filter: brightness(0.75) saturate(0.55);
+  transition: opacity 0.14s ease, filter 0.14s ease;
 }
-.codex-unknown.is-dimmed {
-  opacity: 0.35;
+.codex-slot.is-unseen.is-dimmed:hover .card-face {
+  opacity: 0.72;
+  filter: brightness(0.9) saturate(0.8);
 }
 
 .codex-stats-error {
