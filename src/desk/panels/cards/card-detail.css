@@ -23,8 +23,8 @@
   position: relative;
   display: flex;
   gap: 24px;
-  width: min(840px, 100%);
-  max-height: calc(100vh - 48px);
+  width: min(880px, 100%);
+  max-height: min(680px, calc(100vh - 48px));
   padding: 24px;
   box-sizing: border-box;
   border-radius: 14px;
@@ -36,13 +36,12 @@
     0 0 0 1px rgb(0 0 0 / 0.4),
     0 4px 0 var(--bk-edge),
     0 30px 50px -12px rgb(0 0 0 / 0.65);
-  overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--bk-raised) transparent;
+  overflow: hidden;
 }
 .card-detail__face {
-  width: 330px;
-  flex: 0 0 330px;
+  width: 310px;
+  flex: 0 0 310px;
+  align-self: flex-start;
 }
 .card-detail__face .card-face {
   width: 100%;
@@ -50,9 +49,41 @@
 .card-detail__info {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bk-raised) transparent;
+}
+.card-detail__tabs {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.card-detail__tab {
+  flex: 1;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--bk-line);
+  border-radius: 8px;
+  background: var(--bk-well);
+  color: var(--bk-dim);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.card-detail__tab:hover {
+  color: var(--bk-ink);
+}
+.card-detail__tab[aria-selected="true"] {
+  border-color: var(--bk-osu);
+  background: rgb(255 102 170 / 0.18);
+  color: var(--bk-ink);
 }
 .card-detail__close {
   position: absolute;
@@ -365,6 +396,7 @@
   .card-detail__panel {
     flex-direction: column;
     padding: 16px;
+    overflow: auto;
   }
   .card-detail__face {
     width: min(280px, 100%);

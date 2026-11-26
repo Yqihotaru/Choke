@@ -32,6 +32,7 @@ import {
   type ItemStack,
 } from "@choke/shared/items"
 import { skillById } from "@choke/shared/skills"
+import { describeSkill } from "@choke/shared/skill-check"
 import { useModal } from "@/ui/useModal"
 
 import { useTutorialProgress } from "@/tutorial/store"
@@ -115,6 +116,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [coins, setCoins] = useState<number | null>(null)
   const [rerollInfo, setRerollInfo] = useState<SkillRerollInfo | null>(null)
   const [selectingSlot, setSelectingSlot] = useState<number | null>(null)
+  const [tab, setTab] = useState<"train" | "skills" | "manage">(readOnly ? "skills" : "train")
   const [price, setPrice] = useState("30")
   const progress = useTutorialProgress(userId)
   const marketUnlocked = isModuleUnlocked("market", progress)
@@ -485,6 +487,56 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
           </div>
 
           {!readOnly && (
+            <div className="card-detail__tabs" role="tablist" aria-label="卡牌操作分区">
+              <button
+                type="button"
+                role="tab"
+                className="card-detail__tab"
+                aria-selected={tab === "train"}
+                onClick={() => {
+                  playSfx("tick")
+                  setTab("train")
+                }}
+              >
+                养成
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className="card-detail__tab"
+                aria-selected={tab === "skills"}
+                onClick={() => {
+                  playSfx("tick")
+                  setTab("skills")
+                }}
+              >
+                技能{rerollInfo?.selectReady ? " ★" : ""}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className="card-detail__tab"
+                aria-selected={tab === "manage"}
+                onClick={() => {
+                  playSfx("tick")
+                  setTab("manage")
+                }}
+              >
+                交易 / 处置
+              </button>
+            </div>
+          )}
+
+          {message && (
+            <p
+              className={`card-detail__message ${message.error ? "is-error" : ""}`}
+              role={message.error ? "alert" : "status"}
+            >
+              {message.text}
+            </p>
+          )}
+
+          {!readOnly && tab === "train" && (
             <div className="bk-box card-detail__level">
               <div className="card-detail__level-head">
                 <span>{maxed ? "MAX LEVEL" : `EXP ${current.exp} / ${need}`}</span>
@@ -603,18 +655,10 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   onConfirm={confirmPending}
                 />
               )}
-              {message && (
-                <p
-                  className={`card-detail__message ${message.error ? "is-error" : ""}`}
-                  role={message.error ? "alert" : "status"}
-                >
-                  {message.text}
-                </p>
-              )}
             </div>
           )}
 
-          {!readOnly && fuelOpen && !maxed && (
+          {!readOnly && tab === "train" && fuelOpen && !maxed && (
             <div className="card-detail__fuel">
               <div className="bk-label">可喂重复卡 · 同名卡 {sameCardFuel} 张</div>
               {pending?.kind === "melt" && (
@@ -655,7 +699,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
             </div>
           )}
 
-          {!readOnly && !hero && (
+          {!readOnly && tab === "manage" && !hero && (
             <div className="card-detail__market">
               <div className="bk-label">市场 · 金币 {coins ?? "—"}</div>
               {marketUnlocked ? (
@@ -698,101 +742,106 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
             </div>
           )}
 
-          <div className="card-detail__meta">
-            <span>ID: {formatNo(current.no, current.total).replace("/", " / ")}</span>
-            {current.country && <span>{current.country}</span>}
-            {current.globalRank != null && <span>#{current.globalRank}</span>}
-            {current.pp != null && (
-              <span>{Math.round(Number(current.pp)).toLocaleString("en-US")}pp</span>
-            )}
-          </div>
-
-          <div className="card-detail__skills">
-            <div className="card-detail__reroll-head">
-              <div className="bk-label">技能</div>
-              {!readOnly && !hero && rerollInfo && (
-                <span className="card-detail__reroll-pity">
-                  {rerollInfo.selectReady
-                    ? `★ 已触发逢 ${rerollInfo.pityInterval} 自选`
-                    : `洗技能保底 ${rerollInfo.skillRerollCount}/${rerollInfo.pityInterval - 1}`}
-                  {" · "}
-                  {rerollInfo.cost.shards}{current.rarity}碎片 + {rerollInfo.cost.coins}金币
-                </span>
+          {(readOnly || tab === "manage") && (
+            <div className="card-detail__meta">
+              <span>ID: {formatNo(current.no, current.total).replace("/", " / ")}</span>
+              {current.country && <span>{current.country}</span>}
+              {current.globalRank != null && <span>#{current.globalRank}</span>}
+              {current.pp != null && (
+                <span>{Math.round(Number(current.pp)).toLocaleString("en-US")}pp</span>
               )}
             </div>
-            {face.skills.map((skill, i) => {
-              const def = skillById(skill.id)
-              const canReroll = !readOnly && !hero && rerollInfo && rerollInfo.candidates.length > 0
-              const isPicking = selectingSlot === i && rerollInfo?.selectReady
-              return (
-                <div className="card-detail__skill" key={`${skill.id}-${i}`}>
-                  <div className="card-detail__skill-head">
-                    <span
-                      className="card-detail__element"
-                      style={{ "--el": ELEMENT_COLOR[skill.element] } as CSSProperties}
-                      title={ELEMENT_LABEL[skill.element]}
-                    />
-                    <b>{skill.name}</b>
-                    <em>{ELEMENT_LABEL[skill.element]}</em>
-                    <span className="card-detail__cost">
-                      {skill.passive ? "被动" : `${skill.ap} AP`}
-                    </span>
-                    {canReroll && (
-                      <button
-                        type="button"
-                        className={`bk-btn bk-btn--sm ${rerollInfo.selectReady ? "bk-btn--main" : "bk-btn--ghost"}`}
-                        disabled={busy !== null}
-                        onClick={() => {
-                          if (rerollInfo.selectReady) {
-                            setSelectingSlot(isPicking ? null : i)
-                          } else {
-                            void doReroll(i)
-                          }
-                        }}
-                      >
-                        {busy === `reroll-${i}`
-                          ? "洗技能中…"
-                          : rerollInfo.selectReady
-                            ? isPicking
-                              ? "收起自选"
-                              : "自选替换"
-                            : "重洗"}
-                      </button>
+          )}
+
+          {(readOnly || tab === "skills") && (
+            <div className="card-detail__skills">
+              <div className="card-detail__reroll-head">
+                <div className="bk-label">技能</div>
+                {!readOnly && !hero && rerollInfo && (
+                  <span className="card-detail__reroll-pity">
+                    {rerollInfo.selectReady
+                      ? `★ 已触发逢 ${rerollInfo.pityInterval} 自选`
+                      : `洗技能保底 ${rerollInfo.skillRerollCount}/${rerollInfo.pityInterval - 1}`}
+                    {" · "}
+                    {rerollInfo.cost.shards}{current.rarity}碎片 + {rerollInfo.cost.coins}金币
+                  </span>
+                )}
+              </div>
+              {face.skills.map((skill, i) => {
+                const def = skillById(skill.id)
+                const descText = def ? describeSkill(def) : ""
+                const canReroll = !readOnly && !hero && rerollInfo && rerollInfo.candidates.length > 0
+                const isPicking = selectingSlot === i && rerollInfo?.selectReady
+                return (
+                  <div className="card-detail__skill" key={`${skill.id}-${i}`}>
+                    <div className="card-detail__skill-head">
+                      <span
+                        className="card-detail__element"
+                        style={{ "--el": ELEMENT_COLOR[skill.element] } as CSSProperties}
+                        title={ELEMENT_LABEL[skill.element]}
+                      />
+                      <b>{skill.name}</b>
+                      <em>{ELEMENT_LABEL[skill.element]}</em>
+                      <span className="card-detail__cost">
+                        {skill.passive ? "被动" : `${skill.ap} AP`}
+                      </span>
+                      {canReroll && (
+                        <button
+                          type="button"
+                          className={`bk-btn bk-btn--sm ${rerollInfo.selectReady ? "bk-btn--main" : "bk-btn--ghost"}`}
+                          disabled={busy !== null}
+                          onClick={() => {
+                            if (rerollInfo.selectReady) {
+                              setSelectingSlot(isPicking ? null : i)
+                            } else {
+                              void doReroll(i)
+                            }
+                          }}
+                        >
+                          {busy === `reroll-${i}`
+                            ? "洗技能中…"
+                            : rerollInfo.selectReady
+                              ? isPicking
+                                ? "收起自选"
+                                : "自选替换"
+                              : "重洗"}
+                        </button>
+                      )}
+                    </div>
+                    {descText && <p className="card-detail__skill-desc">{descText}</p>}
+                    {isPicking && rerollInfo && (
+                      <div className="card-detail__reroll-pool">
+                        {rerollInfo.candidates.map((cand) => (
+                          <button
+                            key={cand.id}
+                            type="button"
+                            className="card-detail__reroll-opt"
+                            disabled={busy !== null}
+                            onClick={() => void doReroll(i, cand.id)}
+                          >
+                            <div className="card-detail__reroll-opt-top">
+                              <span
+                                className="card-detail__element"
+                                style={{ "--el": ELEMENT_COLOR[cand.element] } as CSSProperties}
+                              />
+                              <b>{cand.name}</b>
+                              <em>{ELEMENT_LABEL[cand.element]}</em>
+                              <span className="card-detail__cost">
+                                {cand.passive ? "被动" : `${cand.ap} AP`}
+                              </span>
+                            </div>
+                            {cand.desc && <p>{cand.desc}</p>}
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  {def?.desc && <p className="card-detail__skill-desc">{def.desc}</p>}
-                  {isPicking && rerollInfo && (
-                    <div className="card-detail__reroll-pool">
-                      {rerollInfo.candidates.map((cand) => (
-                        <button
-                          key={cand.id}
-                          type="button"
-                          className="card-detail__reroll-opt"
-                          disabled={busy !== null}
-                          onClick={() => void doReroll(i, cand.id)}
-                        >
-                          <div className="card-detail__reroll-opt-top">
-                            <span
-                              className="card-detail__element"
-                              style={{ "--el": ELEMENT_COLOR[cand.element] } as CSSProperties}
-                            />
-                            <b>{cand.name}</b>
-                            <em>{ELEMENT_LABEL[cand.element]}</em>
-                            <span className="card-detail__cost">
-                              {cand.passive ? "被动" : `${cand.ap} AP`}
-                            </span>
-                          </div>
-                          {cand.desc && <p>{cand.desc}</p>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
 
-          {!readOnly && !hero && (
+          {!readOnly && tab === "manage" && !hero && (
             <div className="card-detail__dispose">
               <div className="bk-label">处置</div>
               <div className="card-detail__actions">
@@ -817,13 +866,15 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
             </div>
           )}
 
-          <p className="bk-note">
-            {readOnly
-              ? "图鉴数据 · 基础数值（Lv.1 / 0 命座），实际养成的卡面以卡册为准。"
-              : "经验来自喂卡、碎片和经验乐谱。直接喂卡比分解成碎片再喂多 25%；升过级的卡按投入经验的 75% 返还。"}
-          </p>
+          {(readOnly || tab === "manage") && (
+            <p className="bk-note">
+              {readOnly
+                ? "图鉴数据 · 基础数值（Lv.1 / 0 命座），实际养成的卡面以卡册为准。"
+                : "经验来自喂卡、碎片和经验乐谱。直接喂卡比分解成碎片再喂多 25%；升过级的卡按投入经验的 75% 返还。"}
+            </p>
+          )}
 
-          {current.profileUrl && (
+          {(readOnly || tab === "manage") && current.profileUrl && (
             <a className="bk-btn bk-btn--ghost card-detail__link" href={current.profileUrl} target="_blank" rel="noreferrer">
               查看 osu! 主页
               <i aria-hidden>›</i>

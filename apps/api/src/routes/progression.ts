@@ -23,6 +23,7 @@ import {
   skillRerollCost,
 } from "@choke/shared/progression"
 import { cardSkillOf, rerollSkillPool } from "@choke/shared/skills"
+import { describeSkill } from "@choke/shared/skill-check"
 import {
   RESONANCE_ATTR_CAP,
   RESONANCE_TOTAL_CAP,
@@ -1084,7 +1085,7 @@ export async function progressionRoutes(app: FastifyInstance) {
           shards: cost.shards,
           shardItemId: shardId,
         },
-        candidates: pool.map((def) => ({ ...cardSkillOf(def), desc: def.desc ?? "" })),
+        candidates: pool.map((def) => ({ ...cardSkillOf(def), desc: describeSkill(def) })),
       },
     }
   })
