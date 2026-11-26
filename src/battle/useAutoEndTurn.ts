@@ -32,7 +32,9 @@ export function useAutoEndTurn({
   const [on, setOn] = useState(readSetting)
   const [cancelledFor, setCancelledFor] = useState<BattleState | null>(null)
   const endRef = useRef(onEndTurn)
-  endRef.current = onEndTurn
+  useEffect(() => {
+    endRef.current = onEndTurn
+  }, [onEndTurn])
 
   const stuck = useMemo(() => !!battle && battle.phase === "player" && !hasLegalAction(battle), [battle])
   const pending = allowed && on && stuck && cancelledFor !== battle

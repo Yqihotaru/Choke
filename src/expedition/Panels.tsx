@@ -16,7 +16,6 @@ export function StoryPanel({
 }) {
   const menus = story.lines.filter((line) => "choice" in line).length
   const [choices, setChoices] = useState<(number | undefined)[]>(() => Array.from({ length: menus }))
-  let menuIndex = -1
 
   return (
     <>
@@ -27,8 +26,7 @@ export function StoryPanel({
       <div className="ex-story">
         {story.lines.map((line, i) => {
           if ("choice" in line) {
-            menuIndex += 1
-            const at = menuIndex
+            const at = story.lines.slice(0, i).filter((item) => "choice" in item).length
             return (
               <div className="ex-story__choice" key={i}>
                 {line.choice.map((option, j) => (

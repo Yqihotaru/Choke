@@ -39,15 +39,17 @@ export function RunView({
   const [sel, setSel] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [prevPosition, setPrevPosition] = useState(view.position)
   const [toast, setToast] = useState<string | null>(null)
   const [mini, setMini] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const toastTimer = useRef<number>(0)
 
-  useEffect(() => {
+  if (prevPosition !== view.position) {
+    setPrevPosition(view.position)
     setSel(null)
     setError(null)
-  }, [view.position])
+  }
   useEffect(() => () => window.clearTimeout(toastTimer.current), [])
 
   const say = (text: string) => {

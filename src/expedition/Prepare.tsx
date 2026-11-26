@@ -86,17 +86,20 @@ export function Prepare({
   const allowed = (r: Row) => cardAllowed(alloc, { rarity: r.row.rarity, isHero: r.isHero })
 
   // 稀有度权限降低后，已选的卡里没权限的要拿掉
-  useEffect(() => {
-    if (!rows) return
-    const byId = new Map(rows.map((r) => [r.row.userCardId, r]))
-    setPicked((current) => {
-      const next = current.filter((id) => {
-        const r = byId.get(id)
-        return r && cardAllowed(alloc, { rarity: r.row.rarity, isHero: r.isHero })
+  const [prevFilterKey, setPrevFilterKey] = useState({ alloc, rows })
+  if (prevFilterKey.alloc !== alloc || prevFilterKey.rows !== rows) {
+    setPrevFilterKey({ alloc, rows })
+    if (rows) {
+      const byId = new Map(rows.map((r) => [r.row.userCardId, r]))
+      setPicked((current) => {
+        const next = current.filter((id) => {
+          const r = byId.get(id)
+          return r && cardAllowed(alloc, { rarity: r.row.rarity, isHero: r.isHero })
+        })
+        return next.length === current.length ? current : next
       })
-      return next.length === current.length ? current : next
-    })
-  }, [alloc, rows])
+    }
+  }
 
   const points = level === null ? null : totalPoints(level)
   const cost = allocationCost(alloc)

@@ -11,10 +11,10 @@
     "earth"
   ],
   "stats": {
-    "hp": 52000,
-    "atk": 820,
+    "hp": 58000,
+    "atk": 740,
     "int": 760,
-    "def": 2200
+    "def": 1800
   },
   "ai": {
     "moves": {
@@ -39,7 +39,7 @@
         "kind": "heavy_phys",
         "label": "重装处决",
         "element": "physical",
-        "power": 1.55,
+        "power": 1.35,
         "hits": 1,
         "desc": "高额物理重击",
         "variants": [
@@ -99,7 +99,13 @@
         "always": "break"
       },
       {
-        "always": "execute"
+        "when": {
+          "turnMod": [
+            2,
+            0
+          ]
+        },
+        "use": "execute"
       },
       {
         "when": {

@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useMemo, useRef, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { ELEMENT_LABEL, battlePower } from "@/card/data"
 import { GameCardFace } from "@/card/GameCardFace"
@@ -197,7 +197,9 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
   const queue = useRef<BattleAction[]>([])
   const inflight = useRef<Promise<void> | null>(null)
   const onViewRef = useRef(onView)
-  onViewRef.current = onView
+  useEffect(() => {
+    onViewRef.current = onView
+  }, [onView])
 
   const [pending, setPending] = useState(0)
   const [syncError, setSyncError] = useState<string | null>(null)
