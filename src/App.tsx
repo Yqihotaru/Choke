@@ -33,6 +33,9 @@ const LoginPage = lazy(() =>
 const AdminPage = lazy(() =>
   import("@/admin/AdminPage").then((m) => ({ default: m.AdminPage }))
 )
+const ExpeditionPage = lazy(() =>
+  import("@/expedition/ExpeditionPage").then((m) => ({ default: m.ExpeditionPage }))
+)
 
 const FALLBACK = <PageLoading />
 
@@ -49,6 +52,13 @@ export function App() {
     return (
       <Suspense fallback={FALLBACK}>
         <AdminPage />
+      </Suspense>
+    )
+  }
+  if (path.endsWith("expedition")) {
+    return (
+      <Suspense fallback={FALLBACK}>
+        <ExpeditionPage />
       </Suspense>
     )
   }

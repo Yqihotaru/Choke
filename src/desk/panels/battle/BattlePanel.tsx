@@ -304,6 +304,19 @@ export function BattlePanel({
             </span>
           )}
 
+          {!tutorialBattleStep && (
+            <>
+              <hr className="bk-divider" />
+              <div className="dungeon-head">
+                <span className="bk-label">远征</span>
+              </div>
+              <p className="bk-note">走地图、做选择、连打几场战斗，奖励攒到最后一次结算。</p>
+              <a className="bk-btn bk-btn--block" href="/expedition">
+                进入远征
+              </a>
+            </>
+          )}
+
           <hr className="bk-divider" />
 
           <div className="dungeon-head">
