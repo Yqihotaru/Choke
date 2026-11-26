@@ -97,6 +97,8 @@ const nodeBase = {
   /** 画地图用的坐标，服务端不关心 */
   pos: z.tuple([z.number(), z.number()]).optional(),
   title: z.string().optional(),
+  /** 分叉选择卡片上的一句话提示（"前方信号平稳"这类）；不写就按节点类型显示默认文案 */
+  hint: z.string().min(1).max(60).optional(),
   next: z.array(id).max(6).default([]),
   /** 进这个节点需要先设置过的标记 */
   requires: z.strictObject({ flag }).optional(),
@@ -118,12 +120,14 @@ export const mapNodeSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("slot"), pool: id, ...nodeBase }),
 ])
 
+const slotHint = z.string().min(1).max(60).optional()
+
 /** 槽位池里的候选节点：只决定「这个格子是什么」，位置、下一跳、前置条件都沿用槽位本身 */
 export const slotNodeSchema = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("battle"), encounter: id, rewards: id.optional(), title: z.string().optional(), threat: threatDelta.optional() }),
-  z.strictObject({ type: z.literal("boss"), encounter: id, rewards: id.optional(), title: z.string().optional(), threat: threatDelta.optional() }),
-  z.strictObject({ type: z.literal("treasure"), rewards: id, title: z.string().optional(), threat: threatDelta.optional() }),
-  z.strictObject({ type: z.literal("rest"), title: z.string().optional(), threat: threatDelta.optional() }),
+  z.strictObject({ type: z.literal("battle"), encounter: id, rewards: id.optional(), title: z.string().optional(), hint: slotHint, threat: threatDelta.optional() }),
+  z.strictObject({ type: z.literal("boss"), encounter: id, rewards: id.optional(), title: z.string().optional(), hint: slotHint, threat: threatDelta.optional() }),
+  z.strictObject({ type: z.literal("treasure"), rewards: id, title: z.string().optional(), hint: slotHint, threat: threatDelta.optional() }),
+  z.strictObject({ type: z.literal("rest"), title: z.string().optional(), hint: slotHint, threat: threatDelta.optional() }),
 ])
 export type SlotNode = z.infer<typeof slotNodeSchema>
 

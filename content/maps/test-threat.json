@@ -14,8 +14,8 @@
   "nodes": {
     "n1": { "type": "battle", "encounter": "ghost", "rewards": "test-battle", "pos": [0, 0], "next": ["n2"] },
     "n2": { "type": "event", "event": "test-shrine", "pos": [1, 0], "next": ["n3a", "n3b"] },
-    "n3a": { "type": "battle", "encounter": "ghost", "rewards": "test-battle", "title": "危险路线", "threat": 4, "pos": [2, -1], "next": ["n4"] },
-    "n3b": { "type": "rest", "title": "篝火", "pos": [2, 1], "next": ["n4"] },
+    "n3a": { "type": "battle", "encounter": "ghost", "rewards": "test-battle", "title": "危险路线", "hint": "感觉那边更危险，但掉落更多。", "threat": 4, "pos": [2, -1], "next": ["n4"] },
+    "n3b": { "type": "rest", "title": "篝火", "hint": "那边看起来更太平。", "pos": [2, 1], "next": ["n4"] },
     "n4": { "type": "boss", "encounter": "colossus-metronome", "rewards": "test-boss", "pos": [3, 0], "next": [] }
   }
 }

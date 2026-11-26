@@ -30,12 +30,13 @@ function pickWeighted<T extends { weight: number }>(items: readonly T[], roll: n
 
 function slotToMapNode(
   picked: SlotNode,
-  base: { pos?: [number, number]; title?: string; next: string[]; requires?: { flag: string }; threat?: number },
+  base: { pos?: [number, number]; title?: string; hint?: string; next: string[]; requires?: { flag: string }; threat?: number },
 ): MapNode {
   const threat = picked.threat ?? base.threat
   const common = {
     ...(base.pos ? { pos: base.pos } : {}),
     ...(picked.title ?? base.title ? { title: picked.title ?? base.title } : {}),
+    ...(picked.hint ?? base.hint ? { hint: picked.hint ?? base.hint } : {}),
     next: [...base.next],
     ...(base.requires ? { requires: base.requires } : {}),
     ...(threat ? { threat } : {}),
