@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import gsap from "gsap"
 import { FiChevronLeft, FiRefreshCw, FiRepeat } from "react-icons/fi"
 import {
@@ -35,6 +35,8 @@ import { BattleLog, SkillHint, SupportReadout, TriggerReadout } from "../BattleR
 import { ELEMENT_COLOR, ELEMENT_LABEL, JOB_LABEL, battlePower } from "@/card/data"
 import { pointerCommand, useSkillRows } from "../useSkillRows"
 import { usePlaybackSpeed } from "../usePlaybackSpeed"
+import { useAutoEndTurn } from "../useAutoEndTurn"
+import type { BattleHostHooks } from "../host"
 import { impact, reducedImpactMotion, sustainHurtTint } from "../impact"
 import type { CardFaceData, Element } from "@/card/types"
 
@@ -88,6 +90,8 @@ interface Props {
   onEndTurn: () => void
   onRestart: () => void
   onSwitchUi?: () => void
+  /** 嵌在别的流程里时由宿主接管退出和结算按钮；不传是独立战斗页 */
+  host?: BattleHostHooks
 }
 
 function bossBgStyle(background: string): CSSProperties {
@@ -194,6 +198,32 @@ function SupportKindIcon({ unit }: { unit: SideSupportUnit }) {
   }
 }
 
+/** 退出按钮：独立战斗页是回桌面的链接；被宿主嵌入时换成宿主给的文字和动作 */
+function ExitLink({
+  host,
+  className,
+  sfx,
+  children,
+}: {
+  host?: BattleHostHooks
+  className: string
+  sfx?: string
+  children: ReactNode
+}) {
+  if (host) {
+    return (
+      <button type="button" className={className} onClick={host.onExit} data-sfx={sfx}>
+        {host.exitLabel}
+      </button>
+    )
+  }
+  return (
+    <a className={className} href="/" data-sfx={sfx}>
+      {children}
+    </a>
+  )
+}
+
 export function BattleStage({
   battle,
   playerName,
@@ -212,6 +242,7 @@ export function BattleStage({
   onEndTurn,
   onRestart,
   onSwitchUi,
+  host,
 }: Props) {
   const [hoveredIntent, setHoveredIntent] = useState<EnemyIntent | null>(null)
   const [previewAp, setPreviewAp] = useState(0)
@@ -219,6 +250,7 @@ export function BattleStage({
   const [swapOpen, setSwapOpen] = useState(false)
   const [swapOutIdx, setSwapOutIdx] = useState(0)
   const { label, hint, cycle, stepGap } = usePlaybackSpeed()
+  const autoEnd = useAutoEndTurn({ battle, allowed: !tutorial, onEndTurn })
   /** 胜负已定后，等最后一击演完才亮结算层 */
   const [resultShown, setResultShown] = useState(battle?.phase === "won" || battle?.phase === "lost")
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -699,10 +731,10 @@ export function BattleStage({
                   <span>新版界面</span>
                 </button>
               )}
-              <a className="choke-tool-btn" href="/" data-sfx="close">
+              <ExitLink host={host} className="choke-tool-btn" sfx="close">
                 <FiChevronLeft aria-hidden />
                 <span>桌面</span>
-              </a>
+              </ExitLink>
             </div>
 
             {!tutorial && (
@@ -853,13 +885,29 @@ export function BattleStage({
 
           <section className="choke-deck">
             <aside className="choke-wing choke-wing--left">
-              <div className="choke-btn-panel">
-                <span>{tutorial ? "教学编队" : "出战编队"}</span>
-                <small>{deck.length} / 7 张</small>
+              <button type="button" className="choke-btn-panel" disabled>
+                <div className="choke-btn-panel__top">
+                  <GiCycle />
+                  <span>{tutorial ? "教学编队" : "出战编队"}</span>
+                </div>
+                <div className="choke-btn-panel__pill">{deck.length} / 7 张</div>
+              </button>
+              <div className="choke-wing-toggles">
+                <button
+                  type="button"
+                  className="choke-btn-mini"
+                  aria-label={hint}
+                  title={hint}
+                  onClick={cycle}
+                  data-sfx="toggle"
+                >
+                  <GiHourglass aria-hidden />
+                  <span>{label}</span>
+                </button>
               </div>
-              <a className="choke-btn-menu" href="/">
+              <ExitLink host={host} className="choke-btn-menu">
                 桌面
-              </a>
+              </ExitLink>
             </aside>
             <div className="choke-party-grid">
               {deck.map((card, slot) => (
@@ -998,19 +1046,21 @@ export function BattleStage({
                 <span>新版界面</span>
               </button>
             )}
-            <button
-              type="button"
-              className="choke-tool-btn"
-              onClick={() => begin(onRestart)}
-              title="重新开始本场战斗"
-            >
-              <FiRefreshCw aria-hidden />
-              <span>重开</span>
-            </button>
-            <a className="choke-tool-btn" href="/" data-sfx="close">
+            {host?.canRestart !== false && (
+              <button
+                type="button"
+                className="choke-tool-btn"
+                onClick={() => begin(onRestart)}
+                title="重新开始本场战斗"
+              >
+                <FiRefreshCw aria-hidden />
+                <span>重开</span>
+              </button>
+            )}
+            <ExitLink host={host} className="choke-tool-btn" sfx="close">
               <FiChevronLeft aria-hidden />
               <span>桌面</span>
-            </a>
+            </ExitLink>
           </div>
 
           <div className="choke-classic-readouts">
@@ -1278,11 +1328,23 @@ export function BattleStage({
               >
                 <span>战报</span>
               </button>
+              {autoEnd.allowed && (
+                <button
+                  type="button"
+                  className="choke-btn-mini"
+                  aria-pressed={autoEnd.on}
+                  title="没有能做的操作时，3 秒后自动结束回合；倒计时里点任何地方可取消"
+                  onClick={autoEnd.toggle}
+                  data-sfx="toggle"
+                >
+                  <span>自动结束</span>
+                </button>
+              )}
             </div>
 
-            <a className="choke-btn-menu" href="/" data-sfx="close">
+            <ExitLink host={host} className="choke-btn-menu" sfx="close">
               桌面
-            </a>
+            </ExitLink>
           </aside>
 
           <div className="choke-party-grid">
@@ -1380,6 +1442,7 @@ export function BattleStage({
               {...pointerCommand}
               type="button"
               className="choke-btn-end"
+              data-auto-end={autoEnd.pending ? "true" : undefined}
               onClick={() => {
                 playSfx("whoosh")
                 onEndTurn()
@@ -1508,11 +1571,17 @@ export function BattleStage({
                 </div>
               )}
 
+              {host?.resultNote}
+
               <div className="choke-result-actions">
-                <button type="button" onClick={() => begin(onRestart)} data-sfx="none">
-                  再来一场
-                </button>
-                <a href="/">返回桌面</a>
+                {host?.resultActions ?? (
+                  <>
+                    <button type="button" onClick={() => begin(onRestart)} data-sfx="none">
+                      再来一场
+                    </button>
+                    <a href="/">返回桌面</a>
+                  </>
+                )}
               </div>
             </div>
           </div>

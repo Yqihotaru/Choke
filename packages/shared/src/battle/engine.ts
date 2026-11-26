@@ -1138,6 +1138,26 @@ export function swapBattleCard(
 }
 
 /**
+ * 我方回合里还有没有任何能做的操作（出技能 / 升防御 / 换人）；
+ * 全都做不了时界面可以提示或自动结束回合。不改状态。
+ */
+export function hasLegalAction(state: BattleState): boolean {
+  if (state.phase !== "player") return false
+  for (let i = 0; i < state.cards.length; i += 1) {
+    for (const skill of state.cards[i]!.skills) {
+      if (canUseSkillReason(state, i, skill.id) === null) return true
+    }
+  }
+  const maxTier = hasTankAlive(state.cards) ? 4 : 2
+  if (state.ap >= 1 && state.defenseTier + 1 <= maxTier) return true
+  if (state.swapCooldown <= 0) {
+    const benchReady = state.bench.some((b) => !b.down)
+    if (benchReady && (!state.hasActedThisTurn || state.cards.some((c) => c.down))) return true
+  }
+  return false
+}
+
+/**
  * 我方回合开始自动序列（严格遵循 §6.1 & §8.1 顺序）：
  * 1. 侧面支援自动行动（攻击型 60% 发动率，50% 伤害，每段命中按支援的 combo 字段加 Combo）
  * 2. 迅捷卡抢攻判定（带迅捷被动的卡，70% 伤害，命中 +1 Combo）

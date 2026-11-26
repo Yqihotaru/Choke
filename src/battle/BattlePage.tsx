@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react"
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react"
 
 import {
   fetchDeck,
@@ -21,31 +21,8 @@ import { TUTORIAL_ENCOUNTER_ID, type EncounterSpec, type EncounterSummary } from
 import type { BattleState } from "@choke/shared/battle/types"
 import { randomSeed } from "@choke/shared/rng"
 import { playSfx } from "@/audio/sfx"
+import { ClassicStage, ModernStage, readBattleUiMode, saveBattleUiMode, type BattleUiMode } from "./stages"
 import "./battle-gate.css"
-
-type BattleUiMode = "classic" | "modern"
-const BATTLE_UI_KEY = "choke:battle-ui"
-
-const ClassicStage = lazy(() =>
-  import("./view/BattleStage").then((m) => ({ default: m.BattleStage })),
-)
-const ModernStage = lazy(() =>
-  import("./view-modern/BattleStage").then((m) => ({ default: m.BattleStage })),
-)
-
-function readBattleUiMode(searchParams: URLSearchParams): BattleUiMode {
-  const fromUrl = searchParams.get("ui")
-  if (fromUrl === "classic" || fromUrl === "modern") {
-    return fromUrl
-  }
-  try {
-    const saved = localStorage.getItem(BATTLE_UI_KEY)
-    if (saved === "classic" || saved === "modern") return saved
-  } catch {
-    // ignore storage failure
-  }
-  return "classic"
-}
 
 /** 进不了战斗时的整页提示（没登录、没卡、出错、加载中）：和战斗舞台同一套配色，都带回桌面的路 */
 function Gate({ tag, title, text, children }: { tag: string; title: string; text?: string; children?: ReactNode }) {
@@ -85,13 +62,7 @@ export function BattlePage() {
 
   const searchParams = new URLSearchParams(window.location.search)
   const [uiMode, setUiMode] = useState(() => readBattleUiMode(searchParams))
-  useEffect(() => {
-    try {
-      localStorage.setItem(BATTLE_UI_KEY, uiMode)
-    } catch {
-      // The current tab can still switch when storage is unavailable.
-    }
-  }, [uiMode])
+  useEffect(() => saveBattleUiMode(uiMode), [uiMode])
   const tutorialMode = searchParams.get("tutorial") === "1"
   const [stageId, setStageId] = useState<string | null>(searchParams.get("stage"))
   const [encounters, setEncounters] = useState<EncounterSummary[] | null>(null)

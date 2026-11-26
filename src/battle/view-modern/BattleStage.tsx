@@ -34,6 +34,8 @@ import { BattleLog, ReadoutTip, SkillHint, SupportReadout, TriggerReadout } from
 import { ELEMENT_COLOR, ELEMENT_LABEL, JOB_LABEL, battlePower } from "@/card/data"
 import { pointerCommand, useSkillRows } from "../useSkillRows"
 import { usePlaybackSpeed } from "../usePlaybackSpeed"
+import { useAutoEndTurn } from "../useAutoEndTurn"
+import type { BattleHostHooks } from "../host"
 import { impact, reducedImpactMotion, sustainHurtTint } from "../impact"
 import type { CardFaceData, Element } from "@/card/types"
 
@@ -79,6 +81,8 @@ interface Props {
   onEndTurn: () => void
   onRestart: () => void
   onSwitchUi?: () => void
+  /** 嵌在别的流程里时由宿主接管退出和结算按钮；不传是独立战斗页 */
+  host?: BattleHostHooks
 }
 
 function bossBgStyle(background: string): CSSProperties {
@@ -203,6 +207,7 @@ export function BattleStage({
   onEndTurn,
   onRestart,
   onSwitchUi,
+  host,
 }: Props) {
   const [intentHover, setIntentHover] = useState<{ id: string; anchor: HTMLElement; pointer: { x: number; y: number } } | null>(null)
   const [previewAp, setPreviewAp] = useState(0)
@@ -210,6 +215,7 @@ export function BattleStage({
   const [swapOpen, setSwapOpen] = useState(false)
   const [swapOutIdx, setSwapOutIdx] = useState(0)
   const { label, hint, cycle, stepGap } = usePlaybackSpeed()
+  const autoEnd = useAutoEndTurn({ battle, allowed: !tutorial, onEndTurn })
   /** 胜负已定后，等最后一击演完才亮结算层 */
   const [resultShown, setResultShown] = useState(battle?.phase === "won" || battle?.phase === "lost")
 
@@ -670,7 +676,12 @@ export function BattleStage({
   // 两个画面共用同一副骨架，从上到下五条，互不叠压：
   // 顶栏（工具、回合）→ 敌人区（血条在上，两侧是支援和行动预告，正中留给打击演出）
   // → 播报条（战况、出招、回合切换）→ 队伍状态栏 → 卡牌区（右边一列指令）
-  const backToDesk = (
+  const backToDesk = host ? (
+    <button type="button" className="choke-tool-btn" onClick={host.onExit} data-sfx="close">
+      <b>‹</b>
+      <span>{host.exitLabel}</span>
+    </button>
+  ) : (
     <a className="choke-tool-btn" href="/" data-sfx="close">
       <b>‹</b>
       <span>桌面</span>
@@ -888,16 +899,18 @@ export function BattleStage({
         <header className="choke-topbar">
           <div className="choke-topbar__side">
             {backToDesk}
-            <button
-              type="button"
-              className="choke-tool-btn"
-              onClick={() => begin(onRestart)}
-              title="重新开始本场战斗"
-              data-sfx="none"
-            >
-              <b>↻</b>
-              <span>重开</span>
-            </button>
+            {host?.canRestart !== false && (
+              <button
+                type="button"
+                className="choke-tool-btn"
+                onClick={() => begin(onRestart)}
+                title="重新开始本场战斗"
+                data-sfx="none"
+              >
+                <b>↻</b>
+                <span>重开</span>
+              </button>
+            )}
             <button
               type="button"
               className="choke-tool-btn"
@@ -945,6 +958,18 @@ export function BattleStage({
               <GiHourglass />
               <span>{label}</span>
             </button>
+            {autoEnd.allowed && (
+              <button
+                type="button"
+                className="choke-tool-btn"
+                aria-pressed={autoEnd.on}
+                title="没有能做的操作时，3 秒后自动结束回合；倒计时里点任何地方可取消"
+                onClick={autoEnd.toggle}
+                data-sfx="toggle"
+              >
+                <span>自动结束</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -1294,6 +1319,7 @@ export function BattleStage({
               {...pointerCommand}
               type="button"
               className="choke-btn-end"
+              data-auto-end={autoEnd.pending ? "true" : undefined}
               onClick={() => {
                 playSfx("whoosh")
                 onEndTurn()
@@ -1427,11 +1453,17 @@ export function BattleStage({
                 </div>
               )}
 
+              {host?.resultNote}
+
               <div className="choke-result-actions">
-                <button type="button" onClick={() => begin(onRestart)} data-sfx="none">
-                  再来一场
-                </button>
-                <a href="/">返回桌面</a>
+                {host?.resultActions ?? (
+                  <>
+                    <button type="button" onClick={() => begin(onRestart)} data-sfx="none">
+                      再来一场
+                    </button>
+                    <a href="/">返回桌面</a>
+                  </>
+                )}
               </div>
             </div>
           </div>
