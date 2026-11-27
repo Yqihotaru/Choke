@@ -44,7 +44,9 @@ function sumRewardExp(items?: readonly { itemId: string; count: number }[]): num
   return sum
 }
 
-const DAILY_PACKS: Partial<Record<PoolId, number>> = { idle: 60, ...sumActivityPacks(QUEST_CONTENT.activity.daily) }
+// 每日挂机包额度可用环境变量 IDLE_LIMIT 覆盖（默认 60），用来对比放宽额度后的养成速度
+const IDLE_LIMIT = Number(process.env.IDLE_LIMIT ?? 60)
+const DAILY_PACKS: Partial<Record<PoolId, number>> = { idle: IDLE_LIMIT, ...sumActivityPacks(QUEST_CONTENT.activity.daily) }
 const WEEKLY_PACKS: Partial<Record<PoolId, number>> = sumActivityPacks(QUEST_CONTENT.activity.weekly)
 const MONTHLY_PACKS: Partial<Record<PoolId, number>> = sumActivityPacks(QUEST_CONTENT.activity.monthly)
 
