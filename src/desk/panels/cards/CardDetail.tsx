@@ -39,6 +39,7 @@ import { useTutorialProgress } from "@/tutorial/store"
 import { isModuleUnlocked, lockHintOf } from "@/tutorial/unlocks"
 
 import {
+  ApiError,
   ascendCard,
   dismantleCard,
   enhanceCard,
@@ -340,7 +341,26 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
         .catch(() => {})
     } catch (error) {
       playSfx("error")
-      setMessage({ text: error instanceof Error ? error.message : "洗技能失败", error: true })
+      const code = error instanceof ApiError ? error.code : undefined
+      if (code === "card_listed") {
+        setListed(true)
+        setSelectingSlot(null)
+        setMessage({ text: "这张卡正在市场上架，请先下架后再洗技能", error: true })
+      } else if (code === "in_expedition") {
+        setSelectingSlot(null)
+        setMessage({ text: "这张卡正在远征出征中，暂不能洗技能", error: true })
+      } else if (code === "select_not_ready" || code === "skill_id_required") {
+        fetchSkillRerollInfo(userId, current.userCardId)
+          .then((fresh) => setRerollInfo(fresh))
+          .catch(() => {})
+        setMessage({ text: error instanceof Error ? error.message : "洗技能状态已变化，已刷新", error: true })
+      } else if (code === "not_enough_coins") {
+        setMessage({ text: error instanceof Error ? error.message : "金币不足，无法洗技能", error: true })
+      } else if (code === "not_enough_items") {
+        setMessage({ text: error instanceof Error ? error.message : "同品质碎片不足，无法洗技能", error: true })
+      } else {
+        setMessage({ text: error instanceof Error ? error.message : "洗技能失败", error: true })
+      }
     } finally {
       setBusy(null)
     }
