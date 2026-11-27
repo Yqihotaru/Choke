@@ -1042,29 +1042,57 @@ export async function progressionRoutes(app: FastifyInstance) {
         throw new TxAbort(400, "hero_protected", "本体卡不能回收")
       }
 
+      const lockedIds = await lockedUserCardIds(tx, userId)
+      const listedRows = await tx
+        .select({ userCardId: marketListings.userCardId })
+        .from(marketListings)
+        .where(and(inArray(marketListings.userCardId, body.userCardIds), eq(marketListings.status, "active")))
+      const listedIds = new Set(listedRows.map((r) => r.userCardId))
+
+      const skipped: { userCardId: number; reason: "in_expedition" | "card_listed" }[] = []
       let coinsGained = 0
+      let recycledCount = 0
       const ledger: LedgerEntryInput[] = []
       for (const target of targets) {
+        if (lockedIds.has(target.id)) {
+          skipped.push({ userCardId: target.id, reason: "in_expedition" })
+          continue
+        }
+        if (listedIds.has(target.id)) {
+          skipped.push({ userCardId: target.id, reason: "card_listed" })
+          continue
+        }
         await removeUserCard(tx, userId, target.id)
+        recycledCount += 1
         coinsGained += npcRecycleValue(target.rarity as Rarity, target.level, target.exp, false)
         ledger.push({ kind: "card", ref: target.cardId, delta: -1, userCardId: target.id })
       }
 
-      const [wallet] = await tx
-        .update(users)
-        .set({ coins: sql`${users.coins} + ${coinsGained}` })
-        .where(eq(users.id, userId))
-        .returning({ coins: users.coins })
+      let coins: number
+      if (coinsGained > 0) {
+        const [wallet] = await tx
+          .update(users)
+          .set({ coins: sql`${users.coins} + ${coinsGained}` })
+          .where(eq(users.id, userId))
+          .returning({ coins: users.coins })
+        coins = wallet?.coins ?? 0
+        ledger.push({ kind: "coins", delta: coinsGained })
+      } else {
+        const [wallet] = await tx.select({ coins: users.coins }).from(users).where(eq(users.id, userId)).limit(1)
+        coins = wallet?.coins ?? 0
+      }
 
-      ledger.push({ kind: "coins", delta: coinsGained })
-      await recordLedger(tx, userId, ledger, { source: "npc-recycle", sourceRef: dayKey })
+      if (recycledCount > 0) {
+        await recordLedger(tx, userId, ledger, { source: "npc-recycle", sourceRef: dayKey })
+      }
 
       return {
-        recycledCount: targets.length,
+        recycledCount,
+        skipped,
         coinsGained,
-        coins: wallet?.coins ?? 0,
-        usedToday: usedToday + targets.length,
-        remaining: remaining - targets.length,
+        coins,
+        usedToday: usedToday + recycledCount,
+        remaining: remaining - recycledCount,
         dailyLimit: NPC_RECYCLE_DAILY_LIMIT,
       }
     })

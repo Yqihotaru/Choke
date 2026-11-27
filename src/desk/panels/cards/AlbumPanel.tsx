@@ -14,12 +14,17 @@ import { expToNext, isHeroCardId, levelCap } from "@/card/progression"
 import { RARITIES } from "@/card/types"
 
 import {
+  ApiError,
   dismantleCardsBatch,
+  fetchRecycleQuota,
   fetchUserCards,
+  recycleCardsBatch,
   toFace,
   type ApiUserCard,
   type CardSort,
+  type RecycleQuota,
 } from "@/desk/session/api"
+import { NPC_RECYCLE_DAILY_LIMIT, npcRecycleValue } from "@choke/shared/economy"
 import { ITEMS, SHARDS_PER_DISMANTLE } from "@choke/shared/items"
 import { Pages, useBook, usePageCache } from "@/desk/shell/BookPages"
 import { CardDetail } from "@/desk/panels/cards/CardDetail"
@@ -57,11 +62,13 @@ export const AlbumPanel = memo(function AlbumPanel({
   const [sort, setSort] = useState<CardSort>("recent")
   const [page, setPage] = useState(0)
   const [detail, setDetail] = useState<ApiUserCard | null>(null)
-  const [batchMode, setBatchMode] = useState(false)
+  const [batchMode, setBatchMode] = useState<"dismantle" | "recycle" | null>(null)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [batchConfirm, setBatchConfirm] = useState(false)
   const [batchBusy, setBatchBusy] = useState(false)
   const [batchNotice, setBatchNotice] = useState<string | null>(null)
+  const [recycleQuota, setRecycleQuota] = useState<RecycleQuota | null>(null)
+  const [recycleLockMsg, setRecycleLockMsg] = useState<string | null>(null)
   const [prevUserId, setPrevUserId] = useState(userId)
   const [prevRevision, setPrevRevision] = useState(book.revision)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -70,16 +77,46 @@ export const AlbumPanel = memo(function AlbumPanel({
   if (prevUserId !== userId) {
     setPrevUserId(userId)
     setDetail(null)
-    setBatchMode(false)
+    setBatchMode(null)
     setSelectedIds([])
     setBatchConfirm(false)
     setBatchNotice(null)
+    setRecycleQuota(null)
+    setRecycleLockMsg(null)
   }
   if (prevRevision !== book.revision) {
     setPrevRevision(book.revision)
     setSelectedIds([])
     setBatchConfirm(false)
   }
+
+  useEffect(() => {
+    if (!userId || batchMode !== "recycle") return
+    const ctl = new AbortController()
+    fetchRecycleQuota(userId, ctl.signal)
+      .then((q) => {
+        if (ctl.signal.aborted) return
+        setRecycleQuota(q)
+        setRecycleLockMsg(null)
+      })
+      .catch((error: unknown) => {
+        if (ctl.signal.aborted) return
+        const code = error instanceof ApiError ? error.code : undefined
+        setRecycleLockMsg(
+          code === "feature_locked"
+            ? error instanceof Error
+              ? error.message
+              : "NPC 回收尚未解锁"
+            : error instanceof Error
+              ? error.message
+              : "读取回收额度失败",
+        )
+      })
+    return () => ctl.abort()
+  }, [userId, batchMode, book.revision])
+
+  const maxBatchSelect =
+    batchMode === "recycle" ? Math.max(0, recycleQuota?.remaining ?? NPC_RECYCLE_DAILY_LIMIT) : 60
 
   const openDetail = useCallback((row: ApiUserCard) => setDetail(row), [])
   const toggleSelect = useCallback(
@@ -89,15 +126,15 @@ export const AlbumPanel = memo(function AlbumPanel({
       setBatchNotice(null)
       setSelectedIds((cur) => {
         if (cur.includes(row.userCardId)) return cur.filter((id) => id !== row.userCardId)
-        if (cur.length >= 60) return cur
+        if (cur.length >= maxBatchSelect) return cur
         return [...cur, row.userCardId]
       })
     },
-    [batchBusy],
+    [batchBusy, maxBatchSelect],
   )
   const exitBatchMode = useCallback(() => {
     if (batchBusy) return
-    setBatchMode(false)
+    setBatchMode(null)
     setSelectedIds([])
     setBatchConfirm(false)
     setBatchNotice(null)
@@ -187,7 +224,7 @@ export const AlbumPanel = memo(function AlbumPanel({
         key={row.userCardId}
         row={row}
         onDesk={deskIds.has(row.userCardId)}
-        batchMode={batchMode}
+        batchMode={batchMode !== null}
         selected={selectedSet.has(row.userCardId)}
         onDetail={openDetail}
         onToggleSelect={toggleSelect}
@@ -202,13 +239,20 @@ export const AlbumPanel = memo(function AlbumPanel({
       setSelectedIds((cur) => {
         const next = new Set(cur)
         for (const id of eligible) {
-          if (next.size >= 60) break
+          if (next.size >= maxBatchSelect) break
           next.add(id)
         }
         return [...next]
       })
     }
-    const runBatchDismantle = async () => {
+    const estimatedCoins =
+      batchMode === "recycle" && rows
+        ? selectedIds.reduce((sum, id) => {
+            const card = rows.find((r) => r.userCardId === id)
+            return sum + (card ? npcRecycleValue(card.rarity, card.level, card.exp, false) : 0)
+          }, 0)
+        : 0
+    const runBatchAction = async () => {
       if (selectedIds.length === 0 || batchBusy) return
       if (!batchConfirm) {
         playSfx("tick")
@@ -218,6 +262,23 @@ export const AlbumPanel = memo(function AlbumPanel({
       setBatchBusy(true)
       setBatchNotice(null)
       try {
+        if (batchMode === "recycle") {
+          const res = await recycleCardsBatch(userId, selectedIds)
+          playSfx("coin")
+          setSelectedIds([])
+          setBatchConfirm(false)
+          setRecycleQuota({
+            dailyLimit: res.dailyLimit,
+            usedToday: res.usedToday,
+            remaining: res.remaining,
+          })
+          const skipNote = res.skipped?.length ? `（跳过 ${res.skipped.length} 张出征/在售卡）` : ""
+          setBatchNotice(
+            `已回收 ${res.recycledCount} 张卡，获得 ${res.coinsGained} 金币 · 今日剩余 ${res.remaining}/${res.dailyLimit}${skipNote}`,
+          )
+          book.invalidate()
+          return
+        }
         const res = await dismantleCardsBatch(userId, selectedIds)
         playSfx("pick")
         setSelectedIds([])
@@ -235,7 +296,14 @@ export const AlbumPanel = memo(function AlbumPanel({
         book.invalidate()
       } catch (error) {
         setBatchConfirm(false)
-        setBatchNotice(error instanceof Error ? error.message : "批量分解失败")
+        const code = error instanceof ApiError ? error.code : undefined
+        if (code === "daily_limit_reached") {
+          setBatchNotice(error instanceof Error ? error.message : "今日 NPC 回收额度已用完")
+        } else if (code === "feature_locked") {
+          setBatchNotice(error instanceof Error ? error.message : "该功能尚未解锁")
+        } else {
+          setBatchNotice(error instanceof Error ? error.message : batchMode === "recycle" ? "批量回收失败" : "批量分解失败")
+        }
       } finally {
         setBatchBusy(false)
       }
@@ -325,30 +393,56 @@ export const AlbumPanel = memo(function AlbumPanel({
               </select>
               <button
                 type="button"
-                className={`bk-btn album-head__batch ${batchMode ? "bk-btn--main" : "bk-btn--ghost"}`}
+                className={`bk-btn album-head__batch ${batchMode === "dismantle" ? "bk-btn--main" : "bk-btn--ghost"}`}
                 disabled={batchBusy}
                 onClick={() => {
                   if (batchBusy) return
                   playSfx("tick")
-                  if (batchMode) {
+                  if (batchMode === "dismantle") {
                     exitBatchMode()
                   } else {
                     setDetail(null)
-                    setBatchMode(true)
+                    setSelectedIds([])
+                    setBatchConfirm(false)
+                    setBatchMode("dismantle")
                     setBatchNotice(null)
                   }
                 }}
               >
-                {batchMode ? "退出批量" : "批量分解"}
+                {batchMode === "dismantle" ? "退出分解" : "批量分解"}
+              </button>
+              <button
+                type="button"
+                className={`bk-btn album-head__batch ${batchMode === "recycle" ? "bk-btn--main" : "bk-btn--ghost"}`}
+                disabled={batchBusy}
+                onClick={() => {
+                  if (batchBusy) return
+                  playSfx("tick")
+                  if (batchMode === "recycle") {
+                    exitBatchMode()
+                  } else {
+                    setDetail(null)
+                    setSelectedIds([])
+                    setBatchConfirm(false)
+                    setBatchMode("recycle")
+                    setBatchNotice(null)
+                  }
+                }}
+              >
+                {batchMode === "recycle" ? "退出回收" : "批量回收"}
               </button>
             </div>
 
             {batchMode && (
-              <div className="album-batch-bar" role="region" aria-label="批量分解操作栏">
+              <div
+                className="album-batch-bar"
+                role="region"
+                aria-label={batchMode === "recycle" ? "批量回收操作栏" : "批量分解操作栏"}
+              >
                 <button
                   type="button"
                   className="bk-btn bk-btn--ghost"
-                  disabled={!rows || rows.length === 0 || batchBusy}
+                  disabled={!rows || rows.length === 0 || batchBusy || Boolean(batchMode === "recycle" && recycleLockMsg)}
                   onClick={selectCurrentPage}
                 >
                   本页全选
@@ -366,19 +460,38 @@ export const AlbumPanel = memo(function AlbumPanel({
                   清空
                 </button>
                 <span className="album-batch-bar__info">
-                  已选 {selectedIds.length} / 60 · 预计 +{selectedIds.length * SHARDS_PER_DISMANTLE} 碎片
+                  {batchMode === "recycle" ? (
+                    recycleLockMsg ? (
+                      recycleLockMsg
+                    ) : (
+                      <>
+                        已选 {selectedIds.length} · 预计 +{estimatedCoins} 金币 · 今日剩余{" "}
+                        {recycleQuota?.remaining ?? NPC_RECYCLE_DAILY_LIMIT}/{recycleQuota?.dailyLimit ?? NPC_RECYCLE_DAILY_LIMIT}
+                      </>
+                    )
+                  ) : (
+                    <>
+                      已选 {selectedIds.length} / 60 · 预计 +{selectedIds.length * SHARDS_PER_DISMANTLE} 碎片
+                    </>
+                  )}
                 </span>
                 <button
                   type="button"
                   className={`bk-btn ${batchConfirm ? "album-batch-bar__danger" : "bk-btn--main"}`}
-                  disabled={selectedIds.length === 0 || batchBusy}
-                  onClick={() => void runBatchDismantle()}
+                  disabled={
+                    selectedIds.length === 0 ||
+                    batchBusy ||
+                    Boolean(batchMode === "recycle" && (recycleLockMsg || (recycleQuota?.remaining ?? 1) <= 0))
+                  }
+                  onClick={() => void runBatchAction()}
                 >
                   {batchBusy
-                    ? "分解中…"
+                    ? batchMode === "recycle"
+                      ? "回收中…"
+                      : "分解中…"
                     : batchConfirm
-                      ? `确认分解 ${selectedIds.length} 张`
-                      : `分解 (${selectedIds.length})`}
+                      ? `确认${batchMode === "recycle" ? "回收" : "分解"} ${selectedIds.length} 张`
+                      : `${batchMode === "recycle" ? "回收" : "分解"} (${selectedIds.length})`}
                 </button>
                 {batchNotice && <div className="album-batch-bar__notice">{batchNotice}</div>}
               </div>

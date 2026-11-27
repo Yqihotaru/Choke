@@ -770,6 +770,31 @@ export function dismantleCardsBatch(
   })
 }
 
+export interface RecycleQuota {
+  dailyLimit: number
+  usedToday: number
+  remaining: number
+}
+
+export interface RecycleResult extends RecycleQuota {
+  recycledCount: number
+  skipped?: { userCardId: number; reason: string }[]
+  coinsGained: number
+  coins: number
+}
+
+export function fetchRecycleQuota(userId: string, signal?: AbortSignal): Promise<RecycleQuota> {
+  return request<RecycleQuota>(`/api/users/${userId}/cards/recycle`, { signal })
+}
+
+export function recycleCardsBatch(userId: string, userCardIds: number[]): Promise<RecycleResult> {
+  return request<RecycleResult>(`/api/users/${userId}/cards/recycle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userCardIds }),
+  })
+}
+
 export interface SkillRerollCandidate {
   id: string
   name: string
