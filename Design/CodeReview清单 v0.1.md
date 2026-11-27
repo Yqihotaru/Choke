@@ -142,7 +142,7 @@
 27. **切号后背包、市场先显示上个账号的数据**（待复核）：`BackpackPanel.tsx` L76–130、`MarketPanel.tsx` L63–90。给面板加 `key={userId}` 最省事。市场的 `fetchMe` 失败不应让整页判为加载失败，`unlist` 失败也要重新拉列表。
 28. **道具名查表没有兜底，遇到新道具白屏**（待复核）：`BattlePanel.tsx` 约 L82、`CardDetail.tsx` 约 L103，改成 `ITEMS[id]?.name ?? id`。
 29. **多处 `.catch(() => {})` 吞错，界面无提示**（待复核）：`BattlePanel.tsx` L51/54/64、`MailBox.tsx` L143/L181（已读失败要回滚本地已读）、`AccountPanel.tsx` L105/113/141、`useDeskSession.ts` L84/107。
-30. **找出"Encountered two children with the same key"的来源**：key 值出现过 1、2、4、40 到 46。先确认第 16 条修复后是否还有；若有，在浏览器控制台复制完整组件栈，从 `DeskDrawer.tsx` L184、`DeskBook.tsx` L496、`PackOpener.tsx` 的 `keyOf` 查起。
+30. **找出"Encountered two children with the same key"的来源**：key 值出现过 1、2、4、40 到 46。先确认第 16 条修复后是否还有；若有，在浏览器控制台复制完整组件栈，从 `DeskDrawer.tsx` L184、`DeskBook.tsx` L496、`PackOpener.tsx` 的 `keyOf` 查起。（*2026-11-27 备注：自动化浏览器检查因本机 Chrome 未开启远程调试 `DevToolsActivePort` 未能连上，需人工在浏览器控制台复核。*）
 
 ### P2
 
@@ -161,3 +161,17 @@
 - 战斗"同归于尽"判定前后不一：回合顺序是我方先敌方后，该情形不存在，不处理。
 - 硬壳低于 100 的伤害按 100 算：按设计，不改。
 - 商店与洗技能没有功能门：故意放行。
+
+
+---
+
+## 六、2026-11-27 第二批任务完成记录
+
+- 补充 1（技能覆盖矩阵）：`d3ff6f9`
+- 1. 洗技能 `error.code` 分支：`afd54e2`
+- 2. NPC 批量回收：`084591a`
+- 3. 体力药水：`28db4fa`
+- 4. 任务宝箱：`b744101`
+- 5. osu! 每日推荐谱面：`d2f6759`
+- 6. 本体卡共鸣只读展示：`1f5e1bb`
+- 7. 本体卡命座选镜像卡入口：`5a8a813`
