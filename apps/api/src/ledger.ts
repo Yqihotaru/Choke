@@ -49,6 +49,7 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   "npc-recycle": "NPC 回收",
   breakthrough: "卡牌突破",
   quest: "任务奖励",
+  shop: "商店兑换",
   "quest-chest": "活跃度宝箱",
   "sign-in": "签到",
   "skill-reroll": "洗技能",

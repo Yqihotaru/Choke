@@ -9,6 +9,7 @@ console.log(
   [
     `物品 ${Object.keys(CONTENT.items).length}`,
     `卡包 ${Object.keys(CONTENT.packs.packs).length}`,
+    `商店 ${Object.keys(CONTENT.shop).length}`,
     `敌人 ${Object.keys(BATTLE_CONTENT.enemies).length}`,
     `敌方支援 ${Object.keys(BATTLE_CONTENT.supports).length}`,
     `遭遇 ${Object.keys(BATTLE_CONTENT.encounters).length}`,

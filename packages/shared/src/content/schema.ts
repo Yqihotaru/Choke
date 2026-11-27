@@ -133,6 +133,37 @@ export const packsSchema = z.strictObject({
   mirror: z.strictObject({ rate: z.number().min(0).max(1), activeDays: positiveInt }),
 })
 
+const itemStack = z.strictObject({ itemId: z.string(), count: positiveInt })
+
+const shopCostSchema = z
+  .strictObject({
+    coins: positiveInt.optional(),
+    items: z.array(itemStack).min(1).optional(),
+  })
+  .refine((c) => Boolean(c.coins) || Boolean(c.items?.length), "商品必须至少消耗金币或一种物品")
+
+const shopRewardSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("fixed"), items: z.array(itemStack).min(1) }),
+  z.strictObject({
+    kind: z.literal("gamble"),
+    pool: z.array(z.strictObject({ weight: z.number().positive(), items: z.array(itemStack).min(1) })).min(2),
+  }),
+])
+
+/** 商店：每日 / 每周 / 每月限购，用金币和碎片换东西；商店不发可交易的卡和卡包 */
+export const shopSchema = z.record(
+  id,
+  z.strictObject({
+    name: z.string().min(1),
+    summary: z.string().min(1),
+    section: z.enum(["supply", "gamble", "pity"]),
+    period: z.enum(["daily", "weekly", "monthly"]),
+    limit: positiveInt,
+    cost: shopCostSchema,
+    reward: shopRewardSchema,
+  }),
+)
+
 /** 整个 content/：先各自校验，再检查跨文件引用和经济上的硬约束 */
 export const contentSchema = z
   .strictObject({
@@ -141,6 +172,7 @@ export const contentSchema = z
     economy: economySchema,
     packs: packsSchema,
     unlocks: unlocksSchema,
+    shop: shopSchema,
   })
   .superRefine((content, ctx) => {
     const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message })
@@ -205,6 +237,21 @@ export const contentSchema = z
         issue(["items", itemId], `碎片 id 必须是 shard-${item.rarity}`)
       }
     }
+    // 商店里的物品必须存在
+    for (const [shopId, entry] of Object.entries(content.shop)) {
+      entry.cost.items?.forEach((stack, i) => {
+        if (!Object.hasOwn(content.items, stack.itemId)) {
+          issue(["shop", shopId, "cost", "items", i, "itemId"], `物品 ${stack.itemId} 不存在`)
+        }
+      })
+      const rewardStacks = entry.reward.kind === "fixed" ? entry.reward.items : entry.reward.pool.flatMap((opt) => opt.items)
+      rewardStacks.forEach((stack, i) => {
+        if (!Object.hasOwn(content.items, stack.itemId)) {
+          issue(["shop", shopId, "reward", i, "itemId"], `物品 ${stack.itemId} 不存在`)
+        }
+      })
+    }
+
     const packIds = Object.keys(content.packs.packs)
     const { starterGuarantee, starterGrant } = content.packs
     if (!packIds.includes(starterGuarantee.pool)) {

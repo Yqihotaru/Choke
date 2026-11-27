@@ -2,7 +2,8 @@
  * P1 经济闭环服务端测试：
  * 1. NPC 回收（价格表、日限 20 张、本体卡拦截、记账）
  * 2. 卡牌 40+ 突破金币消耗（300/500/500/700）
- * 3. 市场 2% 上架税 + 5% 成交税 + ±40% 价格带 + 7 天过期 + 成交历史
+ * 3. 商店（周限购、碎片赌箱、限量兑换）
+ * 4. 市场 2% 上架税 + 5% 成交税 + ±40% 价格带 + 7 天过期 + 成交历史
  */
 import assert from "node:assert/strict"
 
@@ -20,6 +21,7 @@ const { handleError } = await import("../src/error-handler")
 const { packRoutes } = await import("../src/routes/packs")
 const { progressionRoutes } = await import("../src/routes/progression")
 const { marketRoutes } = await import("../src/routes/market")
+const { shopRoutes } = await import("../src/routes/shop")
 const { breakthroughCoinCost } = await import("@choke/shared/progression")
 
 const app = Fastify()
@@ -28,6 +30,7 @@ await app.register(cookie)
 await app.register(packRoutes)
 await app.register(progressionRoutes)
 await app.register(marketRoutes)
+await app.register(shopRoutes)
 await app.ready()
 
 let passed = 0
@@ -150,6 +153,52 @@ await test("卡牌 40+ 突破只收金币：40→41 扣 300 金币，不再要�
   assert.equal(okRes.json().data.coinsSpent, 300)
   assert.equal(okRes.json().data.coins, 200)
 
+})
+
+await test("商店：周限购、碎片赌箱、限量兑换，余额不够不误扣", async () => {
+  const userId = "p1-shop-user"
+  await db.insert(users).values({ id: userId, username: userId, coins: 2000, tutorialDone: true, playerLevel: 60 })
+  await db.insert(userItems).values([
+    { userId, itemId: "shard-C", count: 40 },
+    { userId, itemId: "shard-E", count: 50 },
+  ])
+
+  const buy = (itemId: string, count: number) =>
+    app.inject({ method: "POST", url: `/users/${userId}/shop/buy`, headers: auth(userId), payload: { itemId, count } })
+
+  const list = await app.inject({ method: "GET", url: `/users/${userId}/shop`, headers: auth(userId) })
+  assert.equal(list.statusCode, 200)
+  const entries: { id: string; remaining: number }[] = list.json().data.items
+  assert.ok(entries.some((i) => i.id === "shard-box-high" && i.remaining === 3))
+
+  // 低阶赌箱：扣 20 个 C 碎片和 40 金币，产出随机碎片
+  const low = await buy("shard-box-low", 1)
+  assert.equal(low.statusCode, 200)
+  assert.equal(low.json().data.items["shard-C"], 20)
+  assert.equal(low.json().data.coins, 1960)
+  assert.ok(low.json().data.granted.items.length > 0)
+  const eAfterLow: number = low.json().data.items["shard-E"] ?? 0
+
+  // 限量 L 碎片包：买 2 次后周限耗尽，共得 4 个 L 碎片
+  const pity = await buy("shard-l-pity", 2)
+  assert.equal(pity.statusCode, 200)
+  assert.equal(pity.json().data.remaining, 0)
+  assert.equal(pity.json().data.items["shard-E"], eAfterLow - 40)
+  assert.ok((pity.json().data.items["shard-L"] ?? 0) >= 4)
+
+  const over = await buy("shard-l-pity", 1)
+  assert.equal(over.statusCode, 400)
+  assert.equal(over.json().error.code, "shop_limit_reached")
+
+  // 碎片不够买高阶赌箱：被拦截，金币不变
+  const coinsBefore = pity.json().data.coins
+  const fail = await buy("shard-box-high", 1)
+  assert.equal(fail.statusCode, 400)
+  assert.equal(fail.json().error.code, "not_enough_items")
+  const [after] = await db.select({ coins: users.coins }).from(users).where(eq(users.id, userId))
+  assert.equal(after!.coins, coinsBefore)
+
+  assert.equal((await buy("no-such-item", 1)).json().error.code, "unknown_shop_item")
 })
 
 await test("市场：±40% 价格带校验、7 天过期与成交历史", async () => {
