@@ -153,7 +153,14 @@ export function AccountPanel({
     const controller = new AbortController()
     fetchQuests(userId, controller.signal)
       .then((data) => setQuests(data))
-      .catch(() => {})
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return
+        if (reason instanceof ApiError && reason.code === "feature_locked") return
+        setQuestMessage({
+          text: reason instanceof Error ? `读取签到与任务失败：${reason.message}` : "读取签到与任务失败",
+          error: true,
+        })
+      })
     fetchOsuDaily(userId, controller.signal)
       .then((data) => {
         setOsuDaily(data)

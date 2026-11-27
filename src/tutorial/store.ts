@@ -132,11 +132,15 @@ function applyServer(ownerId: string, remote: ServerProgress) {
 /** 从服务端拉最新进度；副本结算等会改等级的操作之后调用 */
 export async function refreshProgress(ownerId: string | null = owner) {
   if (!ownerId) return
-  const remote = await fetchProgress(ownerId)
-  if (!remote || owner !== ownerId) return
-  current = normalize(remote, ownerId)
-  write(ownerId, current)
-  emit()
+  try {
+    const remote = await fetchProgress(ownerId)
+    if (!remote || owner !== ownerId) return
+    current = normalize(remote, ownerId)
+    write(ownerId, current)
+    emit()
+  } catch {
+    // 保留本地缓存进度
+  }
 }
 
 function hydrate(ownerId: string | null) {
@@ -170,7 +174,7 @@ export function advanceTutorial(from: TutorialStep) {
     } catch (error) {
       // 409 多半是同时到账的副本经验改了等级：服务端仍停在 from 就重试一次
       if (error instanceof ApiError && error.code === "step_mismatch") {
-        const remote = await fetchProgress(ownerId)
+        const remote = await fetchProgress(ownerId).catch(() => null)
         if (remote?.tutorialStep === from) {
           try {
             applyServer(ownerId, await advanceTutorialStep(ownerId, from))

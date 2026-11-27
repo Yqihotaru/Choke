@@ -682,7 +682,7 @@ export interface ServerProgress {
 }
 
 export function fetchProgress(userId: string, signal?: AbortSignal): Promise<ServerProgress | null> {
-  return request<ServerProgress | null>(`/api/users/${userId}/progress`, { signal }).catch(() => null)
+  return request<ServerProgress | null>(`/api/users/${userId}/progress`, { signal })
 }
 
 /** 请求把教程从 from 推进一步；下一步和经验由服务端决定。进度已变化时抛 step_mismatch */
