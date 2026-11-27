@@ -391,26 +391,34 @@ export function BattlePanel({
           {stamina && (
             <div className="dungeon-head">
               <span className="bk-note">
-                体力药水（{stamina.potionUsedToday ?? 0}/{stamina.potionDailyLimit ?? 2}）
-                {stamina.value >= (stamina.overflowMax ?? 720)
+                体力药水（{stamina.potionUsedToday ?? 0}
+                {stamina.potionDailyLimit != null ? `/${stamina.potionDailyLimit}` : ""}）
+                {stamina.overflowMax != null && stamina.value >= stamina.overflowMax
                   ? " · 已达溢出上限"
-                  : stamina.value + (stamina.potionGain ?? 60) > (stamina.overflowMax ?? 720)
-                    ? ` · 本次实际 +${(stamina.overflowMax ?? 720) - stamina.value}`
-                    : ` · +${stamina.potionGain ?? 60} 体力`}
+                  : stamina.overflowMax != null &&
+                      stamina.potionGain != null &&
+                      stamina.value + stamina.potionGain > stamina.overflowMax
+                    ? ` · 本次实际 +${stamina.overflowMax - stamina.value}`
+                    : stamina.potionGain != null
+                      ? ` · +${stamina.potionGain} 体力`
+                      : ""}
               </span>
               <button
                 type="button"
                 className="bk-btn bk-btn--sm"
                 disabled={
                   dungeonBusy !== null ||
-                  (stamina.potionUsedToday ?? 0) >= (stamina.potionDailyLimit ?? 2) ||
-                  stamina.value >= (stamina.overflowMax ?? 720)
+                  (stamina.potionDailyLimit != null &&
+                    (stamina.potionUsedToday ?? 0) >= stamina.potionDailyLimit) ||
+                  (stamina.overflowMax != null && stamina.value >= stamina.overflowMax)
                 }
                 onClick={() => void handleBuyPotion()}
               >
                 {dungeonBusy === "stamina-potion"
                   ? "购买中…"
-                  : `买体力药 · ${stamina.potionCost ?? 100} 金币`}
+                  : stamina.potionCost != null
+                    ? `买体力药 · ${stamina.potionCost} 金币`
+                    : "买体力药"}
               </button>
             </div>
           )}

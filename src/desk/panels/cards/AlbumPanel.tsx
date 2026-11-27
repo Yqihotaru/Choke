@@ -24,7 +24,7 @@ import {
   type CardSort,
   type RecycleQuota,
 } from "@/desk/session/api"
-import { NPC_RECYCLE_DAILY_LIMIT, npcRecycleValue } from "@choke/shared/economy"
+import { npcRecycleValue } from "@choke/shared/economy"
 import { ITEMS, SHARDS_PER_DISMANTLE } from "@choke/shared/items"
 import { Pages, useBook, usePageCache } from "@/desk/shell/BookPages"
 import { CardDetail } from "@/desk/panels/cards/CardDetail"
@@ -127,7 +127,7 @@ export const AlbumPanel = memo(function AlbumPanel({
   }, [userId, batchMode, book.revision])
 
   const maxBatchSelect =
-    batchMode === "recycle" ? Math.max(0, recycleQuota?.remaining ?? NPC_RECYCLE_DAILY_LIMIT) : 60
+    batchMode === "recycle" ? Math.max(0, recycleQuota?.remaining ?? 0) : 60
 
   const openDetail = useCallback((row: ApiUserCard) => setDetail(row), [])
   const toggleSelect = useCallback(
@@ -516,7 +516,7 @@ export const AlbumPanel = memo(function AlbumPanel({
                     ) : (
                       <>
                         已选 {selectedIds.length} · 预计 +{estimatedCoins} 金币 · 今日剩余{" "}
-                        {recycleQuota?.remaining ?? NPC_RECYCLE_DAILY_LIMIT}/{recycleQuota?.dailyLimit ?? NPC_RECYCLE_DAILY_LIMIT}
+                        {recycleQuota ? `${recycleQuota.remaining}/${recycleQuota.dailyLimit}` : "—/—"}
                       </>
                     )
                   ) : (

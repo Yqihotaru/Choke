@@ -46,7 +46,7 @@ const PACK_TAGLINE: Record<PackPool, string> = {
   radiant: "周常奖励",
   sky: "月常奖励",
   prism: "赛季牌面",
-  starter: "一次性 · 30 包内至少 1 张传奇",
+  starter: "一次性 · 保底至少 1 张传奇",
 }
 
 const QUESTIONS = [
