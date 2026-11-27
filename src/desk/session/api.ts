@@ -5,6 +5,7 @@ import type { DungeonId, DungeonRewards } from "@choke/shared/dungeons"
 import type { ItemId, ItemStack } from "@choke/shared/items"
 import type { MailView } from "@choke/shared/mail"
 import type { LedgerKind, LedgerPage } from "@choke/shared/ledger"
+import type { OsuDailyCheckResult, OsuDailyView } from "@choke/shared/osu-daily"
 import type { QuestsOverview, ResettingPeriod } from "@choke/shared/quests"
 
 export type ItemWallet = Partial<Record<ItemId, number>>
@@ -760,6 +761,14 @@ export function claimQuestChest(
   at: number,
 ): Promise<{ period: ResettingPeriod; at: number; rewards: { label: string; count: number }[] }> {
   return request(`/api/users/${userId}/quests/chests/${period}/${at}/claim`, { method: "POST" })
+}
+
+export function fetchOsuDaily(userId: string, signal?: AbortSignal): Promise<OsuDailyView> {
+  return request<OsuDailyView>(`/api/users/${userId}/osu-daily`, { signal })
+}
+
+export function checkOsuDaily(userId: string): Promise<OsuDailyCheckResult> {
+  return request<OsuDailyCheckResult>(`/api/users/${userId}/osu-daily/check`, { method: "POST" })
 }
 
 export function dismantleCard(

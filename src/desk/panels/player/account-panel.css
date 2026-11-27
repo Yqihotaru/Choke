@@ -201,3 +201,12 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+.account-osu-daily__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bk-ink);
+  text-decoration: none;
+}
+.account-osu-daily__title:hover {
+  text-decoration: underline;
+}

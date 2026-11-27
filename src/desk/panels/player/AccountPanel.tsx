@@ -3,14 +3,17 @@ import { useEffect, useState } from "react"
 import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
+import type { OsuDailyView } from "@choke/shared/osu-daily"
 import type { QuestsOverview, ResettingPeriod } from "@choke/shared/quests"
 
 import {
   ApiError,
   bindEmail,
+  checkOsuDaily,
   claimAllQuests,
   claimQuestChest,
   fetchMe,
+  fetchOsuDaily,
   fetchPendingBind,
   fetchQuests,
   signIn,
@@ -77,6 +80,10 @@ export function AccountPanel({
   const [quests, setQuests] = useState<QuestsOverview | null>(null)
   const [questBusy, setQuestBusy] = useState<"sign-in" | "claim-all" | `chest:${ResettingPeriod}:${number}` | null>(null)
   const [questMessage, setQuestMessage] = useState<{ text: string; error?: boolean } | null>(null)
+  const [osuDaily, setOsuDaily] = useState<OsuDailyView | null>(null)
+  const [osuDailyCooldown, setOsuDailyCooldown] = useState(0)
+  const [osuDailyBusy, setOsuDailyBusy] = useState(false)
+  const [osuDailyMessage, setOsuDailyMessage] = useState<{ text: string; error?: boolean } | null>(null)
   const avatarError = failedAvatar === avatarUrl
   /** 账号类型以服务端为准（绑定之后邮箱号的 id 前缀不会变），没取回来前是 null */
   const [meState, setMe] = useState<AccountMe | null>(null)
@@ -147,8 +154,22 @@ export function AccountPanel({
     fetchQuests(userId, controller.signal)
       .then((data) => setQuests(data))
       .catch(() => {})
+    fetchOsuDaily(userId, controller.signal)
+      .then((data) => {
+        setOsuDaily(data)
+        setOsuDailyCooldown(data.cooldownSeconds)
+      })
+      .catch(() => {})
     return () => controller.abort()
   }, [userId])
+
+  useEffect(() => {
+    if (osuDailyCooldown <= 0) return
+    const timer = window.setInterval(() => {
+      setOsuDailyCooldown((prev) => (prev > 1 ? prev - 1 : 0))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [osuDailyCooldown])
 
   const handleSignIn = async () => {
     if (!userId || questBusy) return
@@ -219,6 +240,62 @@ export function AccountPanel({
       setQuestMessage({ text, error: true })
     } finally {
       setQuestBusy(null)
+    }
+  }
+
+  const handleCheckOsuDaily = async () => {
+    if (!userId || osuDailyBusy || osuDailyCooldown > 0) return
+    setOsuDailyBusy(true)
+    setOsuDailyMessage(null)
+    try {
+      const res = await checkOsuDaily(userId)
+      const [nextDaily, nextQuests] = await Promise.all([
+        fetchOsuDaily(userId),
+        fetchQuests(userId).catch(() => null),
+      ])
+      setOsuDaily(nextDaily)
+      setOsuDailyCooldown(nextDaily.cooldownSeconds)
+      if (nextQuests) setQuests(nextQuests)
+      if (res.passed) {
+        playSfx("levelup")
+        setOsuDailyMessage({
+          text: res.alreadyPassed
+            ? "今日推荐谱面已通过"
+            : "成绩达标！已计入今日推荐谱面任务，可点击一键领奖励",
+        })
+      } else {
+        playSfx("error")
+        setOsuDailyMessage({
+          text:
+            res.reason === "no-score"
+              ? "今天还没找到你在该谱面的 standard Pass 成绩"
+              : `找到 ${res.found} 条今日成绩，但未达到最低要求`,
+          error: true,
+        })
+      }
+    } catch (reason) {
+      playSfx("error")
+      const code = reason instanceof ApiError ? reason.code : undefined
+      if (code === "cooldown" || code === "osu_busy") {
+        fetchOsuDaily(userId)
+          .then((next) => {
+            setOsuDaily(next)
+            setOsuDailyCooldown(next.cooldownSeconds)
+          })
+          .catch(() => {})
+      }
+      let text: string
+      if (code === "no_osu_daily") text = "今天没有推荐谱面"
+      else if (code === "osu_not_linked") text = "需要绑定 osu! 账号才能检查成绩"
+      else if (code === "osu_unavailable") text = "暂时连不上 osu!，请稍后再试"
+      else if (code === "cooldown" || code === "osu_busy" || code === "feature_locked") {
+        text = reason instanceof ApiError ? reason.message : "请稍后再试"
+      } else {
+        text = reason instanceof Error ? reason.message : "检查失败"
+      }
+      setOsuDailyMessage({ text, error: true })
+    } finally {
+      setOsuDailyBusy(false)
     }
   }
 
@@ -393,6 +470,72 @@ export function AccountPanel({
               </div>
             )}
           </div>
+
+          {osuDaily && (
+            <div className="bk-box account-quests">
+              <div className="account-quests__head">
+                <span className="bk-label">osu! 每日推荐谱面</span>
+                <span className="bk-num">
+                  {!osuDaily.beatmap ? "今日暂无" : osuDaily.passed ? "已通过" : "待挑战"}
+                </span>
+              </div>
+              {osuDaily.beatmap ? (
+                <>
+                  <a
+                    className="account-osu-daily__title"
+                    href={osuDaily.beatmap.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {osuDaily.beatmap.title} ↗
+                  </a>
+                  <span className="account-hint">
+                    {[
+                      osuDaily.beatmap.minAccuracy !== undefined
+                        ? `Acc ≥ ${osuDaily.beatmap.minAccuracy}%`
+                        : null,
+                      osuDaily.beatmap.minRank !== undefined
+                        ? `评级 ≥ ${osuDaily.beatmap.minRank}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "任意 osu! standard Pass 成绩即可"}
+                  </span>
+                  <div className="account-quests__actions">
+                    <button
+                      type="button"
+                      className="bk-btn bk-btn--sm bk-btn--main"
+                      disabled={
+                        osuDaily.passed ||
+                        osuDailyBusy ||
+                        osuDailyCooldown > 0 ||
+                        (kind !== null && kind !== "osu")
+                      }
+                      onClick={() => void handleCheckOsuDaily()}
+                    >
+                      {osuDailyBusy
+                        ? "检查中…"
+                        : osuDaily.passed
+                          ? "今日已通过"
+                          : osuDailyCooldown > 0
+                            ? `冷却 ${osuDailyCooldown}s`
+                            : "检查成绩"}
+                    </button>
+                  </div>
+                  {kind && kind !== "osu" && (
+                    <span className="account-hint">绑定 osu! 账号后可检查成绩</span>
+                  )}
+                </>
+              ) : (
+                <span className="account-hint">今天还没有安排推荐谱面，明天再来看看。</span>
+              )}
+              {osuDailyMessage && (
+                <span className={`account-quests__msg ${osuDailyMessage.error ? "bk-error" : ""}`}>
+                  {osuDailyMessage.text}
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="bk-list">
             <div className="bk-row account-row">
