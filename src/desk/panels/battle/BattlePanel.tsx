@@ -40,6 +40,7 @@ export function BattlePanel({
   const [encounters, setEncounters] = useState<EncounterSummary[] | null>(null)
   const [stamina, setStamina] = useState<StaminaState | null>(null)
   const [dungeonStatuses, setDungeonStatuses] = useState<DungeonStatus[] | null>(null)
+  const [dungeonLoadError, setDungeonLoadError] = useState<string | null>(null)
   const [dungeonBusy, setDungeonBusy] = useState<string | null>(null)
   const [dungeonMessage, setDungeonMessage] = useState<{ text: string; error?: boolean } | null>(null)
   const [reload, setReload] = useState(0)
@@ -58,13 +59,14 @@ export function BattlePanel({
         })
       })
     fetchDungeons(userId, controller.signal)
-      .then((data) => setDungeonStatuses(data))
+      .then((data) => {
+        setDungeonStatuses(data)
+        setDungeonLoadError(null)
+      })
       .catch((reason: unknown) => {
         if (controller.signal.aborted) return
-        setDungeonMessage({
-          text: reason instanceof Error ? `读取副本状态失败：${reason.message}` : "读取副本状态失败",
-          error: true,
-        })
+        setDungeonStatuses(null)
+        setDungeonLoadError(reason instanceof Error ? reason.message : "读取副本状态失败")
       })
     return () => controller.abort()
   }, [userId, reload])
@@ -106,10 +108,22 @@ export function BattlePanel({
       emitDeskData("packs")
     } catch (reason) {
       playSfx("error")
-      setDungeonMessage({
-        text: reason instanceof Error ? reason.message : "副本失败",
-        error: true,
-      })
+      const code = reason instanceof ApiError ? reason.code : undefined
+      if (code === "not_enough_stamina") {
+        fetchStamina(userId)
+          .then((s) => setStamina(s))
+          .catch(() => {})
+      } else if (code === "dungeon_locked" || code === "not_unlocked") {
+        fetchDungeons(userId)
+          .then((d) => setDungeonStatuses(d))
+          .catch(() => {})
+      }
+      let text: string
+      if (code === "feature_locked") text = reason instanceof ApiError ? reason.message : "功能暂未解锁"
+      else if (code === "not_enough_stamina") text = "体力不足，已刷新体力"
+      else if (code === "dungeon_locked" || code === "not_unlocked") text = "需先首通对应远征关卡"
+      else text = reason instanceof Error ? reason.message : "副本失败"
+      setDungeonMessage({ text, error: true })
     } finally {
       setDungeonBusy(null)
     }
@@ -417,11 +431,31 @@ export function BattlePanel({
             </p>
           )}
 
+          {dungeonLoadError && (
+            <div className="bk-box dungeon-message bk-error" role="alert">
+              <span>副本状态加载失败：{dungeonLoadError}</span>{" "}
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                onClick={() => {
+                  setDungeonLoadError(null)
+                  setReload((r) => r + 1)
+                }}
+              >
+                重试
+              </button>
+            </div>
+          )}
+
           <div className="dungeon-list">
             {(dungeonStatuses ?? DUNGEONS.map((d) => ({ ...d, clears: 0, sweepUnlocked: !d.mapId }))).map((dungeon) => {
               const unlocked = dungeon.sweepUnlocked
               const disabled =
-                !unlocked || !stamina || stamina.value < dungeon.cost || dungeonBusy !== null
+                !dungeonStatuses ||
+                !unlocked ||
+                !stamina ||
+                stamina.value < dungeon.cost ||
+                dungeonBusy !== null
               return (
                 <div className="dungeon-row" key={dungeon.id}>
                   <div className="dungeon-row__text">
