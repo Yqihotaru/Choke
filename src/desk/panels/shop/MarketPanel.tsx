@@ -6,6 +6,7 @@ import { RARITY_LABEL } from "@/card/data"
 import { RARITIES, type Rarity } from "@/card/types"
 
 import {
+  ApiError,
   buyMarketListing,
   fetchMarketListings,
   fetchMe,
@@ -107,10 +108,23 @@ export function MarketPanel({
       setNotice({ text: `买到了 ${result.card.name} · 花费 ${result.price} 金币` })
     } catch (reason) {
       playSfx("error")
-      setNotice({
-        text: `${reason instanceof Error ? reason.message : "购买失败"}，已刷新列表`,
-        error: true,
-      })
+      const code = reason instanceof ApiError ? reason.code : undefined
+      if (code === "not_enough_coins") {
+        fetchMe()
+          .then((me) => setCoins(me.coins))
+          .catch(() => {})
+      }
+      let text: string
+      if (code === "feature_locked") {
+        text = reason instanceof ApiError ? reason.message : "市场交易暂未解锁"
+      } else if (code === "not_enough_coins") {
+        text = "金币不足，已刷新列表"
+      } else if (code === "not_found" || code === "already_sold" || code === "listing_not_active") {
+        text = "该挂单已被买走或下架，已刷新列表"
+      } else {
+        text = `${reason instanceof Error ? reason.message : "购买失败"}，已刷新列表`
+      }
+      setNotice({ text, error: true })
     } finally {
       setBusy(null)
       reload()
@@ -127,10 +141,14 @@ export function MarketPanel({
       setNotice({ text: `${listing.card.name} 已下架` })
     } catch (reason) {
       playSfx("error")
-      setNotice({
-        text: reason instanceof Error ? reason.message : "下架失败",
-        error: true,
-      })
+      const code = reason instanceof ApiError ? reason.code : undefined
+      const text =
+        code === "not_found" || code === "listing_not_active"
+          ? "该挂单已不在架上，已刷新列表"
+          : reason instanceof Error
+            ? reason.message
+            : "下架失败"
+      setNotice({ text, error: true })
     } finally {
       setBusy(null)
       reload()

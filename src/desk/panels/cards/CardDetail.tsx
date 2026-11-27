@@ -290,7 +290,27 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       loadFuel(result.card.userCardId)
     } catch (error) {
       playSfx("error")
-      setMessage({ text: error instanceof Error ? error.message : "操作失败", error: true })
+      const code = error instanceof ApiError ? error.code : undefined
+      let text: string
+      if (code === "card_listed") {
+        setListed(true)
+        text = "这张卡正在市场上架，请先下架后再操作"
+      } else if (code === "in_expedition") {
+        text = "这张卡正在远征出征中，暂不能操作"
+      } else if (code === "not_enough_coins") {
+        text = "金币不足"
+      } else if (code === "not_enough_exp") {
+        text = "经验不足"
+      } else if (code === "not_enough_items") {
+        text = "材料不足"
+      } else if (code === "already_foil") {
+        text = "这张卡已经是闪卡了"
+      } else if (code === "feature_locked") {
+        text = error instanceof ApiError ? error.message : "功能暂未解锁"
+      } else {
+        text = error instanceof Error ? error.message : "操作失败"
+      }
+      setMessage({ text, error: true })
     } finally {
       setBusy(null)
     }
@@ -513,7 +533,23 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       emitDeskData("packs")
     } catch (error) {
       playSfx("error")
-      setMessage({ text: error instanceof Error ? error.message : "上架失败", error: true })
+      const code = error instanceof ApiError ? error.code : undefined
+      let text: string
+      if (code === "already_listed") {
+        setListed(true)
+        text = "这张卡已经在市场上架了"
+      } else if (code === "in_deck") {
+        text = "这张卡正在卡组中，请先从卡组移出后再上架"
+      } else if (code === "in_expedition") {
+        text = "这张卡正在远征出征中，暂不能上架"
+      } else if (code === "not_enough_coins") {
+        text = "金币不足以支付上架押金"
+      } else if (code === "price_out_of_band" || code === "feature_locked") {
+        text = error instanceof ApiError ? error.message : "无法上架"
+      } else {
+        text = error instanceof Error ? error.message : "上架失败"
+      }
+      setMessage({ text, error: true })
     } finally {
       setBusy(null)
     }
