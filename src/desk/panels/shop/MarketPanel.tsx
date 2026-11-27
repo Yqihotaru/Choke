@@ -27,6 +27,10 @@ import "@/desk/panels/shop/market-panel.css"
 const PAGE_SIZE = 24
 
 type MarketSort = "new" | "asc" | "desc"
+type MarketKindFilter = "all" | "normal" | "mirror"
+
+const isMirrorCard = (card: { id: string; cardType?: string }) =>
+  card.cardType === "mirror" || card.id.startsWith("mirror-")
 
 interface Notice {
   text: string
@@ -55,6 +59,8 @@ export function MarketPanel({
   const [pendingBuy, setPendingBuy] = useState<MarketListing | null>(null)
   const [sort, setSort] = useState<MarketSort>("new")
   const [rarity, setRarity] = useState<Rarity | "">("")
+  const [kindFilter, setKindFilter] = useState<MarketKindFilter>("all")
+  const [search, setSearch] = useState("")
   const [shown, setShown] = useState(PAGE_SIZE)
 
   const requestKey = `${userId ?? ""}|${refresh}`
@@ -158,13 +164,19 @@ export function MarketPanel({
   const ownListings = userId ? own : []
 
   const visible = useMemo(() => {
-    const filtered = rarity
-      ? listings.filter((listing) => listing.card.rarity === rarity)
-      : listings
+    const q = search.trim().toLowerCase()
+    const filtered = listings.filter((listing) => {
+      if (rarity && listing.card.rarity !== rarity) return false
+      const mirror = isMirrorCard(listing.card)
+      if (kindFilter === "mirror" && !mirror) return false
+      if (kindFilter === "normal" && mirror) return false
+      if (q && !listing.card.name.toLowerCase().includes(q)) return false
+      return true
+    })
     if (sort === "new") return [...filtered].sort((a, b) => b.id - a.id)
     const dir = sort === "asc" ? 1 : -1
     return [...filtered].sort((a, b) => (a.price - b.price) * dir || b.id - a.id)
-  }, [listings, rarity, sort])
+  }, [listings, rarity, kindFilter, search, sort])
   const page = visible.slice(0, shown)
 
   const canAfford = (listing: MarketListing) => coins == null || coins >= listing.price
@@ -204,7 +216,8 @@ export function MarketPanel({
               onConfirm={() => void buy(pendingBuy)}
               message={
                 <>
-                  买下 {pendingFace.name}（{RARITY_LABEL[pendingFace.rarity]}
+                  买下 {isMirrorCard(pendingFace) ? "【镜像】" : ""}
+                  {pendingFace.name}（{RARITY_LABEL[pendingFace.rarity]}
                   {pendingFace.foil ? " · 闪" : ""} · Lv.{pendingFace.level}）？将花费{" "}
                   <b className="bk-num">{pendingBuy.price.toLocaleString("en-US")}</b> 金币
                   {coins != null && (
@@ -244,7 +257,10 @@ export function MarketPanel({
                         <GameCardFace card={toFace(listing.card)} />
                       </div>
                       <div className="market-own__text">
-                        <b>{listing.card.name}</b>
+                        <b>
+                          {isMirrorCard(listing.card) ? "【镜像】" : ""}
+                          {listing.card.name}
+                        </b>
                         <span className="bk-num">{listing.price.toLocaleString("en-US")} 金币</span>
                       </div>
                       <button
@@ -269,10 +285,34 @@ export function MarketPanel({
             <span className="bk-label" aria-live="polite">
               正在出售
               {loaded &&
-                ` · ${rarity ? `${visible.length} / ${listings.length}` : listings.length}`}
+                ` · ${rarity || kindFilter !== "all" || search.trim() ? `${visible.length} / ${listings.length}` : listings.length}`}
               {refreshing && " · 刷新中…"}
             </span>
             <div className="market-toolbar__filters">
+              <input
+                className="bk-input"
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value)
+                  setShown(PAGE_SIZE)
+                }}
+                placeholder="搜卡名…"
+                aria-label="搜索市场卡牌名称"
+              />
+              <select
+                className="bk-select"
+                value={kindFilter}
+                onChange={(event) => {
+                  setKindFilter(event.target.value as MarketKindFilter)
+                  setShown(PAGE_SIZE)
+                }}
+                aria-label="按类型筛选"
+              >
+                <option value="all">全部类型</option>
+                <option value="normal">普通卡</option>
+                <option value="mirror">只看镜像</option>
+              </select>
               <select
                 className="bk-select"
                 value={rarity}
@@ -342,6 +382,7 @@ export function MarketPanel({
                       </div>
                       <b className="market-card__name">{listing.card.name}</b>
                       <span className="market-card__meta">
+                        {isMirrorCard(listing.card) ? "镜像 · " : ""}
                         {RARITY_LABEL[listing.card.rarity]}
                         {listing.card.foil ? " · ✦ 闪" : ""} · Lv.{listing.card.level}
                       </span>

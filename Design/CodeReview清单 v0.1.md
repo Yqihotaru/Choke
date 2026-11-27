@@ -139,18 +139,22 @@
 26. **镜像卡（第 6 张）前端没演出**（待复核）
     - **位置**：后端 `gacha/open.ts` L179–197、L224–228 返回 `bonus`；前端 `src/desk/session/api.ts` L554–564 的 `OpenPackResult` 没有这个字段，`DeskPage.tsx` 约 L1299、L1416 和 `GachaPanel.tsx` 约 L204 只处理 `results`。
     - **修法**：演完 5 张后，用同一套 `resolvePulledCards` 再演第 6 张；至少先用提示告知"额外获得 xxx"。
-27. **切号后背包、市场先显示上个账号的数据**（待复核）：`BackpackPanel.tsx` L76–130、`MarketPanel.tsx` L63–90。给面板加 `key={userId}` 最省事。市场的 `fetchMe` 失败不应让整页判为加载失败，`unlist` 失败也要重新拉列表。
-28. **道具名查表没有兜底，遇到新道具白屏**（待复核）：`BattlePanel.tsx` 约 L82、`CardDetail.tsx` 约 L103，改成 `ITEMS[id]?.name ?? id`。
-29. **多处 `.catch(() => {})` 吞错，界面无提示**（待复核）：`BattlePanel.tsx` L51/54/64、`MailBox.tsx` L143/L181（已读失败要回滚本地已读）、`AccountPanel.tsx` L105/113/141、`useDeskSession.ts` L84/107。
+27. **切号后背包、市场先显示上个账号的数据**：**已确认无需处理**（`DeskBook.tsx` 已给 `BackpackPanel` / `MarketPanel` 加 `key={userId ?? "guest"}`，`MarketPanel` 的 `fetchMe` 已有 `.catch(() => {})`，`unlist` 的 `finally` 已有 `reload()`）。
+28. **道具名查表没有兜底，遇到新道具白屏**：**已确认无需处理**（全量 `src/` 5 处 `ITEMS[...]` 均已有 `?.name ?? itemId` 兜底）。
+29. **多处 `.catch(() => {})` 吞错，界面无提示**：**已修**（`MailBox` 已有已读回滚与提示，`BattlePanel` 已有失败提示，`AccountPanel` 补齐 `fetchQuests` 失败提示，`28f6802`）。
 30. **找出"Encountered two children with the same key"的来源**：key 值出现过 1、2、4、40 到 46。先确认第 16 条修复后是否还有；若有，在浏览器控制台复制完整组件栈，从 `DeskDrawer.tsx` L184、`DeskBook.tsx` L496、`PackOpener.tsx` 的 `keyOf` 查起。（*2026-11-27 浏览器实测：已连接 `127.0.0.1:9222` 遍历桌面、`厚书`全部页签（含图鉴翻页）、邮箱、流水与抽屉，控制台均未再出现 `Encountered two children with the same key` 警告。注：未包含抽卡开包后 `PackOpener` 动画过程，若开包时仍复现可再看 `PackOpener.tsx` 的 `keyOf`。*）
 
 ### P2
 
-31. **前端几乎没按 `error.code` 分支**（待复核）：`feature_locked`、`in_expedition`、`already_listed`、`in_deck`、`price_out_of_band`、`not_enough_coins`、`not_enough_stamina`、`not_enough_exp`、`already_foil` 现在只靠 `message` 展示。至少对 `feature_locked`、`in_expedition`、`already_listed` 做"刷新状态 + 提示"。
-32. **市场下架按钮在交易未解锁时仍可点**（待复核）：`MarketPanel.tsx` L230–236，先确认后端下架是否受锁影响再决定禁用。
-33. **`BattlePanel` 副本状态拉取失败时按钮仍可点**（待复核）：L51/54/64，失败要显示"加载失败，重试"并禁用依赖按钮；切号时清状态。
-34. **`useDeskSession` 的 `refreshPacks` 依赖整个 `user` 对象，会重复拉库存**（待复核）：依赖改成 `user?.id`。
-35. **`api.ts` 的 `fetchMails`、`fetchMailSummary`、`fetchLedger` 不接 `signal`；`fetchProgress` 吞掉所有错误返回 `null`**（待复核）。
+31. **前端几乎没按 `error.code` 分支**：**已修**（`BattlePanel`、`CardDetail`、`MarketPanel` 补齐 `feature_locked`、`in_expedition`、`already_listed`、`in_deck`、`price_out_of_band`、`not_enough_coins`、`not_enough_stamina`、`not_enough_exp`、`already_foil` 分支并刷新状态，`1199496`、`f3040f8`）。
+32. **市场下架按钮在交易未解锁时仍可点**：**已确认无需处理**（核对 `apps/api/src/routes/market.ts` L363：`DELETE /users/:userId/market/listings/:listingId` 不受 `requireFeature` 锁限制，未解锁交易也允许下架自己的挂单）。
+33. **`BattlePanel` 副本状态拉取失败时按钮仍可点**：**已修**（`DeskBook` 已有 `key={userId ?? "guest"}` 切号清状态，`BattlePanel` 新增 `dungeonLoadError` 提示与「重试」按钮，拉取失败或未就绪时禁用扫荡按钮，`1199496`）。
+34. **`useDeskSession` 的 `refreshPacks` 依赖整个 `user` 对象，会重复拉库存**：**已确认无需处理**（`useDeskSession.ts` L76–86 已收窄为 `[userId]`）。
+35. **`api.ts` 的 `fetchMails`、`fetchMailSummary`、`fetchLedger` 不接 `signal`；`fetchProgress` 吞掉所有错误返回 `null`**：**已修**（`fetchMails`/`fetchMailSummary`/`fetchLedger` 已接 `signal`；已移除 `fetchProgress` 内的 `.catch(() => null)` 并在 `tutorial/store.ts` 显式接住，`28f6802`）。
+
+### 新发现（要主线配合）
+
+36. **卡册后端筛选接口条件偏少**（2026-11-27 记）：`GET /users/:userId/cards` 目前仅支持 `rarity`、`q`、`sort`。前端已在卡册子界面补上「全部/普通卡/镜像卡/本体卡」与「仅闪卡」筛选（持卡多时前端翻页扫描），后续建议主线在 `GET /users/:userId/cards` 补充 `cardType`、`foil`、`job` 等服务端筛选参数。
 
 ---
 
@@ -175,3 +179,11 @@
 - 5. osu! 每日推荐谱面：`d2f6759`
 - 6. 本体卡共鸣只读展示：`1f5e1bb`
 - 7. 本体卡命座选镜像卡入口：`5a8a813`
+
+---
+
+## 七、2026-11-27 第三批任务完成记录
+
+- 1. 清前端遗留 CR（`#27～#35`）：`28f6802`（`#29`/`#35`）、`1199496`（`#33`/`#31`）、`f3040f8`（`#31`），`#27`/`#28`/`#32`/`#34` 已确认无需处理
+- 2. 开包第 6 张镜像卡玻璃碎裂演出（`#26`）：`5b41493`
+- 3. 镜像卡外边框与 L+ 外发光特效、卡册精准筛选、市场镜像筛选/标记：本次提交（见 git log）

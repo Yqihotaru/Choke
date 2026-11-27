@@ -50,6 +50,15 @@ interface Result {
   error: string | null
 }
 
+type CardTypeFilter = "all" | "pool" | "mirror" | "hero"
+
+const CARD_TYPE_OPTIONS: { value: CardTypeFilter; label: string }[] = [
+  { value: "all", label: "全部类型" },
+  { value: "pool", label: "普通卡" },
+  { value: "mirror", label: "镜像卡" },
+  { value: "hero", label: "本体卡" },
+]
+
 export const AlbumPanel = memo(function AlbumPanel({
   userId,
 }: {
@@ -57,6 +66,8 @@ export const AlbumPanel = memo(function AlbumPanel({
 }) {
   const book = useBook()
   const [rarity, setRarity] = useState("")
+  const [cardTypeFilter, setCardTypeFilter] = useState<CardTypeFilter>("all")
+  const [foilOnly, setFoilOnly] = useState(false)
   const [query, setQuery] = useState("")
   const [deferredQuery, setDeferredQuery] = useState("")
   const [sort, setSort] = useState<CardSort>("recent")
@@ -155,20 +166,59 @@ export const AlbumPanel = memo(function AlbumPanel({
   }, [query])
 
   const key = userId
-    ? `${userId}|${rarity}|${deferredQuery}|${sort}|${book.revision}`
+    ? `${userId}|${rarity}|${cardTypeFilter}|${foilOnly ? "foil" : ""}|${deferredQuery}|${sort}|${book.revision}`
     : ""
   const loadPage = useCallback(
     async (index: number, signal: AbortSignal): Promise<Result> => {
       try {
-        const data = await fetchUserCards(userId!, {
+        if (cardTypeFilter === "all" && !foilOnly) {
+          const data = await fetchUserCards(userId!, {
+            rarity: rarity || undefined,
+            q: deferredQuery || undefined,
+            sort,
+            page: index,
+            limit: PAGE_SIZE,
+            signal,
+          })
+          return { rows: data.rows, total: data.total, error: null }
+        }
+        const first = await fetchUserCards(userId!, {
           rarity: rarity || undefined,
           q: deferredQuery || undefined,
           sort,
-          page: index,
-          limit: PAGE_SIZE,
+          page: 0,
+          limit: 60,
           signal,
         })
-        return { rows: data.rows, total: data.total, error: null }
+        const all = [...first.rows]
+        const maxPages = Math.min(10, Math.ceil(first.total / 60))
+        for (let p = 1; p < maxPages; p += 1) {
+          if (signal.aborted) break
+          const next = await fetchUserCards(userId!, {
+            rarity: rarity || undefined,
+            q: deferredQuery || undefined,
+            sort,
+            page: p,
+            limit: 60,
+            signal,
+          })
+          all.push(...next.rows)
+        }
+        const matched = all.filter((row) => {
+          if (foilOnly && !row.foil) return false
+          const isMirror = row.cardType === "mirror" || row.id.startsWith("mirror-")
+          const isHero = isHeroCardId(row.id)
+          if (cardTypeFilter === "mirror") return isMirror
+          if (cardTypeFilter === "hero") return isHero
+          if (cardTypeFilter === "pool") return !isMirror && !isHero
+          return true
+        })
+        const start = index * PAGE_SIZE
+        return {
+          rows: matched.slice(start, start + PAGE_SIZE),
+          total: matched.length,
+          error: null,
+        }
       } catch (error) {
         if (signal.aborted) throw error
         return {
@@ -178,7 +228,7 @@ export const AlbumPanel = memo(function AlbumPanel({
         }
       }
     },
-    [userId, rarity, deferredQuery, sort]
+    [userId, rarity, cardTypeFilter, foilOnly, deferredQuery, sort]
   )
   const cachedPages = usePageCache(key, page, PAGE_SIZE, loadPage)
   const currentResult = cachedPages.find(([index]) => index === page)?.[1]
@@ -214,7 +264,7 @@ export const AlbumPanel = memo(function AlbumPanel({
     const ready = result !== null
     const total = result?.total ?? 0
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-    const filtered = !!(rarity || deferredQuery)
+    const filtered = !!(rarity || deferredQuery || cardTypeFilter !== "all" || foilOnly)
     const rows = result && !result.error ? result.rows : null
     const empty = ready && rows !== null && rows.length === 0
 
@@ -529,6 +579,33 @@ export const AlbumPanel = memo(function AlbumPanel({
                   {RARITY_LABEL[item]}
                 </button>
               ))}
+              {CARD_TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className="bk-chip"
+                  aria-pressed={cardTypeFilter === opt.value}
+                  onClick={() => {
+                    playSfx("tick")
+                    setCardTypeFilter(opt.value)
+                    setPage(0)
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="bk-chip"
+                aria-pressed={foilOnly}
+                onClick={() => {
+                  playSfx("tick")
+                  setFoilOnly((prev) => !prev)
+                  setPage(0)
+                }}
+              >
+                仅闪卡
+              </button>
             </div>
 
             {!empty &&

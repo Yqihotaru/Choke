@@ -64,16 +64,24 @@
 .cfb2[data-rarity="E"] { --r: #9566e0; }
 .cfb2[data-rarity="L"] {
   --r: #e2b13c;
-  --glow: 0 0 12px -2px rgb(226 177 60 / 0.55);
+  --glow: 0 0 14px 0 rgb(226 177 60 / 0.62), 0 0 26px -4px rgb(255 214 102 / 0.38);
 }
 .cfb2[data-rarity="Mythic"] {
   --r: #e8475f;
-  --glow: 0 0 14px -2px rgb(232 71 95 / 0.6);
+  --glow: 0 0 16px 0 rgb(232 71 95 / 0.68), 0 0 30px -4px rgb(255 102 140 / 0.42);
 }
 .cfb2[data-rarity="Prismatic"] {
   --r: #c58cff;
   --r-fill: linear-gradient(160deg, #ff7eb6, #ffcf6e 22%, #7dffb2 42%, #6ec8ff 62%, #b98cff 82%, #ff7eb6);
-  --glow: 0 0 16px -2px rgb(197 140 255 / 0.65);
+  --glow: 0 0 18px 0 rgb(197 140 255 / 0.72), 0 0 32px -4px rgb(110 200 255 / 0.48);
+}
+.cfb2[data-mirror="true"] {
+  --glow: 0 0 14px 0 rgb(110 218 255 / 0.68), 0 0 26px -4px rgb(255 110 176 / 0.5);
+}
+.cfb2[data-mirror="true"] .cfb2__frame {
+  background:
+    linear-gradient(135deg, rgb(140 235 255 / 0.85), rgb(255 130 196 / 0.75) 50%, rgb(140 235 255 / 0.85)),
+    var(--r-fill);
 }
 
 /* ---------- 外框：一整圈稀有度色，带一道金属高光 ---------- */
