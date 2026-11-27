@@ -53,6 +53,7 @@ import {
   fetchMe,
   fetchResonance,
   fetchSkillRerollInfo,
+  fetchUserCards,
   levelUpCard,
   listMarketCard,
   rerollCardSkill,
@@ -77,7 +78,7 @@ interface Props {
 }
 
 type Pending =
-  | { kind: "ascend" }
+  | { kind: "ascend"; material?: ApiUserCard }
   | { kind: "melt"; source: ApiUserCard }
   | { kind: "list"; value: number }
   | { kind: "dismantle" }
@@ -124,6 +125,8 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [coins, setCoins] = useState<number | null>(null)
   const [rerollInfo, setRerollInfo] = useState<SkillRerollInfo | null>(null)
   const [resonance, setResonance] = useState<ResonanceOverview | null>(null)
+  const [mirrorCards, setMirrorCards] = useState<ApiUserCard[]>([])
+  const [mirrorPickerOpen, setMirrorPickerOpen] = useState(false)
   const [selectingSlot, setSelectingSlot] = useState<number | null>(null)
   const [tab, setTab] = useState<"train" | "skills" | "manage">(readOnly ? "skills" : "train")
   const [price, setPrice] = useState("30")
@@ -213,6 +216,23 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
         if (!controller.signal.aborted) setResonance(data)
       })
       .catch(() => {})
+    ;(async () => {
+      try {
+        const first = await fetchUserCards(userId, { limit: 60, page: 0, signal: controller.signal })
+        const all = [...first.rows]
+        const totalPages = Math.min(5, Math.ceil(first.total / 60))
+        for (let p = 1; p < totalPages; p += 1) {
+          if (controller.signal.aborted) return
+          const next = await fetchUserCards(userId, { limit: 60, page: p, signal: controller.signal })
+          all.push(...next.rows)
+        }
+        if (!controller.signal.aborted) {
+          setMirrorCards(all.filter((c) => c.cardType === "mirror" || c.id.startsWith("mirror-")))
+        }
+      } catch {
+        // ignore abort/fetch error
+      }
+    })()
     return () => controller.abort()
   }, [readOnly, userId, card.id])
 
@@ -229,7 +249,16 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const ownShardId = shardItemId(current.rarity)
   const ownShardCount = items?.[ownShardId] ?? 0
   const sameCardFuel = fuel.filter((row) => row.id === current.id).length
-  const canAscend = current.constellation < conCap && sameCardFuel > 0
+  const resonatedSources = useMemo(
+    () => new Set(resonance?.records.map((r) => r.sourceCardId) ?? []),
+    [resonance],
+  )
+  const availableMirrors = useMemo(
+    () => mirrorCards.filter((m) => !resonatedSources.has(m.id)),
+    [mirrorCards, resonatedSources],
+  )
+  const canAscend =
+    current.constellation < conCap && (hero ? availableMirrors.length > 0 : sameCardFuel > 0)
   const expPct = maxed ? 100 : Math.min(100, (current.exp / Math.max(1, need)) * 100)
   /** 仅用经验乐谱补到够升下一级为止，绝不误吃碎片 */
   const topUpPicks = maxed || canLevel ? [] : pickExpTopUp(items ?? {}, need - current.exp)
@@ -277,14 +306,43 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
     )
   }
 
-  const ascend = () => {
-    if (!userId) return
-    return run(
-      "ascend",
-      () => ascendCard(userId, current.userCardId),
-      () => "命座 +1",
-      () => playSfx("levelup", { rate: 1.25 }),
-    )
+  const ascend = async (material?: ApiUserCard) => {
+    if (!userId || busy !== null) return
+    setBusy("ascend")
+    setMessage(null)
+    try {
+      const result = await ascendCard(userId, current.userCardId, material?.userCardId)
+      playSfx("levelup", { rate: 1.25 })
+      setCurrent(result.card)
+      if (result.resonance && result.summary) {
+        setResonance({ records: result.resonance, summary: result.summary })
+      }
+      if (material) {
+        setMirrorCards((prev) => prev.filter((c) => c.userCardId !== result.consumedUserCardId))
+        setMirrorPickerOpen(false)
+      }
+      const resMsg = result.addedResonance
+        ? `命座 +1 · 共鸣 +${(result.addedResonance.valueBp / 100).toFixed(1)}% ${result.addedResonance.attribute}`
+        : result.capped
+          ? "命座 +1（共鸣槽位已满）"
+          : "命座 +1"
+      setMessage({ text: resMsg })
+      onChanged?.()
+      loadFuel(result.card.userCardId)
+    } catch (error) {
+      playSfx("error")
+      const code = error instanceof ApiError ? error.code : undefined
+      let text: string
+      if (code === "duplicate_source") text = "该镜像卡已提供过共鸣，请换一张不同的镜像卡"
+      else if (code === "invalid_material") text = "只能消耗镜像卡为本体卡升命座"
+      else if (code === "in_expedition") text = "选中的镜像卡正在远征出征中，暂不能消耗"
+      else if (code === "max_constellation") text = "命座已达上限"
+      else if (code === "missing_material") text = "请先选择一张镜像卡"
+      else text = error instanceof Error ? error.message : "升命座失败"
+      setMessage({ text, error: true })
+    } finally {
+      setBusy(null)
+    }
   }
 
   const feedDone = (result: { gained: number; levelsGained: number; wasted: number; essenceGained: number }) =>
@@ -465,7 +523,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
     const action = pending
     setPending(null)
     if (!action) return
-    if (action.kind === "ascend") void ascend()
+    if (action.kind === "ascend") void ascend(action.material)
     else if (action.kind === "melt") void melt(action.source)
     else if (action.kind === "list") void list(action.value)
     else void dismantle()
@@ -615,9 +673,20 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                 <button
                   type="button"
                   className="bk-btn"
-                  onClick={() => setPending({ kind: "ascend" })}
+                  onClick={() => {
+                    if (hero) setMirrorPickerOpen((open) => !open)
+                    else setPending({ kind: "ascend" })
+                  }}
                   disabled={!canAscend || busy !== null}
-                  title={sameCardFuel > 0 ? `消耗 1 张同名卡（剩余 ${sameCardFuel}）` : "没有同名卡"}
+                  title={
+                    hero
+                      ? availableMirrors.length > 0
+                        ? `选择 1 张镜像卡升命座（可用 ${availableMirrors.length} 张）`
+                        : "没有可用的未共鸣镜像卡"
+                      : sameCardFuel > 0
+                        ? `消耗 1 张同名卡（剩余 ${sameCardFuel}）`
+                        : "没有同名卡"
+                  }
                 >
                   {busy === "ascend" ? "升命中…" : `升命座 ${current.constellation}/${conCap}`}
                 </button>
@@ -741,11 +810,51 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   )}
                 </div>
               )}
+              {hero && mirrorPickerOpen && current.constellation < conCap && (
+                <div className="card-detail__mirror-picker">
+                  <div className="card-detail__resonance-head">
+                    <span>选择消耗的镜像卡（同时触发共鸣）</span>
+                    <button
+                      type="button"
+                      className="bk-btn bk-btn--sm"
+                      onClick={() => setMirrorPickerOpen(false)}
+                    >
+                      收起
+                    </button>
+                  </div>
+                  {mirrorCards.length === 0 ? (
+                    <p className="card-detail__resonance-empty">背包/卡册里还没有镜像卡。</p>
+                  ) : (
+                    <div className="card-detail__mirror-list">
+                      {mirrorCards.map((m) => {
+                        const alreadyUsed = resonatedSources.has(m.id)
+                        return (
+                          <button
+                            key={m.userCardId}
+                            type="button"
+                            className="bk-btn bk-btn--sm"
+                            disabled={alreadyUsed || busy !== null}
+                            title={alreadyUsed ? "该镜像卡已提供过共鸣" : `消耗 ${m.name} 升命座`}
+                            onClick={() => setPending({ kind: "ascend", material: m })}
+                          >
+                            {m.name} · {RARITY_LABEL[m.rarity]} Lv.{m.level}
+                            {alreadyUsed ? "（已共鸣）" : ""}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
               {pending?.kind === "ascend" && (
                 <ConfirmBar
                   busy={busy !== null}
                   confirmLabel="确认升命座"
-                  message={`升命座：消耗 1 张同名卡（还剩 ${sameCardFuel} 张），${current.name} 的命座 ${current.constellation} → ${current.constellation + 1}。消耗的卡不会返还。`}
+                  message={
+                    pending.material
+                      ? `升命座：消耗镜像卡「${pending.material.name}」（Lv.${pending.material.level}），${current.name} 的命座 ${current.constellation} → ${current.constellation + 1}，并触发共鸣。消耗的卡不会返还。`
+                      : `升命座：消耗 1 张同名卡（还剩 ${sameCardFuel} 张），${current.name} 的命座 ${current.constellation} → ${current.constellation + 1}。消耗的卡不会返还。`
+                  }
                   onCancel={() => setPending(null)}
                   onConfirm={confirmPending}
                 />

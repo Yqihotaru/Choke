@@ -13,6 +13,7 @@ export type ItemWallet = Partial<Record<ItemId, number>>
 /** `/users/:id/cards` 和 `/users/:id/deck` 共用的卡行 */
 export interface ApiUserCard {
   id: string
+  cardType?: "pool" | "hero" | "mirror"
   name: string
   rarity: Rarity
   job: Job
@@ -272,6 +273,7 @@ export interface PackInventory {
 
 export interface PackCatalogEntry {
   id: string
+  cardType?: "pool" | "hero" | "mirror"
   name: string
   short: string
   color: string
@@ -612,6 +614,7 @@ export function openPack(
 
 export interface ApiCardDef {
   id: string
+  cardType?: "pool" | "hero" | "mirror"
   name: string
   rarity: Rarity
   job: Job
@@ -857,6 +860,7 @@ export function recycleCardsBatch(userId: string, userCardIds: number[]): Promis
 
 export interface SkillRerollCandidate {
   id: string
+  cardType?: "pool" | "hero" | "mirror"
   name: string
   element: CardElement
   ap: number

@@ -480,3 +480,17 @@
   font-size: 11px;
   color: var(--bk-dim);
 }
+
+.card-detail__mirror-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bk-raised);
+}
+.card-detail__mirror-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
