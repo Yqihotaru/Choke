@@ -171,54 +171,17 @@ export const AlbumPanel = memo(function AlbumPanel({
   const loadPage = useCallback(
     async (index: number, signal: AbortSignal): Promise<Result> => {
       try {
-        if (cardTypeFilter === "all" && !foilOnly) {
-          const data = await fetchUserCards(userId!, {
-            rarity: rarity || undefined,
-            q: deferredQuery || undefined,
-            sort,
-            page: index,
-            limit: PAGE_SIZE,
-            signal,
-          })
-          return { rows: data.rows, total: data.total, error: null }
-        }
-        const first = await fetchUserCards(userId!, {
+        const data = await fetchUserCards(userId!, {
           rarity: rarity || undefined,
+          cardType: cardTypeFilter !== "all" ? cardTypeFilter : undefined,
+          foil: foilOnly ? true : undefined,
           q: deferredQuery || undefined,
           sort,
-          page: 0,
-          limit: 60,
+          page: index,
+          limit: PAGE_SIZE,
           signal,
         })
-        const all = [...first.rows]
-        const maxPages = Math.min(10, Math.ceil(first.total / 60))
-        for (let p = 1; p < maxPages; p += 1) {
-          if (signal.aborted) break
-          const next = await fetchUserCards(userId!, {
-            rarity: rarity || undefined,
-            q: deferredQuery || undefined,
-            sort,
-            page: p,
-            limit: 60,
-            signal,
-          })
-          all.push(...next.rows)
-        }
-        const matched = all.filter((row) => {
-          if (foilOnly && !row.foil) return false
-          const isMirror = row.cardType === "mirror" || row.id.startsWith("mirror-")
-          const isHero = isHeroCardId(row.id)
-          if (cardTypeFilter === "mirror") return isMirror
-          if (cardTypeFilter === "hero") return isHero
-          if (cardTypeFilter === "pool") return !isMirror && !isHero
-          return true
-        })
-        const start = index * PAGE_SIZE
-        return {
-          rows: matched.slice(start, start + PAGE_SIZE),
-          total: matched.length,
-          error: null,
-        }
+        return { rows: data.rows, total: data.total, error: null }
       } catch (error) {
         if (signal.aborted) throw error
         return {

@@ -215,22 +215,42 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       .then((data) => {
         if (!controller.signal.aborted) setResonance(data)
       })
-      .catch(() => {})
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return
+        setMessage({
+          text: reason instanceof Error ? `读取共鸣记录失败：${reason.message}` : "读取共鸣记录失败",
+          error: true,
+        })
+      })
     ;(async () => {
       try {
-        const first = await fetchUserCards(userId, { limit: 60, page: 0, signal: controller.signal })
+        const first = await fetchUserCards(userId, {
+          cardType: "mirror",
+          limit: 60,
+          page: 0,
+          signal: controller.signal,
+        })
         const all = [...first.rows]
-        const totalPages = Math.min(5, Math.ceil(first.total / 60))
+        const totalPages = Math.ceil(first.total / 60)
         for (let p = 1; p < totalPages; p += 1) {
           if (controller.signal.aborted) return
-          const next = await fetchUserCards(userId, { limit: 60, page: p, signal: controller.signal })
+          const next = await fetchUserCards(userId, {
+            cardType: "mirror",
+            limit: 60,
+            page: p,
+            signal: controller.signal,
+          })
           all.push(...next.rows)
         }
         if (!controller.signal.aborted) {
-          setMirrorCards(all.filter((c) => c.cardType === "mirror" || c.id.startsWith("mirror-")))
+          setMirrorCards(all)
         }
-      } catch {
-        // ignore abort/fetch error
+      } catch (reason: unknown) {
+        if (controller.signal.aborted) return
+        setMessage({
+          text: reason instanceof Error ? `读取镜像卡列表失败：${reason.message}` : "读取镜像卡列表失败",
+          error: true,
+        })
       }
     })()
     return () => controller.abort()

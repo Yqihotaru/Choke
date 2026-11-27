@@ -154,7 +154,7 @@
 
 ### 新发现（要主线配合）
 
-36. **卡册后端筛选接口条件偏少**（2026-11-27 记）：`GET /users/:userId/cards` 目前仅支持 `rarity`、`q`、`sort`。前端已在卡册子界面补上「全部/普通卡/镜像卡/本体卡」与「仅闪卡」筛选（持卡多时前端翻页扫描），后续建议主线在 `GET /users/:userId/cards` 补充 `cardType`、`foil`、`job` 等服务端筛选参数。
+36. **卡册后端筛选接口条件偏少**（2026-11-27 记）：主线已在 `GET /users/:userId/cards` 补充 `cardType=pool|hero|mirror` 与 `foil=true|false`；前端已切回服务端参数分页（不再前端翻页扫描漏卡），`job` 筛选可按需再补。
 37. **法师「叠 4 层侧面支援魔法阵」引擎钩子**（2026-11-27 记）：第四批已在 `skills.ts` 为法师先接入基于现有 `aura` 支援的 `mage_resonance_circle`（共鸣法阵）与 `mage_arcane_circle`（秘术增幅阵）。待主线完成「上阵 ×5 + 替补」战斗引擎重构后，可在 `packages/shared/src/battle/` 补充 `magic_circle` 支援类型（每次魔法伤害叠 1 层、最多 4 层）再升级这两个法阵技能。
 38. **部分经济常量尚未由 `/api/config` 下发**（2026-11-27 记）：已清掉 `BattlePanel`（体力药水/溢出上限）、`AlbumPanel`（NPC 日回收上限）、`BackpackPanel`（新手包文案“30 包”）里的写死默认值；但 `CardDetail` 里的 `FOIL_COST`（镀闪精华）、`MARKET_MAX_PRICE`（市场最高价）以及 `AlbumPanel` 批量分解预估里的 `SHARDS_PER_DISMANTLE` 与单批上限 `60` 目前服务端 `/api/config` 尚未返回，待主线经济演算定稿后由 `/api/config` 统一下发，前端即可直接切换。
     - 主线结论（审查）：前端翻页扫描最多读 10 页×60=600 张，`CardDetail` 里找镜像卡最多读 5 页=300 张，超出的卡会被**静默漏掉**，持卡多的玩家会看到不全。服务端已补 `cardType`（`pool`/`hero`/`mirror`）和 `foil`（`true`/`false`）两个可选参数；前端要改成走服务端筛选，删掉翻页扫描（见第四批任务书第 4 条）。`job` 暂不加，有需要再说。
@@ -198,4 +198,5 @@
 ## 八、2026-11-27 第四批任务完成记录
 
 - 1. 技能池加深（新增 56 个技能，总池 214 → 270 + `职业与技能总表` 更新）：`3f3ed3d`
-- 2. 清掉前端写死经济数字 + 3. 重写 `README.md` + 补充清单 `#37` / `#38`：见本批收尾提交
+- 2. 清掉前端写死经济数字：`655fa8a` + 3. 重写 `README.md`：`71f48f4`
+- 4. 镜像卡收尾（`AlbumPanel` / `CardDetail` 切回服务端 `cardType` / `foil` 分页筛选 + 去空 `catch`）：见本次提交

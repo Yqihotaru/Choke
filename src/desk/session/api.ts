@@ -134,6 +134,8 @@ export function fetchUserCards(
   userId: string,
   params: {
     rarity?: string
+    cardType?: "pool" | "hero" | "mirror"
+    foil?: boolean
     q?: string
     sort?: CardSort
     page?: number
@@ -143,13 +145,15 @@ export function fetchUserCards(
     ids?: number[]
   } = {},
 ): Promise<CardPage> {
-  const { rarity, q, sort = "recent", page = 0, limit = 24, signal, ids } = params
+  const { rarity, cardType, foil, q, sort = "recent", page = 0, limit = 24, signal, ids } = params
   const search = new URLSearchParams({
     sort,
     limit: String(limit),
     offset: String(page * limit),
   })
   if (rarity) search.set("rarity", rarity)
+  if (cardType) search.set("cardType", cardType)
+  if (foil !== undefined) search.set("foil", String(foil))
   if (q) search.set("q", q)
   if (ids?.length) search.set("ids", ids.join(","))
   return request<CardPage>(`/api/users/${userId}/cards?${search.toString()}`, { signal })
