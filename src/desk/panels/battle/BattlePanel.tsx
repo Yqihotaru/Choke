@@ -8,6 +8,8 @@ import { ITEMS } from "@choke/shared/items"
 import { refreshProgress, useTutorialProgress } from "@/tutorial/store"
 
 import {
+  ApiError,
+  buyStaminaPotion,
   fetchDeck,
   fetchDungeons,
   fetchEncounters,
@@ -108,6 +110,37 @@ export function BattlePanel({
         text: reason instanceof Error ? reason.message : "副本失败",
         error: true,
       })
+    } finally {
+      setDungeonBusy(null)
+    }
+  }
+
+  const handleBuyPotion = async () => {
+    if (!userId || !stamina || dungeonBusy !== null) return
+    setDungeonBusy("stamina-potion")
+    setDungeonMessage(null)
+    try {
+      const res = await buyStaminaPotion(userId)
+      setStamina((prev) => ({
+        ...res.stamina,
+        potionUsedToday: res.potionUsedToday,
+        potionDailyLimit: res.potionDailyLimit,
+        potionCost: prev?.potionCost,
+        potionGain: prev?.potionGain,
+      }))
+      playSfx("coin")
+      setDungeonMessage({
+        text: `购买体力药水成功：体力 +${res.gained}（今日 ${res.potionUsedToday}/${res.potionDailyLimit}）`,
+      })
+      emitDeskData("user")
+    } catch (reason) {
+      playSfx("error")
+      const code = reason instanceof ApiError ? reason.code : undefined
+      if (code === "feature_locked" || code === "stamina_full" || code === "daily_limit_reached" || code === "not_enough_coins") {
+        setDungeonMessage({ text: reason instanceof Error ? reason.message : "无法购买体力药水", error: true })
+      } else {
+        setDungeonMessage({ text: reason instanceof Error ? reason.message : "购买体力药水失败", error: true })
+      }
     } finally {
       setDungeonBusy(null)
     }
@@ -341,6 +374,32 @@ export function BattlePanel({
               {stamina ? `${stamina.value} / ${stamina.max}` : "—"}
             </b>
           </div>
+          {stamina && (
+            <div className="dungeon-head">
+              <span className="bk-note">
+                体力药水（{stamina.potionUsedToday ?? 0}/{stamina.potionDailyLimit ?? 2}）
+                {stamina.value >= (stamina.overflowMax ?? 720)
+                  ? " · 已达溢出上限"
+                  : stamina.value + (stamina.potionGain ?? 60) > (stamina.overflowMax ?? 720)
+                    ? ` · 本次实际 +${(stamina.overflowMax ?? 720) - stamina.value}`
+                    : ` · +${stamina.potionGain ?? 60} 体力`}
+              </span>
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                disabled={
+                  dungeonBusy !== null ||
+                  (stamina.potionUsedToday ?? 0) >= (stamina.potionDailyLimit ?? 2) ||
+                  stamina.value >= (stamina.overflowMax ?? 720)
+                }
+                onClick={() => void handleBuyPotion()}
+              >
+                {dungeonBusy === "stamina-potion"
+                  ? "购买中…"
+                  : `买体力药 · ${stamina.potionCost ?? 100} 金币`}
+              </button>
+            </div>
+          )}
           <div
             className="bk-bar dungeon-stamina"
             style={{ "--p": stamina ? (stamina.value / Math.max(1, stamina.max)) * 100 : 0 } as CSSProperties}
