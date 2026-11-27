@@ -33,6 +33,11 @@ import {
 } from "@choke/shared/items"
 import { skillById } from "@choke/shared/skills"
 import { describeSkill } from "@choke/shared/skill-check"
+import {
+  RESONANCE_ATTRIBUTES,
+  RESONANCE_ATTR_CAP,
+  RESONANCE_TOTAL_CAP,
+} from "@choke/shared/resonance"
 import { useModal } from "@/ui/useModal"
 
 import { useTutorialProgress } from "@/tutorial/store"
@@ -46,6 +51,7 @@ import {
   feedCard,
   fetchFuel,
   fetchMe,
+  fetchResonance,
   fetchSkillRerollInfo,
   levelUpCard,
   listMarketCard,
@@ -53,6 +59,7 @@ import {
   toFace,
   type ApiUserCard,
   type ItemWallet,
+  type ResonanceOverview,
   type SkillRerollInfo,
 } from "@/desk/session/api"
 import "@/desk/book.css"
@@ -116,6 +123,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [items, setItems] = useState<ItemWallet | null>(null)
   const [coins, setCoins] = useState<number | null>(null)
   const [rerollInfo, setRerollInfo] = useState<SkillRerollInfo | null>(null)
+  const [resonance, setResonance] = useState<ResonanceOverview | null>(null)
   const [selectingSlot, setSelectingSlot] = useState<number | null>(null)
   const [tab, setTab] = useState<"train" | "skills" | "manage">(readOnly ? "skills" : "train")
   const [price, setPrice] = useState("30")
@@ -196,6 +204,17 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       .catch(() => {})
     return () => controller.abort()
   }, [readOnly, userId, card.id, card.userCardId])
+
+  useEffect(() => {
+    if (readOnly || !userId || !isHeroCardId(card.id)) return
+    const controller = new AbortController()
+    fetchResonance(userId, controller.signal)
+      .then((data) => {
+        if (!controller.signal.aborted) setResonance(data)
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [readOnly, userId, card.id])
 
   useEffect(() => () => fuelController.current?.abort(), [])
 
@@ -680,6 +699,48 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   {current.foil ? "已是闪卡" : `精华镀闪 · ${FOIL_COST}`}
                 </button>
               </div>
+              {hero && resonance && (
+                <div className="card-detail__resonance">
+                  <div className="card-detail__resonance-head">
+                    <span>本体共鸣</span>
+                    <b className="bk-num">
+                      {resonance.summary.totalSlots}/{RESONANCE_TOTAL_CAP}
+                    </b>
+                  </div>
+                  <div className="card-detail__resonance-grid">
+                    {RESONANCE_ATTRIBUTES.map((attr) => {
+                      const bp = resonance.summary.totalBpByAttr[attr]
+                      const cnt = resonance.summary.countsByAttr[attr]
+                      return (
+                        <div key={attr} className="card-detail__resonance-stat">
+                          <span>{attr}</span>
+                          <b className="bk-num">+{(bp / 100).toFixed(1)}%</b>
+                          <em>
+                            {cnt}/{RESONANCE_ATTR_CAP}
+                          </em>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {resonance.records.length > 0 ? (
+                    <ul className="card-detail__resonance-list">
+                      {resonance.records.map((rec) => (
+                        <li key={rec.slot}>
+                          <span>#{rec.slot}</span>
+                          <b>{rec.sourceCardId}</b>
+                          <em className="bk-num">
+                            +{(rec.valueBp / 100).toFixed(1)}% {rec.attribute}
+                          </em>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="card-detail__resonance-empty">
+                      尚无共鸣记录，升命座吞噬镜像卡可获得属性加成。
+                    </p>
+                  )}
+                </div>
+              )}
               {pending?.kind === "ascend" && (
                 <ConfirmBar
                   busy={busy !== null}

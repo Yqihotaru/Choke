@@ -7,6 +7,7 @@ import type { MailView } from "@choke/shared/mail"
 import type { LedgerKind, LedgerPage } from "@choke/shared/ledger"
 import type { OsuDailyCheckResult, OsuDailyView } from "@choke/shared/osu-daily"
 import type { QuestsOverview, ResettingPeriod } from "@choke/shared/quests"
+import type { ResonanceRecord, ResonanceSummary } from "@choke/shared/resonance"
 
 export type ItemWallet = Partial<Record<ItemId, number>>
 /** `/users/:id/cards` 和 `/users/:id/deck` 共用的卡行 */
@@ -200,11 +201,36 @@ export function levelUpCard(
 export function ascendCard(
   userId: string,
   userCardId: number,
-): Promise<{ card: ApiUserCard; consumedUserCardId: number }> {
-  return request<{ card: ApiUserCard; consumedUserCardId: number }>(
+  materialUserCardId?: number,
+): Promise<{
+  card: ApiUserCard
+  consumedUserCardId: number
+  resonance?: ResonanceRecord[]
+  summary?: ResonanceSummary
+  addedResonance?: ResonanceRecord | null
+  capped?: boolean
+}> {
+  return request(
     `/api/users/${userId}/cards/${userCardId}/constellation`,
-    { method: "POST" },
+    {
+      method: "POST",
+      ...(materialUserCardId !== undefined
+        ? {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ materialUserCardId }),
+          }
+        : {}),
+    },
   )
+}
+
+export interface ResonanceOverview {
+  records: ResonanceRecord[]
+  summary: ResonanceSummary
+}
+
+export function fetchResonance(userId: string, signal?: AbortSignal): Promise<ResonanceOverview> {
+  return request<ResonanceOverview>(`/api/users/${userId}/resonance`, { signal })
 }
 
 export interface FeedResult {
