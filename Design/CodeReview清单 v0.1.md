@@ -142,7 +142,7 @@
 27. **切号后背包、市场先显示上个账号的数据**（待复核）：`BackpackPanel.tsx` L76–130、`MarketPanel.tsx` L63–90。给面板加 `key={userId}` 最省事。市场的 `fetchMe` 失败不应让整页判为加载失败，`unlist` 失败也要重新拉列表。
 28. **道具名查表没有兜底，遇到新道具白屏**（待复核）：`BattlePanel.tsx` 约 L82、`CardDetail.tsx` 约 L103，改成 `ITEMS[id]?.name ?? id`。
 29. **多处 `.catch(() => {})` 吞错，界面无提示**（待复核）：`BattlePanel.tsx` L51/54/64、`MailBox.tsx` L143/L181（已读失败要回滚本地已读）、`AccountPanel.tsx` L105/113/141、`useDeskSession.ts` L84/107。
-30. **找出"Encountered two children with the same key"的来源**：key 值出现过 1、2、4、40 到 46。先确认第 16 条修复后是否还有；若有，在浏览器控制台复制完整组件栈，从 `DeskDrawer.tsx` L184、`DeskBook.tsx` L496、`PackOpener.tsx` 的 `keyOf` 查起。（*2026-11-27 备注：自动化浏览器检查因本机 Chrome 未开启远程调试 `DevToolsActivePort` 未能连上，需人工在浏览器控制台复核。*）
+30. **找出"Encountered two children with the same key"的来源**：key 值出现过 1、2、4、40 到 46。先确认第 16 条修复后是否还有；若有，在浏览器控制台复制完整组件栈，从 `DeskDrawer.tsx` L184、`DeskBook.tsx` L496、`PackOpener.tsx` 的 `keyOf` 查起。（*2026-11-27 浏览器实测：已连接 `127.0.0.1:9222` 遍历桌面、`厚书`全部页签（含图鉴翻页）、邮箱、流水与抽屉，控制台均未再出现 `Encountered two children with the same key` 警告。注：未包含抽卡开包后 `PackOpener` 动画过程，若开包时仍复现可再看 `PackOpener.tsx` 的 `keyOf`。*）
 
 ### P2
 
