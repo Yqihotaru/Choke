@@ -5,7 +5,7 @@ import type { DungeonId, DungeonRewards } from "@choke/shared/dungeons"
 import type { ItemId, ItemStack } from "@choke/shared/items"
 import type { MailView } from "@choke/shared/mail"
 import type { LedgerKind, LedgerPage } from "@choke/shared/ledger"
-import type { QuestsOverview } from "@choke/shared/quests"
+import type { QuestsOverview, ResettingPeriod } from "@choke/shared/quests"
 
 export type ItemWallet = Partial<Record<ItemId, number>>
 /** `/users/:id/cards` 和 `/users/:id/deck` 共用的卡行 */
@@ -752,6 +752,14 @@ export function claimAllQuests(
   userId: string,
 ): Promise<{ claimed: string[]; chests: string[]; rewards: { label: string; count: number }[] }> {
   return request(`/api/users/${userId}/quests/claim-all`, { method: "POST" })
+}
+
+export function claimQuestChest(
+  userId: string,
+  period: ResettingPeriod,
+  at: number,
+): Promise<{ period: ResettingPeriod; at: number; rewards: { label: string; count: number }[] }> {
+  return request(`/api/users/${userId}/quests/chests/${period}/${at}/claim`, { method: "POST" })
 }
 
 export function dismantleCard(

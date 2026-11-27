@@ -175,3 +175,29 @@
   color: var(--bk-dim);
   font-size: 12px;
 }
+
+.account-chests {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--bk-line);
+}
+.account-chests__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.account-chests__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--bk-dim);
+}
+.account-chests__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
