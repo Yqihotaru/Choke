@@ -683,3 +683,46 @@
   opacity: 0;
   transition-property: transform, opacity;
 }
+
+/* 第 6 张额外镜像卡：玻璃碎裂闪白与裂纹过渡 + 卡面角标 */
+.op__shatter {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  pointer-events: none;
+  background:
+    linear-gradient(28deg, transparent 48.8%, rgb(255 255 255 / 0.85) 49.5%, transparent 50.4%),
+    linear-gradient(-37deg, transparent 47.2%, rgb(255 255 255 / 0.7) 48%, transparent 48.8%),
+    linear-gradient(64deg, transparent 52%, rgb(255 255 255 / 0.65) 52.6%, transparent 53.3%),
+    radial-gradient(circle at 50% 48%, rgb(255 255 255 / 0.55), transparent 62%);
+  animation: op-shatter-flash 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes op-shatter-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+.op-card__bonus-tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 4;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgb(255 102 170 / 0.92);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+}

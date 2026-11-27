@@ -1298,9 +1298,10 @@ export function DeskPage() {
         // 卡包已核销：详情拿不到的卡用结果里的字段兜底，保证每张都展示（含额外第 6 张镜像卡）
         const allPulled = opened.bonus ? [...opened.results, opened.bonus] : opened.results
         const faces = await resolvePulledCards(allPulled)
-        const cards: CardData[] = faces.map((face, index) =>
-          toDeskCard(face, allPulled[index]!.userCardId)
-        )
+        const cards: CardData[] = faces.map((face, index) => ({
+          ...toDeskCard(face, allPulled[index]!.userCardId),
+          ...(opened.bonus && index === faces.length - 1 ? { isBonus: true } : {}),
+        }))
 
         if (userIdRef.current !== user.id) {
           emitTutorialEvent("pack-opened")
@@ -1416,9 +1417,10 @@ export function DeskPage() {
 
       const allPulled = opened.bonus ? [...opened.results, opened.bonus] : opened.results
       const faces = await resolvePulledCards(allPulled)
-      const cards: CardData[] = faces.map((face, index) =>
-        toDeskCard(face, allPulled[index]!.userCardId),
-      )
+      const cards: CardData[] = faces.map((face, index) => ({
+        ...toDeskCard(face, allPulled[index]!.userCardId),
+        ...(opened.bonus && index === faces.length - 1 ? { isBonus: true } : {}),
+      }))
 
       if (userIdRef.current !== user.id) {
         emitTutorialEvent("pack-opened")

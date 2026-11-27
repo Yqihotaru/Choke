@@ -24,6 +24,8 @@ export interface CardData {
   banner?: string
   foil?: boolean
   isHero?: boolean
+  /** 额外第 6 张镜像卡 */
+  isBonus?: boolean
 }
 
 export interface DeskItem {

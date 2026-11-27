@@ -76,7 +76,8 @@ const TEAR_MS = 1000
 type Stage = "seal" | "torn" | "stack"
 type CardPhase = "stack" | "charge" | "show" | "hold" | "slot"
 
-const keyOf = (card: CardData) => String(card.userCardId ?? `${card.cardId}:${card.name}`)
+const keyOf = (card: CardData) =>
+  `${card.isBonus ? "bonus:" : ""}${card.userCardId ?? `${card.cardId}:${card.name}`}`
 const OpenerFace = memo(function OpenerFace({ card }: { card: CardData }) {
   return <GameCardFace card={cardFromDesk(card)} eager />
 })
@@ -99,6 +100,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches)
   /** L 以上翻开那一下的全屏演出；id 每次加一，连着两张大卡时各播各的 */
   const [burst, setBurst] = useState<{ id: number; rarity: Rarity } | null>(null)
+  const [shattering, setShattering] = useState(false)
   const burstId = useRef(0)
   const tear = useRef<{ x: number; width: number; moved: boolean; tick: number; p: number } | null>(null)
   const torn = useRef(false)
@@ -151,7 +153,12 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
     () =>
       cards
         .map((card, index) => ({ card, index }))
-        .sort((a, b) => RARITY_ORDER.indexOf(a.card.rarity) - RARITY_ORDER.indexOf(b.card.rarity) || a.index - b.index)
+        .sort(
+          (a, b) =>
+            (a.card.isBonus ? 1 : 0) - (b.card.isBonus ? 1 : 0) ||
+            RARITY_ORDER.indexOf(a.card.rarity) - RARITY_ORDER.indexOf(b.card.rarity) ||
+            a.index - b.index,
+        )
         .map(({ card }) => card),
     [cards],
   )
@@ -220,6 +227,18 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
 
   const reveal = (card: CardData) => {
     if (phaseOf(card) !== "stack" || spotlight) return
+    if (card.isBonus) {
+      setSaid(`额外获得：${card.name} 的镜像，${RARITY_LABEL[card.rarity]}`)
+      playSfx("shatter")
+      if (!reduced) {
+        setShattering(true)
+        later(550, () => setShattering(false))
+      }
+      setPhase(card, "charge")
+      const waitMs = reduced ? 40 : (ritualOf(card.rarity)?.charge ?? 260)
+      revealTimers.current.push(later(waitMs, () => show(card)))
+      return
+    }
     setSaid(`${card.name}，${RARITY_LABEL[card.rarity]}，还剩 ${unrevealed.length - 1} 张`)
     const ritual = ritualOf(card.rarity)
     if (!ritual) {
@@ -461,16 +480,20 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
           ))}
         </div>
       )}
-      {/* E 以上亮相时在卡下方报出稀有度；key 用卡，换一张就重新砸一次 */}
+      {shattering && <div className="op__shatter" aria-hidden />}
+      {/* E 以上亮相时在卡下方报出稀有度；额外镜像卡标出「额外获得」 */}
       {spotlight && (spotlightPhase === "show" || spotlightPhase === "hold") && (
         <div
           key={keyOf(spotlight)}
           className="op__title"
           data-rarity={spotlight.rarity}
+          data-bonus={spotlight.isBonus ? "" : undefined}
           style={{ "--c": RARITY_COLOR[spotlight.rarity] } as CSSProperties}
           aria-hidden
         >
-          {RARITY_LABEL[spotlight.rarity]}
+          {spotlight.isBonus
+            ? `额外获得：${spotlight.name} 的镜像 · ${RARITY_LABEL[spotlight.rarity]}`
+            : RARITY_LABEL[spotlight.rarity]}
         </div>
       )}
 
@@ -485,6 +508,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
               className={`op-card ${isTop ? "is-top" : ""}`}
               data-phase={stage === "stack" ? (phase === "hold" ? "show" : phase) : stage}
               data-rarity={card.rarity}
+              data-bonus={card.isBonus ? "" : undefined}
               style={cardStyle(card, order)}
               onPointerDown={(event) => {
                 if (phase === "slot") startCardPointerDrag(event, { card }, {
@@ -517,6 +541,9 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
                 </div>
                 <div className="op-card__front">
                   <OpenerFace card={card} />
+                  {flipped && card.isBonus && (
+                    <span className="op-card__bonus-tag">额外镜像</span>
+                  )}
                   <i className="op-card__sweep" aria-hidden />
                 </div>
               </div>
