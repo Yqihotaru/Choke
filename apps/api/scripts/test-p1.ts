@@ -21,7 +21,6 @@ const { handleError } = await import("../src/error-handler")
 const { packRoutes } = await import("../src/routes/packs")
 const { progressionRoutes } = await import("../src/routes/progression")
 const { marketRoutes } = await import("../src/routes/market")
-const { shopRoutes } = await import("../src/routes/shop")
 const { breakthroughCoinCost } = await import("@choke/shared/progression")
 const { resetDayKey } = await import("@choke/shared/reset")
 
@@ -31,7 +30,6 @@ await app.register(cookie)
 await app.register(packRoutes)
 await app.register(progressionRoutes)
 await app.register(marketRoutes)
-await app.register(shopRoutes)
 await app.ready()
 
 let passed = 0
@@ -441,121 +439,6 @@ await test("碎片+金币「逢 5 自选」洗技能：单卡独立计数、严�
   assert.equal(sd.selectReady, false)
   assert.equal(sd.coins, 1000 - 150 * 5)
   assert.equal(sd.items["shard-L"], 24 - 4 * 5)
-})
-
-await test("统一商店：日/周限购、体力药共用上限、碎片博弈盲盒与限量保底兑换", async () => {
-  const userId = "p1-shop-user"
-  await db.insert(users).values({
-    id: userId,
-    username: userId,
-    coins: 2000,
-    stamina: 100,
-    tutorialDone: true,
-    playerLevel: 60,
-    staminaUpdatedAt: Date.now(),
-  })
-  await db.insert(userItems).values([
-    { userId, itemId: "shard-C", count: 40 },
-    { userId, itemId: "shard-E", count: 50 },
-  ])
-
-  const listRes = await app.inject({
-    method: "GET",
-    url: `/users/${userId}/shop`,
-    headers: auth(userId),
-  })
-  assert.equal(listRes.statusCode, 200)
-  const listItems: { id: string; remaining: number }[] = listRes.json().data.items
-  assert.ok(listItems.some((i) => i.id === "stamina-potion" && i.remaining === 2))
-  assert.ok(listItems.some((i) => i.id === "shard-box-high" && i.remaining === 3))
-
-  // 买 2 瓶体力药（达到日限 2）→ 第 3 瓶被限购拦截
-  const buyPotion = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/shop/buy`,
-    headers: auth(userId),
-    payload: { itemId: "stamina-potion", count: 2 },
-  })
-  assert.equal(buyPotion.statusCode, 200)
-  assert.equal(buyPotion.json().data.granted.stamina, 120)
-  assert.equal(buyPotion.json().data.remaining, 0)
-
-  const overPotion = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/shop/buy`,
-    headers: auth(userId),
-    payload: { itemId: "stamina-potion", count: 1 },
-  })
-  assert.equal(overPotion.statusCode, 400)
-  assert.equal(overPotion.json().error.code, "shop_limit_reached")
-
-  // 碎片博弈盲盒（低阶）：扣 20 C 碎片 + 40 金币，产出随机碎片
-  const buyLowBox = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/shop/buy`,
-    headers: auth(userId),
-    payload: { itemId: "shard-box-low", count: 1 },
-  })
-  assert.equal(buyLowBox.statusCode, 200)
-  assert.equal(buyLowBox.json().data.items["shard-C"], 20)
-  assert.ok(buyLowBox.json().data.granted.items.length > 0)
-  const eAfterLowBox: number = buyLowBox.json().data.items["shard-E"] ?? 0
-
-  // 限量 L 碎片包：买 2 次后周限耗尽，共获得 4 片 L 碎片
-  const buyPity = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/shop/buy`,
-    headers: auth(userId),
-    payload: { itemId: "shard-l-pity", count: 2 },
-  })
-  assert.equal(buyPity.statusCode, 200)
-  assert.equal(buyPity.json().data.remaining, 0)
-  assert.equal(buyPity.json().data.items["shard-E"], eAfterLowBox - 40)
-  assert.ok((buyPity.json().data.items["shard-L"] ?? 0) >= 4)
-
-  const overPity = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/shop/buy`,
-    headers: auth(userId),
-    payload: { itemId: "shard-l-pity", count: 1 },
-  })
-  assert.equal(overPity.statusCode, 400)
-  assert.equal(overPity.json().error.code, "shop_limit_reached")
-
-  // 碎片不足买高阶赌箱（需 24 E，当前仅剩 10 E）被拦截且不误扣金币
-  const coinsBeforeFail = buyPity.json().data.coins
-  const failHighBox = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/shop/buy`,
-    headers: auth(userId),
-    payload: { itemId: "shard-box-high", count: 1 },
-  })
-  assert.equal(failHighBox.statusCode, 400)
-  assert.equal(failHighBox.json().error.code, "not_enough_items")
-  const [uAfterFail] = await db.select({ coins: users.coins }).from(users).where(eq(users.id, userId))
-  assert.equal(uAfterFail!.coins, coinsBeforeFail)
-
-  // 体力接近 720 上限时（如 710/720）一次买 2 瓶体力药应被拦截，不空扣金币
-  const staminaUser = "p1-shop-stamina-cap"
-  await db.insert(users).values({
-    id: staminaUser,
-    username: staminaUser,
-    coins: 500,
-    stamina: 710,
-    tutorialDone: true,
-    playerLevel: 60,
-    staminaUpdatedAt: Date.now(),
-  })
-  const overStaminaBuy = await app.inject({
-    method: "POST",
-    url: `/users/${staminaUser}/shop/buy`,
-    headers: auth(staminaUser),
-    payload: { itemId: "stamina-potion", count: 2 },
-  })
-  assert.equal(overStaminaBuy.statusCode, 400)
-  assert.equal(overStaminaBuy.json().error.code, "stamina_full")
-  const [stUserAfter] = await db.select({ coins: users.coins }).from(users).where(eq(users.id, staminaUser))
-  assert.equal(stUserAfter!.coins, 500)
 })
 
 await test("市场列表需登录才能查看", async () => {

@@ -59,15 +59,6 @@
       "rewards": { "playerExp": 10, "coins": 10 },
       "points": 10
     },
-    "daily-dungeon": {
-      "period": "daily",
-      "name": "刷一次副本",
-      "desc": "通关 1 次副本",
-      "event": "dungeon-run",
-      "target": 1,
-      "rewards": { "playerExp": 15, "coins": 10, "items": [{ "itemId": "exp-small", "count": 2 }] },
-      "points": 10
-    },
     "daily-feed": {
       "period": "daily",
       "name": "喂喂卡",
@@ -189,15 +180,6 @@
       "rewards": { "playerExp": 35, "coins": 50, "items": [{ "itemId": "exp-medium", "count": 2 }] },
       "points": 10
     },
-    "weekly-dungeon": {
-      "period": "weekly",
-      "name": "副本常客",
-      "desc": "本周通关 10 次副本",
-      "event": "dungeon-run",
-      "target": 10,
-      "rewards": { "playerExp": 35, "coins": 50, "items": [{ "itemId": "exp-medium", "count": 2 }] },
-      "points": 10
-    },
     "weekly-fuse": {
       "period": "weekly",
       "name": "命座周",
@@ -269,15 +251,6 @@
       "event": "fuse",
       "target": 10,
       "rewards": { "playerExp": 120, "coins": 120, "items": [{ "itemId": "exp-large", "count": 2 }] },
-      "points": 15
-    },
-    "monthly-dungeon": {
-      "period": "monthly",
-      "name": "副本达人",
-      "desc": "本月通关 60 次副本",
-      "event": "dungeon-run",
-      "target": 60,
-      "rewards": { "playerExp": 120, "coins": 120, "items": [{ "itemId": "exp-large", "count": 1 }] },
       "points": 15
     },
     "monthly-sign-in": {
@@ -785,16 +758,6 @@
       "event": "sign-in",
       "target": 100,
       "rewards": { "playerExp": 600, "coins": 1000, "packs": [{ "pool": "radiant", "count": 1 }] },
-      "points": 0
-    },
-    "ach-dungeon-100": {
-      "period": "once",
-      "group": "日常",
-      "name": "副本老炮",
-      "desc": "累计通关 100 次副本",
-      "event": "dungeon-run",
-      "target": 100,
-      "rewards": { "playerExp": 250, "coins": 400, "items": [{ "itemId": "exp-large", "count": 2 }] },
       "points": 0
     },
     "ach-market-buy-10": {

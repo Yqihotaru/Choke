@@ -48,7 +48,6 @@ import type {
   ObjectiveResult,
 } from "@choke/shared/expedition/view"
 import { isAttachmentEmpty } from "@choke/shared/mail"
-import { dungeonByMapId } from "@choke/shared/dungeons"
 import { lockMessage, lockReason } from "@choke/shared/unlocks"
 import { randomSeed } from "@choke/shared/rng"
 import { nextReset } from "@choke/shared/reset"
@@ -728,7 +727,6 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
     await recordQuestEvent(tx, exp.userId, "expedition-tier", { ...questContext, value: status.tier })
     const fullTier = exp.map.objectives?.length ?? 3
     if (clearTier >= fullTier) await recordQuestEvent(tx, exp.userId, "expedition-perfect", questContext)
-    if (dungeonByMapId(exp.mapId)) await recordQuestEvent(tx, exp.userId, "dungeon-run", { now })
     const date = new Date(now)
     const [row] = await tx
       .select()

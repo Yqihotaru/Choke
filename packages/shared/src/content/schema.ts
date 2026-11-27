@@ -89,29 +89,6 @@ const itemSchema = z.discriminatedUnion("kind", [
 
 export const itemsSchema = z.record(id, itemSchema)
 
-const itemStack = z.strictObject({ itemId: z.string(), count: positiveInt })
-
-export const dungeonRewardsSchema = z.strictObject({
-  essence: positiveInt.optional(),
-  coins: positiveInt.optional(),
-  /** 普通卡包数量 */
-  packs: positiveInt.optional(),
-  items: z.array(itemStack).min(1).optional(),
-})
-
-export const dungeonsSchema = z.record(
-  id,
-  z.strictObject({
-    name: z.string().min(1),
-    summary: z.string(),
-    /** 体力消耗 */
-    cost: positiveInt,
-    /** 绑定的小远征地图 id；配置后需首通该地图才解锁扫荡 */
-    mapId: id.optional(),
-    rewards: dungeonRewardsSchema,
-  }),
-)
-
 /** 功能解锁表：功能 id → 解锁条件。条件之间是"且"；服务端和前端共用这一份 */
 export const unlocksSchema = z.record(
   id,
@@ -163,63 +140,14 @@ export const packsSchema = z.strictObject({
   mirror: z.strictObject({ rate: z.number().min(0).max(1), activeDays: positiveInt }),
 })
 
-const shopPackStack = z.strictObject({ pool: id, count: positiveInt })
-
-const shopCostSchema = z
-  .strictObject({
-    coins: positiveInt.optional(),
-    items: z.array(itemStack).min(1).optional(),
-  })
-  .refine((c) => Boolean(c.coins) || Boolean(c.items?.length), "商品必须至少消耗金币或一种物品")
-
-const shopRewardSchema = z.discriminatedUnion("kind", [
-  z
-    .strictObject({
-      kind: z.literal("fixed"),
-      stamina: positiveInt.optional(),
-      items: z.array(itemStack).min(1).optional(),
-      packs: z.array(shopPackStack).min(1).optional(),
-    })
-    .refine(
-      (r) => Boolean(r.stamina) || Boolean(r.items?.length) || Boolean(r.packs?.length),
-      "固定商品必须至少包含体力、物品或卡包之一",
-    ),
-  z.strictObject({
-    kind: z.literal("gamble"),
-    pool: z
-      .array(
-        z.strictObject({
-          weight: z.number().positive(),
-          items: z.array(itemStack).min(1),
-        }),
-      )
-      .min(2),
-  }),
-])
-
-export const shopSchema = z.record(
-  id,
-  z.strictObject({
-    name: z.string().min(1),
-    summary: z.string().min(1),
-    section: z.enum(["supply", "gamble", "pity"]),
-    period: z.enum(["daily", "weekly", "monthly"]),
-    limit: positiveInt,
-    cost: shopCostSchema,
-    reward: shopRewardSchema,
-  }),
-)
-
 /** 整个 content/：先各自校验，再检查跨文件引用和经济上的硬约束 */
 export const contentSchema = z
   .strictObject({
     progression: progressionSchema,
     items: itemsSchema,
-    dungeons: dungeonsSchema,
     economy: economySchema,
     packs: packsSchema,
     unlocks: unlocksSchema,
-    shop: shopSchema,
   })
   .superRefine((content, ctx) => {
     const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message })
@@ -291,18 +219,6 @@ export const contentSchema = z
       issue(["items"], "至少需要一种经验道具（分解返还要用）")
     }
 
-    for (const [dungeonId, dungeon] of Object.entries(content.dungeons)) {
-      const { rewards } = dungeon
-      if (!rewards.essence && !rewards.coins && !rewards.packs && !rewards.items) {
-        issue(["dungeons", dungeonId, "rewards"], "副本没有任何奖励")
-      }
-      rewards.items?.forEach((stack, i) => {
-        if (!Object.hasOwn(content.items, stack.itemId)) {
-          issue(["dungeons", dungeonId, "rewards", "items", i, "itemId"], `物品 ${stack.itemId} 不存在`)
-        }
-      })
-    }
-
     const packIds = Object.keys(content.packs.packs)
     const { starterGuarantee, starterGrant } = content.packs
     if (!packIds.includes(starterGuarantee.pool)) {
@@ -314,37 +230,6 @@ export const contentSchema = z
     for (const grantId of Object.keys(starterGrant)) {
       if (grantId !== MYSTERY_PACK_ID && !packIds.includes(grantId)) {
         issue(["packs", "starterGrant", grantId], `卡包 ${grantId} 不存在`)
-      }
-    }
-
-    // 商店跨文件引用与「产出严禁进市场」硬约束（仅允许绑定挂机包 idle）
-    for (const [shopId, entry] of Object.entries(content.shop)) {
-      entry.cost.items?.forEach((stack, i) => {
-        if (!Object.hasOwn(content.items, stack.itemId)) {
-          issue(["shop", shopId, "cost", "items", i, "itemId"], `物品 ${stack.itemId} 不存在`)
-        }
-      })
-      if (entry.reward.kind === "fixed") {
-        entry.reward.items?.forEach((stack, i) => {
-          if (!Object.hasOwn(content.items, stack.itemId)) {
-            issue(["shop", shopId, "reward", "items", i, "itemId"], `物品 ${stack.itemId} 不存在`)
-          }
-        })
-        entry.reward.packs?.forEach((pack, i) => {
-          if (!packIds.includes(pack.pool)) {
-            issue(["shop", shopId, "reward", "packs", i, "pool"], `卡包 ${pack.pool} 不存在`)
-          } else if (pack.pool !== "idle") {
-            issue(["shop", shopId, "reward", "packs", i, "pool"], "商店仅允许发放绑定卡包（idle），禁止发放可交易卡包")
-          }
-        })
-      } else {
-        entry.reward.pool.forEach((opt, i) => {
-          opt.items.forEach((stack, j) => {
-            if (!Object.hasOwn(content.items, stack.itemId)) {
-              issue(["shop", shopId, "reward", "pool", i, "items", j, "itemId"], `物品 ${stack.itemId} 不存在`)
-            }
-          })
-        })
       }
     }
   })

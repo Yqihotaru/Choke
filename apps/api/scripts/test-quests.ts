@@ -30,7 +30,7 @@ for (const event of ["market-buy", "market-sell"] as const) {
 }
 
 const { db } = await import("../src/db/client")
-const { users, cards, userCards, userPacks, userItems, ledgerEntries, mails, mapClears, questProgress } = await import(
+const { users, cards, userCards, userPacks, userItems, ledgerEntries, mails, questProgress } = await import(
   "../src/db/schema"
 )
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
@@ -41,7 +41,6 @@ const { recordQuestEvent } = await import("../src/quest-events")
 const { questRoutes } = await import("../src/routes/quests")
 const { progressionRoutes } = await import("../src/routes/progression")
 const { marketRoutes } = await import("../src/routes/market")
-const { dungeonRoutes } = await import("../src/routes/dungeons")
 const { packRoutes } = await import("../src/routes/packs")
 const { nextReset, periodKey, resetDayKey, resetMonthDay, resetMonthKey, resetWeekKey } = await import(
   "@choke/shared/reset"
@@ -52,7 +51,7 @@ const { expToNextPlayerLevel } = await import("@choke/shared/player")
 const app = Fastify()
 app.setErrorHandler(handleError)
 await app.register(cookie)
-for (const routes of [questRoutes, progressionRoutes, marketRoutes, dungeonRoutes, packRoutes]) await app.register(routes)
+for (const routes of [questRoutes, progressionRoutes, marketRoutes, packRoutes]) await app.register(routes)
 await app.ready()
 
 let passed = 0
@@ -194,9 +193,9 @@ await test("进度累加、封顶；没完成不能领；领一次只发一次�
 await test("多种奖励（金币 + 道具）一起发，流水逐项对得上", async () => {
   const userId = await newUser()
   const t = bj(2026, 11, 24, 10)
-  await recordQuestEvent(db, userId, "dungeon-run", { now: t })
-  await quests.claimQuest(userId, "daily-dungeon", t)
-  const def = defOf("daily-dungeon")
+  await recordQuestEvent(db, userId, "expedition-clear", { now: t, mapKind: "daily" })
+  await quests.claimQuest(userId, "daily-expedition-clear", t)
+  const def = defOf("daily-expedition-clear")
   assert.equal(await coinsOf(userId), def.rewards.coins ?? 0)
   for (const { itemId, count } of def.rewards.items ?? []) {
     const [row] = await db.select().from(userItems).where(and(eq(userItems.userId, userId), eq(userItems.itemId, itemId)))
@@ -236,8 +235,8 @@ await test("玩家经验：领任务才到账、只到账一次，不进流水�
 await test("玩家经验：活跃度宝箱、一键全领也会发，合并成一行展示", async () => {
   const t = bj(2026, 11, 24, 10)
   const userId = await newUser({ playerLevel: 5, playerExp: 0 })
-  for (const event of ["sign-in", "pack-open", "feed", "fuse", "dismantle", "dungeon-run", "market-buy", "market-sell"] as const) {
-    await recordQuestEvent(db, userId, event, { now: t })
+  for (const event of ["sign-in", "pack-open", "feed", "fuse", "dismantle", "expedition-clear", "market-buy", "market-sell"] as const) {
+    await recordQuestEvent(db, userId, event, { now: t, mapKind: "daily" })
   }
   const before = await expOf(userId)
   const all = await quests.claimAllQuests(userId, t)
@@ -311,14 +310,14 @@ await test("一键全领：只领完成了没领的，合并展示，再点什�
   const userId = await newUser()
   const t = bj(2026, 11, 24, 10)
   await recordQuestEvent(db, userId, "feed", { now: t })
-  await recordQuestEvent(db, userId, "dungeon-run", { now: t })
+  await recordQuestEvent(db, userId, "expedition-clear", { now: t, mapKind: "daily" })
   await recordQuestEvent(db, userId, "pack-open", { now: t })
   await quests.claimQuest(userId, "daily-open-pack", t)
   const before = await coinsOf(userId)
 
   const result = await quests.claimAllQuests(userId, t)
-  assert.deepEqual([...result.claimed].sort(), ["daily-dungeon", "daily-feed"])
-  const expected = mergeQuestRewards([defOf("daily-feed").rewards, defOf("daily-dungeon").rewards])
+  assert.deepEqual([...result.claimed].sort(), ["daily-expedition-clear", "daily-feed"])
+  const expected = mergeQuestRewards([defOf("daily-feed").rewards, defOf("daily-expedition-clear").rewards])
   assert.equal(result.rewards.find((line) => line.kind === "coins")?.count, expected.coins)
   assert.equal((await coinsOf(userId)) - before, expected.coins)
   assert.equal((await ledgerOf(userId)).filter((e) => e.source === "quest").length >= 3, true)
@@ -480,7 +479,7 @@ await test("过期没领的奖励合成一封邮件发到邮箱，只发一次�
   const before0 = await expOf(userId)
   const t = bj(2026, 11, 24, 10)
   await recordQuestEvent(db, userId, "feed", { now: t })
-  await recordQuestEvent(db, userId, "dungeon-run", { now: t })
+  await recordQuestEvent(db, userId, "expedition-clear", { now: t, mapKind: "daily" })
   await recordQuestEvent(db, userId, "expedition-win", { now: t }) // daily-expedition 目标 2，只有 1
   await recordQuestEvent(db, userId, "pack-open", { now: t })
   await quests.claimQuest(userId, "daily-open-pack", t) // 已经领过的不会再发
@@ -493,7 +492,7 @@ await test("过期没领的奖励合成一封邮件发到邮箱，只发一次�
   await quests.getQuests(userId, bj(2026, 11, 25, 4, 0))
   const sent = await mailsOf(userId)
   assert.equal(sent.length, 1)
-  const { playerExp: expectedExp = 0, ...expected } = mergeQuestRewards([defOf("daily-feed").rewards, defOf("daily-dungeon").rewards])
+  const { playerExp: expectedExp = 0, ...expected } = mergeQuestRewards([defOf("daily-feed").rewards, defOf("daily-expedition-clear").rewards])
   assert.deepEqual(sent[0]!.attachment, expected, "玩家经验不进邮件附件")
   assert.ok(expectedExp > 0)
   assert.equal((await expOf(userId)) - before0, expectedExp + (defOf("daily-open-pack").rewards.playerExp ?? 0), "经验在转邮件时直接到账")
@@ -501,7 +500,7 @@ await test("过期没领的奖励合成一封邮件发到邮箱，只发一次�
   assert.equal(await coinsOf(userId), coinsBefore, "邮件本身不直接发金币")
 
   const left = (await rowsOf(userId)).filter((r) => r.questId.startsWith("daily-") && r.periodKey === "2026-11-24")
-  assert.deepEqual(left.map((r) => r.questId).sort(), ["daily-dungeon", "daily-feed", "daily-open-pack"], "没完成的那行被清掉")
+  assert.deepEqual(left.map((r) => r.questId).sort(), ["daily-expedition-clear", "daily-feed", "daily-open-pack"], "没完成的那行被清掉")
   assert.equal(left.filter((r) => r.autoClaimed).length, 2)
 
   await quests.getQuests(userId, bj(2026, 11, 26, 10))
@@ -623,21 +622,6 @@ await test("埋点：分解", async () => {
   assert.equal(await progressNow(userId, "weekly-dismantle"), 1)
 })
 
-await test("埋点：副本通关（体力不够不算）", async () => {
-  const poor = await newUser({ stamina: 0, playerLevel: 50 })
-  const rich = await newUser({ playerLevel: 50 })
-  await db.insert(mapClears).values([
-    { userId: poor, mapId: "dungeon-shards", clears: 1, bestStars: 9, bestObjectives: 0 },
-    { userId: rich, mapId: "dungeon-shards", clears: 1, bestStars: 9, bestObjectives: 0 },
-  ])
-  let res = await call(poor, "POST", `/users/${poor}/dungeons/shards/run`)
-  assert.equal(res.status, 400)
-  assert.equal(await progressNow(poor, "daily-dungeon"), 0)
-  res = await call(rich, "POST", `/users/${rich}/dungeons/shards/run`)
-  assert.equal(res.status, 200, JSON.stringify(res.body))
-  assert.equal(await progressNow(rich, "daily-dungeon"), 1)
-})
-
 await test("埋点：市场买入和卖出（只挂单不算，成交才算双方各一笔）", async () => {
   const seller = await newUser({ coins: 100, playerLevel: 50 })
   const buyer = await newUser({ coins: 1000, playerLevel: 50 })
@@ -676,7 +660,7 @@ const completeQuest = (userId: string, questId: string, t: number) => {
 await test("活跃度宝箱：领任务攒活跃点，点数到了才能领宝箱，每个只能领一次", async () => {
   const userId = await newUser()
   const t = bj(2026, 11, 24, 10)
-  for (const id of ["daily-feed", "daily-open-pack", "daily-dungeon"]) await completeQuest(userId, id, t)
+  for (const id of ["daily-feed", "daily-open-pack", "daily-expedition-clear"]) await completeQuest(userId, id, t)
 
   let overview = await quests.getQuests(userId, t)
   assert.equal(overview.activity.daily.earned, 0, "完成了没领，不算活跃点")
@@ -684,9 +668,9 @@ await test("活跃度宝箱：领任务攒活跃点，点数到了才能领宝�
   assert.equal(overview.activity.daily.chests.length, 5)
   assert.equal(overview.claimable, 3)
 
-  for (const id of ["daily-feed", "daily-open-pack", "daily-dungeon"]) await quests.claimQuest(userId, id, t)
+  for (const id of ["daily-feed", "daily-open-pack", "daily-expedition-clear"]) await quests.claimQuest(userId, id, t)
   overview = await quests.getQuests(userId, t)
-  assert.equal(overview.activity.daily.earned, 30)
+  assert.equal(overview.activity.daily.earned, 35)
   assert.deepEqual(
     overview.activity.daily.chests.map((c) => c.claimable),
     [true, false, false, false, false],
@@ -930,7 +914,7 @@ await test("接口：总览、领取、一键全领、签到；只能操作自�
   assert.notEqual(res.status, 200, "别人不能看")
   res = await call(other, "POST", `/users/${userId}/quests/daily-feed/claim`)
   assert.notEqual(res.status, 200, "别人不能领")
-  res = await call(userId, "POST", `/users/${userId}/quests/daily-dungeon/claim`)
+  res = await call(userId, "POST", `/users/${userId}/quests/daily-expedition-clear/claim`)
   assert.equal(res.status, 400)
   assert.equal(res.body.error.code, "not_done")
   res = await call(userId, "POST", `/users/${userId}/quests/daily-feed/claim`)

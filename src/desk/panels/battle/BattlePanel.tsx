@@ -3,21 +3,16 @@ import { useEffect, useState, type CSSProperties } from "react"
 import { playSfx } from "@/audio/sfx"
 import { battlePower } from "@/card/data"
 import { TUTORIAL_ENCOUNTER_ID, type EncounterSummary } from "@choke/shared/battle/content"
-import { DUNGEONS } from "@choke/shared/dungeons"
-import { ITEMS } from "@choke/shared/items"
-import { refreshProgress, useTutorialProgress } from "@/tutorial/store"
+import { useTutorialProgress } from "@/tutorial/store"
 
 import {
   ApiError,
   buyStaminaPotion,
   fetchDeck,
-  fetchDungeons,
   fetchEncounters,
   fetchStamina,
-  sweepDungeon,
   toFace,
   type ApiDeck,
-  type DungeonStatus,
   type StaminaState,
 } from "@/desk/session/api"
 import { Pages } from "@/desk/shell/BookPages"
@@ -39,8 +34,6 @@ export function BattlePanel({
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null)
   const [encounters, setEncounters] = useState<EncounterSummary[] | null>(null)
   const [stamina, setStamina] = useState<StaminaState | null>(null)
-  const [dungeonStatuses, setDungeonStatuses] = useState<DungeonStatus[] | null>(null)
-  const [dungeonLoadError, setDungeonLoadError] = useState<string | null>(null)
   const [dungeonBusy, setDungeonBusy] = useState<string | null>(null)
   const [dungeonMessage, setDungeonMessage] = useState<{ text: string; error?: boolean } | null>(null)
   const [reload, setReload] = useState(0)
@@ -57,16 +50,6 @@ export function BattlePanel({
           text: reason instanceof Error ? `读取体力失败：${reason.message}` : "读取体力失败",
           error: true,
         })
-      })
-    fetchDungeons(userId, controller.signal)
-      .then((data) => {
-        setDungeonStatuses(data)
-        setDungeonLoadError(null)
-      })
-      .catch((reason: unknown) => {
-        if (controller.signal.aborted) return
-        setDungeonStatuses(null)
-        setDungeonLoadError(reason instanceof Error ? reason.message : "读取副本状态失败")
       })
     return () => controller.abort()
   }, [userId, reload])
@@ -86,48 +69,6 @@ export function BattlePanel({
       cancelled = true
     }
   }, [reload])
-
-  const runDungeonById = async (dungeonId: string) => {
-    if (!userId || dungeonBusy) return
-    setDungeonBusy(dungeonId)
-    setDungeonMessage(null)
-    try {
-      const result = await sweepDungeon(userId, dungeonId)
-      setStamina(result.stamina)
-      const parts: string[] = []
-      if (result.rewards.essence) parts.push(`精华 +${result.rewards.essence}`)
-      if (result.rewards.coins) parts.push(`金币 +${result.rewards.coins}`)
-      if (result.rewards.packs) parts.push(`普通卡包 +${result.rewards.packs}`)
-      for (const stack of result.rewards.items ?? []) {
-        parts.push(`${ITEMS[stack.itemId]?.name ?? stack.itemId} ×${stack.count}`)
-      }
-      if (result.player?.gained) parts.push(`玩家经验 +${result.player.gained}`)
-      void refreshProgress(userId)
-      playSfx(result.rewards.packs ? "levelup" : "success")
-      setDungeonMessage({ text: `通关：${parts.join(" · ")}` })
-      emitDeskData("packs")
-    } catch (reason) {
-      playSfx("error")
-      const code = reason instanceof ApiError ? reason.code : undefined
-      if (code === "not_enough_stamina") {
-        fetchStamina(userId)
-          .then((s) => setStamina(s))
-          .catch(() => {})
-      } else if (code === "dungeon_locked" || code === "not_unlocked") {
-        fetchDungeons(userId)
-          .then((d) => setDungeonStatuses(d))
-          .catch(() => {})
-      }
-      let text: string
-      if (code === "feature_locked") text = reason instanceof ApiError ? reason.message : "功能暂未解锁"
-      else if (code === "not_enough_stamina") text = "体力不足，已刷新体力"
-      else if (code === "dungeon_locked" || code === "not_unlocked") text = "需先首通对应远征关卡"
-      else text = reason instanceof Error ? reason.message : "副本失败"
-      setDungeonMessage({ text, error: true })
-    } finally {
-      setDungeonBusy(null)
-    }
-  }
 
   const handleBuyPotion = async () => {
     if (!userId || !stamina || dungeonBusy !== null) return
@@ -383,7 +324,7 @@ export function BattlePanel({
           <hr className="bk-divider" />
 
           <div className="dungeon-head">
-            <span className="bk-label">资源副本</span>
+            <span className="bk-label">体力</span>
             <b className="bk-num">
               {stamina ? `${stamina.value} / ${stamina.max}` : "—"}
             </b>
@@ -438,55 +379,6 @@ export function BattlePanel({
               下一点体力：{Math.ceil(stamina.nextIn / 60000)} 分钟后
             </p>
           )}
-
-          {dungeonLoadError && (
-            <div className="bk-box dungeon-message bk-error" role="alert">
-              <span>副本状态加载失败：{dungeonLoadError}</span>{" "}
-              <button
-                type="button"
-                className="bk-btn bk-btn--sm"
-                onClick={() => {
-                  setDungeonLoadError(null)
-                  setReload((r) => r + 1)
-                }}
-              >
-                重试
-              </button>
-            </div>
-          )}
-
-          <div className="dungeon-list">
-            {(dungeonStatuses ?? DUNGEONS.map((d) => ({ ...d, clears: 0, sweepUnlocked: !d.mapId }))).map((dungeon) => {
-              const unlocked = dungeon.sweepUnlocked
-              const disabled =
-                !dungeonStatuses ||
-                !unlocked ||
-                !stamina ||
-                stamina.value < dungeon.cost ||
-                dungeonBusy !== null
-              return (
-                <div className="dungeon-row" key={dungeon.id}>
-                  <div className="dungeon-row__text">
-                    <b>{dungeon.name}</b>
-                    <span>{dungeon.summary}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="bk-btn bk-btn--sm"
-                    disabled={disabled}
-                    title={unlocked ? undefined : "需先首通对应资源远征关卡"}
-                    onClick={() => void runDungeonById(dungeon.id)}
-                  >
-                    {dungeonBusy === dungeon.id
-                      ? "扫荡中…"
-                      : unlocked
-                        ? `扫荡 · ${dungeon.cost} 体力`
-                        : "需先首通远征"}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
 
           {dungeonMessage && (
             <div

@@ -19,7 +19,6 @@ const { users, cards, userCards, ledgerEntries, mails, mapClears, bestiary, expe
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
 const { expeditionRoutes } = await import("../src/routes/expeditions")
-const { dungeonRoutes } = await import("../src/routes/dungeons")
 const { progressionRoutes } = await import("../src/routes/progression")
 const { marketRoutes } = await import("../src/routes/market")
 const { expireDue, expiryOf } = await import("../src/expedition/service")
@@ -42,7 +41,7 @@ import type { ExpeditionView } from "@choke/shared/expedition/view"
 const app = Fastify()
 app.setErrorHandler(handleError)
 await app.register(cookie)
-for (const routes of [expeditionRoutes, dungeonRoutes, progressionRoutes, marketRoutes]) await app.register(routes)
+for (const routes of [expeditionRoutes, progressionRoutes, marketRoutes]) await app.register(routes)
 await app.ready()
 
 let passed = 0
@@ -932,52 +931,6 @@ await test("镜像卡抽取：不排除自己，且候选池有活跃玩家时�
   assert.ok(picked, "有活跃已引导账号时能抽到镜像卡（含自己）")
   assert.equal(picked!.id, "mirror-990001")
   assert.equal(picked!.rarity, "R")
-})
-
-await test("资源本小远征与扫荡：未首通不能扫荡；手动走决策路线通关后解锁扫荡并计入副本任务", async () => {
-  const me = await newPlayer({ stamina: 200 })
-
-  // 1. 初始未首通：列表显示未解锁，调扫荡被拒
-  let listRes = await call(me.id, "GET", `/users/${me.id}/dungeons`)
-  assert.equal(listRes.status, 200)
-  assert.equal(listRes.body.data.find((d: { id: string }) => d.id === "exp").sweepUnlocked, false)
-
-  const blocked = await call(me.id, "POST", `/users/${me.id}/dungeons/exp/sweep`)
-  assert.equal(blocked.status, 400)
-  assert.equal(blocked.body.error.code, "first_clear_required")
-
-  // 2. 开始 dungeon-exp（deckSize=6，前 4 张强卡 + 2 张替补）
-  const pool6 = me.ids.slice(0, 6)
-  await must(start(me.id, "dungeon-exp", pool6))
-  await fight(me.id, strongIds(me.ids))
-
-  // 走过开头两个空地（自动通过），到校准仪事件，选破拆侧门拿 shortcut 标记（扣血解锁密道宝箱）
-  for (const to of ["x1", "e1", "e2", "x2", "n2"]) await must(call(me.id, "POST", `${base(me.id)}/current/node`, { to }))
-  const view = await must(call(me.id, "POST", `${base(me.id)}/current/event`, { choice: 1 }))
-  assert.deepEqual(view.flags, ["shortcut"])
-
-  // 走营火休整 -> 密道宝箱 -> 考场门前（空地）-> Boss
-  for (const to of ["n3b", "n4b", "x4", "e5", "x5", "n5"]) await must(call(me.id, "POST", `${base(me.id)}/current/node`, { to }))
-  await fight(me.id, strongIds(me.ids))
-
-  const settled = await call(me.id, "POST", `${base(me.id)}/current/settle`)
-  assert.equal(settled.status, 200, JSON.stringify(settled.body))
-  assert.equal(settled.body.data.end, "cleared")
-  assert.equal(settled.body.data.staminaSpent, 20)
-
-  // 手动通关同时计入每日副本任务
-  const [dq] = await db
-    .select()
-    .from(questProgress)
-    .where(and(eq(questProgress.userId, me.id), eq(questProgress.questId, "daily-dungeon")))
-  assert.equal(dq?.progress, 1)
-
-  // 3. 首通后解锁扫荡，可直接消耗 20 体力扫荡练习室
-  listRes = await call(me.id, "GET", `/users/${me.id}/dungeons`)
-  assert.equal(listRes.body.data.find((d: { id: string }) => d.id === "exp").sweepUnlocked, true)
-  const swept = await call(me.id, "POST", `/users/${me.id}/dungeons/exp/sweep`)
-  assert.equal(swept.status, 200, JSON.stringify(swept.body))
-  assert.equal(swept.body.data.stamina.value, 200 - 20 - 20)
 })
 
 console.log(`${passed} 项通过`)

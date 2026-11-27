@@ -1,7 +1,6 @@
 import { faceFromDef, type CardDef } from "@/card/def"
 import type { CardFaceData, CardSkillRef, Element as CardElement, Job, Rarity } from "@/card/types"
 import type { EncounterSpec, EncounterSummary } from "@choke/shared/battle/content"
-import type { DungeonId, DungeonRewards } from "@choke/shared/dungeons"
 import type { ItemId, ItemStack } from "@choke/shared/items"
 import type { MailView } from "@choke/shared/mail"
 import type { LedgerKind, LedgerPage } from "@choke/shared/ledger"
@@ -727,42 +726,6 @@ export function fetchStamina(userId: string, signal?: AbortSignal): Promise<Stam
 
 export function buyStaminaPotion(userId: string): Promise<StaminaPotionResult> {
   return request<StaminaPotionResult>(`/api/users/${userId}/stamina/potion`, { method: "POST" })
-}
-
-export interface DungeonRunResult {
-  rewards: DungeonRewards
-  stamina: StaminaState
-  essence: number
-  coins: number
-  /** 副本按体力给的玩家经验；旧后端没有这个字段 */
-  player?: { level: number; exp: number; gained: number }
-}
-
-export interface DungeonStatus {
-  id: DungeonId
-  name: string
-  summary: string
-  cost: number
-  rewards: DungeonRewards
-  mapId?: string
-  clears: number
-  sweepUnlocked: boolean
-}
-
-export function fetchDungeons(userId: string, signal?: AbortSignal): Promise<DungeonStatus[]> {
-  return request<DungeonStatus[]>(`/api/users/${userId}/dungeons`, { signal })
-}
-
-export function runDungeon(userId: string, dungeonId: string): Promise<DungeonRunResult> {
-  return request<DungeonRunResult>(`/api/users/${userId}/dungeons/${dungeonId}/run`, {
-    method: "POST",
-  })
-}
-
-export function sweepDungeon(userId: string, dungeonId: string): Promise<DungeonRunResult> {
-  return request<DungeonRunResult>(`/api/users/${userId}/dungeons/${dungeonId}/sweep`, {
-    method: "POST",
-  })
 }
 
 /* ============================ 签到 / 任务 ============================ */

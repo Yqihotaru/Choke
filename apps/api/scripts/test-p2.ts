@@ -17,7 +17,7 @@ const { db } = await import("../src/db/client")
 const { users, cards, userCards, ledgerEntries, heroResonance } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
-const { dungeonRoutes } = await import("../src/routes/dungeons")
+const { staminaRoutes } = await import("../src/routes/stamina")
 const { progressionRoutes } = await import("../src/routes/progression")
 const {
   STAMINA_MAX,
@@ -33,8 +33,8 @@ const { resonanceAttributeOf } = await import("@choke/shared/resonance")
 const app = Fastify()
 app.setErrorHandler(handleError)
 await app.register(cookie)
-await app.register(dungeonRoutes)
 await app.register(progressionRoutes)
+await app.register(staminaRoutes)
 await app.ready()
 
 let passed = 0

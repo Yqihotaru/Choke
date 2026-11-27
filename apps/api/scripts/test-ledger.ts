@@ -15,14 +15,13 @@ const { eq } = await import("drizzle-orm")
 const { default: Fastify } = await import("fastify")
 const { default: cookie } = await import("@fastify/cookie")
 const { db } = await import("../src/db/client")
-const { users, cards, ledgerEntries, mapClears, userPacks } = await import("../src/db/schema")
+const { users, cards, ledgerEntries, userPacks } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
 const { grantCard } = await import("../src/gacha/open")
 const { grantPacks } = await import("../src/packs/inventory")
 const { ledgerRoutes } = await import("../src/routes/ledger")
 const { progressionRoutes } = await import("../src/routes/progression")
-const { dungeonRoutes } = await import("../src/routes/dungeons")
 const { marketRoutes } = await import("../src/routes/market")
 const { packRoutes } = await import("../src/routes/packs")
 const { shardItemId, SHARDS_PER_DISMANTLE } = await import("@choke/shared/items")
@@ -30,7 +29,7 @@ const { shardItemId, SHARDS_PER_DISMANTLE } = await import("@choke/shared/items"
 const app = Fastify()
 app.setErrorHandler(handleError)
 await app.register(cookie)
-for (const routes of [ledgerRoutes, progressionRoutes, dungeonRoutes, marketRoutes, packRoutes]) {
+for (const routes of [ledgerRoutes, progressionRoutes, marketRoutes, packRoutes]) {
   await app.register(routes)
 }
 await app.ready()
@@ -94,41 +93,6 @@ const sumOf = async (userId: string, kind: string, ref?: string) =>
 const userOf = async (userId: string) => (await db.select().from(users).where(eq(users.id, userId)))[0]!
 
 console.log("ledger tests")
-
-await test("副本：体力、精华、卡包、道具都记账，且与余额对得上（副本不产金币）；未首通拦截不记账", async () => {
-  const locked = await newUser({ stamina: 200 })
-  const lockedRes = await call(locked, "POST", `/users/${locked}/dungeons/shards/sweep`)
-  assert.equal(lockedRes.status, 400)
-  assert.equal(lockedRes.body.error.code, "first_clear_required")
-  assert.equal((await entriesOf(locked)).length, 0)
-
-  const userId = await newUser({ coins: 0, essence: 0, stamina: 200 })
-  for (const mapId of ["dungeon-shards", "dungeon-essence", "dungeon-packs", "dungeon-exp"]) {
-    await db.insert(mapClears).values({ userId, mapId, clears: 1, bestStars: 9, bestObjectives: 2 })
-  }
-  for (const dungeon of ["shards", "essence", "packs", "exp"]) {
-    const res = await call(userId, "POST", `/users/${userId}/dungeons/${dungeon}/run`)
-    assert.equal(res.status, 200, JSON.stringify(res.body))
-  }
-  const user = await userOf(userId)
-  assert.equal(user.coins, 0)
-  assert.equal(await sumOf(userId, "coins"), 0)
-  assert.equal(await sumOf(userId, "essence"), user.essence)
-  assert.equal(await sumOf(userId, "stamina"), -(20 + 20 + 60 + 20))
-  assert.equal(await sumOf(userId, "pack", "normal"), 1)
-  assert.equal(await sumOf(userId, "item", "exp-medium"), 3)
-  assert.equal(await sumOf(userId, "item", "shard-C"), 4)
-  const dungeonSources = new Set((await entriesOf(userId)).map((e) => e.source))
-  assert.deepEqual([...dungeonSources], ["dungeon"])
-})
-
-await test("体力不够时副本不记账", async () => {
-  const userId = await newUser({ stamina: 0 })
-  await db.insert(mapClears).values({ userId, mapId: "dungeon-shards", clears: 1, bestStars: 9, bestObjectives: 0 })
-  const res = await call(userId, "POST", `/users/${userId}/dungeons/shards/run`)
-  assert.equal(res.status, 400)
-  assert.equal((await entriesOf(userId)).length, 0)
-})
 
 await test("开包：卡包 −1，每张卡 +1，带上卡的实例 id", async () => {
   const userId = await newUser()
@@ -245,7 +209,7 @@ await test("流水接口：新的在前、翻页、按类别筛选、中文名�
       kind: i % 2 === 0 ? "coins" : "card",
       ref: i % 2 === 0 ? "" : "lt-R",
       delta: i + 1,
-      source: i % 2 === 0 ? "dungeon" : "pack-open",
+      source: i % 2 === 0 ? "expedition" : "pack-open",
     })),
   )
   const first = await call(userId, "GET", `/users/${userId}/ledger?limit=3`)
@@ -254,7 +218,7 @@ await test("流水接口：新的在前、翻页、按类别筛选、中文名�
   assert.equal(first.body.data.hasMore, true)
   assert.deepEqual(first.body.data.entries.map((e: { delta: number }) => e.delta), [7, 6, 5])
   assert.equal(first.body.data.entries[0].label, "金币")
-  assert.equal(first.body.data.entries[0].sourceLabel, "副本")
+  assert.equal(first.body.data.entries[0].sourceLabel, "远征")
   assert.equal(first.body.data.entries[1].label, "测试卡 R")
   assert.equal(first.body.data.entries[1].rarity, "R")
 

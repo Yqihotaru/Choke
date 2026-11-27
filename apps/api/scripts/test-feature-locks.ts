@@ -20,10 +20,10 @@ const { users, expeditions } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
 const { questRoutes } = await import("../src/routes/quests")
+const { staminaRoutes } = await import("../src/routes/stamina")
 const { progressionRoutes } = await import("../src/routes/progression")
 const { progressRoutes } = await import("../src/routes/progress")
 const { marketRoutes } = await import("../src/routes/market")
-const { dungeonRoutes } = await import("../src/routes/dungeons")
 const { expeditionRoutes } = await import("../src/routes/expeditions")
 const { CONTENT } = await import("@choke/shared/content")
 const { FEATURE_IDS } = await import("@choke/shared/unlocks")
@@ -31,7 +31,7 @@ const { FEATURE_IDS } = await import("@choke/shared/unlocks")
 const app = Fastify()
 app.setErrorHandler(handleError)
 await app.register(cookie)
-for (const routes of [questRoutes, progressionRoutes, progressRoutes, marketRoutes, dungeonRoutes, expeditionRoutes]) {
+for (const routes of [questRoutes, progressionRoutes, progressRoutes, marketRoutes, staminaRoutes, expeditionRoutes]) {
   await app.register(routes)
 }
 await app.ready()
@@ -91,7 +91,6 @@ const ENDPOINTS: Array<{ feature: string; method: "GET" | "POST"; url: (u: strin
   { feature: "dismantle", method: "POST", url: (u) => `/users/${u}/cards/1/dismantle` },
   { feature: "npc-recycle", method: "GET", url: (u) => `/users/${u}/cards/recycle` },
   { feature: "npc-recycle", method: "POST", url: (u) => `/users/${u}/cards/recycle`, body: { cards: [] } },
-  { feature: "dungeons", method: "POST", url: (u) => `/users/${u}/dungeons/none/sweep` },
   { feature: "stamina-potion", method: "POST", url: (u) => `/users/${u}/stamina/potion` },
   { feature: "quests", method: "GET", url: (u) => `/users/${u}/quests` },
   { feature: "quests", method: "POST", url: (u) => `/users/${u}/quests/claim-all` },
@@ -178,7 +177,7 @@ await test("任务：Lv2 被拒，Lv3 放行", async () => {
   assert.equal((await call(open, "GET", `/users/${open}/quests`)).status, 200)
 })
 
-await test("出征：主线要 Lv5，副本地图要 Lv8，日常和周常不设限；被拒时不会留下出征", async () => {
+await test("出征：主线要 Lv5，日常和周常不设限；被拒时不会留下出征", async () => {
   const user = await newUser({ playerLevel: 4 })
   const base = `/users/${user}/expeditions`
   const body = (mapId: string) => ({
@@ -189,9 +188,6 @@ await test("出征：主线要 Lv5，副本地图要 Lv8，日常和周常不设
   const main = await call(user, "POST", base, body("test-trial"))
   assert.ok(isLocked(main), JSON.stringify(main.body))
   assert.equal(main.body.error.feature, "mainline")
-  const dungeon = await call(user, "POST", base, body("dungeon-exp"))
-  assert.ok(isLocked(dungeon), JSON.stringify(dungeon.body))
-  assert.equal(dungeon.body.error.feature, "dungeons")
   const daily = await call(user, "POST", base, body("test-daily"))
   assert.ok(!isLocked(daily), `日常图不应该被解锁表拦：${JSON.stringify(daily.body)}`)
   const rows = await db.select().from(expeditions).where(eq(expeditions.userId, user))
@@ -206,7 +202,6 @@ await test("出征地图列表：没解锁的图标 startable=false 并带原因
   const byId = new Map(maps.map((m) => [m.id, m]))
   assert.equal(byId.get("test-trial")?.startable, false)
   assert.equal(typeof byId.get("test-trial")?.lockedReason, "string")
-  assert.equal(byId.get("dungeon-exp")?.startable, false)
   assert.equal(byId.get("test-daily")?.startable, true)
   assert.equal(byId.get("test-daily")?.lockedReason, null)
 

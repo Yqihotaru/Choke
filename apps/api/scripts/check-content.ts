@@ -8,8 +8,6 @@ console.log(`content/ 校验通过 · 版本 ${CONTENT_VERSION}`)
 console.log(
   [
     `物品 ${Object.keys(CONTENT.items).length}`,
-    `副本 ${Object.keys(CONTENT.dungeons).length}`,
-    `商店 ${Object.keys(CONTENT.shop).length}`,
     `卡包 ${Object.keys(CONTENT.packs.packs).length}`,
     `敌人 ${Object.keys(BATTLE_CONTENT.enemies).length}`,
     `敌方支援 ${Object.keys(BATTLE_CONTENT.supports).length}`,

@@ -37,7 +37,6 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   starter: "新手礼包",
   "hero-claim": "领取本体卡",
   "bind-osu": "绑定 osu! 补发",
-  dungeon: "副本",
   expedition: "远征",
   "expedition-refund": "远征体力退回",
   feed: "喂养",
@@ -57,7 +56,6 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   "sign-in": "签到",
   "stamina-potion": "购买体力药水",
   "skill-reroll": "洗技能",
-  shop: "商店兑换",
   resonance: "吞噬共鸣",
 }
 

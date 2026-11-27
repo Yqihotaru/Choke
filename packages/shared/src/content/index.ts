@@ -1,11 +1,9 @@
 import { prettifyError } from "zod"
 
-import dungeonsRaw from "../../../../content/dungeons.json" with { type: "json" }
 import economyRaw from "../../../../content/economy.json" with { type: "json" }
 import itemsRaw from "../../../../content/items.json" with { type: "json" }
 import packsRaw from "../../../../content/packs.json" with { type: "json" }
 import progressionRaw from "../../../../content/progression.json" with { type: "json" }
-import shopRaw from "../../../../content/shop.json" with { type: "json" }
 import unlocksRaw from "../../../../content/unlocks.json" with { type: "json" }
 import type { Rarity } from "../types"
 import { MYSTERY_PACK_ID, contentSchema, type ContentData } from "./schema"
@@ -21,20 +19,16 @@ export { MYSTERY_PACK_ID }
 
 /** 已接入的内容文件（相对 content/）。和上面的 import 保持一致；服务端据此发现没接入的文件 */
 export const CONTENT_FILES = [
-  "dungeons.json",
   "economy.json",
   "items.json",
   "packs.json",
   "progression.json",
-  "shop.json",
   "unlocks.json",
 ] as const
 
 export type FeatureId = keyof typeof unlocksRaw
 export type ItemId = keyof typeof itemsRaw
-export type DungeonId = keyof typeof dungeonsRaw
 export type PackId = keyof typeof packsRaw.packs
-export type ShopItemId = keyof typeof shopRaw
 
 export interface ItemStack {
   itemId: ItemId
@@ -42,21 +36,13 @@ export interface ItemStack {
 }
 
 type Data = ContentData
-type DungeonData = Data["dungeons"][string]
 type PackData = Data["packs"]["packs"][string]
 
 export interface Content {
   progression: Data["progression"]
   items: Record<ItemId, Data["items"][string]>
-  dungeons: Record<
-    DungeonId,
-    Omit<DungeonData, "rewards"> & {
-      rewards: Omit<DungeonData["rewards"], "items"> & { items?: ItemStack[] }
-    }
-  >
   economy: Data["economy"]
   unlocks: Record<FeatureId, Data["unlocks"][string]>
-  shop: Record<ShopItemId, Data["shop"][string]>
   packs: Omit<Data["packs"], "packs" | "starterGrant" | "starterGuarantee"> & {
     packs: Record<PackId, PackData>
     starterGrant: Partial<Record<PackId | typeof MYSTERY_PACK_ID, number>>
@@ -68,11 +54,9 @@ function load(): Content {
   const result = contentSchema.safeParse({
     progression: progressionRaw,
     items: itemsRaw,
-    dungeons: dungeonsRaw,
     economy: economyRaw,
     packs: packsRaw,
     unlocks: unlocksRaw,
-    shop: shopRaw,
   })
   if (!result.success) {
     throw new Error(`content/ 校验失败：\n${prettifyError(result.error)}`)

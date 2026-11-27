@@ -13,7 +13,6 @@ import { handleError } from "./error-handler"
 import { battleRoutes } from "./routes/battle"
 import { cardRoutes } from "./routes/cards"
 import { deckRoutes } from "./routes/decks"
-import { dungeonRoutes } from "./routes/dungeons"
 import { expeditionRoutes } from "./routes/expeditions"
 import { adminRoutes } from "./routes/admin"
 import { mailRoutes } from "./routes/mails"
@@ -24,7 +23,7 @@ import { presenceRoutes } from "./routes/presence"
 import { progressionRoutes } from "./routes/progression"
 import { progressRoutes } from "./routes/progress"
 import { questRoutes } from "./routes/quests"
-import { shopRoutes } from "./routes/shop"
+import { staminaRoutes } from "./routes/stamina"
 import { client, sql } from "./db/client"
 
 const app = Fastify({ logger: true })
@@ -49,11 +48,10 @@ await app.register(mailRoutes)
 await app.register(ledgerRoutes)
 await app.register(adminRoutes)
 await app.register(progressionRoutes)
-await app.register(dungeonRoutes)
+await app.register(staminaRoutes)
 await app.register(expeditionRoutes)
 await app.register(questRoutes)
 await app.register(progressRoutes)
-await app.register(shopRoutes)
 
 app.get("/health", async () => ({ ok: true, data: { status: "up", contentVersion: CONTENT_VERSION } }))
 

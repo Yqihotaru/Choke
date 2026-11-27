@@ -15,7 +15,6 @@
   "dismantle": { "name": "分解", "level": 4, "tutorial": true },
   "mainline": { "name": "主线远征", "level": 5, "tutorial": true },
   "fuse": { "name": "融合", "level": 6, "tutorial": true },
-  "dungeons": { "name": "副本", "level": 8, "tutorial": true },
   "stamina-potion": { "name": "体力药水", "level": 9, "tutorial": true },
   "npc-recycle": { "name": "NPC 回收", "level": 9, "tutorial": true },
   "difficulty": { "name": "远征难度档位", "level": 12, "tutorial": true },
