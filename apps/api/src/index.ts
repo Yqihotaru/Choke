@@ -23,7 +23,6 @@ import { presenceRoutes } from "./routes/presence"
 import { progressionRoutes } from "./routes/progression"
 import { progressRoutes } from "./routes/progress"
 import { questRoutes } from "./routes/quests"
-import { staminaRoutes } from "./routes/stamina"
 import { client, sql } from "./db/client"
 
 const app = Fastify({ logger: true })
@@ -48,7 +47,6 @@ await app.register(mailRoutes)
 await app.register(ledgerRoutes)
 await app.register(adminRoutes)
 await app.register(progressionRoutes)
-await app.register(staminaRoutes)
 await app.register(expeditionRoutes)
 await app.register(questRoutes)
 await app.register(progressRoutes)

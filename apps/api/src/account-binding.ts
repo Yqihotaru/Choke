@@ -263,7 +263,7 @@ export async function resolveBind(userId: string, choice: BindChoice, now = Date
   if (!found) throw new TxAbort(404, "no_pending_bind", "没有待确认的绑定，请重新点一次绑定 osu!")
 
   const loserId = choice === "keep-current" ? found.targetUserId : userId
-  // 出征没法跟着封存，先放弃（不给奖励、体力退回）；放在事务外，失败也不影响账号本身
+  // 出征没法跟着封存，先放弃（不给奖励）；放在事务外，失败也不影响账号本身
   await abandonIfOpen(loserId, now)
 
   const result = await db.transaction(async (tx) => {

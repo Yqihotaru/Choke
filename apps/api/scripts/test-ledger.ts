@@ -74,7 +74,7 @@ async function newUser(patch: Partial<typeof users.$inferInsert> = {}) {
   const id = `ledger-test-${seq}`
   await db
     .insert(users)
-    .values({ id, username: id, email: `${id}@test.local`, osuId: 800_000 + seq, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now(), ...patch })
+    .values({ id, username: id, email: `${id}@test.local`, osuId: 800_000 + seq, tutorialDone: true, playerLevel: 60, ...patch })
   return id
 }
 

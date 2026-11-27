@@ -65,7 +65,7 @@ const call = async (userId: string | null, method: "GET" | "POST", url: string, 
 }
 
 const addUser = (id: string, patch: Partial<typeof users.$inferInsert> = {}) =>
-  db.insert(users).values({ id, username: `name-${id}`, staminaUpdatedAt: Date.now(), ...patch })
+  db.insert(users).values({ id, username: `name-${id}`, ...patch })
 const mailCount = async (userId: string) =>
   (await db.select().from(mails).where(eq(mails.userId, userId))).length
 

@@ -101,7 +101,6 @@ export const questRewardSchema = z
   .strictObject({
     coins: amount.optional(),
     essence: amount.optional(),
-    stamina: amount.optional(),
     /** 玩家经验：直接加到账号上，不走邮件附件和流水 */
     playerExp: amount.optional(),
     items: z.array(z.strictObject({ itemId: z.string(), count: amount })).min(1).max(20).optional(),
@@ -224,7 +223,6 @@ export function mergeQuestRewards(rewards: readonly QuestReward[]): QuestReward 
   for (const reward of rewards) {
     if (reward.coins) out.coins = (out.coins ?? 0) + reward.coins
     if (reward.essence) out.essence = (out.essence ?? 0) + reward.essence
-    if (reward.stamina) out.stamina = (out.stamina ?? 0) + reward.stamina
     if (reward.playerExp) out.playerExp = (out.playerExp ?? 0) + reward.playerExp
     for (const { itemId, count } of reward.items ?? []) items.set(itemId, (items.get(itemId) ?? 0) + count)
     for (const { pool, count } of reward.packs ?? []) packs.set(pool, (packs.get(pool) ?? 0) + count)

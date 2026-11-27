@@ -98,7 +98,6 @@ check("奖励放大：金币、精华、经验、物品、卡包放大；整卡�
       coins: 100,
       essence: 3,
       playerExp: 30,
-      stamina: 10,
       items: [{ itemId: "exp-small", count: 2 }],
       packs: [{ pool: "golden", count: 1 }],
       cards: [{ cardId: "x", count: 1 }],
@@ -108,7 +107,6 @@ check("奖励放大：金币、精华、经验、物品、卡包放大；整卡�
   assert.equal(out.coins, 190)
   assert.equal(out.essence, 6)
   assert.equal(out.playerExp, 57)
-  assert.equal(out.stamina, 10)
   assert.equal(out.items![0]!.count, 4)
   assert.equal(out.packs![0]!.count, 2)
   assert.equal(out.cards![0]!.count, 1)

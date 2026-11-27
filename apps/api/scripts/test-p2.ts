@@ -14,19 +14,10 @@ const { eq } = await import("drizzle-orm")
 const { default: Fastify } = await import("fastify")
 const { default: cookie } = await import("@fastify/cookie")
 const { db } = await import("../src/db/client")
-const { users, cards, userCards, ledgerEntries, heroResonance } = await import("../src/db/schema")
+const { users, cards, userCards, heroResonance } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
-const { staminaRoutes } = await import("../src/routes/stamina")
 const { progressionRoutes } = await import("../src/routes/progression")
-const {
-  STAMINA_MAX,
-  STAMINA_OVERFLOW_MAX,
-  STAMINA_REGEN_MS,
-  STAMINA_OVERFLOW_REGEN_MS,
-  settleStamina,
-  spendStamina,
-} = await import("@choke/shared/stamina")
 const { constellationCap } = await import("@choke/shared/progression")
 const { resonanceAttributeOf } = await import("@choke/shared/resonance")
 
@@ -34,7 +25,6 @@ const app = Fastify()
 app.setErrorHandler(handleError)
 await app.register(cookie)
 await app.register(progressionRoutes)
-await app.register(staminaRoutes)
 await app.ready()
 
 let passed = 0
@@ -53,70 +43,6 @@ function authHeaders(userId: string) {
   return { cookie: `${COOKIE_NAME}=${makeSession(userId)}` }
 }
 
-await test("体力纯函数：跨 360 溢出槽分段恢复与封顶 720", async () => {
-  const t0 = 1_700_000_000_000
-  // 从 355 经过 30 分钟（5 点基础到 360）+ 24 分钟（2 点溢出到 362）= 54 分钟
-  const s1 = settleStamina({ value: 355, updatedAt: t0 }, t0 + 5 * STAMINA_REGEN_MS + 2 * STAMINA_OVERFLOW_REGEN_MS)
-  assert.equal(s1.value, 362)
-
-  // 不够溢出段 12 分钟时不提前进位
-  const s2 = settleStamina({ value: 360, updatedAt: t0 }, t0 + 11 * 60 * 1000)
-  assert.equal(s2.value, 360)
-
-  // 极大离线时间封顶 720
-  const s3 = settleStamina({ value: 0, updatedAt: t0 }, t0 + 100 * 24 * 60 * 60 * 1000)
-  assert.equal(s3.value, STAMINA_OVERFLOW_MAX)
-
-  // 扣减可从溢出槽正常扣除
-  const spent = spendStamina({ value: 400, updatedAt: t0 }, 50, t0)
-  assert.equal(spent?.value, 350)
-})
-
-await test("体力药水：100 金币换 60 体力，每日限 2 次，可进溢出槽", async () => {
-  const userId = "p2-stamina-user"
-  await db.insert(users).values({
-    id: userId,
-    username: userId,
-    tutorialDone: true,
-    playerLevel: 60,
-    coins: 500,
-    stamina: STAMINA_MAX,
-    staminaUpdatedAt: Date.now(),
-  })
-
-  const r1 = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/stamina/potion`,
-    headers: authHeaders(userId),
-  })
-  assert.equal(r1.statusCode, 200)
-  const b1 = r1.json()
-  assert.equal(b1.data.stamina.value, STAMINA_MAX + 60)
-  assert.equal(b1.data.coins, 400)
-  assert.equal(b1.data.potionUsedToday, 1)
-
-  const r2 = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/stamina/potion`,
-    headers: authHeaders(userId),
-  })
-  assert.equal(r2.statusCode, 200)
-  assert.equal(r2.json().data.stamina.value, STAMINA_MAX + 120)
-
-  // 第 3 次被每日上限拦截
-  const r3 = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/stamina/potion`,
-    headers: authHeaders(userId),
-  })
-  assert.equal(r3.statusCode, 400)
-  assert.equal(r3.json().error.code, "daily_limit_reached")
-
-  const ledger = await db.select().from(ledgerEntries).where(eq(ledgerEntries.userId, userId))
-  assert.equal(ledger.filter((e) => e.source === "stamina-potion" && e.kind === "coins").length, 2)
-  assert.equal(ledger.filter((e) => e.source === "stamina-potion" && e.kind === "stamina").length, 2)
-})
-
 await test("本体卡命座上限 8 与吞噬镜像共鸣（职业/MOD映射、同源 409、单属性上限 3）", async () => {
   assert.equal(constellationCap(true), 8)
   assert.equal(constellationCap(false), 6)
@@ -129,7 +55,6 @@ await test("本体卡命座上限 8 与吞噬镜像共鸣（职业/MOD映射、�
     username: userId,
     tutorialDone: true,
     playerLevel: 60,
-    staminaUpdatedAt: Date.now(),
   })
 
   const heroId = "hero-90001"

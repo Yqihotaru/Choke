@@ -699,35 +699,6 @@ export function skipTutorialRemote(userId: string): Promise<ServerProgress> {
   return request(`/api/users/${userId}/tutorial/skip`, { method: "POST" })
 }
 
-/* ============================ 体力 / 副本 ============================ */
-
-export interface StaminaState {
-  value: number
-  max: number
-  overflowMax?: number
-  nextIn: number
-  potionUsedToday?: number
-  potionDailyLimit?: number
-  potionCost?: number
-  potionGain?: number
-}
-
-export interface StaminaPotionResult {
-  stamina: StaminaState
-  coins: number
-  gained: number
-  potionUsedToday: number
-  potionDailyLimit: number
-}
-
-export function fetchStamina(userId: string, signal?: AbortSignal): Promise<StaminaState> {
-  return request<StaminaState>(`/api/users/${userId}/stamina`, { signal })
-}
-
-export function buyStaminaPotion(userId: string): Promise<StaminaPotionResult> {
-  return request<StaminaPotionResult>(`/api/users/${userId}/stamina/potion`, { method: "POST" })
-}
-
 /* ============================ 签到 / 任务 ============================ */
 
 export function fetchQuests(userId: string, signal?: AbortSignal): Promise<QuestsOverview> {

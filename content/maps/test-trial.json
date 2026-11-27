@@ -2,7 +2,6 @@
   "kind": "main",
   "name": "测试 · 试炼之路",
   "summary": "给开发和测试用的小地图：剧情、分支、普通战、休息、宝箱、BOSS 各一个。",
-  "staminaCost": 0,
   "deckSize": 8,
   "start": "n1",
   "rewards": "test-clear",

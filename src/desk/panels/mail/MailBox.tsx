@@ -6,7 +6,6 @@ import {
   GiCrystalShine,
   GiCutDiamond,
   GiEnvelope,
-  GiLightningArc,
   GiOpenTreasureChest,
   GiPin,
   GiTwoCoins,
@@ -43,7 +42,6 @@ const EXIT_MS = 170
 const ATTACHMENT_ICON = {
   coins: GiTwoCoins,
   essence: GiCutDiamond,
-  stamina: GiLightningArc,
   playerExp: GiUpgrade,
   item: GiCrystalShine,
   pack: GiOpenTreasureChest,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
-import { fetchMe, fetchStamina, type StaminaState } from "@/desk/session/api"
+import { fetchMe } from "@/desk/session/api"
 import type { ExpeditionSettlement, ExpeditionView } from "@choke/shared/expedition/view"
 
 import {
@@ -39,7 +39,6 @@ export function ExpeditionPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [maps, setMaps] = useState<MapListing[]>([])
-  const [stamina, setStamina] = useState<StaminaState | null>(null)
   const [screen, setScreen] = useState<Screen>({ name: "select" })
   /** 登录后发现还有没结束的出征：先让玩家决定继续、结算还是放弃 */
   const [unfinished, setUnfinished] = useState<ExpeditionView | null>(null)
@@ -50,9 +49,7 @@ export function ExpeditionPage() {
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async (id: string) => {
-    const [list, stam] = await Promise.all([fetchExpeditionMaps(id), fetchStamina(id).catch(() => null)])
-    setMaps(list)
-    setStamina(stam)
+    setMaps(await fetchExpeditionMaps(id))
   }, [])
 
   useEffect(() => {
@@ -108,7 +105,7 @@ export function ExpeditionPage() {
     })
   const settle = () => guard(async () => goSettled(await settleExpedition(userId!)))
   const abandon = () => {
-    if (!window.confirm("放弃后不会有任何奖励，体力会全部退回。确定放弃这次出征吗？")) return
+    if (!window.confirm("放弃后不会有任何奖励。确定放弃这次出征吗？")) return
     return guard(async () => goSettled(await abandonExpedition(userId!)))
   }
   const suspend = () =>
@@ -184,14 +181,6 @@ export function ExpeditionPage() {
               ))}
             </>
           )}
-          {(result.staminaSpent > 0 || result.staminaRefunded > 0) && (
-            <div className="ex-row" style={{ marginTop: 8 }}>
-              <span>体力</span>
-              <b>
-                {result.staminaSpent > 0 ? `扣了 ${result.staminaSpent}` : `退回 ${result.staminaRefunded}`}
-              </b>
-            </div>
-          )}
           <button type="button" className="ex-btn ex-btn--primary" style={{ marginTop: 12 }} onClick={() => setScreen({ name: "select" })}>
             回到选图
           </button>
@@ -202,7 +191,7 @@ export function ExpeditionPage() {
     body = (
       <>
         {error && <div className="ex-note ex-note--error" style={{ marginBottom: 10 }}>{error}</div>}
-        <MapSelect maps={maps} staminaValue={stamina?.value ?? null} onPick={(map) => setScreen({ name: "prepare", map })} />
+        <MapSelect maps={maps} onPick={(map) => setScreen({ name: "prepare", map })} />
       </>
     )
   }
@@ -244,9 +233,7 @@ export function ExpeditionPage() {
         <nav className="ex-nav" aria-label="远征导航">
           <div className="ex-nav__brand">
             <b>CHOKE!</b>
-            <span>
-              远征{stamina ? ` · 体力 ${stamina.value}/${stamina.max}` : ""}
-            </span>
+            <span>远征</span>
           </div>
           <div className="ex-nav__items">
             <button

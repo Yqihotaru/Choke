@@ -66,8 +66,6 @@ export const progressionSchema = z.strictObject({
     tutorialGraduateLevel: positiveInt,
     /** 离开某一步时发的玩家经验 */
     tutorialStepExp: z.partialRecord(z.enum(TUTORIAL_STEPS), positiveInt),
-    /** 副本每消耗 1 点体力给的玩家经验 */
-    expPerStamina: nonNegative,
   }),
   expedition: z.strictObject({
     /** 免费卡槽数；slotCosts 的第 i 项 = 买第 baseSlots+i+1 个卡槽的点数 */

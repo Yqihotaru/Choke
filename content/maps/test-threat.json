@@ -2,7 +2,6 @@
   "kind": "main",
   "name": "测试 · 威胁之路",
   "summary": "给开发和测试用的小地图：事件格、危险路线分支、休息、Boss；通关目标是「3 档及以上通关」和「得到祝福」。",
-  "staminaCost": 0,
   "deckSize": 8,
   "start": "n1",
   "rewards": "test-clear",

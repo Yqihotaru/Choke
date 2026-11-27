@@ -20,7 +20,6 @@ const { users, expeditions } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
 const { questRoutes } = await import("../src/routes/quests")
-const { staminaRoutes } = await import("../src/routes/stamina")
 const { progressionRoutes } = await import("../src/routes/progression")
 const { progressRoutes } = await import("../src/routes/progress")
 const { marketRoutes } = await import("../src/routes/market")
@@ -31,7 +30,7 @@ const { FEATURE_IDS } = await import("@choke/shared/unlocks")
 const app = Fastify()
 app.setErrorHandler(handleError)
 await app.register(cookie)
-for (const routes of [questRoutes, progressionRoutes, progressRoutes, marketRoutes, staminaRoutes, expeditionRoutes]) {
+for (const routes of [questRoutes, progressionRoutes, progressRoutes, marketRoutes, expeditionRoutes]) {
   await app.register(routes)
 }
 await app.ready()
@@ -65,8 +64,6 @@ async function newUser(patch: Partial<typeof users.$inferInsert> = {}) {
     osuId: 500_000 + seq,
     tutorialDone: true,
     playerLevel: 60,
-    stamina: 200,
-    staminaUpdatedAt: Date.now(),
     coins: 1000,
     ...patch,
   })
@@ -91,7 +88,6 @@ const ENDPOINTS: Array<{ feature: string; method: "GET" | "POST"; url: (u: strin
   { feature: "dismantle", method: "POST", url: (u) => `/users/${u}/cards/1/dismantle` },
   { feature: "npc-recycle", method: "GET", url: (u) => `/users/${u}/cards/recycle` },
   { feature: "npc-recycle", method: "POST", url: (u) => `/users/${u}/cards/recycle`, body: { cards: [] } },
-  { feature: "stamina-potion", method: "POST", url: (u) => `/users/${u}/stamina/potion` },
   { feature: "quests", method: "GET", url: (u) => `/users/${u}/quests` },
   { feature: "quests", method: "POST", url: (u) => `/users/${u}/quests/claim-all` },
   { feature: "quests", method: "POST", url: (u) => `/users/${u}/sign-in` },

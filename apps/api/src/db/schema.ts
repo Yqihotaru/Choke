@@ -94,11 +94,7 @@ export const users = pgTable("users", {
   progressUpdatedAt: bigint("progress_updated_at", { mode: "number" }).notNull().default(0),
   /** 回归玩家补发的一次性教程包 */
   tutorialPackClaimed: boolean("tutorial_pack_claimed").notNull().default(false),
-  /**
-   * 体力：0–360 每 6 分钟 1 点，360–720（STAMINA_OVERFLOW_MAX）每 12 分钟 1 点；设计初值 240（= 每日自然恢复量）。
-   * updatedAt 为上次结算时间戳。注意 updatedAt 的列默认值 0 会被 settleStamina 当成
-   * 「离线很久」而回满，所以任何 insert(users) 都必须显式写 staminaUpdatedAt: Date.now()。
-   */
+  /** 已弃用：体力系统已取消，列保留不用，日后统一清 */
   stamina: integer("stamina").notNull().default(240),
   staminaUpdatedAt: bigint("stamina_updated_at", { mode: "number" }).notNull().default(0),
   /** 最近一次活跃（/auth/me 刷新）；镜像池按它筛活跃账号 */
@@ -342,6 +338,7 @@ export const expeditions = pgTable(
     /** 威胁值：只在走进带威胁的格子、做事件选择时变；档位由它和地图的阈值算出，战斗中不变 */
     threat: integer("threat").notNull().default(0),
     drops: jsonb("drops").$type<{ node: string; reward: Reward }[]>().notNull().default(sql`'[]'::jsonb`),
+    /** 已弃用：体力系统已取消，列保留不用，日后统一清 */
     staminaCost: integer("stamina_cost").notNull().default(0),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

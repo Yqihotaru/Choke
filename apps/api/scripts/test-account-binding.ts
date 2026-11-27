@@ -85,7 +85,6 @@ async function newUser(patch: Partial<typeof users.$inferInsert> = {}) {
     tutorialDone: true,
     playerLevel: 5,
     coins: 100,
-    staminaUpdatedAt: Date.now(),
     ...patch,
   })
   return id

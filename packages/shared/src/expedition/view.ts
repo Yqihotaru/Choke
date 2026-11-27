@@ -69,9 +69,6 @@ export interface ExpeditionSettlement {
   tier: number
   /** 地图写了通关目标时才有；达成几个就是几颗通关星 */
   objectives: ObjectiveResult[]
-  /** 这次出征体力是不是扣掉了（拿到东西才扣） */
-  staminaSpent: number
-  staminaRefunded: number
   /** 到期结算时，奖励是通过邮件发的 */
   viaMail: boolean
 }
@@ -99,7 +96,6 @@ export interface ExpeditionView {
   pending: Reward
   stars: number
   maxStars: number
-  staminaCost: number
   startedAt: string
   expiresAt: string
   battle: ExpeditionBattleView | null

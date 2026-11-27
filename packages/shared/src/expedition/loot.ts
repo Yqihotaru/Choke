@@ -16,7 +16,6 @@ export function isRewardEmpty(reward: Reward | undefined | null): boolean {
   return !(
     reward.coins ||
     reward.essence ||
-    reward.stamina ||
     reward.playerExp ||
     reward.items?.length ||
     reward.packs?.length ||
@@ -32,7 +31,7 @@ export function mergeRewards(...parts: (Reward | undefined | null)[]): Reward {
   const cards = new Map<string, { cardId: string; foil?: boolean; count: number }>()
   for (const part of parts) {
     if (!part) continue
-    for (const key of ["coins", "essence", "stamina", "playerExp"] as const) {
+    for (const key of ["coins", "essence", "playerExp"] as const) {
       if (part[key]) total[key] = (total[key] ?? 0) + part[key]!
     }
     for (const { itemId, count } of part.items ?? []) items.set(itemId, (items.get(itemId) ?? 0) + count)

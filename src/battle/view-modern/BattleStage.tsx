@@ -69,7 +69,7 @@ interface Props {
   /** 可选的讨伐目标 */
   encounters: EncounterSummary[]
   tutorial: boolean
-  /** 战斗测试：可选所有敌人，不发奖励、不扣体力、不记发现；只在开发模式传入 onToggleTest */
+  /** 战斗测试：可选所有敌人，不发奖励、不记发现；只在开发模式传入 onToggleTest */
   testMode?: boolean
   onToggleTest?: () => void
   actionError: string | null
@@ -708,7 +708,7 @@ export function BattleStage({
                   type="button"
                   className="choke-tool-btn"
                   aria-pressed={testMode}
-                  title="开发模式：可选所有敌人，不发奖励、不扣体力、不记弱点发现"
+                  title="开发模式：可选所有敌人，不发奖励、不记弱点发现"
                   onClick={onToggleTest}
                   data-sfx="toggle"
                 >
@@ -809,7 +809,7 @@ export function BattleStage({
               {tutorial
                 ? "教学战：熟悉连击、AP 继承和右侧的【防御】；弱点里的“？”是隐藏弱点。"
                 : testMode
-                  ? "战斗测试：不发奖励、不扣体力、不记弱点发现。"
+                  ? "战斗测试：不发奖励、不记弱点发现。"
                   : "选好讨伐目标、确认编队后，点右侧【战斗开始】。"}
             </span>
           </div>

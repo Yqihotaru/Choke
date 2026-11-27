@@ -18,13 +18,12 @@ const amount = z.int().min(1).max(1_000_000)
 
 /**
  * 邮件附件：任何系统发奖励走邮箱时都用这个格式。
- * 数量都是正整数；体力会被限制在体力上限内（超出部分作废，流水记实际到账数）。
+ * 数量都是正整数。
  */
 export const mailAttachmentSchema = z
   .object({
     coins: amount.optional(),
     essence: amount.optional(),
-    stamina: amount.optional(),
     items: z
       .array(
         z.object({
@@ -55,7 +54,6 @@ export function isAttachmentEmpty(attachment: MailAttachment | null | undefined)
   return !(
     attachment.coins ||
     attachment.essence ||
-    attachment.stamina ||
     attachment.items?.length ||
     attachment.packs?.length ||
     attachment.cards?.length
@@ -64,7 +62,7 @@ export function isAttachmentEmpty(attachment: MailAttachment | null | undefined)
 
 /** 列表里给界面看的附件行：服务端把名字都解析好，前端只管显示 */
 export interface MailAttachmentLine {
-  kind: "coins" | "essence" | "stamina" | "playerExp" | "item" | "pack" | "card"
+  kind: "coins" | "essence" | "playerExp" | "item" | "pack" | "card"
   label: string
   count: number
   foil?: boolean
@@ -90,7 +88,6 @@ export interface MailView {
 export const ADMIN_ATTACHMENT_LIMITS = {
   coins: 100_000,
   essence: 10_000,
-  stamina: 360,
   itemCount: 1_000,
   packCount: 50,
   cards: 20,
@@ -102,7 +99,6 @@ export function adminAttachmentProblem(attachment: MailAttachment | null | undef
   const limits = ADMIN_ATTACHMENT_LIMITS
   if ((attachment.coins ?? 0) > limits.coins) return `金币最多 ${limits.coins}`
   if ((attachment.essence ?? 0) > limits.essence) return `闪卡精华最多 ${limits.essence}`
-  if ((attachment.stamina ?? 0) > limits.stamina) return `体力最多 ${limits.stamina}`
   if (attachment.items?.some((item) => item.count > limits.itemCount)) return `单种道具最多 ${limits.itemCount}`
   if (attachment.packs?.some((pack) => pack.count > limits.packCount)) return `单种卡包最多 ${limits.packCount}`
   const cardTotal = attachment.cards?.reduce((sum, card) => sum + card.count, 0) ?? 0

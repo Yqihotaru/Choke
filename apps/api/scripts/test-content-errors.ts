@@ -148,7 +148,6 @@ const CASES: Case[] = [
     expect: "没满足条件时会卡死",
   },
   { name: "requires 的标记没有剧情能设置", breakIt: editJson("maps/test-trial.json", (d) => (d.nodes.n4b.requires.flag = "never-set")), expect: "never-set" },
-  { name: "主线地图写了体力消耗", breakIt: editJson("maps/test-trial.json", (d) => (d.staminaCost = 10)), expect: "staminaCost 必须是 0" },
   { name: "节点类型未知", breakIt: editJson("maps/test-trial.json", (d) => (d.nodes.n3.type = "shop")), expect: "type" },
   { name: "掉落表引用不存在的卡包", breakIt: editJson("rewards/test-chest.json", (d) => (d.fixed.packs[0].pool = "nope")), expect: "nope" },
   { name: "掉落表多写字段", breakIt: editJson("rewards/test-chest.json", (d) => (d.fixed.gems = 5)), expect: "gems" },

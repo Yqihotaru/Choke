@@ -18,7 +18,6 @@
     "./pool/score": "./src/pool/score.ts",
     "./pool/rarity": "./src/pool/rarity.ts",
     "./pool/hero": "./src/pool/hero.ts",
-    "./stamina": "./src/stamina.ts",
     "./mail": "./src/mail.ts",
     "./ledger": "./src/ledger.ts",
     "./expedition-points": "./src/expedition-points.ts",

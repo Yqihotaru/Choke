@@ -50,7 +50,6 @@ async function makeUser(id: string, packs: Record<string, number>, patch: Partia
     username: id,
     onboarded: true,
     tutorialDone: true,
-    staminaUpdatedAt: Date.now(),
     ...patch,
   })
   for (const [pool, count] of Object.entries(packs)) {

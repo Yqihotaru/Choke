@@ -131,7 +131,6 @@ async function describeAttachments(rows: MailRow[]): Promise<Map<number, MailAtt
     const lines: MailAttachmentLine[] = []
     if (attachment.coins) lines.push({ kind: "coins", label: "金币", count: attachment.coins })
     if (attachment.essence) lines.push({ kind: "essence", label: "闪卡精华", count: attachment.essence })
-    if (attachment.stamina) lines.push({ kind: "stamina", label: "体力", count: attachment.stamina })
     for (const { itemId, count: n } of attachment.items ?? []) {
       lines.push({ kind: "item", label: ITEMS[itemId].name, count: n })
     }

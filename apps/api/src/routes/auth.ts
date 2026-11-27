@@ -150,7 +150,6 @@ export async function authRoutes(app: FastifyInstance) {
         email,
         passwordHash: hashPassword(body.data.password),
         onboarded: false,
-        staminaUpdatedAt: Date.now(),
       })
       .returning()
 
@@ -218,7 +217,6 @@ export async function authRoutes(app: FastifyInstance) {
         id: userId,
         username: `游客 ${suffix.slice(0, 4).toUpperCase()}`,
         onboarded: true,
-        staminaUpdatedAt: Date.now(),
       })
       .returning()
 
@@ -274,7 +272,6 @@ export async function authRoutes(app: FastifyInstance) {
             username: me.username,
             osuId: me.id,
             onboarded: false,
-            staminaUpdatedAt: Date.now(),
           })
           .onConflictDoNothing()
         ;[user] = await db.select().from(users).where(eq(users.osuId, me.id)).limit(1)

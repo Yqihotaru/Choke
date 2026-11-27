@@ -53,7 +53,6 @@ interface Form {
   body: string
   coins: string
   essence: string
-  stamina: string
   items: Row[]
   packs: Row[]
   cards: Row[]
@@ -68,7 +67,6 @@ const EMPTY_FORM: Form = {
   body: "",
   coins: "",
   essence: "",
-  stamina: "",
   items: [],
   packs: [],
   cards: [],
@@ -92,10 +90,8 @@ function buildAttachment(form: Form): MailAttachment | null {
   const attachment: MailAttachment = {}
   const coins = positiveInt(form.coins)
   const essence = positiveInt(form.essence)
-  const stamina = positiveInt(form.stamina)
   if (coins) attachment.coins = coins
   if (essence) attachment.essence = essence
-  if (stamina) attachment.stamina = stamina
   const items = form.items.flatMap((row) => {
     const count = positiveInt(row.count)
     return row.id && count ? [{ itemId: row.id as ItemId, count }] : []
@@ -119,7 +115,6 @@ function attachmentLines(attachment: MailAttachment | null): string[] {
   const lines: string[] = []
   if (attachment.coins) lines.push(`金币 ×${attachment.coins}`)
   if (attachment.essence) lines.push(`闪卡精华 ×${attachment.essence}`)
-  if (attachment.stamina) lines.push(`体力 ×${attachment.stamina}`)
   for (const item of attachment.items ?? []) lines.push(`${ITEMS[item.itemId]?.name ?? item.itemId} ×${item.count}`)
   for (const pack of attachment.packs ?? []) lines.push(`${packName(pack.pool)} ×${pack.count}`)
   for (const card of attachment.cards ?? []) lines.push(`卡牌 ${card.cardId}${card.foil ? "（闪）" : ""} ×${card.count}`)
@@ -502,7 +497,7 @@ function MailComposer() {
           </label>
 
           <div className="admin-field">
-            <span className="bk-label">附件（单封上限：金币 {limits.coins}、精华 {limits.essence}、体力 {limits.stamina}）</span>
+            <span className="bk-label">附件（单封上限：金币 {limits.coins}、精华 {limits.essence}）</span>
             <div className="admin-row admin-row--nums">
               <label>
                 金币
@@ -511,10 +506,6 @@ function MailComposer() {
               <label>
                 闪卡精华
                 <input type="number" min={0} value={form.essence} onChange={(event) => patch({ essence: event.target.value })} />
-              </label>
-              <label>
-                体力
-                <input type="number" min={0} value={form.stamina} onChange={(event) => patch({ stamina: event.target.value })} />
               </label>
             </div>
           </div>

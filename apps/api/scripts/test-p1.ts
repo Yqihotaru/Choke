@@ -56,7 +56,6 @@ await test("挂机包：按在线时间累计，每日上限 60 包，领完后�
     username: userId,
     tutorialDone: true,
     playerLevel: 60,
-    staminaUpdatedAt: Date.now(),
     onlineDay: resetDayKey(Date.now()),
     onlineSeconds: 25 * 60,
   })
@@ -112,7 +111,7 @@ await test("挂机包：按在线时间累计，每日上限 60 包，领完后�
 
 await test("NPC 回收：按稀有度给金币、每日限 20 张、本体卡禁止回收", async () => {
   const userId = "p1-recycle-user"
-  await db.insert(users).values({ id: userId, username: userId, coins: 0, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
+  await db.insert(users).values({ id: userId, username: userId, coins: 0, tutorialDone: true, playerLevel: 60 })
   await db.insert(cards).values([
     { id: "p1-c", name: "C卡", rarity: "C", job: "tank", no: 1, total: 1 },
     { id: "p1-l", name: "L卡", rarity: "L", job: "warrior", no: 2, total: 1 },
@@ -162,7 +161,7 @@ await test("NPC 回收：按稀有度给金币、每日限 20 张、本体卡禁
 
   // 培养过的卡回收时按返还经验每 1000 点 +1 金币
   const trainedUser = "p1-recycle-trained"
-  await db.insert(users).values({ id: trainedUser, username: trainedUser, coins: 0, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
+  await db.insert(users).values({ id: trainedUser, username: trainedUser, coins: 0, tutorialDone: true, playerLevel: 60 })
   const [trainedCard] = await db
     .insert(userCards)
     .values({ userId: trainedUser, cardId: "p1-c", level: 40, exp: 0, serial: 1 })
@@ -186,7 +185,7 @@ await test("卡牌 40+ 突破只收金币：40→41 扣 300 金币，不再要�
   assert.equal(breakthroughCoinCost(40, true), 0)
 
   const userId = "p1-bt-user"
-  await db.insert(users).values({ id: userId, username: userId, coins: 200, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
+  await db.insert(users).values({ id: userId, username: userId, coins: 200, tutorialDone: true, playerLevel: 60 })
   await db.insert(cards).values({ id: "p1-bt-c", name: "突破卡", rarity: "C", job: "tank", no: 1, total: 1 })
   const [uc] = await db
     .insert(userCards)
@@ -251,8 +250,8 @@ await test("市场：±40% 价格带校验、7 天过期与成交历史", async 
   const seller = "p1-mkt-seller"
   const buyer = "p1-mkt-buyer"
   await db.insert(users).values([
-    { id: seller, username: seller, osuId: 1001, playerLevel: 5, tutorialDone: true, coins: 500, staminaUpdatedAt: Date.now() },
-    { id: buyer, username: buyer, osuId: 1002, playerLevel: 5, tutorialDone: true, coins: 2000, staminaUpdatedAt: Date.now() },
+    { id: seller, username: seller, osuId: 1001, playerLevel: 5, tutorialDone: true, coins: 500 },
+    { id: buyer, username: buyer, osuId: 1002, playerLevel: 5, tutorialDone: true, coins: 2000 },
   ])
   await db.insert(cards).values({ id: "p1-mkt-card", name: "市场卡", rarity: "E", job: "mage", no: 1, total: 1 })
   const [c1] = await db.insert(userCards).values({ userId: seller, cardId: "p1-mkt-card", serial: 1 }).returning()
@@ -317,7 +316,7 @@ await test("市场：±40% 价格带校验、7 天过期与成交历史", async 
 
 await test("碎片+金币「逢 5 自选」洗技能：单卡独立计数、严格同品质碎片、第 5 次自选并归零", async () => {
   const userId = "p1-reroll-user"
-  await db.insert(users).values({ id: userId, username: userId, coins: 100, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
+  await db.insert(users).values({ id: userId, username: userId, coins: 100, tutorialDone: true, playerLevel: 60 })
   await db.insert(cards).values([
     { id: "p1-rr-l", name: "洗技能L卡", rarity: "L", job: "warrior", no: 1, total: 1 },
     { id: "hero-777", name: "本体卡", rarity: "L", job: "warrior", no: 2, total: 1, cardType: "hero" },
@@ -455,7 +454,6 @@ await test("批量分解：合并产出同品质碎片与闪卡精华、拦截�
     essence: 0,
     tutorialDone: true,
     playerLevel: 60,
-    staminaUpdatedAt: Date.now(),
   })
   await db.insert(cards).values([
     { id: "p1-bd-c", name: "批量C", rarity: "C", job: "tank", no: 1, total: 1 },

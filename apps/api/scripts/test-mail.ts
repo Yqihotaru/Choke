@@ -43,7 +43,7 @@ let seq = 0
 async function newUser(patch: Partial<typeof users.$inferInsert> = {}) {
   seq += 1
   const id = `mail-test-${seq}`
-  await db.insert(users).values({ id, username: id, staminaUpdatedAt: Date.now(), ...patch })
+  await db.insert(users).values({ id, username: id, ...patch })
   return id
 }
 
@@ -92,13 +92,12 @@ await test("没有附件的邮件不能领取；不能领别人的邮件", async
 })
 
 await test("多种附件一起发：道具、卡包、卡牌、体力，流水逐项记录", async () => {
-  const userId = await newUser({ stamina: 100 })
+  const userId = await newUser()
   const id = await mail.sendMail(userId, {
     title: "大礼包",
     attachment: {
       coins: 10,
       essence: 5,
-      stamina: 50,
       items: [{ itemId, count: 3 }],
       packs: [{ pool: "normal", count: 2 }],
       cards: [{ cardId: "mail-test-card", count: 2 }],
@@ -109,7 +108,6 @@ await test("多种附件一起发：道具、卡包、卡牌、体力，流水�
   const [user] = await db.select().from(users).where(eq(users.id, userId))
   assert.equal(user!.coins, 110)
   assert.equal(user!.essence, 5)
-  assert.ok(user!.stamina >= 150)
   const [item] = await db.select().from(userItems).where(and(eq(userItems.userId, userId), eq(userItems.itemId, itemId)))
   assert.equal(item!.count, 3)
   const [pack] = await db.select().from(userPacks).where(and(eq(userPacks.userId, userId), eq(userPacks.pool, "normal")))
@@ -121,21 +119,11 @@ await test("多种附件一起发：道具、卡包、卡牌、体力，流水�
   const sum = (kind: string) => ledger.filter((e) => e.kind === kind).reduce((n, e) => n + e.delta, 0)
   assert.equal(sum("coins"), 10)
   assert.equal(sum("essence"), 5)
-  assert.equal(sum("stamina"), 50)
   assert.equal(sum("item"), 3)
   assert.equal(sum("pack"), 2)
   assert.equal(sum("card"), 2)
   const cardEntries = ledger.filter((e) => e.kind === "card")
   assert.deepEqual(new Set(cardEntries.map((e) => e.userCardId)), new Set(owned.map((c) => c.id)))
-})
-
-await test("体力超过上限的部分作废，流水只记实际到账", async () => {
-  const userId = await newUser({ stamina: 715 })
-  const id = await mail.sendMail(userId, { title: "体力", attachment: { stamina: 50 } })
-  await mail.claimMail(userId, id)
-  const stamina = (await ledgerOf(userId)).filter((e) => e.kind === "stamina")
-  assert.equal(stamina.length, 1)
-  assert.ok(stamina[0]!.delta >= 5 && stamina[0]!.delta <= 5 + 1)
 })
 
 await test("附件里有不存在的卡包时整笔回滚，邮件仍可领取状态", async () => {

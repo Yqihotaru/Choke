@@ -62,7 +62,6 @@ export function RewardChips({ reward }: { reward: Reward }) {
   if (reward.playerExp) chips.push(<span key="exp">玩家经验 +{reward.playerExp}</span>)
   if (reward.coins) chips.push(<span key="coins">金币 +{reward.coins}</span>)
   if (reward.essence) chips.push(<span key="essence">精华 +{reward.essence}</span>)
-  if (reward.stamina) chips.push(<span key="stamina">体力 +{reward.stamina}</span>)
   reward.items?.forEach((item) =>
     chips.push(
       <span key={`item-${item.itemId}`}>

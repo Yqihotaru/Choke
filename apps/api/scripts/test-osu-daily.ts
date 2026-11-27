@@ -188,8 +188,6 @@ async function newUser(patch: Partial<typeof users.$inferInsert> = {}) {
     osuId: 900_000 + seq,
     tutorialDone: true,
     playerLevel: 60,
-    stamina: 200,
-    staminaUpdatedAt: Date.now(),
     coins: 0,
     ...patch,
   })

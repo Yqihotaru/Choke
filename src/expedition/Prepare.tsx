@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react"
 import { RARITY_LABEL, battlePower } from "@/card/data"
 import { GameCardFace } from "@/card/GameCardFace"
 import type { CardFaceData } from "@/card/types"
-import { fetchProgress, fetchStamina, toFace, type ApiUserCard, type StaminaState } from "@/desk/session/api"
+import { fetchProgress, toFace, type ApiUserCard } from "@/desk/session/api"
 import {
   BASE_AP_MAX,
   BASE_SLOTS,
@@ -49,7 +49,6 @@ export function Prepare({
 }) {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [level, setLevel] = useState<number | null>(null)
-  const [stamina, setStamina] = useState<StaminaState | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [alloc, setAlloc] = useState<ExpeditionAllocation>({
     slots: Math.min(BASE_SLOTS, map.deckSize),
@@ -64,8 +63,8 @@ export function Prepare({
 
   useEffect(() => {
     const ctl = new AbortController()
-    Promise.all([loadAllCards(userId, ctl.signal), fetchProgress(userId, ctl.signal), fetchStamina(userId, ctl.signal).catch(() => null)])
-      .then(([cards, progress, stam]) => {
+    Promise.all([loadAllCards(userId, ctl.signal), fetchProgress(userId, ctl.signal)])
+      .then(([cards, progress]) => {
         setRows(
           cards
             .map((row) => {
@@ -75,7 +74,6 @@ export function Prepare({
             .sort((a, b) => b.power - a.power),
         )
         setLevel(progress?.level ?? null)
-        setStamina(stam)
       })
       .catch((reason: unknown) => {
         if (!ctl.signal.aborted) setLoadError(errorText(reason))
@@ -127,9 +125,8 @@ export function Prepare({
     setPicked(best.map((r) => r.row.userCardId))
   }
 
-  const lacksStamina = stamina !== null && map.staminaCost > stamina.value
   const full = picked.length === map.deckSize
-  const canStart = full && !overBudget && !lacksStamina && !busy
+  const canStart = full && !overBudget && !busy
 
   const start = async () => {
     setBusy(true)
@@ -256,13 +253,6 @@ export function Prepare({
           <div className="ex-box">
             <h4>出征信息</h4>
             <div className="ex-row">
-              <span>体力</span>
-              <b>
-                {map.staminaCost > 0 ? `需要 ${map.staminaCost}` : "不消耗"}
-                {stamina && map.staminaCost > 0 ? `（现有 ${stamina.value}）` : ""}
-              </b>
-            </div>
-            <div className="ex-row">
               <span>这一期还剩</span>
               <b>{remainingText(map.endsAt)}</b>
             </div>
@@ -275,7 +265,6 @@ export function Prepare({
                 离这一期结束不足 1 小时，来不及打完的话，到期会自动结算。
               </div>
             )}
-            {lacksStamina && <div className="ex-note ex-note--error" style={{ marginTop: 8 }}>体力不够，需要 {map.staminaCost}。</div>}
             {error && <div className="ex-note ex-note--error" style={{ marginTop: 8 }}>{error}</div>}
             <button
               type="button"
@@ -304,10 +293,6 @@ export function Prepare({
               <b>
                 {picked.length} 张（上场 {alloc.slots}）
               </b>
-            </div>
-            <div className="ex-row">
-              <span>体力</span>
-              <b>{map.staminaCost > 0 ? `${map.staminaCost}（结算时才扣，没拿到东西或放弃会退回）` : "不消耗"}</b>
             </div>
             {endsWithinHour(map.endsAt) && (
               <div className="ex-note ex-note--warn">离这一期结束不足 1 小时，到期没打完会自动结算，奖励通过邮件发放。</div>

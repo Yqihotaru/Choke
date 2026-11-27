@@ -224,8 +224,6 @@ export const mapSchema = z.strictObject({
   kind: z.enum(MAP_KINDS),
   name: z.string().min(1),
   summary: z.string().default(""),
-  /** 开始时冻结、结算时才扣的体力；主线和赛季必须是 0 */
-  staminaCost: int.min(0).max(360).default(0),
   /** 出征前要选满几张卡（卡池） */
   deckSize: int.min(1).max(60),
   /** 手作图和周常骨架图的起点；日常生成图在生成后自动设为第 1 层节点 */
@@ -371,9 +369,6 @@ export function parseWorldContent(
 
   for (const [mapId, map] of Object.entries(world.maps)) {
     const base = ["maps", mapId]
-    if ((map.kind === "main" || map.kind === "season") && map.staminaCost !== 0) {
-      issue([...base, "staminaCost"], "主线和赛季地图不消耗体力，staminaCost 必须是 0")
-    }
     if (map.rewards && !world.rewards[map.rewards]) issue([...base, "rewards"], `掉落表 ${map.rewards} 不存在`)
     if (map.unlock && !Object.hasOwn(CONTENT.unlocks, map.unlock)) {
       issue([...base, "unlock"], `功能 ${map.unlock} 不在 unlocks.json 里`)

@@ -38,7 +38,6 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   "hero-claim": "领取本体卡",
   "bind-osu": "绑定 osu! 补发",
   expedition: "远征",
-  "expedition-refund": "远征体力退回",
   feed: "喂养",
   fuse: "融合",
   dismantle: "分解",
@@ -54,7 +53,6 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   quest: "任务奖励",
   "quest-chest": "活跃度宝箱",
   "sign-in": "签到",
-  "stamina-potion": "购买体力药水",
   "skill-reroll": "洗技能",
   resonance: "吞噬共鸣",
 }

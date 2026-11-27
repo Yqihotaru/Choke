@@ -107,8 +107,6 @@ async function newPlayer(patch: Partial<typeof users.$inferInsert> = {}) {
     osuId: 700_000 + seq,
     tutorialDone: true,
     playerLevel: 50,
-    stamina: 200,
-    staminaUpdatedAt: Date.now(),
     ...patch,
   })
   const ids: number[] = []
@@ -482,15 +480,12 @@ await test("服务端复算和客户端本地算出的结果一致", async () =>
   assert.ok(Math.abs(result.state.teamHp / result.state.teamHpMax - done.hpRatio) < 1e-9)
 })
 
-await test("战败后直接退出：不要奖励，体力退回", async () => {
+await test("战败后直接退出：能放弃，不留下东西", async () => {
   const me = await newPlayer()
   await must(start(me.id, "test-patrol", me.ids.slice(0, 7)))
-  assert.equal(await sumOf(me.id, "stamina"), -10)
   await loseOn(me.id, [...weakIds(me.ids).slice(0, 3), me.ids[3]!])
   const res = await abandon(me.id)
   assert.equal(res.status, 200)
-  assert.equal(res.body.data.staminaRefunded, 10)
-  assert.equal(await sumOf(me.id, "stamina"), 0)
 })
 
 // ---------- 存档 ----------
@@ -598,47 +593,6 @@ await test("出征结束后卡解锁", async () => {
 
 // ---------- 体力 ----------
 
-await test("体力不够：不开始、不记账", async () => {
-  const me = await newPlayer({ stamina: 5 })
-  const res = await start(me.id, "test-patrol", me.ids.slice(0, 7))
-  assert.equal(res.status, 400)
-  assert.equal(res.body.error.code, "not_enough_stamina")
-  assert.equal((await entriesOf(me.id)).length, 0)
-  assert.equal(await current(me.id), null)
-})
-
-await test("体力冻结：放弃退回；什么都没拿到结算也退回；拿到东西才真扣", async () => {
-  const me = await newPlayer()
-  const ids = me.ids.slice(0, 7)
-
-  await must(start(me.id, "test-patrol", ids))
-  assert.equal(await sumOf(me.id, "stamina", "expedition"), -10)
-  let res = await abandon(me.id)
-  assert.equal(res.body.data.staminaRefunded, 10)
-  assert.equal(await sumOf(me.id, "stamina"), 0)
-
-  await must(start(me.id, "test-patrol", ids))
-  res = await settle(me.id)
-  assert.equal(res.body.data.end, "early")
-  assert.equal(res.body.data.staminaRefunded, 10, "空手结算退回体力")
-  assert.equal(await sumOf(me.id, "stamina"), 0)
-
-  await must(start(me.id, "test-patrol", ids))
-  await fight(me.id, strongIds(me.ids))
-  res = await settle(me.id)
-  assert.equal(res.body.data.staminaSpent, 10)
-  assert.equal(res.body.data.staminaRefunded, 0)
-  assert.equal(await sumOf(me.id, "stamina"), -10, "拿到了东西，体力保留扣除")
-  assert.ok((await sumOf(me.id, "coins", "expedition")) >= 50)
-})
-
-await test("主线地图不扣体力，也没有体力流水", async () => {
-  const me = await newPlayer()
-  await must(start(me.id, "test-trial", me.ids))
-  await abandon(me.id)
-  assert.equal((await entriesOf(me.id)).filter((e) => e.kind === "stamina").length, 0)
-})
-
 // ---------- 到期 ----------
 
 await test("到期：奖励以邮件发到邮箱，玩家经验直接加，卡解锁，出征读不到了", async () => {
@@ -666,12 +620,10 @@ await test("到期：奖励以邮件发到邮箱，玩家经验直接加，卡�
   assert.equal((await lockedUserCardIds(db, me.id)).size, 0)
 })
 
-await test("到期的出征：体力按拿到才扣处理，空手的退回", async () => {
+await test("过期的出征：什么都没拿到不发邮件", async () => {
   const me = await newPlayer()
   await must(start(me.id, "test-patrol", me.ids.slice(0, 7)))
-  assert.equal(await sumOf(me.id, "stamina"), -10)
   await expireDue(me.id, Date.now() + 25 * 3_600_000)
-  assert.equal(await sumOf(me.id, "stamina"), 0, "什么都没拿到，退回")
   assert.equal((await db.select().from(mails).where(eq(mails.userId, me.id))).length, 0, "没有奖励就不发邮件")
 })
 
@@ -742,8 +694,8 @@ await test("周常随机槽位：开始出征时 slot 已展开成具体节点�
 })
 
 await test("日常随机地图：按玩家+地图+当天固定种子，放弃重进还是同一张图；通关后再进推进种子；换日或换人不同图", async () => {
-  const me = await newPlayer({ stamina: 300 })
-  const other = await newPlayer({ stamina: 300 })
+  const me = await newPlayer()
+  const other = await newPlayer()
   const ids = me.ids.slice(0, 7)
 
   const v1 = await must(start(me.id, "test-daily", ids))

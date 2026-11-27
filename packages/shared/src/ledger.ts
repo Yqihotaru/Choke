@@ -1,11 +1,10 @@
 /** 流水：玩家所有货币、道具、卡包、卡牌的增减记录 */
-export const LEDGER_KINDS = ["coins", "essence", "stamina", "item", "pack", "card"] as const
+export const LEDGER_KINDS = ["coins", "essence", "item", "pack", "card"] as const
 export type LedgerKind = (typeof LEDGER_KINDS)[number]
 
 export const LEDGER_KIND_LABEL: Readonly<Record<LedgerKind, string>> = {
   coins: "金币",
   essence: "闪卡精华",
-  stamina: "体力",
   item: "道具",
   pack: "卡包",
   card: "卡牌",

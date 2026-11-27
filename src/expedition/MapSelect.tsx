@@ -16,11 +16,9 @@ const KIND_ORDER: MapKind[] = ["main", "daily", "weekly", "season"]
 /** 选图页：按主线 / 日常 / 周常 / 赛季分栏，点「出征准备」进入下一页 */
 export function MapSelect({
   maps,
-  staminaValue,
   onPick,
 }: {
   maps: MapListing[]
-  staminaValue: number | null
   onPick: (map: MapListing) => void
 }) {
   const kinds = KIND_ORDER.filter((kind) => maps.some((m) => m.kind === kind))
@@ -30,7 +28,6 @@ export function MapSelect({
   return (
     <>
       <h1 className="ex-title">选择出征地图</h1>
-      <p className="ex-sub">主线和赛季图不消耗体力；日常、周常每张图固定消耗一笔体力，走一步不再扣。</p>
 
       <div className="ex-seg" role="tablist" style={{ marginBottom: 14, maxWidth: 480 }}>
         {kinds.map((k) => (
@@ -50,7 +47,6 @@ export function MapSelect({
       {shown.length === 0 && <div className="ex-note">这一栏暂时没有地图。</div>}
       <div className="ex-maps">
         {shown.map((map) => {
-          const lacksStamina = staminaValue !== null && map.staminaCost > staminaValue
           return (
             <article className="ex-map" key={map.id} data-locked={!map.startable}>
               <h3>{map.name}</h3>
@@ -58,9 +54,6 @@ export function MapSelect({
               <div className="ex-map__chips">
                 <span className="ex-chip">带 {map.deckSize} 张卡</span>
                 <span className="ex-chip">{map.fights} 场战斗</span>
-                <span className={`ex-chip${lacksStamina ? " ex-chip--warn" : ""}`}>
-                  {map.staminaCost > 0 ? `体力 ${map.staminaCost}` : "不消耗体力"}
-                </span>
                 <span className="ex-chip">
                   ★ {map.bestStars} / {map.maxStars}
                 </span>

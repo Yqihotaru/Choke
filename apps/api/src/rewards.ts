@@ -1,7 +1,6 @@
 import { eq, sql } from "drizzle-orm"
 
 import type { MailAttachment } from "@choke/shared/mail"
-import { STAMINA_OVERFLOW_MAX, settleStamina } from "@choke/shared/stamina"
 
 import { users, userPacks } from "./db/schema"
 import { grantCard } from "./gacha/open"
@@ -30,24 +29,6 @@ export async function grantAttachment(
       .set({ coins: sql`${users.coins} + ${coins}`, essence: sql`${users.essence} + ${essence}` })
       .where(eq(users.id, userId))
     ledger.push({ kind: "coins", delta: coins }, { kind: "essence", delta: essence })
-  }
-
-  if ((attachment.stamina ?? 0) > 0) {
-    const [row] = await tx
-      .select({ stamina: users.stamina, updatedAt: users.staminaUpdatedAt })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
-    if (row) {
-      const now = Date.now()
-      const settled = settleStamina({ value: row.stamina, updatedAt: row.updatedAt }, now)
-      const value = Math.min(STAMINA_OVERFLOW_MAX, settled.value + (attachment.stamina ?? 0))
-      await tx
-        .update(users)
-        .set({ stamina: value, staminaUpdatedAt: value >= STAMINA_OVERFLOW_MAX ? now : settled.updatedAt })
-        .where(eq(users.id, userId))
-      ledger.push({ kind: "stamina", delta: value - settled.value })
-    }
   }
 
   const items = mergeStacks(attachment.items ?? [])

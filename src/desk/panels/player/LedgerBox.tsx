@@ -4,7 +4,6 @@ import {
   GiCardRandom,
   GiCrystalShine,
   GiCutDiamond,
-  GiLightningArc,
   GiNotebook,
   GiOpenTreasureChest,
   GiTwoCoins,
@@ -30,7 +29,6 @@ const FILTERS: readonly { kind: LedgerKind | null; label: string }[] = [
   { kind: null, label: "全部" },
   { kind: "coins", label: LEDGER_KIND_LABEL.coins },
   { kind: "essence", label: LEDGER_KIND_LABEL.essence },
-  { kind: "stamina", label: LEDGER_KIND_LABEL.stamina },
   { kind: "item", label: LEDGER_KIND_LABEL.item },
   { kind: "pack", label: LEDGER_KIND_LABEL.pack },
   { kind: "card", label: LEDGER_KIND_LABEL.card },
@@ -39,7 +37,6 @@ const FILTERS: readonly { kind: LedgerKind | null; label: string }[] = [
 const KIND_ICON = {
   coins: GiTwoCoins,
   essence: GiCutDiamond,
-  stamina: GiLightningArc,
   item: GiCrystalShine,
   pack: GiOpenTreasureChest,
   card: GiCardRandom,
@@ -240,7 +237,7 @@ export function LedgerBox({ userId }: { userId: string }) {
               </div>
 
               <footer className="mail-panel__foot bk-note">
-                只记录上线之后的变化；体力的自然恢复不记，只记花掉和领到的。
+                只记录上线之后的变化。
               </footer>
             </section>
           </div>,

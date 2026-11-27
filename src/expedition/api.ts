@@ -11,7 +11,6 @@ export interface MapListing {
   kind: MapDef["kind"]
   name: string
   summary: string
-  staminaCost: number
   deckSize: number
   fights: number
   maxStars: number

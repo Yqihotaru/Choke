@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react"
+import { useEffect, useState } from "react"
 
 import { playSfx } from "@/audio/sfx"
 import { battlePower } from "@/card/data"
@@ -6,17 +6,12 @@ import { TUTORIAL_ENCOUNTER_ID, type EncounterSummary } from "@choke/shared/batt
 import { useTutorialProgress } from "@/tutorial/store"
 
 import {
-  ApiError,
-  buyStaminaPotion,
   fetchDeck,
   fetchEncounters,
-  fetchStamina,
   toFace,
   type ApiDeck,
-  type StaminaState,
 } from "@/desk/session/api"
 import { Pages } from "@/desk/shell/BookPages"
-import { emitDeskData } from "@/desk/session/events"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
 import { useGameConfig } from "@/desk/session/useGameConfig"
 import "@/desk/panels/battle/battle-panel.css"
@@ -33,26 +28,8 @@ export function BattlePanel({
   const [error, setError] = useState<string | null>(null)
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null)
   const [encounters, setEncounters] = useState<EncounterSummary[] | null>(null)
-  const [stamina, setStamina] = useState<StaminaState | null>(null)
-  const [dungeonBusy, setDungeonBusy] = useState<string | null>(null)
-  const [dungeonMessage, setDungeonMessage] = useState<{ text: string; error?: boolean } | null>(null)
   const [reload, setReload] = useState(0)
   const config = useGameConfig()
-
-  useEffect(() => {
-    if (!userId) return
-    const controller = new AbortController()
-    fetchStamina(userId, controller.signal)
-      .then((data) => setStamina(data))
-      .catch((reason: unknown) => {
-        if (controller.signal.aborted) return
-        setDungeonMessage({
-          text: reason instanceof Error ? `读取体力失败：${reason.message}` : "读取体力失败",
-          error: true,
-        })
-      })
-    return () => controller.abort()
-  }, [userId, reload])
 
   useEffect(() => {
     let cancelled = false
@@ -69,37 +46,6 @@ export function BattlePanel({
       cancelled = true
     }
   }, [reload])
-
-  const handleBuyPotion = async () => {
-    if (!userId || !stamina || dungeonBusy !== null) return
-    setDungeonBusy("stamina-potion")
-    setDungeonMessage(null)
-    try {
-      const res = await buyStaminaPotion(userId)
-      setStamina((prev) => ({
-        ...res.stamina,
-        potionUsedToday: res.potionUsedToday,
-        potionDailyLimit: res.potionDailyLimit,
-        potionCost: prev?.potionCost,
-        potionGain: prev?.potionGain,
-      }))
-      playSfx("coin")
-      setDungeonMessage({
-        text: `购买体力药水成功：体力 +${res.gained}（今日 ${res.potionUsedToday}/${res.potionDailyLimit}）`,
-      })
-      emitDeskData("user")
-    } catch (reason) {
-      playSfx("error")
-      const code = reason instanceof ApiError ? reason.code : undefined
-      if (code === "feature_locked" || code === "stamina_full" || code === "daily_limit_reached" || code === "not_enough_coins") {
-        setDungeonMessage({ text: reason instanceof Error ? reason.message : "无法购买体力药水", error: true })
-      } else {
-        setDungeonMessage({ text: reason instanceof Error ? reason.message : "购买体力药水失败", error: true })
-      }
-    } finally {
-      setDungeonBusy(null)
-    }
-  }
 
   useEffect(() => {
     if (!userId) return
@@ -311,82 +257,12 @@ export function BattlePanel({
           {!tutorialBattleStep && (
             <>
               <hr className="bk-divider" />
-              <div className="dungeon-head">
-                <span className="bk-label">远征</span>
-              </div>
+              <span className="bk-label">远征</span>
               <p className="bk-note">走地图、做选择、连打几场战斗，奖励攒到最后一次结算。</p>
               <a className="bk-btn bk-btn--block" href="/expedition">
                 进入远征
               </a>
             </>
-          )}
-
-          <hr className="bk-divider" />
-
-          <div className="dungeon-head">
-            <span className="bk-label">体力</span>
-            <b className="bk-num">
-              {stamina ? `${stamina.value} / ${stamina.max}` : "—"}
-            </b>
-          </div>
-          {stamina && (
-            <div className="dungeon-head">
-              <span className="bk-note">
-                体力药水（{stamina.potionUsedToday ?? 0}
-                {stamina.potionDailyLimit != null ? `/${stamina.potionDailyLimit}` : ""}）
-                {stamina.overflowMax != null && stamina.value >= stamina.overflowMax
-                  ? " · 已达溢出上限"
-                  : stamina.overflowMax != null &&
-                      stamina.potionGain != null &&
-                      stamina.value + stamina.potionGain > stamina.overflowMax
-                    ? ` · 本次实际 +${stamina.overflowMax - stamina.value}`
-                    : stamina.potionGain != null
-                      ? ` · +${stamina.potionGain} 体力`
-                      : ""}
-              </span>
-              <button
-                type="button"
-                className="bk-btn bk-btn--sm"
-                disabled={
-                  dungeonBusy !== null ||
-                  (stamina.potionDailyLimit != null &&
-                    (stamina.potionUsedToday ?? 0) >= stamina.potionDailyLimit) ||
-                  (stamina.overflowMax != null && stamina.value >= stamina.overflowMax)
-                }
-                onClick={() => void handleBuyPotion()}
-              >
-                {dungeonBusy === "stamina-potion"
-                  ? "购买中…"
-                  : stamina.potionCost != null
-                    ? `买体力药 · ${stamina.potionCost} 金币`
-                    : "买体力药"}
-              </button>
-            </div>
-          )}
-          <div
-            className="bk-bar dungeon-stamina"
-            style={{ "--p": stamina ? (stamina.value / Math.max(1, stamina.max)) * 100 : 0 } as CSSProperties}
-            role="progressbar"
-            aria-label="体力"
-            aria-valuemin={0}
-            aria-valuemax={stamina?.max ?? 0}
-            aria-valuenow={stamina?.value ?? 0}
-          >
-            <i />
-          </div>
-          {stamina && stamina.value < stamina.max && (
-            <p className="bk-note">
-              下一点体力：{Math.ceil(stamina.nextIn / 60000)} 分钟后
-            </p>
-          )}
-
-          {dungeonMessage && (
-            <div
-              className={`bk-box dungeon-message ${dungeonMessage.error ? "bk-error" : ""}`}
-              role={dungeonMessage.error ? "alert" : "status"}
-            >
-              {dungeonMessage.text}
-            </div>
           )}
         </>
       }

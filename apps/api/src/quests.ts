@@ -125,7 +125,6 @@ function rewardLines(reward: QuestReward): MailAttachmentLine[] {
   const lines: MailAttachmentLine[] = []
   if (reward.coins) lines.push({ kind: "coins", label: "金币", count: reward.coins })
   if (reward.essence) lines.push({ kind: "essence", label: "闪卡精华", count: reward.essence })
-  if (reward.stamina) lines.push({ kind: "stamina", label: "体力", count: reward.stamina })
   if (reward.playerExp) lines.push({ kind: "playerExp", label: "玩家经验", count: reward.playerExp })
   for (const { itemId, count } of reward.items ?? []) {
     lines.push({ kind: "item", label: ITEMS[itemId as keyof typeof ITEMS]?.name ?? itemId, count })

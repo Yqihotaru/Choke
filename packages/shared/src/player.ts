@@ -40,8 +40,5 @@ export function nextTutorialStep(step: TutorialStep): TutorialStep | null {
   return index >= 0 && index < TUTORIAL_STEPS.length - 1 ? TUTORIAL_STEPS[index + 1]! : null
 }
 
-/** 副本每消耗 1 点体力给的玩家经验 */
-export const PLAYER_EXP_PER_STAMINA = PLAYER.expPerStamina
-
 /** 市场的参考等级（条件在 content/unlocks.json，市场还要完成引导、绑定账号） */
 export const MARKET_UNLOCK_LEVEL = CONTENT.unlocks.market.level

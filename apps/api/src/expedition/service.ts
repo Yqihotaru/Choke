@@ -51,7 +51,6 @@ import { isAttachmentEmpty } from "@choke/shared/mail"
 import { lockMessage, lockReason } from "@choke/shared/unlocks"
 import { randomSeed } from "@choke/shared/rng"
 import { nextReset } from "@choke/shared/reset"
-import { spendStamina } from "@choke/shared/stamina"
 import type { Job, Rarity } from "@choke/shared/types"
 
 import { BATTLE_CONTENT, CONTENT_VERSION, WORLD_CONTENT } from "../content"
@@ -65,7 +64,6 @@ import {
   userCards,
   users,
 } from "../db/schema"
-import { recordLedger } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
 import { sendMail } from "../mail"
 import { addPlayerExperience } from "../player-exp"
@@ -181,7 +179,6 @@ async function buildView(exec: Exec, exp: ExpRow): Promise<ExpeditionView> {
     pending: mergeRewards(...exp.drops.map((drop) => drop.reward)),
     stars: totalStars(battles),
     maxStars: maxMapStars(exp.map),
-    staminaCost: exp.staminaCost,
     startedAt: exp.startedAt.toISOString(),
     expiresAt: exp.expiresAt.toISOString(),
     battle: current && isFightNode(node) ? battleView(current) : null,
@@ -256,8 +253,6 @@ export async function startExpedition(userId: string, input: StartInput, now = D
     const [user] = await tx
       .select({
         level: users.playerLevel,
-        stamina: users.stamina,
-        staminaUpdatedAt: users.staminaUpdatedAt,
       })
       .from(users)
       .where(eq(users.id, userId))
@@ -309,13 +304,6 @@ export async function startExpedition(userId: string, input: StartInput, now = D
     const listed = await listedUserCardIds(tx, ids)
     if (listed.size > 0) throw new TxAbort(400, "card_listed", "有卡正在市场里挂着，先下架再出征")
 
-    const cost = rawMap.staminaCost
-    if (cost > 0) {
-      const spent = spendStamina({ value: user.stamina, updatedAt: user.staminaUpdatedAt }, cost, now)
-      if (!spent) throw new TxAbort(400, "not_enough_stamina", `体力不足（需要 ${cost}）`)
-      await tx.update(users).set({ stamina: spent.value, staminaUpdatedAt: spent.updatedAt }).where(eq(users.id, userId))
-    }
-
     // 日常地图的种子按「玩家 + 地图 + 当天（北京时间 4:00 周期）」固定，放弃重进不换图；当天已通关后再打则推进序号
     let seed: string
     if (rawMap.kind === "daily") {
@@ -351,19 +339,11 @@ export async function startExpedition(userId: string, input: StartInput, now = D
         allocation,
         position: map.start,
         threat: difficultyOf(map).startThreat,
-        staminaCost: cost,
         startedAt: new Date(now),
         expiresAt: new Date(expiryOf(map, now)),
         updatedAt: new Date(now),
       })
       .returning()
-    if (cost > 0) {
-      await recordLedger(tx, userId, [{ kind: "stamina", delta: -cost }], {
-        source: "expedition",
-        sourceRef: String(created!.id),
-      })
-    }
-
     await enterNode(tx, created!, map.start)
     return viewById(tx, created!.id)
   })
@@ -656,8 +636,7 @@ export async function retryBattle(userId: string, now = Date.now()): Promise<Exp
 // ---------- 结算 ----------
 
 /**
- * 结束一次出征：算奖励、发奖励、处理体力、写图鉴之外的记录。必须在事务里，且已经锁了用户和这条出征。
- * 体力规则：拿到东西才扣——通关、或者攒下了任何奖励就保留花费，否则退回。
+ * 结束一次出征：算奖励、发奖励、写图鉴之外的记录。必须在事务里，且已经锁了用户和这条出征。
  */
 async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): Promise<ExpeditionSettlement> {
   const battles = await loadBattles(tx, exp.id)
@@ -715,12 +694,6 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
   }
   await addPlayerExperience(tx, exp.userId, playerExp, now)
 
-  const keep = cleared || !isRewardEmpty(rewards)
-  const refund = exp.staminaCost > 0 && !keep ? exp.staminaCost : 0
-  if (refund > 0) {
-    await grantAttachment(tx, exp.userId, { stamina: refund }, { source: "expedition-refund", sourceRef: String(exp.id) })
-  }
-
   if (cleared) {
     const questContext = { mapKind: exp.map.kind, mapId: exp.mapId, now }
     await recordQuestEvent(tx, exp.userId, "expedition-clear", questContext)
@@ -763,8 +736,6 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
     maxStars,
     tier: status.tier,
     objectives,
-    staminaSpent: exp.staminaCost - refund,
-    staminaRefunded: refund,
     viaMail,
   }
   await tx
@@ -789,7 +760,7 @@ export async function settleExpedition(userId: string, now = Date.now()): Promis
   })
 }
 
-/** 放弃：什么奖励都不要，体力全退 */
+/** 放弃：什么奖励都不要 */
 export async function abandonExpedition(userId: string, now = Date.now()): Promise<ExpeditionSettlement> {
   await expireDue(userId, now)
   return db.transaction(async (tx) => {
@@ -818,7 +789,7 @@ export async function resumeExpedition(userId: string, now = Date.now()): Promis
 
 /**
  * 到期检查（读取远征时顺便做，不用定时任务）：超过 24 小时或换图了的出征，
- * 已经拿到的奖励以邮件发到邮箱，体力按「拿到才扣」处理。每条单独一个事务；失败的保留，下次再试。
+ * 已经拿到的奖励以邮件发到邮箱。每条单独一个事务；失败的保留，下次再试。
  */
 export async function expireDue(userId: string, now = Date.now()): Promise<number> {
   const open = await db
@@ -856,7 +827,6 @@ export interface MapListing {
   kind: MapDef["kind"]
   name: string
   summary: string
-  staminaCost: number
   deckSize: number
   fights: number
   maxStars: number
@@ -884,7 +854,6 @@ export async function listMaps(userId: string, now = Date.now()): Promise<MapLis
       kind: map.kind,
       name: map.name,
       summary: map.summary,
-      staminaCost: map.staminaCost,
       deckSize: map.deckSize,
       fights: countMapFights(map),
       maxStars: maxMapStars(map),

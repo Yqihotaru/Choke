@@ -61,7 +61,7 @@ function beijing(date: string, hh: number, mm = 0, ss = 0): number {
 }
 
 async function makeUser(id: string, patch: Partial<typeof users.$inferInsert> = {}) {
-  await db.insert(users).values({ id, username: id, staminaUpdatedAt: Date.now(), ...patch })
+  await db.insert(users).values({ id, username: id, ...patch })
 }
 
 async function setLastSeen(id: string, at: number) {
