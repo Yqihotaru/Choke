@@ -181,8 +181,16 @@ export function fetchFuel(
 export function levelUpCard(
   userId: string,
   userCardId: number,
-): Promise<{ card: ApiUserCard; spent: number }> {
-  return request<{ card: ApiUserCard; spent: number }>(
+): Promise<{
+  card: ApiUserCard
+  spent: number
+  coinsSpent: number
+  shardsSpent: number
+  shardItemId?: ItemId
+  coins: number
+  items: ItemWallet
+}> {
+  return request(
     `/api/users/${userId}/cards/${userCardId}/level`,
     { method: "POST" },
   )
@@ -204,6 +212,12 @@ export interface FeedResult {
   /** 满级后溢出作废的经验 */
   wasted: number
   levelsGained: number
+  coinsSpent: number
+  shardsSpent: number
+  shardItemId?: ItemId
+  blockedCost: number
+  blockedShards: number
+  coins: number
   essenceGained: number
   /** 只有喂了闪卡才返回 */
   essence?: number
@@ -519,17 +533,21 @@ export function claimTutorialPack(): Promise<{ granted?: boolean }> {
 
 /* ============================ 卡包 ============================ */
 
+export interface OpenPackCard {
+  cardId: string
+  rarity?: Rarity
+  userCardId: number
+  foil: boolean
+  serial: number
+  pulled: number
+  /** 这张卡掷出的技能；技能挂在卡实例上 */
+  skillRefs: CardSkillRef[]
+}
+
 export interface OpenPackResult {
-  results: {
-    cardId: string
-    rarity?: Rarity
-    userCardId: number
-    foil: boolean
-    serial: number
-    pulled: number
-    /** 这张卡掷出的技能；技能挂在卡实例上 */
-    skillRefs: CardSkillRef[]
-  }[]
+  results: OpenPackCard[]
+  /** 额外第 6 张镜像卡（挂机包不触发） */
+  bonus?: OpenPackCard | null
   packs?: Record<string, number>
 }
 
@@ -739,6 +757,7 @@ export function dismantleCardsBatch(
   userCardIds: number[],
 ): Promise<{
   removedUserCardIds: number[]
+  skipped?: { userCardId: number; reason: string }[]
   itemsGained: ItemStack[]
   essenceGained: number
   items: ItemWallet
@@ -822,12 +841,12 @@ export interface MailSummary {
   pinned: number
 }
 
-export function fetchMails(userId: string): Promise<MailBoxData> {
-  return request<MailBoxData>(`/api/users/${userId}/mails`)
+export function fetchMails(userId: string, signal?: AbortSignal): Promise<MailBoxData> {
+  return request<MailBoxData>(`/api/users/${userId}/mails`, { signal })
 }
 
-export function fetchMailSummary(userId: string): Promise<MailSummary> {
-  return request<MailSummary>(`/api/users/${userId}/mails/summary`)
+export function fetchMailSummary(userId: string, signal?: AbortSignal): Promise<MailSummary> {
+  return request<MailSummary>(`/api/users/${userId}/mails/summary`, { signal })
 }
 
 export function readMail(userId: string, mailId: number): Promise<unknown> {
@@ -838,7 +857,7 @@ export function claimMail(userId: string, mailId: number): Promise<unknown> {
   return request(`/api/users/${userId}/mails/${mailId}/claim`, { method: "POST" })
 }
 
-export function claimAllMails(userId: string): Promise<{ claimed: number }> {
+export function claimAllMails(userId: string): Promise<{ claimed: number; failed?: { id: number; reason: string }[] }> {
   return request(`/api/users/${userId}/mails/claim-all`, { method: "POST" })
 }
 
@@ -856,11 +875,11 @@ export function deleteMail(userId: string, mailId: number): Promise<unknown> {
 
 export function fetchLedger(
   userId: string,
-  options: { kind?: LedgerKind; before?: number } = {},
+  options: { kind?: LedgerKind; before?: number; signal?: AbortSignal } = {},
 ): Promise<LedgerPage> {
   const query = new URLSearchParams()
   if (options.kind) query.set("kind", options.kind)
   if (options.before) query.set("before", String(options.before))
   const suffix = query.size > 0 ? `?${query}` : ""
-  return request<LedgerPage>(`/api/users/${userId}/ledger${suffix}`)
+  return request<LedgerPage>(`/api/users/${userId}/ledger${suffix}`, { signal: options.signal })
 }

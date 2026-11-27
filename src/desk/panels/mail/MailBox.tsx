@@ -178,7 +178,14 @@ export function MailBox({ userId, onGranted, notify }: MailBoxProps) {
       prev ? { ...prev, mails: prev.mails.map((m) => (m.id === mail.id ? { ...m, read: true } : m)) } : prev,
     )
     setSummary((prev) => ({ ...prev, unread: Math.max(0, prev.unread - 1) }))
-    readMail(userId, mail.id).catch(() => {})
+    readMail(userId, mail.id).catch((reason: unknown) => {
+      // 标记已读失败时回滚本地已读状态并提示
+      setData((prev) =>
+        prev ? { ...prev, mails: prev.mails.map((m) => (m.id === mail.id ? { ...m, read: false } : m)) } : prev,
+      )
+      setSummary((prev) => ({ ...prev, unread: prev.unread + 1 }))
+      fail(reason)
+    })
   }
 
   const run = async (task: () => Promise<void>) => {
@@ -205,9 +212,13 @@ export function MailBox({ userId, onGranted, notify }: MailBoxProps) {
 
   const claimAll = () =>
     run(async () => {
-      const { claimed } = await claimAllMails(userId)
+      const { claimed, failed } = await claimAllMails(userId)
       playSfx(claimed > 0 ? "claim" : "deny")
-      notify(claimed > 0 ? `已领取 ${claimed} 封邮件的附件` : "没有可领取的附件", claimed > 0 ? "success" : "info")
+      const failNote = failed && failed.length > 0 ? `（${failed.length} 封跳过）` : ""
+      notify(
+        claimed > 0 ? `已领取 ${claimed} 封邮件的附件${failNote}` : `没有可领取的附件${failNote}`,
+        claimed > 0 ? "success" : "info",
+      )
       if (claimed > 0) onGranted()
       await load()
     })

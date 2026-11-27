@@ -1295,10 +1295,11 @@ export function DeskPage() {
           emitDeskData("packs")
         }
 
-        // 卡包已核销：详情拿不到的卡用结果里的字段兜底，保证每张都展示
-        const faces = await resolvePulledCards(opened.results)
+        // 卡包已核销：详情拿不到的卡用结果里的字段兜底，保证每张都展示（含额外第 6 张镜像卡）
+        const allPulled = opened.bonus ? [...opened.results, opened.bonus] : opened.results
+        const faces = await resolvePulledCards(allPulled)
         const cards: CardData[] = faces.map((face, index) =>
-          toDeskCard(face, opened.results[index].userCardId)
+          toDeskCard(face, allPulled[index]!.userCardId)
         )
 
         if (userIdRef.current !== user.id) {
@@ -1413,9 +1414,10 @@ export function DeskPage() {
         emitDeskData("packs")
       }
 
-      const faces = await resolvePulledCards(opened.results)
+      const allPulled = opened.bonus ? [...opened.results, opened.bonus] : opened.results
+      const faces = await resolvePulledCards(allPulled)
       const cards: CardData[] = faces.map((face, index) =>
-        toDeskCard(face, opened.results[index].userCardId),
+        toDeskCard(face, allPulled[index]!.userCardId),
       )
 
       if (userIdRef.current !== user.id) {

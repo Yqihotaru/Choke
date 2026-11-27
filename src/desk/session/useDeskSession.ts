@@ -73,16 +73,17 @@ export function useDeskSession() {
     }
   }, [refreshUser])
 
+  const userId = user?.id ?? null
   const refreshPacks = useCallback(() => {
-    if (!user) return
+    if (!userId) return
     const seq = ++packSeq.current
-    fetchPackInventory(user.id)
+    fetchPackInventory(userId)
       .then((d) => {
         if (seq !== packSeq.current) return
-        setPackState({ userId: user.id, data: d.packs })
+        setPackState({ userId, data: d.packs })
       })
       .catch(() => {})
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     refreshPacks()

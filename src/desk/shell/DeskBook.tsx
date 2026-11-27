@@ -531,6 +531,7 @@ export function DeskBook({
           )}
           {panel === "backpack" && (
             <BackpackPanel
+              key={userId ?? "guest"}
               userId={userId}
               onOpenGacha={(pool) => {
                 setGachaPool(pool as PoolId)
@@ -541,6 +542,7 @@ export function DeskBook({
           )}
           {panel === "battle" && (
             <BattlePanel
+              key={userId ?? "guest"}
               userId={userId}
               onOpenDeck={() => selectPanel("deck")}
             />
@@ -550,6 +552,7 @@ export function DeskBook({
           )}
           {panel === "market" && (
             <MarketPanel
+              key={userId ?? "guest"}
               userId={userId}
               onOpenAlbum={() => selectPanel("album")}
             />

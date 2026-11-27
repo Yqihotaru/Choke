@@ -48,12 +48,24 @@ export function BattlePanel({
     const controller = new AbortController()
     fetchStamina(userId, controller.signal)
       .then((data) => setStamina(data))
-      .catch(() => {})
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return
+        setDungeonMessage({
+          text: reason instanceof Error ? `读取体力失败：${reason.message}` : "读取体力失败",
+          error: true,
+        })
+      })
     fetchDungeons(userId, controller.signal)
       .then((data) => setDungeonStatuses(data))
-      .catch(() => {})
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return
+        setDungeonMessage({
+          text: reason instanceof Error ? `读取副本状态失败：${reason.message}` : "读取副本状态失败",
+          error: true,
+        })
+      })
     return () => controller.abort()
-  }, [userId])
+  }, [userId, reload])
 
   useEffect(() => {
     let cancelled = false
@@ -61,7 +73,11 @@ export function BattlePanel({
       .then((list) => {
         if (!cancelled) setEncounters(list)
       })
-      .catch(() => {})
+      .catch((reason: unknown) => {
+        if (!cancelled) {
+          setError(reason instanceof Error ? reason.message : "加载遭遇列表失败")
+        }
+      })
     return () => {
       cancelled = true
     }
@@ -79,7 +95,7 @@ export function BattlePanel({
       if (result.rewards.coins) parts.push(`金币 +${result.rewards.coins}`)
       if (result.rewards.packs) parts.push(`普通卡包 +${result.rewards.packs}`)
       for (const stack of result.rewards.items ?? []) {
-        parts.push(`${ITEMS[stack.itemId].name} ×${stack.count}`)
+        parts.push(`${ITEMS[stack.itemId]?.name ?? stack.itemId} ×${stack.count}`)
       }
       if (result.player?.gained) parts.push(`玩家经验 +${result.player.gained}`)
       void refreshProgress(userId)

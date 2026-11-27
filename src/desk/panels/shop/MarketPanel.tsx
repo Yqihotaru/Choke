@@ -67,9 +67,11 @@ export function MarketPanel({
     ]
     if (userId) {
       tasks.push(
-        fetchMe(controller.signal).then((data) => {
-          setCoins(data.coins)
-        }),
+        fetchMe(controller.signal)
+          .then((data) => {
+            setCoins(data.coins)
+          })
+          .catch(() => {}),
       )
       tasks.push(
         fetchOwnListings(userId, controller.signal).then((data) => setOwn(data)),
@@ -123,7 +125,6 @@ export function MarketPanel({
       await unlistMarketCard(userId, listing.id)
       playSfx("pick")
       setNotice({ text: `${listing.card.name} 已下架` })
-      reload()
     } catch (reason) {
       playSfx("error")
       setNotice({
@@ -132,6 +133,7 @@ export function MarketPanel({
       })
     } finally {
       setBusy(null)
+      reload()
     }
   }
 

@@ -100,7 +100,7 @@ function pickExpTopUp(wallet: ItemWallet, need: number): ItemStack[] {
 }
 
 function describeStacks(stacks: readonly ItemStack[]): string {
-  return stacks.map((stack) => `${ITEMS[stack.itemId].name} ×${stack.count}`).join("、")
+  return stacks.map((stack) => `${ITEMS[stack.itemId]?.name ?? stack.itemId} ×${stack.count}`).join("、")
 }
 
 export function CardDetail({ card, userId, readOnly = false, onClose, onChanged }: Props) {
@@ -218,23 +218,24 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const dismantleEssence = essenceOf(current.rarity, current.foil)
   const bp = battlePower(face)
 
-  async function run<T extends { card: ApiUserCard }>(
+  async function run<
+    T extends { card: ApiUserCard; essence?: number; items?: ItemWallet; coins?: number },
+  >(
     label: string,
     action: () => Promise<T>,
     done: (result: T) => string,
     sound: () => void,
   ) {
-    if (!userId) return
+    if (!userId || busy !== null) return
     setBusy(label)
     setMessage(null)
     try {
       const result = await action()
       sound()
       setCurrent(result.card)
-      const maybeWallet = result as { essence?: number; items?: ItemWallet; coins?: number }
-      if (typeof maybeWallet.essence === "number") setEssence(maybeWallet.essence)
-      if (maybeWallet.items) setItems(maybeWallet.items)
-      if (typeof maybeWallet.coins === "number") setCoins(maybeWallet.coins)
+      if (typeof result.essence === "number") setEssence(result.essence)
+      if (result.items) setItems(result.items)
+      if (typeof result.coins === "number") setCoins(result.coins)
       setMessage({ text: done(result) })
       onChanged?.()
       loadFuel(result.card.userCardId)
@@ -307,7 +308,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   }
 
   const doReroll = async (slot: number, skillId?: string) => {
-    if (!userId || busy !== null) return
+    if (!userId || busy !== null || listed) return
     setBusy(`reroll-${slot}`)
     setMessage(null)
     try {
@@ -317,14 +318,26 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       setCoins(result.coins)
       setItems(result.items)
       setSelectingSlot(null)
+      setRerollInfo((prev) =>
+        prev
+          ? {
+              ...prev,
+              skillRerollCount: result.skillRerollCount,
+              pityInterval: result.pityInterval,
+              remainingUntilSelect: Math.max(0, result.pityInterval - 1 - result.skillRerollCount),
+              selectReady: result.selectReady,
+            }
+          : prev,
+      )
       const prevName = skillById(result.previousSkillId)?.name ?? result.previousSkillId
       const nextName = skillById(result.newSkillId)?.name ?? result.newSkillId
       setMessage({
         text: `${result.mode === "select" ? "自选洗技能" : "随机洗技能"}：${prevName} → ${nextName}`,
       })
       onChanged?.()
-      const freshInfo = await fetchSkillRerollInfo(userId, current.userCardId)
-      setRerollInfo(freshInfo)
+      fetchSkillRerollInfo(userId, current.userCardId)
+        .then((freshInfo) => setRerollInfo(freshInfo))
+        .catch(() => {})
     } catch (error) {
       playSfx("error")
       setMessage({ text: error instanceof Error ? error.message : "洗技能失败", error: true })
@@ -649,6 +662,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
               </div>
               {pending?.kind === "ascend" && (
                 <ConfirmBar
+                  busy={busy !== null}
                   confirmLabel="确认升命座"
                   message={`升命座：消耗 1 张同名卡（还剩 ${sameCardFuel} 张），${current.name} 的命座 ${current.constellation} → ${current.constellation + 1}。消耗的卡不会返还。`}
                   onCancel={() => setPending(null)}
@@ -664,6 +678,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
               {pending?.kind === "melt" && (
                 <ConfirmBar
                   danger
+                  busy={busy !== null}
                   confirmLabel="确认喂掉"
                   message={`喂掉这张 ${pending.source.name}（${RARITY_LABEL[pending.source.rarity]}${pending.source.foil ? " · 闪" : ""} · Lv.${pending.source.level}）？获得 ${feedExpOf(pending.source)} EXP${pending.source.foil ? ` + ${essenceOf(pending.source.rarity, true)} 精华` : ""}，这张卡会消失。`}
                   onCancel={() => setPending(null)}
@@ -726,6 +741,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   </div>
                   {pending?.kind === "list" && (
                     <ConfirmBar
+                      busy={busy !== null}
                       confirmLabel="确认上架"
                       message={`以 ${pending.value.toLocaleString("en-US")} 金币上架 ${current.name}？上架后其他玩家可以直接买下，你可以随时下架。`}
                       onCancel={() => setPending(null)}
@@ -789,7 +805,8 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                         <button
                           type="button"
                           className={`bk-btn bk-btn--sm ${rerollInfo.selectReady ? "bk-btn--main" : "bk-btn--ghost"}`}
-                          disabled={busy !== null}
+                          disabled={busy !== null || listed}
+                          title={listed ? "已上架市场的卡不能洗技能" : undefined}
                           onClick={() => {
                             if (rerollInfo.selectReady) {
                               setSelectingSlot(isPicking ? null : i)
@@ -849,7 +866,8 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   type="button"
                   className="bk-btn bk-btn--danger"
                   onClick={() => setPending({ kind: "dismantle" })}
-                  disabled={busy !== null}
+                  disabled={busy !== null || listed}
+                  title={listed ? "已上架市场的卡不能分解" : undefined}
                 >
                   {busy === "dismantle" ? "分解中…" : `分解此卡 · 得 ${SHARDS_PER_DISMANTLE} ${current.rarity}碎片`}
                 </button>
@@ -857,6 +875,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
               {pending?.kind === "dismantle" && (
                 <ConfirmBar
                   danger
+                  busy={busy !== null}
                   confirmLabel="确认分解"
                   message={`分解这张 ${current.name}？获得 ${SHARDS_PER_DISMANTLE} 个 ${current.rarity} 碎片${dismantleRefund.length > 0 ? `，返还 ${describeStacks(dismantleRefund)}` : ""}${dismantleEssence > 0 ? ` + ${dismantleEssence} 精华` : ""}，卡会消失。`}
                   onCancel={() => setPending(null)}

@@ -20,7 +20,7 @@ import {
   type ApiUserCard,
   type CardSort,
 } from "@/desk/session/api"
-import { SHARDS_PER_DISMANTLE } from "@choke/shared/items"
+import { ITEMS, SHARDS_PER_DISMANTLE } from "@choke/shared/items"
 import { Pages, useBook, usePageCache } from "@/desk/shell/BookPages"
 import { CardDetail } from "@/desk/panels/cards/CardDetail"
 import { FitArea } from "@/desk/shell/FitArea"
@@ -62,25 +62,46 @@ export const AlbumPanel = memo(function AlbumPanel({
   const [batchConfirm, setBatchConfirm] = useState(false)
   const [batchBusy, setBatchBusy] = useState(false)
   const [batchNotice, setBatchNotice] = useState<string | null>(null)
+  const [prevUserId, setPrevUserId] = useState(userId)
+  const [prevRevision, setPrevRevision] = useState(book.revision)
   const rootRef = useRef<HTMLDivElement>(null)
   const deskIds = useDeskCardIds()
-  const openDetail = useCallback((row: ApiUserCard) => setDetail(row), [])
-  const toggleSelect = useCallback((row: ApiUserCard) => {
-    if (isHeroCardId(row.id)) return
-    setBatchConfirm(false)
-    setBatchNotice(null)
-    setSelectedIds((cur) => {
-      if (cur.includes(row.userCardId)) return cur.filter((id) => id !== row.userCardId)
-      if (cur.length >= 60) return cur
-      return [...cur, row.userCardId]
-    })
-  }, [])
-  const exitBatchMode = useCallback(() => {
+
+  if (prevUserId !== userId) {
+    setPrevUserId(userId)
+    setDetail(null)
     setBatchMode(false)
     setSelectedIds([])
     setBatchConfirm(false)
     setBatchNotice(null)
-  }, [])
+  }
+  if (prevRevision !== book.revision) {
+    setPrevRevision(book.revision)
+    setSelectedIds([])
+    setBatchConfirm(false)
+  }
+
+  const openDetail = useCallback((row: ApiUserCard) => setDetail(row), [])
+  const toggleSelect = useCallback(
+    (row: ApiUserCard) => {
+      if (batchBusy || isHeroCardId(row.id)) return
+      setBatchConfirm(false)
+      setBatchNotice(null)
+      setSelectedIds((cur) => {
+        if (cur.includes(row.userCardId)) return cur.filter((id) => id !== row.userCardId)
+        if (cur.length >= 60) return cur
+        return [...cur, row.userCardId]
+      })
+    },
+    [batchBusy],
+  )
+  const exitBatchMode = useCallback(() => {
+    if (batchBusy) return
+    setBatchMode(false)
+    setSelectedIds([])
+    setBatchConfirm(false)
+    setBatchNotice(null)
+  }, [batchBusy])
 
   useEffect(() => {
     return onDeskHover("album", (value) => {
@@ -204,8 +225,12 @@ export const AlbumPanel = memo(function AlbumPanel({
         const shardCount = res.itemsGained
           .filter((s) => s.itemId.startsWith("shard-"))
           .reduce((sum, s) => sum + s.count, 0)
+        const expParts = res.itemsGained
+          .filter((s) => s.itemId.startsWith("exp-"))
+          .map((s) => `${ITEMS[s.itemId]?.name ?? s.itemId} ×${s.count}`)
+        const skipNote = res.skipped?.length ? `（跳过 ${res.skipped.length} 张出征/在售卡）` : ""
         setBatchNotice(
-          `已分解 ${res.removedUserCardIds.length} 张卡，获得 ${shardCount} 片碎片${res.essenceGained > 0 ? `、${res.essenceGained} 精华` : ""}`,
+          `已分解 ${res.removedUserCardIds.length} 张卡，获得 ${shardCount} 片碎片${expParts.length > 0 ? `、${expParts.join("、")}` : ""}${res.essenceGained > 0 ? `、${res.essenceGained} 精华` : ""}${skipNote}`,
         )
         book.invalidate()
       } catch (error) {
@@ -301,7 +326,9 @@ export const AlbumPanel = memo(function AlbumPanel({
               <button
                 type="button"
                 className={`bk-btn album-head__batch ${batchMode ? "bk-btn--main" : "bk-btn--ghost"}`}
+                disabled={batchBusy}
                 onClick={() => {
+                  if (batchBusy) return
                   playSfx("tick")
                   if (batchMode) {
                     exitBatchMode()
@@ -416,22 +443,25 @@ export const AlbumPanel = memo(function AlbumPanel({
                 "卡册右页"
               )
             )}
-
-            {book.active && index === page && detail && (
-              <CardDetail
-                key={detail.userCardId}
-                card={detail}
-                userId={userId}
-                onClose={() => setDetail(null)}
-                onChanged={book.invalidate}
-              />
-            )}
           </>
         }
       />
     )
   }
-  return cachedPages.map(([index, result]) => renderPage(index, result))
+  return (
+    <>
+      {cachedPages.map(([index, result]) => renderPage(index, result))}
+      {book.active && detail && (
+        <CardDetail
+          key={detail.userCardId}
+          card={detail}
+          userId={userId}
+          onClose={() => setDetail(null)}
+          onChanged={book.invalidate}
+        />
+      )}
+    </>
+  )
 })
 
 const AlbumSlot = memo(function AlbumSlot({

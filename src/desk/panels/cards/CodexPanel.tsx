@@ -201,7 +201,7 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
             key={row.id}
             row={row}
             unseen={!row.owned}
-            dimmed={!row.owned && dimUnseen}
+            dimmed={Boolean(userId) && !row.owned && dimUnseen}
             onDetail={setDetail}
           />
         ))}
@@ -348,15 +348,17 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
                   ))}
                 </div>
               )}
-              <button
-                type="button"
-                className="bk-chip"
-                aria-pressed={dimUnseen}
-                onClick={() => setDimUnseen((value) => !value)}
-                title="未见卡只保留问号，并进一步压暗"
-              >
-                暗化未见
-              </button>
+              {userId && (
+                <button
+                  type="button"
+                  className="bk-chip"
+                  aria-pressed={dimUnseen}
+                  onClick={() => setDimUnseen((value) => !value)}
+                  title="未收集的卡以半透明暗化显示"
+                >
+                  暗化未见
+                </button>
+              )}
               <p className="bk-note codex-count">
                 {filterLabel} <b className="bk-num">{ready ? num(total) : "—"}</b> 张
                 {userId && ready && total > 0 && (
@@ -374,16 +376,6 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
           </div>
 
           {renderGrid(rows.slice(0, LEFT_COUNT), LEFT_ROWS, LEFT_COUNT)}
-
-          {book.active && index === page && detailCard && (
-            <CardDetail
-              key={`codex-${detailCard.id}`}
-              card={detailCard}
-              userId={userId}
-              readOnly
-              onClose={() => setDetail(null)}
-            />
-          )}
         </>
       }
       right={
@@ -398,7 +390,20 @@ export const CodexPanel = memo(function CodexPanel({ userId }: { userId: string 
     />
   )
   }
-  return cachedPages.map(([index, result]) => renderPage(index, result))
+  return (
+    <>
+      {cachedPages.map(([index, result]) => renderPage(index, result))}
+      {book.active && detailCard && (
+        <CardDetail
+          key={`codex-${detailCard.id}`}
+          card={detailCard}
+          userId={userId}
+          readOnly
+          onClose={() => setDetail(null)}
+        />
+      )}
+    </>
+  )
 })
 
 const CodexSlot = memo(function CodexSlot({

@@ -200,11 +200,12 @@ export function GachaPanel({
       emitDeskData("packs")
       if (!isCurrent()) return
 
-      // 卡包已核销：详情拿不到的卡用结果里的字段兜底，保证每张都展示
-      const pulled = await resolvePulledCards(result.results)
+      // 卡包已核销：详情拿不到的卡用结果里的字段兜底，保证每张都展示（含额外第 6 张镜像卡）
+      const allPulled = result.bonus ? [...result.results, result.bonus] : result.results
+      const pulled = await resolvePulledCards(allPulled)
       const faces = pulled.map((face, index) => ({
         ...face,
-        userCardId: result.results[index].userCardId,
+        userCardId: allPulled[index]!.userCardId,
       }))
 
       if (!isCurrent()) return

@@ -73,7 +73,13 @@ export const DeckPanel = memo(function DeckPanel({
 
   const [pickerSlot, setPickerSlot] = useState<number | null>(null)
   const [detail, setDetail] = useState<ApiUserCard | null>(null)
+  const [prevUserId, setPrevUserId] = useState(userId)
   const [query, setQuery] = useState("")
+
+  if (prevUserId !== userId) {
+    setPrevUserId(userId)
+    setDetail(null)
+  }
   const [deferredQuery, setDeferredQuery] = useState("")
   const [rarity, setRarity] = useState<Rarity | "">("")
   const [pickPage, setPickPage] = useState(0)
@@ -702,6 +708,7 @@ export const DeckPanel = memo(function DeckPanel({
                             type="button"
                             className="deck-slot__detail deck-pick__detail"
                             onPointerDown={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => event.stopPropagation()}
                             onClick={(event) => {
                               event.stopPropagation()
                               playSfx("pick")
@@ -734,25 +741,25 @@ export const DeckPanel = memo(function DeckPanel({
                 </p>
               </>
             )}
-
-            {book.active && index === pickPage && detail && (
-              <CardDetail
-                key={detail.userCardId}
-                card={detail}
-                userId={userId}
-                onClose={() => setDetail(null)}
-                onChanged={() => {
-                  book.invalidate()
-                  setReload((n) => n + 1)
-                }}
-              />
-            )}
           </>
         }
       />
     )
   }
-  return cachedPages.map(([index, result]) => renderPage(index, result))
+  return (
+    <>
+      {cachedPages.map(([index, result]) => renderPage(index, result))}
+      {book.active && detail && (
+        <CardDetail
+          key={detail.userCardId}
+          card={detail}
+          userId={userId}
+          onClose={() => setDetail(null)}
+          onChanged={book.invalidate}
+        />
+      )}
+    </>
+  )
 })
 
 // 卡面只跟随卡实例变化，输入、选槽和拖放高亮不重新生成卡面树。
