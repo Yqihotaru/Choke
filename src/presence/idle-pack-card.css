@@ -1,0 +1,75 @@
+/* 挂机包小组件：颜色全部取桌面的 --bk-* 变量，深浅两套主题自动跟随 */
+.idle-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--bk-line);
+  border-radius: 10px;
+  background: var(--bk-raised);
+  color: var(--bk-ink);
+}
+.idle-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.idle-card__title {
+  font-size: 14px;
+  font-weight: 800;
+}
+.idle-card__dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--bk-dim);
+  font-size: 12px;
+}
+.idle-card__dot::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bk-good);
+}
+.idle-card__dot.is-off::before {
+  background: var(--bk-bad);
+}
+.idle-card__bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bk-well);
+}
+.idle-card__bar > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--bk-osu);
+  transition: width 0.9s linear;
+}
+.idle-card__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--bk-dim);
+  font-size: 12px;
+}
+.idle-card__row b {
+  color: var(--bk-osu-text);
+  font-size: 14px;
+}
+.idle-card__claim {
+  align-self: stretch;
+}
+.idle-card__hint {
+  color: var(--bk-faint);
+  font-size: 12px;
+  line-height: 1.4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-card__bar > i {
+    transition: none;
+  }
+}

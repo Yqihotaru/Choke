@@ -28,6 +28,7 @@ import { resolvePulledCards } from "@/desk/opening/cards"
 import { PackArt } from "@/desk/opening/PackArt"
 import { RARITY_COLOR } from "@/desk/lib/rarity"
 import { useGameConfig } from "@/desk/session/useGameConfig"
+import { IdlePackCard } from "@/presence/IdlePackCard"
 import "@/desk/panels/shop/gacha-panel.css"
 
 /** 「跳过动画」：开出的卡直接摆在面板里，方便连抽 */
@@ -367,6 +368,7 @@ export function GachaPanel({
           >
             跳过动画
           </button>
+          {userId ? <IdlePackCard userId={userId} /> : null}
         </>
       }
       right={
