@@ -66,7 +66,7 @@ export async function getOsuDaily(userId: string, now = Date.now()): Promise<Osu
 
 /**
  * 玩家点「检查」：去 osu! 读他在今天这张谱面上的成绩，达标就记一次 osu-daily-pass，
- * 奖励走普通任务领取。同一条成绩只能用一次；一天只算一次通过。
+ * 目前没有成就挂在这个事件上，奖励（外观）以后再接。同一条成绩只能用一次；一天只算一次通过。
  */
 export async function checkOsuDaily(userId: string, now = Date.now()): Promise<OsuDailyCheckResult> {
   const day = resetDayKey(now)

@@ -1,35 +1,16 @@
 import { z } from "zod"
 
 import type { MailAttachmentLine } from "./mail"
-import { periodKey, type ResetPeriod } from "./reset"
 import { RARITIES } from "./types"
 
 /**
- * 任务与签到的内容格式和纯规则。内容写在 content/quests.json，进度由服务端在各个动作里记账。
+ * 成就与签到的内容格式和纯规则。内容写在 content/quests.json，进度由服务端在各个动作里记账。
  * 这里不 import 内容（items / packs），引用是否存在由 content/schema.ts 统一核对。
+ * 日常 / 周常 / 月常任务和活跃度宝箱已经砍掉，只剩一次性成就和每日签到。
  */
 
-/** 会定时重置的周期 */
-export const QUEST_PERIODS = ["daily", "weekly", "monthly"] as const satisfies readonly ResetPeriod[]
-/** 任务可以属于的周期：再加上不重置、只领一次的一次性成就 */
-export const QUEST_ALL_PERIODS = [...QUEST_PERIODS, "once"] as const
-export type QuestPeriod = (typeof QUEST_ALL_PERIODS)[number]
-export type ResettingPeriod = (typeof QUEST_PERIODS)[number]
-
-export const PERIOD_LABEL: Record<QuestPeriod, string> = {
-  daily: "日常",
-  weekly: "周常",
-  monthly: "月常",
-  once: "成就",
-}
-
-/** 进度表里一次性任务统一用的周期编号 */
+/** 进度表里成就统一用的周期编号（成就不重置，永远是同一行） */
 export const ONCE_KEY = "once"
-
-/** 任务现在这一轮的周期编号；一次性成就永远是同一个 */
-export function questPeriodKey(period: QuestPeriod, now: number): string {
-  return period === "once" ? ONCE_KEY : periodKey(period, now)
-}
 
 /** 服务端会记账的事件；新增事件要同时在对应的服务端动作里加一行 recordQuestEvent */
 export const QUEST_EVENTS = [
@@ -109,7 +90,6 @@ export const questRewardSchema = z
 export type QuestReward = z.infer<typeof questRewardSchema>
 
 export const questSchema = z.strictObject({
-  period: z.enum(QUEST_ALL_PERIODS),
   name: z.string().min(1).max(20),
   desc: z.string().min(1).max(60),
   /** 前端分组用的小标题（成就页分栏），不影响规则 */
@@ -123,21 +103,9 @@ export const questSchema = z.strictObject({
   /** 只记这个稀有度及以上的卡；只能配在 card-obtain 事件上 */
   minRarity: z.enum(RARITIES).optional(),
   rewards: questRewardSchema,
-  /** 领奖后给的活跃点，用来解锁活跃度宝箱；一次性成就必须是 0 */
-  points: z.number().int().min(0).max(1000),
 })
 
 export type QuestDef = z.infer<typeof questSchema>
-
-/** 活跃度宝箱：活跃点到了 at 就能领 */
-export const activityChestSchema = z.strictObject({
-  at: z.number().int().min(1).max(1000),
-  rewards: questRewardSchema,
-})
-
-export type ActivityChest = z.infer<typeof activityChestSchema>
-
-const chestList = z.array(activityChestSchema).min(1).max(10)
 
 export const questsSchema = z.strictObject({
   signIn: z.strictObject({
@@ -146,14 +114,6 @@ export const questsSchema = z.strictObject({
     /** 「本月第几天」的特别奖励：写了的那天用它，代替 base */
     bonus: z.record(z.string().regex(/^(?:[1-9]|[12]\d|3[01])$/, "键是 1–31 的日期"), questRewardSchema),
   }),
-  /** 每个周期各自一排活跃度宝箱；没写的周期没有宝箱。at 必须从小到大 */
-  activity: z
-    .strictObject({
-      daily: chestList.optional(),
-      weekly: chestList.optional(),
-      monthly: chestList.optional(),
-    })
-    .default({}),
   quests: z.record(id, questSchema),
 })
 
@@ -178,28 +138,6 @@ export function questCounts(def: QuestDef, event: QuestEvent, context: QuestEven
     if (rank < RARITIES.indexOf(def.minRarity)) return false
   }
   return true
-}
-
-// ---------- 活跃度 ----------
-// 活跃点和宝箱都存在进度表里，用 @ 开头的假任务 id（普通任务 id 不允许以 @ 开头）：
-//   @points-daily       当期已经攒到的活跃点（封顶在最大一档宝箱）
-//   @chest-daily-40     已经解锁的 40 点宝箱；claimed_at 有值就是领过了
-
-export const POINTS_ROW_PREFIX = "@points-"
-export const CHEST_ROW_PREFIX = "@chest-"
-
-export const pointsRowId = (period: ResettingPeriod) => `${POINTS_ROW_PREFIX}${period}`
-export const chestRowId = (period: ResettingPeriod, at: number) => `${CHEST_ROW_PREFIX}${period}-${at}`
-
-export function parseChestRowId(rowId: string): { period: ResettingPeriod; at: number } | null {
-  const match = /^@chest-(daily|weekly|monthly)-(\d+)$/.exec(rowId)
-  return match ? { period: match[1] as ResettingPeriod, at: Number(match[2]) } : null
-}
-
-/** 这个周期的活跃点上限 = 最大一档宝箱；没有宝箱的周期返回 0 */
-export function activityCap(content: Pick<QuestsContent, "activity">, period: ResettingPeriod): number {
-  const chests = content.activity[period] ?? []
-  return chests.reduce((max, chest) => Math.max(max, chest.at), 0)
 }
 
 /** 某个月有几天；monthKey 形如 2026-11 */
@@ -234,7 +172,6 @@ export function mergeQuestRewards(rewards: readonly QuestReward[]): QuestReward 
 
 export interface QuestView {
   id: string
-  period: QuestPeriod
   name: string
   desc: string
   /** 成就页的分栏小标题 */
@@ -245,24 +182,6 @@ export interface QuestView {
   claimable: boolean
   claimed: boolean
   rewards: MailAttachmentLine[]
-  points: number
-}
-
-export interface ActivityChestView {
-  /** 要攒到多少活跃点 */
-  at: number
-  rewards: MailAttachmentLine[]
-  /** 点数够了、还没领 */
-  claimable: boolean
-  claimed: boolean
-}
-
-export interface ActivityView {
-  /** 当期已经攒到的活跃点（封顶在最大一档宝箱） */
-  earned: number
-  /** 最大一档宝箱要的点数，进度条的满格；这个周期没有宝箱时为 0 */
-  cap: number
-  chests: ActivityChestView[]
 }
 
 export interface SignInDayView {
@@ -276,14 +195,8 @@ export interface SignInDayView {
 
 export interface QuestsOverview {
   now: string
-  /** 三个周期下一次重置的时间 */
-  resets: Record<ResettingPeriod, string>
   quests: QuestView[]
-  /** 各周期已领取任务的活跃点合计 / 满分 */
-  points: Record<ResettingPeriod, { earned: number; total: number }>
-  /** 各周期的活跃度进度和宝箱 */
-  activity: Record<ResettingPeriod, ActivityView>
-  /** 可以领的条数（任务 + 宝箱），红点用 */
+  /** 可以领的成就条数，红点用 */
   claimable: number
   signIn: {
     monthKey: string

@@ -21,13 +21,21 @@ const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
 const { TxAbort } = await import("../src/tx")
 const { OSU_DAILY_CONTENT, QUEST_CONTENT } = await import("../src/content")
+// 目前没有成就挂在 osu-daily-pass 上，这里临时加一条只在测试里存在的成就；必须赶在 quest-events 被加载之前
+QUEST_CONTENT.quests["t-osu-daily"] = {
+  name: "测试",
+  desc: "测试",
+  event: "osu-daily-pass",
+  target: 1,
+  rewards: { packs: [{ pool: "normal", count: 2 }] },
+}
 const { OsuApiError, setOsuApi } = await import("../src/osu-api")
 const { checkOsuDaily, getOsuDaily, resetOsuDailyState } = await import("../src/osu-daily")
 const quests = await import("../src/quests")
 const { questRoutes } = await import("../src/routes/quests")
 const osu = await import("@choke/shared/osu-daily")
 const { resetDayKey } = await import("@choke/shared/reset")
-const { questPeriodKey } = await import("@choke/shared/quests")
+const { ONCE_KEY } = await import("@choke/shared/quests")
 
 const app = Fastify()
 app.setErrorHandler(handleError)
@@ -218,7 +226,7 @@ const give = async (userId: string, ...scores: import("@choke/shared/osu-daily")
   fake.scores.set(await osuIdOf(userId), scores)
 const claimsOf = (userId: string) => db.select().from(osuScoreClaims).where(eq(osuScoreClaims.userId, userId))
 const progressOf = async (userId: string) =>
-  (await db.select().from(questProgress).where(eq(questProgress.userId, userId))).find((r) => r.questId === "daily-osu-beatmap")?.progress ?? 0
+  (await db.select().from(questProgress).where(eq(questProgress.userId, userId))).find((r) => r.questId === "t-osu-daily")?.progress ?? 0
 
 await test("没有用 osu! 账号登录的玩家：提示需要绑定，不调用接口", async () => {
   resetOsuDailyState()
@@ -250,7 +258,7 @@ await test("没通过的、昨天的、别的模式的成绩都不算", async ()
   assert.equal((await claimsOf(userId)).length, 0)
 })
 
-await test("通过（挂 NF 也算）：记一次进度，成绩被登记；再领任务得到卡包", async () => {
+await test("通过（挂 NF 也算）：记一次进度，成绩被登记；再领成就得到卡包", async () => {
   resetOsuDailyState()
   const userId = await newUser()
   await give(userId, { ...scoreAt({ accuracy: 0.8, rank: "B" }), mods: [{ acronym: "NF" }] } as never)
@@ -259,14 +267,13 @@ await test("通过（挂 NF 也算）：记一次进度，成绩被登记；再�
   assert.equal(claims.length, 1)
   assert.equal(claims[0]!.dayKey, TODAY)
   assert.equal(claims[0]!.beatmapId, entry.beatmapId)
-  // 任务进度按「当前时间」的周期记，这里用 NOW 对应的日常周期
   const rows = await db.select().from(questProgress).where(eq(questProgress.userId, userId))
-  const row = rows.find((r) => r.questId === "daily-osu-beatmap")!
-  assert.equal(row.periodKey, questPeriodKey("daily", NOW))
+  const row = rows.find((r) => r.questId === "t-osu-daily")!
+  assert.equal(row.periodKey, ONCE_KEY)
   assert.equal(row.progress, 1)
 
-  await quests.claimQuest(userId, "daily-osu-beatmap", NOW)
-  const packs = QUEST_CONTENT.quests["daily-osu-beatmap"]!.rewards.packs!
+  await quests.claimQuest(userId, "t-osu-daily", NOW)
+  const packs = QUEST_CONTENT.quests["t-osu-daily"]!.rewards.packs!
   for (const pack of packs) {
     const [owned] = await db.select().from(userPacks).where(and(eq(userPacks.userId, userId), eq(userPacks.pool, pack.pool as "normal")))
     assert.equal(owned?.count, pack.count)

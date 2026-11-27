@@ -3,13 +3,7 @@ import { prettifyError } from "zod"
 import { CONTENT } from "./content"
 import type { WorldContent } from "./expedition/content"
 import { isItemId } from "./items"
-import {
-  QUEST_PERIODS,
-  SIGN_IN_ID,
-  questsSchema,
-  type QuestReward,
-  type QuestsContent,
-} from "./quests"
+import { SIGN_IN_ID, questsSchema, type QuestReward, type QuestsContent } from "./quests"
 
 /**
  * 校验 content/quests.json：格式 + 引用（物品、卡包、地图要存在）+ 几条规则。
@@ -36,23 +30,6 @@ export function parseQuestContent(raw: unknown, world?: Pick<WorldContent, "maps
   checkReward("signIn.base", content.signIn.base)
   for (const [day, reward] of Object.entries(content.signIn.bonus)) checkReward(`signIn.bonus.${day}`, reward)
 
-  const pointsTotal = Object.fromEntries(QUEST_PERIODS.map((p) => [p, 0])) as Record<(typeof QUEST_PERIODS)[number], number>
-  for (const quest of Object.values(content.quests)) {
-    if (quest.period !== "once") pointsTotal[quest.period] += quest.points
-  }
-  for (const period of QUEST_PERIODS) {
-    const chests = content.activity[period] ?? []
-    chests.forEach((chest, i) => {
-      const where = `activity.${period}[${i}]`
-      checkReward(`${where}.rewards`, chest.rewards)
-      if (i > 0 && chest.at <= chests[i - 1]!.at) problems.push(`${where}：at 必须比前一档大`)
-    })
-    const top = chests.at(-1)?.at ?? 0
-    if (top > pointsTotal[period]) {
-      problems.push(`activity.${period}：最大一档要 ${top} 点，但这个周期的任务活跃点加起来只有 ${pointsTotal[period]}，永远领不到`)
-    }
-  }
-
   for (const [questId, quest] of Object.entries(content.quests)) {
     const where = `quests.${questId}`
     if (questId === SIGN_IN_ID) problems.push(`${where}：id「${SIGN_IN_ID}」留给签到记录，任务不能用`)
@@ -73,18 +50,6 @@ export function parseQuestContent(raw: unknown, world?: Pick<WorldContent, "maps
     }
     if (quest.event === "expedition-tier" && quest.target > 5) {
       problems.push(`${where}：难度档位最高是 5`)
-    }
-    if (quest.period === "once" && quest.points > 0) {
-      problems.push(`${where}：一次性成就不给活跃点，points 必须是 0`)
-    }
-    if (quest.event === "sign-in" && quest.period === "daily" && quest.target !== 1) {
-      problems.push(`${where}：每天最多签到 1 次，日常签到任务的目标只能是 1`)
-    }
-    if (quest.event === "sign-in" && quest.period === "weekly" && quest.target > 7) {
-      problems.push(`${where}：一周最多签到 7 次`)
-    }
-    if (quest.event === "sign-in" && quest.period === "monthly" && quest.target > 31) {
-      problems.push(`${where}：一个月最多签到 31 次`)
     }
   }
 

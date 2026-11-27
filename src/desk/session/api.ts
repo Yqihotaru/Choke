@@ -5,7 +5,7 @@ import type { ItemId, ItemStack } from "@choke/shared/items"
 import type { MailView } from "@choke/shared/mail"
 import type { LedgerKind, LedgerPage } from "@choke/shared/ledger"
 import type { OsuDailyCheckResult, OsuDailyView } from "@choke/shared/osu-daily"
-import type { QuestsOverview, ResettingPeriod } from "@choke/shared/quests"
+import type { QuestsOverview } from "@choke/shared/quests"
 import type { ResonanceRecord, ResonanceSummary } from "@choke/shared/resonance"
 
 export type ItemWallet = Partial<Record<ItemId, number>>
@@ -684,16 +684,8 @@ export function signIn(
 
 export function claimAllQuests(
   userId: string,
-): Promise<{ claimed: string[]; chests: string[]; rewards: { label: string; count: number }[] }> {
+): Promise<{ claimed: string[]; rewards: { label: string; count: number }[] }> {
   return request(`/api/users/${userId}/quests/claim-all`, { method: "POST" })
-}
-
-export function claimQuestChest(
-  userId: string,
-  period: ResettingPeriod,
-  at: number,
-): Promise<{ period: ResettingPeriod; at: number; rewards: { label: string; count: number }[] }> {
-  return request(`/api/users/${userId}/quests/chests/${period}/${at}/claim`, { method: "POST" })
 }
 
 export function fetchOsuDaily(userId: string, signal?: AbortSignal): Promise<OsuDailyView> {

@@ -8,740 +8,370 @@
       "28": { "coins": 200, "packs": [{ "pool": "radiant", "count": 1 }] }
     }
   },
-  "activity": {
-    "daily": [
-      { "at": 20, "rewards": { "playerExp": 20, "packs": [{ "pool": "normal", "count": 1 }] } },
-      { "at": 40, "rewards": { "playerExp": 25, "coins": 100, "packs": [{ "pool": "normal", "count": 1 }, { "pool": "golden", "count": 1 }] } },
-      { "at": 60, "rewards": { "playerExp": 30, "packs": [{ "pool": "normal", "count": 2 }] } },
-      { "at": 80, "rewards": { "playerExp": 35, "packs": [{ "pool": "normal", "count": 1 }] } },
-      { "at": 100, "rewards": { "playerExp": 40, "packs": [{ "pool": "normal", "count": 1 }, { "pool": "golden", "count": 1 }] } }
-    ],
-    "weekly": [
-      { "at": 20, "rewards": { "playerExp": 60, "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] } },
-      { "at": 40, "rewards": { "playerExp": 80, "packs": [{ "pool": "normal", "count": 3 }, { "pool": "golden", "count": 1 }] } },
-      { "at": 60, "rewards": { "playerExp": 100, "packs": [{ "pool": "normal", "count": 3 }, { "pool": "golden", "count": 1 }] } },
-      { "at": 80, "rewards": { "playerExp": 120, "packs": [{ "pool": "normal", "count": 3 }, { "pool": "golden", "count": 1 }] } },
-      { "at": 100, "rewards": { "playerExp": 140, "packs": [{ "pool": "normal", "count": 3 }, { "pool": "golden", "count": 2 }, { "pool": "radiant", "count": 1 }] } }
-    ],
-    "monthly": [
-      { "at": 20, "rewards": { "playerExp": 200, "coins": 500, "packs": [{ "pool": "normal", "count": 6 }] } },
-      { "at": 40, "rewards": { "playerExp": 250, "packs": [{ "pool": "normal", "count": 8 }, { "pool": "golden", "count": 2 }] } },
-      { "at": 60, "rewards": { "playerExp": 350, "packs": [{ "pool": "normal", "count": 10 }, { "pool": "golden", "count": 3 }] } },
-      { "at": 80, "rewards": { "playerExp": 400, "packs": [{ "pool": "normal", "count": 12 }, { "pool": "golden", "count": 3 }, { "pool": "radiant", "count": 1 }] } },
-      { "at": 100, "rewards": { "playerExp": 500, "packs": [{ "pool": "normal", "count": 14 }, { "pool": "golden", "count": 4 }, { "pool": "radiant", "count": 1 }, { "pool": "sky", "count": 1 }, { "pool": "prism", "count": 1 }] } }
-    ]
-  },
   "quests": {
-    "daily-sign-in": {
-      "period": "daily",
-      "name": "今日签到",
-      "desc": "完成一次签到",
-      "event": "sign-in",
-      "target": 1,
-      "rewards": { "playerExp": 10, "coins": 10 },
-      "points": 10
-    },
-    "daily-open-pack": {
-      "period": "daily",
-      "name": "拆一包",
-      "desc": "开 1 个卡包",
-      "event": "pack-open",
-      "target": 1,
-      "rewards": { "playerExp": 10, "coins": 10 },
-      "points": 10
-    },
-    "daily-open-pack-5": {
-      "period": "daily",
-      "name": "拆包上瘾",
-      "desc": "开 5 个卡包",
-      "event": "pack-open",
-      "target": 5,
-      "rewards": { "playerExp": 10, "coins": 10 },
-      "points": 10
-    },
-    "daily-fuse": {
-      "period": "daily",
-      "name": "命座一小步",
-      "desc": "融合 1 次",
-      "event": "fuse",
-      "target": 1,
-      "rewards": { "playerExp": 10, "coins": 10 },
-      "points": 10
-    },
-    "daily-dismantle": {
-      "period": "daily",
-      "name": "清清仓库",
-      "desc": "分解 3 张卡",
-      "event": "dismantle",
-      "target": 3,
-      "rewards": { "playerExp": 10, "coins": 10 },
-      "points": 10
-    },
-    "daily-expedition": {
-      "period": "daily",
-      "name": "出门走走",
-      "desc": "在远征里打赢 2 场战斗",
-      "event": "expedition-win",
-      "target": 2,
-      "rewards": { "playerExp": 20, "coins": 15 },
-      "points": 15
-    },
-    "daily-expedition-clear": {
-      "period": "daily",
-      "name": "今日远征",
-      "desc": "通关 1 次日常地图",
-      "event": "expedition-clear",
-      "mapKind": "daily",
-      "target": 1,
-      "rewards": { "playerExp": 25, "coins": 15 },
-      "points": 15
-    },
-    "daily-osu-beatmap": {
-      "period": "daily",
-      "name": "今日推荐谱面",
-      "desc": "在 osu! 里通过今天的推荐谱面，回来点「检查」",
-      "event": "osu-daily-pass",
-      "target": 1,
-      "rewards": { "playerExp": 80, "packs": [{ "pool": "normal", "count": 2 }] },
-      "points": 30
-    },
-    "daily-market-buy": {
-      "period": "daily",
-      "name": "逛逛集市",
-      "desc": "在市场买入 1 张卡",
-      "event": "market-buy",
-      "target": 1,
-      "rewards": { "playerExp": 5, "coins": 10 },
-      "points": 5
-    },
-    "daily-market-sell": {
-      "period": "daily",
-      "name": "摆个摊",
-      "desc": "在市场卖出 1 张卡",
-      "event": "market-sell",
-      "target": 1,
-      "rewards": { "playerExp": 5, "coins": 10 },
-      "points": 5
-    },
-
-    "weekly-open-packs": {
-      "period": "weekly",
-      "name": "开包周",
-      "desc": "本周开 10 个卡包",
-      "event": "pack-open",
-      "target": 10,
-      "rewards": { "playerExp": 35, "coins": 50 },
-      "points": 15
-    },
-    "weekly-expedition-win": {
-      "period": "weekly",
-      "name": "远征老手",
-      "desc": "本周在远征里打赢 10 场战斗",
-      "event": "expedition-win",
-      "target": 10,
-      "rewards": { "playerExp": 50, "coins": 70 },
-      "points": 15
-    },
-    "weekly-patrol": {
-      "period": "weekly",
-      "name": "巡逻完成",
-      "desc": "通关 1 次周常地图",
-      "event": "expedition-clear",
-      "mapKind": "weekly",
-      "target": 1,
-      "rewards": { "playerExp": 80, "coins": 100 },
-      "points": 20
-    },
-    "weekly-daily-clear": {
-      "period": "weekly",
-      "name": "日日远征",
-      "desc": "本周通关 5 次日常地图",
-      "event": "expedition-clear",
-      "mapKind": "daily",
-      "target": 5,
-      "rewards": { "playerExp": 50, "coins": 70 },
-      "points": 10
-    },
-    "weekly-dismantle": {
-      "period": "weekly",
-      "name": "大扫除",
-      "desc": "本周分解 10 张卡",
-      "event": "dismantle",
-      "target": 10,
-      "rewards": { "playerExp": 35, "coins": 50 },
-      "points": 10
-    },
-    "weekly-fuse": {
-      "period": "weekly",
-      "name": "命座周",
-      "desc": "本周融合 3 次",
-      "event": "fuse",
-      "target": 3,
-      "rewards": { "playerExp": 35, "coins": 50 },
-      "points": 10
-    },
-    "weekly-market-buy": {
-      "period": "weekly",
-      "name": "淘货周",
-      "desc": "本周在市场买入 3 张卡",
-      "event": "market-buy",
-      "target": 3,
-      "rewards": { "playerExp": 25, "coins": 50 },
-      "points": 10
-    },
-    "weekly-market-sell": {
-      "period": "weekly",
-      "name": "出货周",
-      "desc": "本周在市场卖出 3 张卡",
-      "event": "market-sell",
-      "target": 3,
-      "rewards": { "playerExp": 25, "coins": 50 },
-      "points": 10
-    },
-    "weekly-sign-in": {
-      "period": "weekly",
-      "name": "勤勤恳恳",
-      "desc": "本周签到 5 天",
-      "event": "sign-in",
-      "target": 5,
-      "rewards": { "playerExp": 45, "coins": 60 },
-      "points": 10
-    },
-
-    "monthly-expedition-clear": {
-      "period": "monthly",
-      "name": "月度远征",
-      "desc": "本月远征通关 20 次",
-      "event": "expedition-clear",
-      "target": 20,
-      "rewards": { "playerExp": 180, "coins": 200 },
-      "points": 20
-    },
-    "monthly-open-packs": {
-      "period": "monthly",
-      "name": "开包大户",
-      "desc": "本月开 100 个卡包",
-      "event": "pack-open",
-      "target": 100,
-      "rewards": { "playerExp": 120, "coins": 150 },
-      "points": 15
-    },
-    "monthly-fuse": {
-      "period": "monthly",
-      "name": "命座修行",
-      "desc": "本月融合 10 次",
-      "event": "fuse",
-      "target": 10,
-      "rewards": { "playerExp": 120, "coins": 120 },
-      "points": 15
-    },
-    "monthly-sign-in": {
-      "period": "monthly",
-      "name": "全勤之星",
-      "desc": "本月签到 20 天",
-      "event": "sign-in",
-      "target": 20,
-      "rewards": { "playerExp": 120, "coins": 150 },
-      "points": 15
-    },
-    "monthly-patrol": {
-      "period": "monthly",
-      "name": "月度巡逻",
-      "desc": "本月通关 4 次周常地图",
-      "event": "expedition-clear",
-      "mapKind": "weekly",
-      "target": 4,
-      "rewards": { "playerExp": 160, "coins": 200 },
-      "points": 15
-    },
-    "monthly-tier": {
-      "period": "monthly",
-      "name": "迎难而上",
-      "desc": "本月在难度档位 3 以上通关 1 次",
-      "event": "expedition-tier",
-      "target": 3,
-      "rewards": { "playerExp": 160, "coins": 160 },
-      "points": 15
-    },
-    "monthly-dismantle": {
-      "period": "monthly",
-      "name": "回收达人",
-      "desc": "本月分解 60 张卡",
-      "event": "dismantle",
-      "target": 60,
-      "rewards": { "playerExp": 90, "coins": 100 },
-      "points": 10
-    },
-    "monthly-market-buy": {
-      "period": "monthly",
-      "name": "市场常客",
-      "desc": "本月在市场买入 10 张卡",
-      "event": "market-buy",
-      "target": 10,
-      "rewards": { "playerExp": 70, "coins": 100 },
-      "points": 10
-    },
-    "monthly-market-sell": {
-      "period": "monthly",
-      "name": "摊位老板",
-      "desc": "本月在市场卖出 10 张卡",
-      "event": "market-sell",
-      "target": 10,
-      "rewards": { "playerExp": 70, "coins": 100 },
-      "points": 10
-    },
-
     "ach-level-10": {
-      "period": "once",
       "group": "成长",
       "name": "初出茅庐",
       "desc": "玩家等级达到 10 级",
       "event": "player-level",
       "target": 10,
-      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] }
     },
     "ach-level-20": {
-      "period": "once",
       "group": "成长",
       "name": "小有名气",
       "desc": "玩家等级达到 20 级",
       "event": "player-level",
       "target": 20,
-      "rewards": { "playerExp": 250, "coins": 300, "packs": [{ "pool": "normal", "count": 3 }] },
-      "points": 0
+      "rewards": { "playerExp": 250, "coins": 300, "packs": [{ "pool": "normal", "count": 3 }] }
     },
     "ach-level-30": {
-      "period": "once",
       "group": "成长",
       "name": "渐入佳境",
       "desc": "玩家等级达到 30 级",
       "event": "player-level",
       "target": 30,
-      "rewards": { "playerExp": 400, "coins": 500, "packs": [{ "pool": "normal", "count": 3 }, { "pool": "golden", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 400, "coins": 500, "packs": [{ "pool": "normal", "count": 3 }, { "pool": "golden", "count": 1 }] }
     },
     "ach-level-40": {
-      "period": "once",
       "group": "成长",
       "name": "独当一面",
       "desc": "玩家等级达到 40 级",
       "event": "player-level",
       "target": 40,
-      "rewards": { "playerExp": 500, "coins": 600, "packs": [{ "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 500, "coins": 600, "packs": [{ "pool": "golden", "count": 2 }] }
     },
     "ach-level-50": {
-      "period": "once",
       "group": "成长",
       "name": "名震一方",
       "desc": "玩家等级达到 50 级",
       "event": "player-level",
       "target": 50,
-      "rewards": { "playerExp": 800, "coins": 1000, "packs": [{ "pool": "golden", "count": 2 }, { "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 800, "coins": 1000, "packs": [{ "pool": "golden", "count": 2 }, { "pool": "radiant", "count": 1 }] }
     },
     "ach-level-60": {
-      "period": "once",
       "group": "成长",
       "name": "登峰造极",
       "desc": "玩家等级达到 60 级（满级）",
       "event": "player-level",
       "target": 60,
-      "rewards": { "coins": 1500, "packs": [{ "pool": "radiant", "count": 2 }] },
-      "points": 0
+      "rewards": { "coins": 1500, "packs": [{ "pool": "radiant", "count": 2 }] }
     },
 
     "ach-obtain-100": {
-      "period": "once",
       "group": "收集",
       "name": "卡册初成",
       "desc": "累计获得 100 张卡",
       "event": "card-obtain",
       "target": 100,
-      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 3 }] },
-      "points": 0
+      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 3 }] }
     },
     "ach-obtain-500": {
-      "period": "once",
       "group": "收集",
       "name": "卡册丰盈",
       "desc": "累计获得 500 张卡",
       "event": "card-obtain",
       "target": 500,
-      "rewards": { "playerExp": 250, "coins": 400, "packs": [{ "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 250, "coins": 400, "packs": [{ "pool": "golden", "count": 2 }] }
     },
     "ach-obtain-2000": {
-      "period": "once",
       "group": "收集",
       "name": "卡海无边",
       "desc": "累计获得 2000 张卡",
       "event": "card-obtain",
       "target": 2000,
-      "rewards": { "playerExp": 500, "coins": 1000, "packs": [{ "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 500, "coins": 1000, "packs": [{ "pool": "radiant", "count": 1 }] }
     },
     "ach-legend-1": {
-      "period": "once",
       "group": "收集",
       "name": "传说降临",
       "desc": "获得 1 张 Legendary 或更高品质的卡",
       "event": "card-obtain",
       "minRarity": "L",
       "target": 1,
-      "rewards": { "playerExp": 200, "coins": 300, "packs": [{ "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 200, "coins": 300, "packs": [{ "pool": "golden", "count": 2 }] }
     },
     "ach-legend-10": {
-      "period": "once",
       "group": "收集",
       "name": "传说成群",
       "desc": "累计获得 10 张 Legendary 或更高品质的卡",
       "event": "card-obtain",
       "minRarity": "L",
       "target": 10,
-      "rewards": { "playerExp": 350, "coins": 800, "packs": [{ "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 350, "coins": 800, "packs": [{ "pool": "radiant", "count": 1 }] }
     },
     "ach-mythic-1": {
-      "period": "once",
       "group": "收集",
       "name": "月见之光",
       "desc": "获得 1 张 Mythic 或更高品质的卡",
       "event": "card-obtain",
       "minRarity": "Mythic",
       "target": 1,
-      "rewards": { "playerExp": 350, "coins": 800, "packs": [{ "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 350, "coins": 800, "packs": [{ "pool": "radiant", "count": 1 }] }
     },
     "ach-prismatic-1": {
-      "period": "once",
       "group": "收集",
       "name": "棱彩加身",
       "desc": "获得 1 张 Prismatic 品质的卡",
       "event": "card-obtain",
       "minRarity": "Prismatic",
       "target": 1,
-      "rewards": { "playerExp": 600, "coins": 2000, "packs": [{ "pool": "radiant", "count": 2 }, { "pool": "sky", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 600, "coins": 2000, "packs": [{ "pool": "radiant", "count": 2 }, { "pool": "sky", "count": 1 }] }
     },
 
     "ach-card-level-20": {
-      "period": "once",
       "group": "养成",
       "name": "初试锋芒",
       "desc": "把一张卡升到 20 级",
       "event": "card-level",
       "target": 20,
-      "rewards": { "playerExp": 150, "coins": 200 },
-      "points": 0
+      "rewards": { "playerExp": 150, "coins": 200 }
     },
     "ach-card-level-40": {
-      "period": "once",
       "group": "养成",
       "name": "百炼成钢",
       "desc": "把一张卡升到 40 级",
       "event": "card-level",
       "target": 40,
-      "rewards": { "playerExp": 250, "coins": 300 },
-      "points": 0
+      "rewards": { "playerExp": 250, "coins": 300 }
     },
     "ach-card-level-60": {
-      "period": "once",
       "group": "养成",
       "name": "炉火纯青",
       "desc": "把一张卡升到 60 级",
       "event": "card-level",
       "target": 60,
-      "rewards": { "playerExp": 400, "coins": 500, "packs": [{ "pool": "golden", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 400, "coins": 500, "packs": [{ "pool": "golden", "count": 1 }] }
     },
     "ach-card-level-80": {
-      "period": "once",
       "group": "养成",
       "name": "登峰之卡",
       "desc": "把一张卡升到 80 级（满级）",
       "event": "card-level",
       "target": 80,
-      "rewards": { "playerExp": 600, "coins": 1000, "packs": [{ "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 600, "coins": 1000, "packs": [{ "pool": "radiant", "count": 1 }] }
     },
     "ach-constellation-3": {
-      "period": "once",
       "group": "养成",
       "name": "三命初成",
       "desc": "把一张卡融合到 3 命座",
       "event": "constellation",
       "target": 3,
-      "rewards": { "playerExp": 150, "coins": 300, "packs": [{ "pool": "normal", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 150, "coins": 300, "packs": [{ "pool": "normal", "count": 2 }] }
     },
     "ach-constellation-6": {
-      "period": "once",
       "group": "养成",
       "name": "六命圆满",
       "desc": "把一张卡融合到 6 命座（满命）",
       "event": "constellation",
       "target": 6,
-      "rewards": { "playerExp": 400, "coins": 1000, "packs": [{ "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 400, "coins": 1000, "packs": [{ "pool": "golden", "count": 2 }] }
     },
     "ach-fuse-50": {
-      "period": "once",
       "group": "养成",
       "name": "融合学徒",
       "desc": "累计融合 50 次",
       "event": "fuse",
       "target": 50,
-      "rewards": { "playerExp": 250, "coins": 400, "packs": [{ "pool": "golden", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 250, "coins": 400, "packs": [{ "pool": "golden", "count": 1 }] }
     },
     "ach-dismantle-200": {
-      "period": "once",
       "group": "养成",
       "name": "分解专家",
       "desc": "累计分解 200 张卡",
       "event": "dismantle",
       "target": 200,
-      "rewards": { "playerExp": 250, "coins": 400, "packs": [{ "pool": "normal", "count": 3 }] },
-      "points": 0
+      "rewards": { "playerExp": 250, "coins": 400, "packs": [{ "pool": "normal", "count": 3 }] }
     },
 
     "ach-win-50": {
-      "period": "once",
       "group": "远征",
       "name": "百战之始",
       "desc": "在远征里累计打赢 50 场战斗",
       "event": "expedition-win",
       "target": 50,
-      "rewards": { "playerExp": 200, "coins": 300, "packs": [{ "pool": "normal", "count": 3 }] },
-      "points": 0
+      "rewards": { "playerExp": 200, "coins": 300, "packs": [{ "pool": "normal", "count": 3 }] }
     },
     "ach-win-500": {
-      "period": "once",
       "group": "远征",
       "name": "久经沙场",
       "desc": "在远征里累计打赢 500 场战斗",
       "event": "expedition-win",
       "target": 500,
-      "rewards": { "playerExp": 500, "coins": 1000, "packs": [{ "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 500, "coins": 1000, "packs": [{ "pool": "golden", "count": 2 }] }
     },
     "ach-main-1": {
-      "period": "once",
       "group": "远征",
       "name": "故事的开端",
       "desc": "通关 1 次主线地图",
       "event": "expedition-clear",
       "mapKind": "main",
       "target": 1,
-      "rewards": { "playerExp": 300, "coins": 400, "packs": [{ "pool": "normal", "count": 4 }] },
-      "points": 0
+      "rewards": { "playerExp": 300, "coins": 400, "packs": [{ "pool": "normal", "count": 4 }] }
     },
     "ach-main-10": {
-      "period": "once",
       "group": "远征",
       "name": "旅途不止",
       "desc": "累计通关 10 次主线地图",
       "event": "expedition-clear",
       "mapKind": "main",
       "target": 10,
-      "rewards": { "playerExp": 500, "coins": 800, "packs": [{ "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 500, "coins": 800, "packs": [{ "pool": "golden", "count": 2 }] }
     },
     "ach-patrol-10": {
-      "period": "once",
       "group": "远征",
       "name": "巡逻队长",
       "desc": "累计通关 10 次周常地图",
       "event": "expedition-clear",
       "mapKind": "weekly",
       "target": 10,
-      "rewards": { "playerExp": 300, "coins": 600, "packs": [{ "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 300, "coins": 600, "packs": [{ "pool": "golden", "count": 2 }] }
     },
     "ach-daily-30": {
-      "period": "once",
       "group": "远征",
       "name": "日行一善",
       "desc": "累计通关 30 次日常地图",
       "event": "expedition-clear",
       "mapKind": "daily",
       "target": 30,
-      "rewards": { "playerExp": 300, "coins": 500, "packs": [{ "pool": "normal", "count": 4 }] },
-      "points": 0
+      "rewards": { "playerExp": 300, "coins": 500, "packs": [{ "pool": "normal", "count": 4 }] }
     },
     "ach-perfect-10": {
-      "period": "once",
       "group": "远征",
       "name": "完美主义",
       "desc": "累计 10 次以最高星级通关",
       "event": "expedition-perfect",
       "target": 10,
-      "rewards": { "playerExp": 300, "coins": 600, "packs": [{ "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 300, "coins": 600, "packs": [{ "pool": "golden", "count": 2 }] }
     },
     "ach-tier-3": {
-      "period": "once",
       "group": "远征",
       "name": "不惧风浪",
       "desc": "在难度档位 3 以上通关 1 次",
       "event": "expedition-tier",
       "target": 3,
-      "rewards": { "playerExp": 250, "coins": 400, "packs": [{ "pool": "golden", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 250, "coins": 400, "packs": [{ "pool": "golden", "count": 1 }] }
     },
     "ach-tier-5": {
-      "period": "once",
       "group": "远征",
       "name": "直面深渊",
       "desc": "在难度档位 5（最高）通关 1 次",
       "event": "expedition-tier",
       "target": 5,
-      "rewards": { "playerExp": 600, "coins": 1000, "packs": [{ "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 600, "coins": 1000, "packs": [{ "pool": "radiant", "count": 1 }] }
     },
 
     "ach-open-100": {
-      "period": "once",
       "group": "日常",
       "name": "拆包新手",
       "desc": "累计开 100 个卡包",
       "event": "pack-open",
       "target": 100,
-      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 3 }] },
-      "points": 0
+      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 3 }] }
     },
     "ach-open-1000": {
-      "period": "once",
       "group": "日常",
       "name": "拆包狂魔",
       "desc": "累计开 1000 个卡包",
       "event": "pack-open",
       "target": 1000,
-      "rewards": { "playerExp": 400, "coins": 800, "packs": [{ "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 400, "coins": 800, "packs": [{ "pool": "radiant", "count": 1 }] }
     },
     "ach-starter-1": {
-      "period": "once",
       "group": "新手",
       "name": "新手补给 · 第一日",
       "desc": "累计签到 1 天",
       "event": "sign-in",
       "target": 1,
-      "rewards": { "playerExp": 350, "coins": 250, "packs": [{ "pool": "normal", "count": 15 }, { "pool": "golden", "count": 3 }] },
-      "points": 0
+      "rewards": { "playerExp": 350, "coins": 250, "packs": [{ "pool": "normal", "count": 15 }, { "pool": "golden", "count": 3 }] }
     },
     "ach-starter-2": {
-      "period": "once",
       "group": "新手",
       "name": "新手补给 · 第二日",
       "desc": "累计签到 2 天",
       "event": "sign-in",
       "target": 2,
-      "rewards": { "playerExp": 500, "coins": 250, "packs": [{ "pool": "normal", "count": 18 }, { "pool": "golden", "count": 4 }] },
-      "points": 0
+      "rewards": { "playerExp": 500, "coins": 250, "packs": [{ "pool": "normal", "count": 18 }, { "pool": "golden", "count": 4 }] }
     },
     "ach-starter-3": {
-      "period": "once",
       "group": "新手",
       "name": "新手补给 · 第三日",
       "desc": "累计签到 3 天",
       "event": "sign-in",
       "target": 3,
-      "rewards": { "playerExp": 500, "coins": 250, "packs": [{ "pool": "normal", "count": 18 }, { "pool": "golden", "count": 4 }, { "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 500, "coins": 250, "packs": [{ "pool": "normal", "count": 18 }, { "pool": "golden", "count": 4 }, { "pool": "radiant", "count": 1 }] }
     },
     "ach-starter-4": {
-      "period": "once",
       "group": "新手",
       "name": "新手补给 · 第四日",
       "desc": "累计签到 4 天",
       "event": "sign-in",
       "target": 4,
-      "rewards": { "playerExp": 250, "coins": 200, "packs": [{ "pool": "normal", "count": 14 }, { "pool": "golden", "count": 3 }, { "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 250, "coins": 200, "packs": [{ "pool": "normal", "count": 14 }, { "pool": "golden", "count": 3 }, { "pool": "radiant", "count": 1 }] }
     },
     "ach-starter-5": {
-      "period": "once",
       "group": "新手",
       "name": "新手补给 · 第五日",
       "desc": "累计签到 5 天",
       "event": "sign-in",
       "target": 5,
-      "rewards": { "playerExp": 150, "coins": 150, "packs": [{ "pool": "normal", "count": 10 }, { "pool": "golden", "count": 3 }] },
-      "points": 0
+      "rewards": { "playerExp": 150, "coins": 150, "packs": [{ "pool": "normal", "count": 10 }, { "pool": "golden", "count": 3 }] }
     },
     "ach-starter-6": {
-      "period": "once",
       "group": "新手",
       "name": "新手补给 · 第六日",
       "desc": "累计签到 6 天",
       "event": "sign-in",
       "target": 6,
-      "rewards": { "playerExp": 100, "coins": 150, "packs": [{ "pool": "normal", "count": 8 }, { "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 100, "coins": 150, "packs": [{ "pool": "normal", "count": 8 }, { "pool": "golden", "count": 2 }] }
     },
     "ach-starter-7": {
-      "period": "once",
       "group": "新手",
       "name": "新手补给 · 第七日",
       "desc": "累计签到 7 天",
       "event": "sign-in",
       "target": 7,
-      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 6 }, { "pool": "golden", "count": 2 }, { "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 6 }, { "pool": "golden", "count": 2 }, { "pool": "radiant", "count": 1 }] }
     },
     "ach-sign-7": {
-      "period": "once",
       "group": "日常",
       "name": "一周之约",
       "desc": "累计签到 7 天",
       "event": "sign-in",
       "target": 7,
-      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 150, "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] }
     },
     "ach-sign-30": {
-      "period": "once",
       "group": "日常",
       "name": "月月相伴",
       "desc": "累计签到 30 天",
       "event": "sign-in",
       "target": 30,
-      "rewards": { "playerExp": 300, "coins": 500, "packs": [{ "pool": "golden", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 300, "coins": 500, "packs": [{ "pool": "golden", "count": 2 }] }
     },
     "ach-sign-100": {
-      "period": "once",
       "group": "日常",
       "name": "百日不辍",
       "desc": "累计签到 100 天",
       "event": "sign-in",
       "target": 100,
-      "rewards": { "playerExp": 600, "coins": 1000, "packs": [{ "pool": "radiant", "count": 1 }] },
-      "points": 0
+      "rewards": { "playerExp": 600, "coins": 1000, "packs": [{ "pool": "radiant", "count": 1 }] }
     },
     "ach-market-buy-10": {
-      "period": "once",
       "group": "日常",
       "name": "第一桶金",
       "desc": "累计在市场买入 10 张卡",
       "event": "market-buy",
       "target": 10,
-      "rewards": { "playerExp": 100, "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 100, "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] }
     },
     "ach-market-sell-10": {
-      "period": "once",
       "group": "日常",
       "name": "小商人",
       "desc": "累计在市场卖出 10 张卡",
       "event": "market-sell",
       "target": 10,
-      "rewards": { "playerExp": 100, "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] },
-      "points": 0
+      "rewards": { "playerExp": 100, "coins": 200, "packs": [{ "pool": "normal", "count": 2 }] }
     }
   }
 }

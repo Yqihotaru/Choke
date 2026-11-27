@@ -339,11 +339,11 @@ await test("通关：剧情标记决定走哪条路，血量跨战斗保留，�
   const seen = await db.select().from(bestiary).where(eq(bestiary.userId, me.id))
   assert.deepEqual(seen.map((row) => row.enemyId).sort(), ["colossus-metronome", "ghost"])
 
-  // 任务进度：打赢 2 场战斗、主线通关 1 次；主线不算周常地图
+  // 成就进度：打赢 2 场战斗、主线通关 1 次；主线不算周常地图
   const quest = new Map((await db.select().from(questProgress).where(eq(questProgress.userId, me.id))).map((r) => [r.questId, r.progress]))
-  assert.equal(quest.get("daily-expedition"), 2)
-  assert.equal(quest.get("monthly-expedition-clear"), 1)
-  assert.equal(quest.has("weekly-patrol"), false)
+  assert.equal(quest.get("ach-win-50"), 2)
+  assert.equal(quest.get("ach-main-1"), 1)
+  assert.equal(quest.has("ach-patrol-10"), false)
 })
 
 await test("走宝箱那条路：需要剧情标记；首通奖励只发一次", async () => {
@@ -381,8 +381,8 @@ await test("到此结算：只发已经攒下的节点奖励，不发通关奖�
   assert.equal((await userOf(me.id)).coins - before.coins, res.body.data.rewards.coins)
   assert.equal((await db.select().from(mapClears).where(eq(mapClears.userId, me.id))).length, 0)
   const quest = new Map((await db.select().from(questProgress).where(eq(questProgress.userId, me.id))).map((r) => [r.questId, r.progress]))
-  assert.equal(quest.get("daily-expedition"), 1, "打赢的那一场算")
-  assert.equal(quest.has("monthly-expedition-clear"), false, "到此结算不算通关")
+  assert.equal(quest.get("ach-win-50"), 1, "打赢的那一场算")
+  assert.equal(quest.has("ach-main-1"), false, "到此结算不算通关")
 })
 
 await test("放弃：什么奖励都不要", async () => {

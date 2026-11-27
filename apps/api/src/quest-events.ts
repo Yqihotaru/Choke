@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm"
 
-import { isMaxEvent, questCounts, questPeriodKey, type QuestEvent } from "@choke/shared/quests"
+import { ONCE_KEY, isMaxEvent, questCounts, type QuestEvent } from "@choke/shared/quests"
 
 import { QUEST_CONTENT } from "./content"
 import type { db } from "./db/client"
@@ -36,12 +36,11 @@ export async function recordQuestEvent(
   const max = isMaxEvent(event)
   const amount = max ? (options.value ?? 0) : (options.amount ?? 1)
   if (amount <= 0) return
-  const now = options.now ?? Date.now()
   for (const [questId, def] of QUESTS) {
     if (!questCounts(def, event, options)) continue
     await tx
       .insert(questProgress)
-      .values({ userId, questId, periodKey: questPeriodKey(def.period, now), progress: Math.min(def.target, amount) })
+      .values({ userId, questId, periodKey: ONCE_KEY, progress: Math.min(def.target, amount) })
       .onConflictDoUpdate({
         target: [questProgress.userId, questProgress.questId, questProgress.periodKey],
         set: {

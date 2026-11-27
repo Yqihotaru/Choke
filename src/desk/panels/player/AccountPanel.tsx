@@ -4,14 +4,13 @@ import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import { RARITY_LABEL } from "@/card/data"
 import type { OsuDailyView } from "@choke/shared/osu-daily"
-import type { QuestsOverview, ResettingPeriod } from "@choke/shared/quests"
+import type { QuestsOverview } from "@choke/shared/quests"
 
 import {
   ApiError,
   bindEmail,
   checkOsuDaily,
   claimAllQuests,
-  claimQuestChest,
   fetchMe,
   fetchOsuDaily,
   fetchPendingBind,
@@ -34,12 +33,6 @@ import {
   peekBindReturn,
 } from "@/desk/panels/player/bind-return"
 import "@/desk/panels/player/account-panel.css"
-
-const PERIOD_LABEL: Record<ResettingPeriod, string> = {
-  daily: "每日活跃",
-  weekly: "每周活跃",
-  monthly: "每月活跃",
-}
 
 const KIND_TEXT: Record<AccountKind, string> = {
   osu: "已连接 osu!",
@@ -78,7 +71,7 @@ export function AccountPanel({
   const [failedAvatar, setFailedAvatar] = useState<string | null>(null)
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [quests, setQuests] = useState<QuestsOverview | null>(null)
-  const [questBusy, setQuestBusy] = useState<"sign-in" | "claim-all" | `chest:${ResettingPeriod}:${number}` | null>(null)
+  const [questBusy, setQuestBusy] = useState<"sign-in" | "claim-all" | null>(null)
   const [questMessage, setQuestMessage] = useState<{ text: string; error?: boolean } | null>(null)
   const [osuDaily, setOsuDaily] = useState<OsuDailyView | null>(null)
   const [osuDailyCooldown, setOsuDailyCooldown] = useState(0)
@@ -190,7 +183,7 @@ export function AccountPanel({
       emitDeskData("packs")
       emitDeskData("items")
       playSfx("success")
-      setQuestMessage({ text: "今日已签到，可继续一键领任务与新手补给。" })
+      setQuestMessage({ text: "今日已签到，可继续一键领成就与新手补给。" })
     } catch (reason) {
       playSfx("error")
       setQuestMessage({ text: reason instanceof Error ? reason.message : "签到失败", error: true })
@@ -221,35 +214,6 @@ export function AccountPanel({
     }
   }
 
-  const handleClaimChest = async (period: ResettingPeriod, at: number) => {
-    if (!userId || questBusy) return
-    setQuestBusy(`chest:${period}:${at}`)
-    setQuestMessage(null)
-    try {
-      const res = await claimQuestChest(userId, period, at)
-      const next = await fetchQuests(userId)
-      setQuests(next)
-      emitDeskData("user")
-      emitDeskData("packs")
-      emitDeskData("items")
-      playSfx("levelup")
-      const summary = res.rewards.map((r) => `${r.label} ×${r.count}`).join(" · ")
-      setQuestMessage({ text: summary ? `已领取宝箱：${summary}` : "已领取宝箱" })
-    } catch (reason) {
-      playSfx("error")
-      const code = reason instanceof ApiError ? reason.code : undefined
-      let text: string
-      if (code === "not_done") text = "活跃点还不够，无法领取该宝箱"
-      else if (code === "already_claimed") text = "这个宝箱已经领过了"
-      else if (code === "not_found") text = "没有找到这个宝箱"
-      else if (code === "feature_locked") text = reason instanceof ApiError ? reason.message : "功能暂未解锁"
-      else text = reason instanceof Error ? reason.message : "领取宝箱失败"
-      setQuestMessage({ text, error: true })
-    } finally {
-      setQuestBusy(null)
-    }
-  }
-
   const handleCheckOsuDaily = async () => {
     if (!userId || osuDailyBusy || osuDailyCooldown > 0) return
     setOsuDailyBusy(true)
@@ -268,7 +232,7 @@ export function AccountPanel({
         setOsuDailyMessage({
           text: res.alreadyPassed
             ? "今日推荐谱面已通过"
-            : "成绩达标！已计入今日推荐谱面任务，可点击一键领奖励",
+            : "成绩达标！今日推荐谱面已通过",
         })
       } else {
         playSfx("error")
@@ -398,7 +362,7 @@ export function AccountPanel({
 
           <div className="bk-box account-quests">
             <div className="account-quests__head">
-              <span className="bk-label">每日签到与奖励</span>
+              <span className="bk-label">每日签到与成就</span>
               {quests && (
                 <span className="bk-num">
                   {quests.claimable > 0 ? `可领 ${quests.claimable} 项` : "暂无待领"}
@@ -431,50 +395,6 @@ export function AccountPanel({
               <span className={`account-quests__msg ${questMessage.error ? "bk-error" : ""}`}>
                 {questMessage.text}
               </span>
-            )}
-            {quests && (
-              <div className="account-chests">
-                {(["daily", "weekly", "monthly"] as const).map((period) => {
-                  const act = quests.activity[period]
-                  if (!act || act.chests.length === 0) return null
-                  return (
-                    <div key={period} className="account-chests__row">
-                      <div className="account-chests__meta">
-                        <span>{PERIOD_LABEL[period]}</span>
-                        <span className="bk-num">
-                          {act.earned}/{act.cap}
-                        </span>
-                      </div>
-                      <div className="account-chests__btns">
-                        {act.chests.map((chest) => {
-                          const busy = questBusy === `chest:${period}:${chest.at}`
-                          const rewardTitle = chest.rewards
-                            .map((r) => `${r.label} ×${r.count}`)
-                            .join("、")
-                          return (
-                            <button
-                              key={`${period}-${chest.at}`}
-                              type="button"
-                              title={rewardTitle}
-                              className={`bk-btn bk-btn--sm ${chest.claimable ? "bk-btn--main" : ""}`}
-                              disabled={!chest.claimable || questBusy !== null}
-                              onClick={() => void handleClaimChest(period, chest.at)}
-                            >
-                              {busy
-                                ? "领取中…"
-                                : chest.claimed
-                                  ? `${chest.at}点 已领`
-                                  : chest.claimable
-                                    ? `领 ${chest.at}点`
-                                    : `${chest.at}点`}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
             )}
           </div>
 
