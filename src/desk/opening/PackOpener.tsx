@@ -581,7 +581,7 @@ export function PackOpener({ cards, pool, origin, onDone, onQuick, onDropCard, r
           {tally.map(({ rarity, count }) => (
             <li key={rarity} style={{ "--c": RARITY_COLOR[rarity] } as CSSProperties}>
               <i aria-hidden />
-              {rarity}
+              {RARITY_LABEL[rarity]}
               <b>×{count}</b>
             </li>
           ))}

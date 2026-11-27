@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 
-import { battlePower } from "@/card/data"
+import { RARITY_LABEL, battlePower } from "@/card/data"
 import { GameCardFace } from "@/card/GameCardFace"
 import type { CardFaceData } from "@/card/types"
 import { fetchProgress, fetchStamina, toFace, type ApiUserCard, type StaminaState } from "@/desk/session/api"
@@ -241,7 +241,7 @@ export function Prepare({
               <div className="ex-seg">
                 {RARITY_STEPS.map((r) => (
                   <button key={r} type="button" aria-pressed={alloc.maxRarity === r} onClick={() => setAlloc({ ...alloc, maxRarity: r })}>
-                    到 {r}
+                    到 {RARITY_LABEL[r]}
                     <small>{costOf({ maxRarity: r })} 点</small>
                   </button>
                 ))}

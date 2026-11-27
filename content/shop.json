@@ -34,7 +34,7 @@
   },
   "shard-box-low": {
     "name": "低阶碎片盲盒",
-    "summary": "消耗闲置 C 碎片与少量金币，随机开出 UC / R / E 碎片，小概率出 L / Mythic 碎片",
+    "summary": "消耗闲置 COMMON 碎片与少量金币，随机开出 UNCOMMON / RARE / EPIC 碎片，小概率出 LEGENDARY / MYTHIC 碎片",
     "section": "gamble",
     "period": "weekly",
     "limit": 10,
@@ -55,7 +55,7 @@
   },
   "shard-box-high": {
     "name": "高阶碎片赌箱",
-    "summary": "消耗 E 碎片与金币博取高稀有度碎片，保底 4 片 L 碎片，最高可出 Prismatic 碎片",
+    "summary": "消耗 EPIC 碎片与金币博取高稀有度碎片，保底 4 片 LEGENDARY 碎片，最高可出 PRISMATIC 碎片",
     "section": "gamble",
     "period": "weekly",
     "limit": 3,
@@ -74,8 +74,8 @@
     }
   },
   "shard-l-pity": {
-    "name": "限量 L 碎片包",
-    "summary": "每周定额换取 2 片 L 碎片（周限 2 次），稳定补齐突破与洗技能缺口",
+    "name": "限量 LEGENDARY 碎片包",
+    "summary": "每周定额换取 2 片 LEGENDARY 碎片（周限 2 次），稳定补齐突破与洗技能缺口",
     "section": "pity",
     "period": "weekly",
     "limit": 2,

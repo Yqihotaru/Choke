@@ -9,6 +9,7 @@ import {
 
 import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
+import { RARITY_LABEL } from "@/card/data"
 import { RARITIES, type CardFaceData, type Rarity } from "@/card/types"
 import type { PackId } from "@choke/shared/content"
 import { emitTutorialEvent, requestTutorialStarter } from "@/tutorial/events"
@@ -473,7 +474,7 @@ export function GachaPanel({
                   style={{ "--c": RARITY_COLOR[rarity as Rarity] } as CSSProperties}
                 >
                   <i aria-hidden />
-                  {rarity}
+                  {RARITY_LABEL[rarity as Rarity]}
                   <b className="bk-num">{weight}%</b>
                 </span>
               ))}

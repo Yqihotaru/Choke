@@ -722,7 +722,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                     {busy === "level"
                       ? "突破中…"
                       : btCoins > 0 || btShards > 0
-                        ? `突破升级（${btCoins}金币${btShards > 0 ? ` + ${btShards}${current.rarity}碎片` : ""}）`
+                        ? `突破升级（${btCoins}金币${btShards > 0 ? ` + ${btShards} ${RARITY_LABEL[current.rarity]} 碎片` : ""}）`
                         : `升级 · ${need} EXP`}
                   </button>
                 )}
@@ -800,7 +800,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
               )}
               {!hero && (
                 <div className="card-detail__wallet">
-                  <span>{current.rarity} 碎片</span>
+                  <span>{RARITY_LABEL[current.rarity]} 碎片</span>
                   <b className="bk-num">{items ? ownShardCount : "—"}</b>
                   <em>
                     {btShards > 0
@@ -1025,7 +1025,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                       ? `★ 已触发逢 ${rerollInfo.pityInterval} 自选`
                       : `洗技能保底 ${rerollInfo.skillRerollCount}/${rerollInfo.pityInterval - 1}`}
                     {" · "}
-                    {rerollInfo.cost.shards}{current.rarity}碎片 + {rerollInfo.cost.coins}金币
+                    {rerollInfo.cost.shards} {RARITY_LABEL[current.rarity]} 碎片 + {rerollInfo.cost.coins} 金币
                   </span>
                 )}
               </div>
@@ -1115,7 +1115,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   disabled={busy !== null || listed}
                   title={listed ? "已上架市场的卡不能分解" : undefined}
                 >
-                  {busy === "dismantle" ? "分解中…" : `分解此卡 · 得 ${SHARDS_PER_DISMANTLE} ${current.rarity}碎片`}
+                  {busy === "dismantle" ? "分解中…" : `分解此卡 · 得 ${SHARDS_PER_DISMANTLE} ${RARITY_LABEL[current.rarity]} 碎片`}
                 </button>
               </div>
               {pending?.kind === "dismantle" && (
@@ -1123,7 +1123,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   danger
                   busy={busy !== null}
                   confirmLabel="确认分解"
-                  message={`分解这张 ${current.name}？获得 ${SHARDS_PER_DISMANTLE} 个 ${current.rarity} 碎片${dismantleRefund.length > 0 ? `，返还 ${describeStacks(dismantleRefund)}` : ""}${dismantleEssence > 0 ? ` + ${dismantleEssence} 精华` : ""}，卡会消失。`}
+                  message={`分解这张 ${current.name}？获得 ${SHARDS_PER_DISMANTLE} 个 ${RARITY_LABEL[current.rarity]} 碎片${dismantleRefund.length > 0 ? `，返还 ${describeStacks(dismantleRefund)}` : ""}${dismantleEssence > 0 ? ` + ${dismantleEssence} 精华` : ""}，卡会消失。`}
                   onCancel={() => setPending(null)}
                   onConfirm={confirmPending}
                 />

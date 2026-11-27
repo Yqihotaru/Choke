@@ -13,6 +13,7 @@ import {
 import { LEDGER_KIND_LABEL, type LedgerEntryView, type LedgerKind } from "@choke/shared/ledger"
 
 import { playSfx } from "@/audio/sfx"
+import { RARITY_LABEL } from "@/card/data"
 import { useModal } from "@/ui/useModal"
 import { usePresence } from "@/ui/usePresence"
 
@@ -210,7 +211,7 @@ export function LedgerBox({ userId }: { userId: string }) {
                             </span>
                             <span className="ledger-row__label">
                               {entry.label}
-                              {entry.rarity && <i className="ledger-row__rarity">{entry.rarity}</i>}
+                              {entry.rarity && <i className="ledger-row__rarity">{(RARITY_LABEL as Record<string, string>)[entry.rarity] ?? entry.rarity}</i>}
                             </span>
                             <span className="ledger-row__source">{entry.sourceLabel}</span>
                             <b className={`ledger-row__delta ${entry.delta > 0 ? "is-gain" : "is-loss"}`}>

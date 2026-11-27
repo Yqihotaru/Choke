@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 
-import { JOB_LABEL } from "@/card/data"
+import { JOB_LABEL, RARITY_LABEL } from "@/card/data"
 import { RARITY_COLOR } from "@/desk/lib/rarity"
 import type { ExpeditionView } from "@choke/shared/expedition/view"
 
@@ -274,7 +274,7 @@ export function RunView({
                     {[...face.name][0]}
                   </div>
                   <div className="ex-slot__name">{face.name}</div>
-                  <div className="ex-slot__rar">{face.rarity}</div>
+                  <div className="ex-slot__rar">{RARITY_LABEL[face.rarity]}</div>
                   <div className="ex-slot__hp">
                     <i className={hpClass} style={{ width: `${pct}%` }} />
                   </div>

@@ -264,7 +264,7 @@ export function PoolLab() {
                 const share = cards.length ? (count / cards.length) * 100 : 0
                 return (
                   <div className="pool-lab__stat" data-rarity={rarity} key={rarity}>
-                    <span className="pool-lab__stat-name">{rarity}</span>
+                    <span className="pool-lab__stat-name">{RARITY_LABEL[rarity]}</span>
                     <b>{count.toLocaleString()}</b>
                     <span className="pool-lab__stat-share">{share.toFixed(2)}%</span>
                   </div>
