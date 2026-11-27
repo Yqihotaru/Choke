@@ -1,9 +1,9 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
-import { SKILLS, JOB_ORDER, JOB_STAT_WEIGHTS, ARCHETYPE_COEF, type SkillDef } from "@choke/shared/skills"
+import { SKILLS, JOB_ORDER, JOB_STAT_WEIGHTS, ARCHETYPE_COEF, skillDealtTo, type SkillDef } from "@choke/shared/skills"
 import { describeSkill, describeSkillEffects } from "@choke/shared/skill-check"
-import { ELEMENT_LABEL } from "@choke/shared/types"
+import { ELEMENT_LABEL, RARITIES, type Element } from "@choke/shared/types"
 
 /**
  * 从技能数据生成《职业与技能总表》的第 1、2 节（<!-- skills:begin --> 与 <!-- skills:end --> 之间）。
@@ -45,7 +45,24 @@ function build(): string {
       `| ${JOB_LABEL[job]} | ${ARCHETYPE_COEF[job].toFixed(2)} | ${w.hp.toFixed(2)} | ${w.atk.toFixed(2)} | ${w.def.toFixed(2)} | ${w.int.toFixed(2)} | ${pool.length}（${pool.length - passive} / ${passive}） |`,
     )
   }
-  lines.push("", "## 2. 技能总表", "")
+  lines.push("", "## 1.5 各职业 × 各元素 × 各稀有度可抽到的攻击技能数", "")
+  const elements: Element[] = ["physical", "metal", "wood", "earth", "ice", "fire", "thunder", "light", "dark"]
+  const dmgPool = Object.values(SKILLS).filter((s) => s.kind === "damage" || (s.power && s.power > 0))
+  for (const job of JOB_ORDER) {
+    lines.push(`### ${JOB_LABEL[job]}`, "")
+    lines.push(
+      `| 属性 | ${RARITIES.join(" | ")} |`,
+      `|---|${RARITIES.map(() => "---:").join("|")}|`,
+    )
+    for (const el of elements) {
+      const counts = RARITIES.map(
+        (r) => dmgPool.filter((s) => s.job === job && s.element === el && skillDealtTo(s, r)).length,
+      )
+      lines.push(`| ${ELEMENT_LABEL[el]} | ${counts.join(" | ")} |`)
+    }
+    lines.push("")
+  }
+  lines.push("## 2. 技能总表", "")
   lines.push(`共 ${Object.keys(SKILLS).length} 个技能，按大职业分组；每组先主动后被动。「倍率合计」是 倍率 × 段数。`, "")
   for (const job of JOB_ORDER) {
     const pool = Object.values(SKILLS).filter((s) => s.job === job)
