@@ -351,11 +351,15 @@ export async function cardRoutes(app: FastifyInstance) {
         limit: z.coerce.number().int().min(1).max(60).default(24),
         offset: z.coerce.number().int().min(0).default(0),
         ids: z.string().optional(),
+        cardType: z.enum(["pool", "hero", "mirror"]).optional(),
+        foil: z.enum(["true", "false"]).optional(),
       })
       .parse(request.query)
 
     const filters = [eq(userCards.userId, userId)]
     if (query.rarity) filters.push(eq(cards.rarity, query.rarity))
+    if (query.cardType) filters.push(eq(cards.cardType, query.cardType))
+    if (query.foil) filters.push(eq(userCards.foil, query.foil === "true"))
     if (query.q) filters.push(ilike(cards.name, `%${query.q}%`))
     // 按实例 id 刷新桌面卡面快照；所有筛选仍限制在当前用户名下。
     if (query.ids) {
