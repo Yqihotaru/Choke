@@ -123,6 +123,13 @@ export const DEBUFF_SCALE_MAX_KINDS = 3
 export const MITIGATION_K = 10000
 export const MITIGATION_CAP = 0.7
 
+/**
+ * 阵容加成：上阵卡的数据乘 FIELD_WEIGHT，替补卡的数据乘 BENCH_WEIGHT 后计入。
+ * 1 和 0 等于旧规则（只看上阵卡）。
+ */
+export const FIELD_WEIGHT = 1
+export const BENCH_WEIGHT = 0
+
 /** 侧面支援默认值（§8.1） */
 export const SUPPORT_PROC_RATE = 0.6
 export const SUPPORT_DAMAGE_RATE = 0.5

@@ -41,6 +41,8 @@ import {
   PREEMPTIVE_RATE,
   REGEN_TEAM_CAP,
   ARMOR_RESIST_PER_TIER,
+  BENCH_WEIGHT,
+  FIELD_WEIGHT,
   SHELL_MIN_DAMAGE,
   SHIELD_BREAK_VULNERABLE_TURNS,
   SHIELD_MAX_BY_TIER,
@@ -202,8 +204,16 @@ function statusBonus(statuses: StatusEffect[], stat: "atk" | "int" | "def"): num
     .reduce((sum, status) => sum + status.amount, 0)
 }
 
+/** 替补份额：替补卡该项数据之和 × BENCH_WEIGHT，平分给活着的上阵卡 */
+function benchShare(state: BattleState, stat: "atk" | "int" | "def"): number {
+  if (BENCH_WEIGHT === 0 || state.bench.length === 0) return 0
+  const alive = state.cards.filter((c) => !c.down).length
+  const total = state.bench.reduce((sum, c) => sum + c.stats[stat], 0)
+  return (total * BENCH_WEIGHT) / Math.max(1, alive)
+}
+
 export function statOf(state: BattleState, card: BattleCard, stat: "atk" | "int" | "def"): number {
-  let value = card.stats[stat]
+  let value = card.stats[stat] * FIELD_WEIGHT + benchShare(state, stat)
   const lowHp = state.teamHp / Math.max(1, state.teamHpMax) < LOW_HP_THRESHOLD
   if (stat !== "def" && lowHp) {
     for (const skill of passivesOf(card)) if (skill.lowHpMul) value *= skill.lowHpMul
@@ -429,7 +439,7 @@ export function createBattle(
 
   // AP 上限由出征前的点数分配决定（expedition-points），引擎不再自己判断
   const { apMax } = options
-  const teamHpMax = calcTeamHpMax(cards)
+  const teamHpMax = calcTeamHpMax(cards, bench)
   const healSoftCap = encounter.healSoftCap === "unlimited" ? null : Math.round(teamHpMax * encounter.healSoftCap)
 
   // 开局被动侧面支援（目前没有技能提供，留空）
@@ -1129,7 +1139,7 @@ export function swapBattleCard(
   state.bench[benchIndex] = outCard
   state.swapCooldown = 1
 
-  state.teamHpMax = calcTeamHpMax(state.cards)
+  state.teamHpMax = calcTeamHpMax(state.cards, state.bench)
   state.teamHp = Math.max(1, Math.min(state.teamHpMax, Math.round(state.teamHpMax * hpRatio)))
   syncDefenseSupportSlot(state)
 

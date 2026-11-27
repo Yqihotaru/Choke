@@ -2,6 +2,7 @@ import { CONSTELLATION_BONUS, RARITY_BASE } from "../config"
 import { ARCHETYPE_COEF, JOB_STAT_WEIGHTS, skillDefFromCardSkill, type SkillDef } from "../skills"
 import type { CardFaceData, Element, Job, Rarity } from "../types"
 import type { EnemyAi, StarCondition, WeaknessWindow } from "./content"
+import { BENCH_WEIGHT, FIELD_WEIGHT } from "./config"
 
 export const MAX_SUPPORT_SLOTS = 7
 
@@ -431,9 +432,8 @@ export function createBattleCard(face: CardFaceData, uid: number, cardId: string
   }
 }
 
-export function calcTeamHpMax(cards: BattleCard[]): number {
-  return Math.max(
-    1,
-    cards.reduce((sum, card) => sum + card.stats.hpContribution, 0),
-  )
+export function calcTeamHpMax(cards: BattleCard[], bench: BattleCard[] = []): number {
+  const field = cards.reduce((sum, card) => sum + card.stats.hpContribution, 0)
+  const reserve = bench.reduce((sum, card) => sum + card.stats.hpContribution, 0)
+  return Math.max(1, Math.round(field * FIELD_WEIGHT + reserve * BENCH_WEIGHT))
 }
