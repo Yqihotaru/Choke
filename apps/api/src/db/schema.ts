@@ -99,7 +99,7 @@ export const users = pgTable("users", {
   staminaUpdatedAt: bigint("stamina_updated_at", { mode: "number" }).notNull().default(0),
   /** 最近一次活跃（/auth/me 刷新）；镜像池按它筛活跃账号 */
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
-  /** 在线时长统计：onlineSeconds 是重置日 onlineDay 里累计的在线秒数，换日（北京时间 4:00）清零；见 @choke/shared/presence */
+  /** 已弃用：挂机包已取消，onlineDay / onlineSeconds 两列保留不用，日后统一清 */
   onlineDay: text("online_day"),
   onlineSeconds: integer("online_seconds").notNull().default(0),
   /** 管理员：只能在数据库里改（scripts/set-admin.ts），没有任何接口能设置 */

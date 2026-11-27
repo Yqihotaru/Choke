@@ -37,10 +37,9 @@ interface PackMeta {
 const MYSTERY_ID = "mystery"
 
 /** 背包里的展示顺序是 UI 决定；名称、每包张数从 GET /config 读。 */
-const PACK_ORDER = ["idle", "normal", "golden", "radiant", "sky", "prism"] as const
+const PACK_ORDER = ["normal", "golden", "radiant", "sky", "prism"] as const
 
 const PACK_TAGLINE: Record<PackPool, string> = {
-  idle: "低稀有度",
   normal: "日常主力",
   golden: "任务产出",
   radiant: "周常奖励",

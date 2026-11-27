@@ -20,7 +20,6 @@ export interface PoolMeta {
 
 export const POOL_META: Record<PackPool, PoolMeta> = {
   normal: { label: "普通卡池", short: "普通", color: "#E5484D" },
-  idle: { label: "挂机卡池", short: "挂机", color: "#3CBADB" },
   golden: { label: "黄金卡池", short: "黄金", color: "#FFC24B" },
   radiant: { label: "璀璨卡池", short: "璀璨", color: "#B98CFF" },
   sky: { label: "天穹卡池", short: "天穹", color: "#21E985" },
@@ -33,7 +32,6 @@ export const EVENT_POOLS: readonly PackPool[] = ["starter"]
 
 export const POOL_ORDER: PackPool[] = [
   "normal",
-  "idle",
   "golden",
   "radiant",
   "sky",

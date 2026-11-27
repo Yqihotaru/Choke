@@ -1,6 +1,6 @@
 {
   "fixed": { "coins": 200, "playerExp": 100 },
   "starBonus": {
-    "3": { "items": [{ "itemId": "exp-medium", "count": 1 }] }
+    "3": { "essence": 1 }
   }
 }

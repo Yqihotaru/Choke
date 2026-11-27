@@ -535,7 +535,7 @@ await test("断线恢复：每次上传都存在服务端，半场战斗能接�
 
 // ---------- 卡池锁定 ----------
 
-await test("出征期间参战的卡不能出售、分解、被喂、被融合吃掉；接收方可以，快照不变", async () => {
+await test("出征期间参战的卡不能出售、分解、被融合吃掉", async () => {
   const me = await newPlayer()
   const pooled = me.ids[1]! // ex-war，在卡池里
   await db.update(userCards).set({ level: 50 }).where(eq(userCards.id, pooled))
@@ -557,8 +557,6 @@ await test("出征期间参战的卡不能出售、分解、被喂、被融合�
   assert.equal(res.body.error?.code, "in_expedition", "出售")
   res = await call(me.id, "POST", card(pooled, "dismantle"))
   assert.equal(res.body.error?.code, "in_expedition", "分解")
-  res = await call(me.id, "POST", card(extra[0]!, "feed"), { cards: [pooled] })
-  assert.equal(res.body.error?.code, "in_expedition", "被喂")
 
   // 融合：被吃的会跳过卡池里的卡，挑那张没入池的
   res = await call(me.id, "POST", card(extra[0]!, "constellation"))
@@ -567,15 +565,6 @@ await test("出征期间参战的卡不能出售、分解、被喂、被融合�
   assert.equal(res.status, 400)
   assert.equal(res.body.error?.code, "in_expedition", "剩下的同名卡都在卡池里，不能被吃")
 
-  // 接收方可以：给卡池里的卡喂经验，卡册里它升级了，出征快照里没变
-  const [material] = await db
-    .insert(userCards)
-    .values({ userId: me.id, cardId: "ex-w1" })
-    .returning({ id: userCards.id })
-  res = await call(me.id, "POST", card(pooled, "feed"), { cards: [material!.id] })
-  assert.equal(res.status, 200, JSON.stringify(res.body))
-  const [owned] = await db.select().from(userCards).where(eq(userCards.id, pooled))
-  assert.ok(owned!.exp > 0 || owned!.level > 50, "卡册里的卡吃到了经验")
   const still = (await current(me.id))!.pool.find((p) => p.userCardId === pooled)!
   assert.equal(still.face.level, view.pool.find((p) => p.userCardId === pooled)!.face.level, "快照里的等级不变")
   assert.equal(still.face.level, 50)

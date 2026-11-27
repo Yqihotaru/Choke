@@ -98,7 +98,7 @@ check("奖励放大：金币、精华、经验、物品、卡包放大；整卡�
       coins: 100,
       essence: 3,
       playerExp: 30,
-      items: [{ itemId: "exp-small", count: 2 }],
+      items: [{ itemId: "shard-C", count: 2 }],
       packs: [{ pool: "golden", count: 1 }],
       cards: [{ cardId: "x", count: 1 }],
     },

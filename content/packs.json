@@ -9,14 +9,6 @@
       "foilRate": 0.03,
       "mirrorWeights": { "UC": 40, "R": 35, "E": 20, "L": 5 }
     },
-    "idle": {
-      "name": "挂机卡包",
-      "short": "挂机",
-      "color": "#3CBADB",
-      "weights": { "C": 62, "UC": 26, "R": 9, "E": 2.8, "L": 0.2 },
-      "foilRate": 0.012,
-      "mirrorWeights": {}
-    },
     "golden": {
       "name": "黄金卡包",
       "short": "黄金",

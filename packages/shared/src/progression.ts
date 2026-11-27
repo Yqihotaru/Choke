@@ -7,13 +7,10 @@ const CARD = CONTENT.progression.card
 export const LEVEL_CAP = CARD.levelCap
 export const CONSTELLATION_CAP = CARD.constellationCap
 
-/** 喂养：一张卡直接喂给别的卡时提供的基础经验。分解成碎片再喂会更少，见 items.json */
-export const FEED_EXP: Record<Rarity, number> = CARD.feedExp
-
 /** lv1 → 满级累计经验 */
 export const LEVEL_EXP_TOTAL: Record<Rarity, number> = CARD.levelExpTotal
 
-/** 升过级的卡被喂掉或分解时，已投入经验按这个比例返还 */
+/** 升过级的卡被 NPC 回收时，已投入经验按这个比例折算 */
 export const EXP_REFUND_RATE = CARD.refundRate
 
 export function isHeroCardId(id: string): boolean {
@@ -60,11 +57,6 @@ export function investedExp(level: number, exp: number, rarity: Rarity, isHero: 
 
 export function refundExpOf(level: number, exp: number, rarity: Rarity, isHero: boolean): number {
   return Math.floor(investedExp(level, exp, rarity, isHero) * EXP_REFUND_RATE)
-}
-
-/** 一张卡被喂掉时给的经验 = 基础喂养值 + 已投入经验 × 返还比例 */
-export function feedExpOf(card: { rarity: Rarity; level: number; exp: number; isHero?: boolean }): number {
-  return FEED_EXP[card.rarity] + refundExpOf(card.level, card.exp, card.rarity, !!card.isHero)
 }
 
 /**
@@ -118,7 +110,7 @@ export function isSkillRerollSelectReady(count: number): boolean {
 }
 
 /**
- * 喂养连续升级（含 40+ 突破金币消耗）：
+ * 连续升级（含 40+ 突破金币消耗）：
  * 若经验够升到突破下一级但金币不足，则停在当前突破级，剩余经验保留在 exp 中。
  */
 export function applyExpWithBreakthrough(

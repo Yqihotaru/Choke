@@ -195,50 +195,6 @@
   color: var(--bk-bad);
 }
 
-/* 熔卡：可选的重复卡 */
-.card-detail__fuel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.card-detail__fuel-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-  gap: 8px;
-  max-height: 260px;
-  padding-right: 4px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--bk-raised) transparent;
-}
-.card-detail__fuel-card {
-  position: relative;
-  min-width: 0;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.card-detail__fuel-card .card-face {
-  width: 100%;
-  pointer-events: none;
-}
-.card-detail__fuel-card span {
-  position: absolute;
-  left: 50%;
-  bottom: 6px;
-  translate: -50% 0;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgb(28 18 22 / 0.88);
-  color: var(--bk-good);
-  font-family: var(--bk-mono);
-  font-size: 10px;
-  white-space: nowrap;
-}
-.card-detail__fuel-card.is-busy {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
 /* 上架市场 */
 .card-detail__market {
   display: flex;
@@ -346,11 +302,6 @@
   margin: 0;
   font-size: 11px;
   color: var(--bk-dim);
-}
-.card-detail__exp-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 .card-detail__dispose {
   display: flex;

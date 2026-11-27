@@ -1,12 +1,9 @@
 {
-  "shard-C": { "name": "COMMON 碎片", "kind": "shard", "rarity": "C", "exp": 10 },
-  "shard-UC": { "name": "UNCOMMON 碎片", "kind": "shard", "rarity": "UC", "exp": 20 },
-  "shard-R": { "name": "RARE 碎片", "kind": "shard", "rarity": "R", "exp": 48 },
-  "shard-E": { "name": "EPIC 碎片", "kind": "shard", "rarity": "E", "exp": 120 },
-  "shard-L": { "name": "LEGENDARY 碎片", "kind": "shard", "rarity": "L", "exp": 288 },
-  "shard-Mythic": { "name": "MYTHIC 碎片", "kind": "shard", "rarity": "Mythic", "exp": 720 },
-  "shard-Prismatic": { "name": "PRISMATIC 碎片", "kind": "shard", "rarity": "Prismatic", "exp": 1920 },
-  "exp-small": { "name": "经验乐谱 · 小", "kind": "exp", "exp": 200 },
-  "exp-medium": { "name": "经验乐谱 · 中", "kind": "exp", "exp": 1000 },
-  "exp-large": { "name": "经验乐谱 · 大", "kind": "exp", "exp": 5000 }
+  "shard-C": { "name": "COMMON 碎片", "kind": "shard", "rarity": "C" },
+  "shard-UC": { "name": "UNCOMMON 碎片", "kind": "shard", "rarity": "UC" },
+  "shard-R": { "name": "RARE 碎片", "kind": "shard", "rarity": "R" },
+  "shard-E": { "name": "EPIC 碎片", "kind": "shard", "rarity": "E" },
+  "shard-L": { "name": "LEGENDARY 碎片", "kind": "shard", "rarity": "L" },
+  "shard-Mythic": { "name": "MYTHIC 碎片", "kind": "shard", "rarity": "Mythic" },
+  "shard-Prismatic": { "name": "PRISMATIC 碎片", "kind": "shard", "rarity": "Prismatic" }
 }

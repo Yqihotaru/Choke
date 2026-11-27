@@ -2,7 +2,7 @@ import { nextHeartbeatDelay } from "@choke/shared/presence"
 
 /**
  * 在线心跳：打开页面就发一次，之后每 20–40 秒随机发一次（见 @choke/shared/presence）。
- * 服务端靠它判断你在不在线，并累计挂机包的在线时间。
+ * 服务端靠它判断你在不在线。
  * 不依赖任何页面：桌面、战斗、远征挂着都算在线；关掉标签页就不会再有请求，服务端超时后判离线。
  */
 

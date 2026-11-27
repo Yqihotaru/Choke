@@ -110,26 +110,6 @@ await test("开包：卡包 −1，每张卡 +1，带上卡的实例 id", async 
   )
 })
 
-await test("喂养：被吃的卡 −1、用掉的道具 −n、闪卡精华 +n", async () => {
-  const userId = await newUser({ essence: 0 })
-  const target = await give(userId, "lt-R")
-  const fodder = await give(userId, "lt-C", true)
-  await db.transaction(async (tx) => {
-    const { grantItems } = await import("../src/items")
-    await grantItems(tx, userId, [{ itemId: "exp-small", count: 3 }])
-  })
-  const res = await call(userId, "POST", `/users/${userId}/cards/${target}/feed`, {
-    cards: [fodder],
-    items: [{ itemId: "exp-small", count: 2 }],
-  })
-  assert.equal(res.status, 200, JSON.stringify(res.body))
-  assert.equal(await sumOf(userId, "card", "lt-C"), -1)
-  assert.equal(await sumOf(userId, "item", "exp-small"), -2)
-  const user = await userOf(userId)
-  assert.ok(user.essence > 0, "闪卡应该给精华")
-  assert.equal(await sumOf(userId, "essence"), user.essence)
-})
-
 await test("分解：卡 −1、碎片 +4、精华 +n", async () => {
   const userId = await newUser({ essence: 0 })
   const card = await give(userId, "lt-E", true)

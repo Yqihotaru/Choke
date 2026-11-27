@@ -7,7 +7,7 @@ import type { db } from "./db/client"
 import { questProgress } from "./db/schema"
 import type { Tx } from "./tx"
 
-/** 只依赖内容和进度表，不碰邮件和发奖，这样开包、喂养这些底层动作可以放心 import */
+/** 只依赖内容和进度表，不碰邮件和发奖，这样开包、融合这些底层动作可以放心 import */
 export const QUESTS = Object.entries(QUEST_CONTENT.quests)
 
 export interface QuestEventOptions {

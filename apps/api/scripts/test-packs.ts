@@ -78,10 +78,10 @@ const HIGH = new Set(["L", "Mythic", "Prismatic"])
 
 // 卡池里一张卡都没有：开包必然失败。这一组要最先跑（卡池 id 会被缓存）
 await test("开包失败：整体回滚，包还在、没有多余的流水", async () => {
-  await makeUser("pk-fail", { idle: 1 })
-  const res = await openAs("pk-fail", "idle")
+  await makeUser("pk-fail", { normal: 1 })
+  const res = await openAs("pk-fail", "normal")
   assert.equal(res.statusCode, 500)
-  assert.equal(await packCount("pk-fail", "idle"), 1)
+  assert.equal(await packCount("pk-fail", "normal"), 1)
   const ledger = await db.select().from(ledgerEntries).where(eq(ledgerEntries.userId, "pk-fail"))
   assert.equal(ledger.length, 0)
 })

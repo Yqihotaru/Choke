@@ -1,9 +1,8 @@
 /**
  * P1 经济闭环服务端测试：
- * 1. 挂机包（idle）每日 60 包领取与上限拦截
- * 2. NPC 回收（价格表、日限 20 张、本体卡拦截、记账）
- * 3. 卡牌 40+ 突破金币消耗（300/500/500/700）
- * 4. 市场 2% 上架税 + 5% 成交税 + ±40% 价格带 + 7 天过期 + 成交历史
+ * 1. NPC 回收（价格表、日限 20 张、本体卡拦截、记账）
+ * 2. 卡牌 40+ 突破金币消耗（300/500/500/700）
+ * 3. 市场 2% 上架税 + 5% 成交税 + ±40% 价格带 + 7 天过期 + 成交历史
  */
 import assert from "node:assert/strict"
 
@@ -22,7 +21,6 @@ const { packRoutes } = await import("../src/routes/packs")
 const { progressionRoutes } = await import("../src/routes/progression")
 const { marketRoutes } = await import("../src/routes/market")
 const { breakthroughCoinCost } = await import("@choke/shared/progression")
-const { resetDayKey } = await import("@choke/shared/reset")
 
 const app = Fastify()
 app.setErrorHandler(handleError)
@@ -47,67 +45,6 @@ async function test(name: string, fn: () => Promise<void>) {
 function auth(userId: string) {
   return { cookie: `${COOKIE_NAME}=${makeSession(userId)}` }
 }
-
-await test("挂机包：按在线时间累计，每日上限 60 包，领完后拦截", async () => {
-  const userId = "p1-idle-user"
-  // 今天已经在线 25 分钟
-  await db.insert(users).values({
-    id: userId,
-    username: userId,
-    tutorialDone: true,
-    playerLevel: 60,
-    onlineDay: resetDayKey(Date.now()),
-    onlineSeconds: 25 * 60,
-  })
-
-  const r1 = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/packs/idle/claim`,
-    headers: auth(userId),
-    payload: { count: 10 },
-  })
-  assert.equal(r1.statusCode, 200)
-  assert.equal(r1.json().data.claimed, 10)
-  assert.equal(r1.json().data.claimable, 15)
-  assert.equal(r1.json().data.remaining, 50)
-
-  const r2 = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/packs/idle/claim`,
-    headers: auth(userId),
-  })
-  assert.equal(r2.statusCode, 200)
-  assert.equal(r2.json().data.claimed, 15)
-  assert.equal(r2.json().data.count, 25)
-
-  // 攒的都领完了，再领要等继续在线
-  const r2b = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/packs/idle/claim`,
-    headers: auth(userId),
-  })
-  assert.equal(r2b.statusCode, 400)
-  assert.equal(r2b.json().error.code, "nothing_to_claim")
-
-  // 在线满 1 小时：补到每日上限 60
-  await db.update(users).set({ onlineSeconds: 3600 }).where(eq(users.id, userId))
-  const r3a = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/packs/idle/claim`,
-    headers: auth(userId),
-  })
-  assert.equal(r3a.statusCode, 200)
-  assert.equal(r3a.json().data.claimed, 35)
-  assert.equal(r3a.json().data.count, 60)
-
-  const r3 = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/packs/idle/claim`,
-    headers: auth(userId),
-  })
-  assert.equal(r3.statusCode, 400)
-  assert.equal(r3.json().error.code, "daily_limit_reached")
-})
 
 await test("NPC 回收：按稀有度给金币、每日限 20 张、本体卡禁止回收", async () => {
   const userId = "p1-recycle-user"
@@ -213,37 +150,6 @@ await test("卡牌 40+ 突破只收金币：40→41 扣 300 金币，不再要�
   assert.equal(okRes.json().data.coinsSpent, 300)
   assert.equal(okRes.json().data.coins, 200)
 
-  // 喂养连续升级跨 40 级：缺金币时停在 40 级、保留经验并返回 blockedCost；补足金币后顺利突破
-  const [ucFeed] = await db
-    .insert(userCards)
-    .values({ userId, cardId: "p1-bt-c", level: 39, exp: 0, serial: 2 })
-    .returning()
-  await db.update(users).set({ coins: 100 }).where(eq(users.id, userId))
-  await db.insert(userItems).values({ userId, itemId: "exp-medium", count: 2 })
-  const feedBlocked = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/cards/${ucFeed!.id}/feed`,
-    headers: auth(userId),
-    payload: { items: [{ itemId: "exp-medium", count: 1 }] },
-  })
-  assert.equal(feedBlocked.statusCode, 200)
-  assert.equal(feedBlocked.json().data.card.level, 40)
-  assert.equal(feedBlocked.json().data.blockedCost, 300)
-  assert.equal(feedBlocked.json().data.coinsSpent, 0)
-  assert.ok(feedBlocked.json().data.card.exp > 0)
-
-  // 补齐金币后继续喂养，成功跨过 40 级并扣除金币
-  await db.update(users).set({ coins: 1000 }).where(eq(users.id, userId))
-  const feedOk = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/cards/${ucFeed!.id}/feed`,
-    headers: auth(userId),
-    payload: { items: [{ itemId: "exp-medium", count: 1 }] },
-  })
-  assert.equal(feedOk.statusCode, 200)
-  assert.ok(feedOk.json().data.card.level > 40)
-  assert.equal(feedOk.json().data.coinsSpent, 300)
-  assert.equal(feedOk.json().data.blockedCost, 0)
 })
 
 await test("市场：±40% 价格带校验、7 天过期与成交历史", async () => {

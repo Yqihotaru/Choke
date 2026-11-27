@@ -34,10 +34,10 @@ check("新号：开包可用", isUnlocked("packs", ctx()))
 check("没完成引导：背包锁，原因是引导", lockReason("backpack", ctx({ level: 3 }))?.kind === "tutorial")
 check("完成引导且到等级：背包开", isUnlocked("backpack", ctx({ level: 3, tutorialDone: true })))
 check(
-  "完成引导但等级不够：喂养锁，原因带所需等级",
+  "完成引导但等级不够：融合锁，原因带所需等级",
   (() => {
-    const reason = lockReason("feed", ctx({ level: 3, tutorialDone: true }))
-    return reason?.kind === "level" && reason.level === unlockLevelOf("feed")
+    const reason = lockReason("fuse", ctx({ level: 3, tutorialDone: true }))
+    return reason?.kind === "level" && reason.level === unlockLevelOf("fuse")
   })(),
 )
 check(
@@ -48,7 +48,7 @@ check("市场：绑定账号并完成引导就开", isUnlocked("market", ctx({ l
 check(
   "提示文案带功能名",
   lockMessage("market", { kind: "account" }).includes(CONTENT.unlocks.market.name) &&
-    lockMessage("feed", { kind: "level", level: 4 }).includes("Lv.4"),
+    lockMessage("fuse", { kind: "level", level: 4 }).includes("Lv.4"),
 )
 
 // 表自洽

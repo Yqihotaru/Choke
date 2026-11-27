@@ -15,15 +15,6 @@
       "normal": [[1, 0], [15, 0.02], [25, 0.06], [40, 0.2], [60, 0.45], [70, 0.68], [80, 1]],
       "hero": [[1, 0], [12, 1]]
     },
-    "feedExp": {
-      "C": 50,
-      "UC": 100,
-      "R": 240,
-      "E": 600,
-      "L": 1440,
-      "Mythic": 3600,
-      "Prismatic": 9600
-    },
     "refundRate": 0.75,
     "shardsPerDismantle": 4,
     "breakthroughCoins": {

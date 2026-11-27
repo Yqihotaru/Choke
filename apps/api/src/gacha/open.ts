@@ -150,11 +150,9 @@ export async function openPack(
     pools.set(rarity, await idsFor(rarity))
   }
 
-  // 额外第 6 张：挂机包不触发，也不占配额、不动保底。
+  // 额外第 6 张：不占配额、不动保底。
   const mirrorCandidate =
-    pool !== "idle" && mirrorRandom() < MIRROR_RATE
-      ? await pickMirrorCard(pool, mirrorRandom)
-      : null
+    mirrorRandom() < MIRROR_RATE ? await pickMirrorCard(pool, mirrorRandom) : null
 
   const floor = rankOf(STARTER_GUARANTEE.rarity)
 

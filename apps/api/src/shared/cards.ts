@@ -6,7 +6,6 @@ export {
   applyExp,
   constellationCap,
   expToNext,
-  feedExpOf,
   isHeroCardId,
   levelCap,
   refundExpOf,

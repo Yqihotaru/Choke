@@ -8,7 +8,6 @@ export const POOL_KEY = "choke.pool"
 /** 桌面卡池 → 服务端卡池 id（现在两边同名，保留映射方便以后改名） */
 export const SERVER_POOL: Record<PackPool, string> = {
   normal: "normal",
-  idle: "idle",
   golden: "golden",
   radiant: "radiant",
   sky: "sky",

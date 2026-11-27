@@ -35,7 +35,6 @@ export function questPeriodKey(period: QuestPeriod, now: number): string {
 export const QUEST_EVENTS = [
   "sign-in",
   "pack-open",
-  "feed",
   "fuse",
   "dismantle",
   "market-buy",
@@ -70,7 +69,6 @@ export function isMaxEvent(event: QuestEvent): boolean {
 export const QUEST_EVENT_LABEL: Record<QuestEvent, string> = {
   "sign-in": "签到",
   "pack-open": "开卡包（每包 1 次）",
-  feed: "喂养（每次 1 次）",
   fuse: "融合（每次 1 次）",
   dismantle: "分解（每张卡 1 次）",
   "market-buy": "市场买入",

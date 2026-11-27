@@ -313,7 +313,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
     if (isLegacySession(rawSession)) setSessionCookie(reply, userId)
 
-    // 镜像池按最近活跃筛选；/auth/me 是每次进桌面的必经请求，顺便当一次心跳（同时累计挂机包的在线时间）。
+    // 镜像池按最近活跃筛选；/auth/me 是每次进桌面的必经请求，顺便当一次心跳。
     await recordBeat(userId)
 
     let hero = null

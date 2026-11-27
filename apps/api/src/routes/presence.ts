@@ -11,10 +11,9 @@ export async function presenceRoutes(app: FastifyInstance) {
   app.post("/presence/beat", async (request, reply) => {
     const userId = requireSession(request, reply)
     if (!userId) return
-    const result = await recordBeat(userId)
-    if (!result) {
+    if (!(await recordBeat(userId))) {
       return reply.code(401).send({ ok: false, error: { code: "unauthorized", message: "用户不存在" } })
     }
-    return { ok: true, data: { onlineSeconds: result.onlineSeconds } }
+    return { ok: true, data: {} }
   })
 }

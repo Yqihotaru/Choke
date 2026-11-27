@@ -82,7 +82,6 @@ const call = async (userId: string, method: "GET" | "POST", url: string, payload
 
 /** 每个功能对应的一个代表接口。请求体故意写得不合法：没解锁时必须先被解锁校验拦下，到不了参数检查 */
 const ENDPOINTS: Array<{ feature: string; method: "GET" | "POST"; url: (u: string) => string; body?: unknown }> = [
-  { feature: "feed", method: "POST", url: (u) => `/users/${u}/cards/1/feed`, body: { cards: [] } },
   { feature: "fuse", method: "POST", url: (u) => `/users/${u}/cards/1/constellation` },
   { feature: "foil", method: "POST", url: (u) => `/users/${u}/cards/1/enhance`, body: { action: "foil" } },
   { feature: "dismantle", method: "POST", url: (u) => `/users/${u}/cards/1/dismantle` },
@@ -215,7 +214,7 @@ await test("/progress 带上每个功能的锁状态，和服务端实际校验�
   assert.equal(res.body.data.linkedAccount, false, "没绑 osu! 的号要告诉前端")
   const locks = res.body.data.locks as Record<string, { reason: string; level: number; message: string } | null>
   assert.deepEqual(Object.keys(locks).sort(), [...FEATURE_IDS].sort())
-  assert.equal(locks["feed"], null)
+  assert.equal(locks["dismantle"], null)
   assert.equal(locks["mainline"], null)
   assert.equal(locks["fuse"]?.reason, "level")
   assert.equal(locks["fuse"]?.level, CONTENT.unlocks.fuse.level)
@@ -226,7 +225,7 @@ await test("/progress 带上每个功能的锁状态，和服务端实际校验�
 await test("不信前端：身份只看数据库，别人的号也碰不到", async () => {
   const victim = await newUser({ playerLevel: 1, tutorialDone: false })
   const attacker = await newUser({ playerLevel: 60 })
-  const res = await call(attacker, "POST", `/users/${victim}/cards/1/feed`, { cards: [] })
+  const res = await call(attacker, "POST", `/users/${victim}/cards/1/dismantle`)
   assert.equal(res.status, 403)
   assert.notEqual(res.body.error.code, "feature_locked", "越权应该是 forbidden，而不是解锁问题")
 })

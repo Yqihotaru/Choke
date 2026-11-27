@@ -29,7 +29,6 @@ import { resolvePulledCards } from "@/desk/opening/cards"
 import { PackArt } from "@/desk/opening/PackArt"
 import { RARITY_COLOR } from "@/desk/lib/rarity"
 import { useGameConfig } from "@/desk/session/useGameConfig"
-import { IdlePackCard } from "@/presence/IdlePackCard"
 import "@/desk/panels/shop/gacha-panel.css"
 
 /** 「跳过动画」：开出的卡直接摆在面板里，方便连抽 */
@@ -48,7 +47,6 @@ interface Pool {
 const POOLS: Pool[] = [
   { id: "starter", name: "新手", note: "一次性 · 必出传奇", event: true },
   { id: "normal", name: "普通", note: "日常主力" },
-  { id: "idle", name: "挂机", note: "低成本" },
   { id: "golden", name: "黄金", note: "任务产出" },
   { id: "radiant", name: "璀璨", note: "周常奖励" },
   { id: "sky", name: "天穹", note: "月常奖励" },
@@ -369,7 +367,6 @@ export function GachaPanel({
           >
             跳过动画
           </button>
-          {userId ? <IdlePackCard userId={userId} /> : null}
         </>
       }
       right={

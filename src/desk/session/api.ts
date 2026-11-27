@@ -235,35 +235,6 @@ export function fetchResonance(userId: string, signal?: AbortSignal): Promise<Re
   return request<ResonanceOverview>(`/api/users/${userId}/resonance`, { signal })
 }
 
-export interface FeedResult {
-  card: ApiUserCard
-  gained: number
-  /** 满级后溢出作废的经验 */
-  wasted: number
-  levelsGained: number
-  coinsSpent: number
-  blockedCost: number
-  coins: number
-  essenceGained: number
-  /** 只有喂了闪卡才返回 */
-  essence?: number
-  items: ItemWallet
-  consumedUserCardIds: number[]
-}
-
-/** 喂养：多张卡 + 多种物品一次喂给目标卡，服务端自动升级 */
-export function feedCard(
-  userId: string,
-  userCardId: number,
-  input: { cards?: number[]; items?: ItemStack[] },
-): Promise<FeedResult> {
-  return request<FeedResult>(`/api/users/${userId}/cards/${userCardId}/feed`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cards: input.cards ?? [], items: input.items ?? [] }),
-  })
-}
-
 export interface PackInventory {
   packs: Record<string, number>
   heroClaimed: boolean
@@ -573,7 +544,7 @@ export interface OpenPackCard {
 
 export interface OpenPackResult {
   results: OpenPackCard[]
-  /** 额外第 6 张镜像卡（挂机包不触发） */
+  /** 额外第 6 张镜像卡 */
   bonus?: OpenPackCard | null
   packs?: Record<string, number>
 }

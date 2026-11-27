@@ -41,9 +41,7 @@ export const progressionSchema = z.strictObject({
     /** lv1 → 满级累计经验 */
     levelExpTotal: perRarity(positiveInt),
     levelCurve: z.strictObject({ normal: levelCurve, hero: levelCurve }),
-    /** 直接喂一张卡的基础经验 */
-    feedExp: perRarity(positiveInt),
-    /** 升过级的卡被喂掉 / 分解时，投入经验的返还比例 */
+    /** 升过级的卡被 NPC 回收时，投入经验折算的比例 */
     refundRate: z.number().min(0).max(1),
     /** 分解一张卡得到的同品质碎片个数 */
     shardsPerDismantle: positiveInt,
@@ -80,10 +78,7 @@ export const progressionSchema = z.strictObject({
   }),
 })
 
-const itemSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ name: z.string().min(1), kind: z.literal("shard"), rarity, exp: positiveInt }),
-  z.strictObject({ name: z.string().min(1), kind: z.literal("exp"), exp: positiveInt }),
-])
+const itemSchema = z.strictObject({ name: z.string().min(1), kind: z.literal("shard"), rarity })
 
 export const itemsSchema = z.record(id, itemSchema)
 
@@ -197,26 +192,19 @@ export const contentSchema = z
       issue(["progression", "expedition", "pointsByLevel", 0], "第一项必须是 1 级（新玩家开局就有点数）")
     }
 
-    // 每个品质恰好一种碎片，id 固定为 shard-<品质>；分解再喂必须比直接喂亏
+    // 每个品质恰好一种碎片，id 固定为 shard-<品质>
     for (const r of RARITIES) {
       const shard = content.items[`shard-${r}`]
-      if (!shard || shard.kind !== "shard" || shard.rarity !== r) {
+      if (!shard || shard.rarity !== r) {
         issue(["items", `shard-${r}`], `缺少 ${r} 品质的碎片（kind: shard, rarity: ${r}）`)
         continue
       }
-      if (shard.exp * card.shardsPerDismantle >= card.feedExp[r]) {
-        issue(["items", `shard-${r}`, "exp"], `${card.shardsPerDismantle} 个碎片的经验不能达到直接喂卡（${card.feedExp[r]}）`)
-      }
     }
     for (const [itemId, item] of Object.entries(content.items)) {
-      if (item.kind === "shard" && itemId !== `shard-${item.rarity}`) {
+      if (itemId !== `shard-${item.rarity}`) {
         issue(["items", itemId], `碎片 id 必须是 shard-${item.rarity}`)
       }
     }
-    if (!Object.values(content.items).some((item) => item.kind === "exp")) {
-      issue(["items"], "至少需要一种经验道具（分解返还要用）")
-    }
-
     const packIds = Object.keys(content.packs.packs)
     const { starterGuarantee, starterGrant } = content.packs
     if (!packIds.includes(starterGuarantee.pool)) {

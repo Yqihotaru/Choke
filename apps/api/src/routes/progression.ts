@@ -6,17 +6,9 @@ import {
   NPC_RECYCLE_DAILY_LIMIT,
   npcRecycleValue,
 } from "@choke/shared/economy"
-import {
-  ITEMS,
-  SHARDS_PER_DISMANTLE,
-  expToItems,
-  isItemId,
-  shardItemId,
-  type ItemStack,
-} from "@choke/shared/items"
+import { SHARDS_PER_DISMANTLE, shardItemId, type ItemStack } from "@choke/shared/items"
 import {
   SKILL_REROLL_PITY_INTERVAL,
-  applyExpWithBreakthrough,
   breakthroughCoinCost,
   isSkillRerollSelectReady,
   skillRerollCost,
@@ -41,10 +33,8 @@ import {
   constellationCap,
   essenceOf,
   expToNext,
-  feedExpOf,
   isHeroCardId,
   levelCap,
-  refundExpOf,
   type Rarity,
 } from "../shared/cards"
 import { db } from "../db/client"
@@ -55,22 +45,6 @@ import { recordLedger, type LedgerEntryInput } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
 import { TxAbort, lockUser, runTx, type Tx } from "../tx"
 import { requireFeature } from "../unlocks"
-
-const feedBodySchema = z
-  .object({
-    cards: z.array(z.number().int().positive()).max(60).default([]),
-    items: z
-      .array(
-        z.object({
-          itemId: z.string().refine(isItemId, "未知物品"),
-          count: z.number().int().positive().max(100_000),
-        }),
-      )
-      .max(20)
-      .default([]),
-  })
-  .refine((body) => body.cards.length > 0 || body.items.length > 0, "至少选一张卡或一种物品")
-  .refine((body) => new Set(body.cards).size === body.cards.length, "卡不能重复")
 
 /** 从卡册里移走一张卡：拦截出征中与在售挂单；清掉布阵；删 0 行直接抛 409 冲突 */
 async function removeUserCard(tx: Tx, userId: string, userCardId: number) {
@@ -192,7 +166,7 @@ export async function progressionRoutes(app: FastifyInstance) {
     }
   })
 
-  /** 可作为喂养/融合材料的重复卡 */
+  /** 可作为融合材料的重复卡 */
   app.get("/users/:userId/cards/:userCardId/fuel", async (request, reply) => {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
@@ -524,152 +498,6 @@ export async function progressionRoutes(app: FastifyInstance) {
     }
   })
 
-  /**
-   * 喂养：一次喂多张卡 + 多种物品（碎片、经验道具），喂完自动升级。
-   * 卡：基础喂养值 + 已投入经验 × 75%；同名卡至少留一张。闪卡另给精华。
-   * 满级后溢出的经验作废，返回 wasted 让前端提示；已满级的卡直接拒收。
-   */
-  app.post("/users/:userId/cards/:userCardId/feed", async (request, reply) => {
-    const params = paramsSchema.parse(request.params)
-    const userId = requireSelf(request, reply, params.userId)
-    if (!userId) return
-    if (!(await requireFeature(reply, userId, "feed"))) return
-    const { userCardId } = params
-    const body = feedBodySchema.parse(request.body)
-    const stacks = mergeStacks(body.items as ItemStack[])
-
-    if (body.cards.includes(userCardId)) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "feed_self", message: "不能把卡喂给它自己" },
-      })
-    }
-
-    const result = await runTx(reply, async (tx) => {
-      await lockUser(tx, userId)
-
-      const [target] = await tx
-        .select({ id: cards.id, rarity: cards.rarity, level: userCards.level, exp: userCards.exp })
-        .from(userCards)
-        .innerJoin(cards, eq(cards.id, userCards.cardId))
-        .where(and(eq(userCards.userId, userId), eq(userCards.id, userCardId)))
-        .limit(1)
-      if (!target) throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
-      const targetHero = isHeroCardId(target.id)
-      if (target.level >= levelCap(targetHero)) {
-        throw new TxAbort(400, "max_level", "已经满级，不需要经验")
-      }
-
-      let gained = 0
-      let essenceGained = 0
-      const ledger: LedgerEntryInput[] = []
-      if (body.cards.length > 0) {
-        const sources = await tx
-          .select({
-            id: userCards.id,
-            cardId: userCards.cardId,
-            rarity: cards.rarity,
-            level: userCards.level,
-            exp: userCards.exp,
-            foil: userCards.foil,
-          })
-          .from(userCards)
-          .innerJoin(cards, eq(cards.id, userCards.cardId))
-          .where(and(eq(userCards.userId, userId), inArray(userCards.id, body.cards)))
-        if (sources.length !== body.cards.length) {
-          throw new TxAbort(400, "source_not_found", "有材料卡不在这个账号的卡册里")
-        }
-        if (sources.some((source) => isHeroCardId(source.cardId))) {
-          throw new TxAbort(400, "hero_protected", "本体卡不能当材料")
-        }
-
-        for (const source of sources) {
-          const rarity = source.rarity as Rarity
-          gained += feedExpOf({ rarity, level: source.level, exp: source.exp })
-          essenceGained += essenceOf(rarity, source.foil)
-          await removeUserCard(tx, userId, source.id)
-          ledger.push({ kind: "card", ref: source.cardId, delta: -1, userCardId: source.id })
-        }
-      }
-
-      if (stacks.length > 0) {
-        await spendItems(tx, userId, stacks)
-        for (const { itemId, count: amount } of stacks) {
-          gained += ITEMS[itemId].exp * amount
-          ledger.push({ kind: "item", ref: itemId, delta: -amount })
-        }
-      }
-
-      const [userRow] = await tx
-        .select({ coins: users.coins })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1)
-      const availableCoins = userRow?.coins ?? 0
-      const targetRarity = target.rarity as Rarity
-
-      const next = applyExpWithBreakthrough(
-        target.level,
-        target.exp,
-        gained,
-        targetRarity,
-        targetHero,
-        availableCoins,
-      )
-      await tx
-        .update(userCards)
-        .set({ level: next.level, exp: next.exp })
-        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
-
-      let coins = availableCoins
-      if (next.coinsSpent > 0) {
-        const [coinWallet] = await tx
-          .update(users)
-          .set({ coins: sql`${users.coins} - ${next.coinsSpent}` })
-          .where(eq(users.id, userId))
-          .returning({ coins: users.coins })
-        coins = coinWallet?.coins ?? availableCoins - next.coinsSpent
-        ledger.push({ kind: "coins", delta: -next.coinsSpent })
-      }
-
-      let essence: number | undefined
-      if (essenceGained > 0) {
-        const [wallet] = await tx
-          .update(users)
-          .set({ essence: sql`${users.essence} + ${essenceGained}` })
-          .where(eq(users.id, userId))
-          .returning({ essence: users.essence })
-        essence = wallet?.essence
-      }
-      ledger.push({ kind: "essence", delta: essenceGained })
-      await recordLedger(tx, userId, ledger, { source: "feed", sourceRef: String(userCardId) })
-      await recordQuestEvent(tx, userId, "feed")
-      await recordQuestEvent(tx, userId, "card-level", { value: next.level })
-
-      return {
-        gained,
-        wasted: next.wasted,
-        levelsGained: next.level - target.level,
-        coinsSpent: next.coinsSpent,
-        blockedCost: next.blockedCost,
-        coins,
-        essenceGained,
-        essence,
-        items: await loadItems(userId, tx),
-      }
-    })
-    if (!result) return
-
-    return {
-      ok: true,
-      data: {
-        card: await loadCard(userId, userCardId),
-        ...result,
-        consumedUserCardIds: body.cards,
-      },
-    }
-  })
-
   app.post("/users/:userId/cards/:userCardId/enhance", async (request, reply) => {
     const params = paramsSchema.parse(request.params)
     const userId = requireSelf(request, reply, params.userId)
@@ -751,8 +579,7 @@ export async function progressionRoutes(app: FastifyInstance) {
 
   /**
    * 通用分解：任意卡 → 4 个同品质碎片（闪卡另给精华）。与「融合升命座」不同，这里不需要同名卡。
-   * 升过级的卡另按已投入经验 × 75% 返还经验道具（大/中/小拆分，尾数舍去）。
-   * 除本体卡外任何卡都能分解，包括最后一张。
+     * 除本体卡外任何卡都能分解，包括最后一张。
    */
   app.post("/users/:userId/cards/:userCardId/dismantle", async (request, reply) => {
     const params = paramsSchema.parse(request.params)
@@ -781,20 +608,11 @@ export async function progressionRoutes(app: FastifyInstance) {
     const dismantled = await runTx(reply, async (tx) => {
       await lockUser(tx, userId)
 
-      // 等级和经验在锁内重读，避免和并发的喂养交错
-      const [fresh] = await tx
-        .select({ level: userCards.level, exp: userCards.exp })
-        .from(userCards)
-        .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
-        .limit(1)
-      if (!fresh || !(await removeUserCard(tx, userId, userCardId))) {
+      if (!(await removeUserCard(tx, userId, userCardId))) {
         throw new TxAbort(404, "not_found", "这不是你账号里的卡")
       }
 
-      const itemsGained: ItemStack[] = [
-        { itemId: shardItemId(rarity), count: SHARDS_PER_DISMANTLE },
-        ...expToItems(refundExpOf(fresh.level, fresh.exp, rarity, false)),
-      ]
+      const itemsGained: ItemStack[] = [{ itemId: shardItemId(rarity), count: SHARDS_PER_DISMANTLE }]
       await grantItems(tx, userId, itemsGained)
 
       const [wallet] = await tx
@@ -829,7 +647,7 @@ export async function progressionRoutes(app: FastifyInstance) {
     }
   })
 
-  /** 批量分解：一次最多 60 张非本体且未出征锁定的卡，合并发放同品质碎片、闪卡精华与 75% 返还经验乐谱 */
+  /** 批量分解：一次最多 60 张非本体且未出征锁定的卡，合并发放同品质碎片与闪卡精华 */
   app.post("/users/:userId/cards/dismantle", async (request, reply) => {
     const { userId: paramUserId } = z.object({ userId: z.string() }).parse(request.params)
     const userId = requireSelf(request, reply, paramUserId)
@@ -850,8 +668,6 @@ export async function progressionRoutes(app: FastifyInstance) {
         .select({
           id: userCards.id,
           cardId: userCards.cardId,
-          level: userCards.level,
-          exp: userCards.exp,
           foil: userCards.foil,
           rarity: cards.rarity,
           cardType: cards.cardType,
@@ -892,7 +708,6 @@ export async function progressionRoutes(app: FastifyInstance) {
         removedUserCardIds.push(target.id)
         const rarity = target.rarity as Rarity
         rawItems.push({ itemId: shardItemId(rarity), count: SHARDS_PER_DISMANTLE })
-        rawItems.push(...expToItems(refundExpOf(target.level, target.exp, rarity, false)))
         essenceGained += essenceOf(rarity, target.foil)
         ledger.push({ kind: "card", ref: target.cardId, delta: -1, userCardId: target.id })
       }
