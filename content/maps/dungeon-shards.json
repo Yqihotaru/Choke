@@ -13,11 +13,20 @@
     { "flag": "vein-key", "label": "带出封存工具箱" }
   ],
   "nodes": {
-    "n1": { "type": "battle", "encounter": "vine-fiddler", "rewards": "dungeon-node-coins", "title": "藤蔓封道", "pos": [0, 0], "next": ["n2"] },
-    "n2": { "type": "event", "event": "dungeon-shortcut", "title": "坍塌的补给道", "pos": [1, 0], "next": ["n3a", "n3b"] },
-    "n3a": { "type": "battle", "encounter": "ember-scribe", "rewards": "dungeon-chest-bonus", "title": "深井守卫（威胁 +2）", "threat": 2, "pos": [2, -1], "next": ["n5"] },
-    "n3b": { "type": "rest", "title": "临时营火", "pos": [2, 1], "next": ["n4b", "n5"] },
-    "n4b": { "type": "treasure", "rewards": "dungeon-chest-bonus", "requires": { "flag": "vein-key" }, "title": "封存工具箱", "pos": [3, 1], "next": ["n5"] },
-    "n5": { "type": "boss", "encounter": "silence-curator", "rewards": "dungeon-node-coins", "title": "矿脉司书", "pos": [4, 0], "next": [] }
+    "n1": { "type": "battle", "encounter": "vine-fiddler", "rewards": "dungeon-node-coins", "title": "藤蔓封道", "pos": [0, 0], "next": ["x6"] },
+    "x6": { "type": "empty", "title": "短暂的喘息", "pos": [1, 0], "next": ["e1"] },
+    "e1": { "type": "empty", "title": "矿道入口", "pos": [2, 0], "next": ["e2"] },
+    "e2": { "type": "empty", "title": "空矿车轨道", "pos": [3, 0], "next": ["x7"] },
+    "x7": { "type": "empty", "title": "一段缓坡", "pos": [4, 0], "next": ["n2"] },
+    "n2": { "type": "event", "event": "dungeon-shortcut", "title": "坍塌的补给道", "pos": [5, 0], "next": ["n3a", "n3b"] },
+    "n3a": { "type": "battle", "encounter": "ember-scribe", "rewards": "dungeon-chest-bonus", "title": "深井守卫（威胁 +2）", "threat": 2, "pos": [6, -1], "next": ["x8"] },
+    "n3b": { "type": "rest", "title": "临时营火", "pos": [6, 1], "next": ["n4b", "e5"] },
+    "x8": { "type": "empty", "title": "岔路口的尘土", "pos": [7, -1], "next": ["e3"] },
+    "n4b": { "type": "treasure", "rewards": "dungeon-chest-bonus", "requires": { "flag": "vein-key" }, "title": "封存工具箱", "pos": [7, 1], "next": ["x9"] },
+    "e3": { "type": "empty", "title": "积灰的矿灯", "pos": [8, -1], "next": ["e5"] },
+    "x9": { "type": "empty", "title": "安静的一段路", "pos": [8, 1], "next": ["e5"] },
+    "e5": { "type": "empty", "title": "司书室前厅", "pos": [9, 0], "next": ["x10"] },
+    "x10": { "type": "empty", "title": "风吹过的空地", "pos": [10, 0], "next": ["n5"] },
+    "n5": { "type": "boss", "encounter": "silence-curator", "rewards": "dungeon-node-coins", "title": "矿脉司书", "pos": [11, 0], "next": [] }
   }
 }

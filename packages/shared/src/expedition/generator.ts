@@ -98,9 +98,10 @@ export function generateMapFromTemplate(template: MapGeneratorTemplate, seed: st
     layerNodeIds.push(count === 1 ? [`n${index}`] : [`n${index}a`, `n${index}b`])
   }
 
-  const kindEntries: { type: "battle" | "rest" | "treasure"; weight: number }[] = [
+  const kindEntries: { type: "battle" | "rest" | "treasure" | "empty"; weight: number }[] = [
     { type: "battle", weight: template.weights.battle },
     ...(template.weights.rest > 0 ? [{ type: "rest" as const, weight: template.weights.rest }] : []),
+    ...(template.weights.empty > 0 ? [{ type: "empty" as const, weight: template.weights.empty }] : []),
     ...(template.weights.treasure > 0 && template.chests.length > 0
       ? [{ type: "treasure" as const, weight: template.weights.treasure }]
       : []),
@@ -156,6 +157,8 @@ export function generateMapFromTemplate(template: MapGeneratorTemplate, seed: st
       const kind = pickWeighted(kindEntries, rand()).type
       if (kind === "rest") {
         nodes[nodeId] = { type: "rest", title: "篝火", pos, next }
+      } else if (kind === "empty") {
+        nodes[nodeId] = { type: "empty", title: "空地", pos, next }
       } else if (kind === "treasure") {
         const chest = pickWeighted(template.chests, rand())
         nodes[nodeId] = { type: "treasure", rewards: chest.rewards, pos, next }

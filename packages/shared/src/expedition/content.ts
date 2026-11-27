@@ -113,6 +113,8 @@ export const mapNodeSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("treasure"), rewards: id, ...nodeBase }),
   /** 休息：队伍血量回满 */
   z.strictObject({ type: z.literal("rest"), ...nodeBase }),
+  /** 空地：走到就自动通过，什么都不发生；只用来把路线拉长 */
+  z.strictObject({ type: z.literal("empty"), ...nodeBase }),
   z.strictObject({ type: z.literal("branch"), prompt: z.string().optional(), ...nodeBase }),
   /** 事件：弹出选项，玩家选一个（效果见 mapEventSchema） */
   z.strictObject({ type: z.literal("event"), event: id, ...nodeBase }),
@@ -165,8 +167,10 @@ export const mapGeneratorSchema = z.strictObject({
       battle: int.min(1).max(1000).default(6),
       rest: int.min(0).max(1000).default(2),
       treasure: int.min(0).max(1000).default(2),
+      /** 空地（什么都不发生的格子）的权重；0 就不出现 */
+      empty: int.min(0).max(1000).default(0),
     })
-    .default({ battle: 6, rest: 2, treasure: 2 }),
+    .default({ battle: 6, rest: 2, treasure: 2, empty: 0 }),
   /** 普通战的默认掉落表（单个遭遇没写 rewards 时用它） */
   battleRewards: id.optional(),
   /** Boss 战的默认掉落表 */
@@ -499,7 +503,11 @@ export function isFightNode(node: MapNode | undefined): node is Extract<MapNode,
  * 还没展开的日常模板按层数给代表值，周常槽位池若含战斗也算 1 场，给列表页展示用）。
  */
 export function countMapFights(map: MapDef): number {
-  if (map.generate) return map.generate.layers
+  if (map.generate) {
+    const { layers, weights } = map.generate
+    const total = weights.battle + weights.rest + weights.treasure + weights.empty
+    return layers - Math.round(((layers - 2) * weights.empty) / total)
+  }
   let count = 0
   for (const node of Object.values(map.nodes)) {
     if (isFightNode(node)) count += 1

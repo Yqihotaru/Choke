@@ -37,6 +37,7 @@ export function RunView({
   const layout = useMemo(() => layoutMap(view.map), [view.map])
   const here = layout.nodes[view.position]
   const [sel, setSel] = useState<string | null>(null)
+  const [passedAt, setPassedAt] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [prevPosition, setPrevPosition] = useState(view.position)
@@ -72,15 +73,17 @@ export function RunView({
     }
   }
 
-  const choices = view.nodeDone ? view.availableNext.filter((id) => layout.nodes[id]) : []
+  // 空地不会自动翻页：站在上面要先点"前进"，才出现下一步（刷新后需要再点一次，不影响进度）
+  const holdEmpty = here?.node.type === "empty" && view.nodeDone && !view.atEnd && passedAt !== view.position
+  const choices = view.nodeDone && !holdEmpty ? view.availableNext.filter((id) => layout.nodes[id]) : []
   const branching = choices.length > 1
   const target = branching ? sel : (choices[0] ?? null)
 
-  const go = () => {
-    if (!target) return
+  const go = (to: string | null = target) => {
+    if (!to) return
     const before = view.difficulty.tier
     void act(
-      () => moveExpedition(userId, target),
+      () => moveExpedition(userId, to),
       (next) => {
         const node = next.map.nodes[next.position]
         if (next.difficulty.tier > before) say(`威胁升到 ${next.difficulty.tier} 档`)
@@ -141,6 +144,28 @@ export function RunView({
         </button>
       </>
     )
+  } else if (holdEmpty) {
+    panel = (
+      <>
+        <div className="ex-ph">
+          <b>{node ? titleOf(node) : "空地"}</b>
+          <span>什么都没有</span>
+        </div>
+        <p className="ex-event__text">{node?.hint ?? "这里没有敌人，也没有东西可拿。"}</p>
+        <button
+          type="button"
+          className="ex-go"
+          disabled={busy}
+          onClick={() => {
+            const ahead = view.availableNext.filter((id) => layout.nodes[id])
+            if (ahead.length === 1) go(ahead[0])
+            else setPassedAt(view.position)
+          }}
+        >
+          前进
+        </button>
+      </>
+    )
   } else if (view.atEnd) {
     panel = (
       <>
@@ -178,7 +203,7 @@ export function RunView({
         </div>
         {prompt && <p className="ex-event__text">{prompt}</p>}
         {choices.map((id) => card(id, branching && sel === id))}
-        <button type="button" className="ex-go" disabled={busy || !target} onClick={go}>
+        <button type="button" className="ex-go" disabled={busy || !target} onClick={() => go()}>
           {branching ? (sel ? "确认路线" : "请先选一条路线") : "前往下一站"}
           {add > 0 && <small>威胁 +{add}</small>}
           {add < 0 && <small>威胁 {add}</small>}

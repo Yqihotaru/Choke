@@ -880,6 +880,25 @@ const logHas = (state: BattleState, text: string) => state.log.some((line) => li
   check("硬壳：门槛很低时不影响伤害", low.amounts.join(",") === none.amounts.join(","))
   check("硬壳：伤害被压成 100 也记隐藏弱点", hitAmounts([shell(1e9)], true).found.includes("physical"))
 
+  // 侧面支援攻击也要过硬壳：回合开始自动打，每一下都是 100；没有硬壳时是正常伤害
+  const supportHits = (supports: (typeof ghost)["supports"]) => {
+    for (let n = 0; n < 30; n += 1) {
+      const s = start("warrior", ["berserker_zero"], `shell-sup-${n}`, { ...ghost, supports })
+      s.enemy.hp = s.enemy.hpMax = 1e9
+      s.enemy.intents = []
+      s.playerSupports.push({ id: "t-atk", name: "测试攻击支援", kind: "attack", element: "physical", atk: 5000, power: 1, hits: 2, procRate: 0.95, roleText: "攻击" })
+      const amounts = apply(s, { type: "endTurn" }).events
+        .filter((e) => e.type === "damage" && e.target === "enemy" && e.source === "测试攻击支援")
+        .map((e) => (e.type === "damage" ? e.amount : 0))
+      if (amounts.length > 0) return amounts
+    }
+    return []
+  }
+  const supNone = supportHits([])
+  const supShell = supportHits([shell(1e9)])
+  check("硬壳：没有硬壳时侧面支援伤害正常", supNone.length > 0 && supNone.every((a) => a > 100), supNone.join(","))
+  check("硬壳：侧面支援单段低于门槛也只算 100", supShell.length === supNone.length && supShell.every((a) => a === 100), supShell.join(","))
+
   const breakWith = (supports: (typeof ghost)["supports"]) => {
     const s = start(SKILLS.breaker_break!.job, ["breaker_break"], "shell-2", { ...ghost, supports })
     s.enemy.hp = s.enemy.hpMax = 1e9

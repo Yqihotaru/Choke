@@ -893,6 +893,7 @@
 .ex-k-story { --c: #0ea5e9; }
 .ex-k-boss { --c: #2b2540; }
 .ex-k-branch { --c: #94a3b8; }
+.ex-k-empty { --c: #a8b0bd; }
 .ex[data-theme="dark"] .ex-k-boss { --c: #4a3b78; }
 .ex-road {
   fill: none;

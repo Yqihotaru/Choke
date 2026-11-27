@@ -73,6 +73,14 @@ export function NodeIcon({ kind }: { kind: NodeKind }) {
           <path d="M-10 -4 H-4 M-10 0 H-4 M4 -4 H10 M4 0 H10" className="ico-seam" />
         </g>
       )
+    case "empty":
+      return (
+        <g>
+          <circle cx="-9" cy="6" r="3" className="ico-solid" />
+          <circle cx="0" cy="0" r="3" className="ico-solid" />
+          <circle cx="9" cy="-6" r="3" className="ico-solid" />
+        </g>
+      )
     case "branch":
       return (
         <g className="ico-line">

@@ -13,11 +13,20 @@
     { "flag": "shortcut", "label": "强行破拆并开启密道宝箱" }
   ],
   "nodes": {
-    "n1": { "type": "battle", "encounter": "wind-chime", "rewards": "dungeon-node-coins", "title": "热身小节", "pos": [0, 0], "next": ["n2"] },
-    "n2": { "type": "event", "event": "dungeon-shrine", "title": "共鸣校准仪", "pos": [1, 0], "next": ["n3a", "n3b"] },
-    "n3a": { "type": "battle", "encounter": "bare-brawler", "rewards": "dungeon-chest-bonus", "title": "高强对练（威胁 +2）", "threat": 2, "pos": [2, -1], "next": ["n5"] },
-    "n3b": { "type": "rest", "title": "幕间调音", "pos": [2, 1], "next": ["n4b", "n5"] },
-    "n4b": { "type": "treasure", "rewards": "dungeon-chest-bonus", "requires": { "flag": "shortcut" }, "title": "密道宝箱", "pos": [3, 1], "next": ["n5"] },
-    "n5": { "type": "boss", "encounter": "vanguard", "rewards": "dungeon-node-coins", "title": "首席考官", "pos": [4, 0], "next": [] }
+    "n1": { "type": "battle", "encounter": "wind-chime", "rewards": "dungeon-node-coins", "title": "热身小节", "pos": [0, 0], "next": ["x1"] },
+    "x1": { "type": "empty", "title": "安静的一段路", "pos": [1, 0], "next": ["e1"] },
+    "e1": { "type": "empty", "title": "空走廊", "pos": [2, 0], "next": ["e2"] },
+    "e2": { "type": "empty", "title": "回声长廊", "pos": [3, 0], "next": ["x2"] },
+    "x2": { "type": "empty", "title": "风吹过的空地", "pos": [4, 0], "next": ["n2"] },
+    "n2": { "type": "event", "event": "dungeon-shrine", "title": "共鸣校准仪", "pos": [5, 0], "next": ["n3a", "n3b"] },
+    "n3a": { "type": "battle", "encounter": "bare-brawler", "rewards": "dungeon-chest-bonus", "title": "高强对练（威胁 +2）", "threat": 2, "pos": [6, -1], "next": ["x3"] },
+    "n3b": { "type": "rest", "title": "幕间调音", "pos": [6, 1], "next": ["n4b", "e5"] },
+    "x3": { "type": "empty", "title": "远处隐约的回声", "pos": [7, -1], "next": ["e3"] },
+    "n4b": { "type": "treasure", "rewards": "dungeon-chest-bonus", "requires": { "flag": "shortcut" }, "title": "密道宝箱", "pos": [7, 1], "next": ["x4"] },
+    "e3": { "type": "empty", "title": "散落的乐谱", "pos": [8, -1], "next": ["e5"] },
+    "x4": { "type": "empty", "title": "路边的旧脚印", "pos": [8, 1], "next": ["e5"] },
+    "e5": { "type": "empty", "title": "考场门前", "pos": [9, 0], "next": ["x5"] },
+    "x5": { "type": "empty", "title": "无人的转角", "pos": [10, 0], "next": ["n5"] },
+    "n5": { "type": "boss", "encounter": "vanguard", "rewards": "dungeon-node-coins", "title": "首席考官", "pos": [11, 0], "next": [] }
   }
 }

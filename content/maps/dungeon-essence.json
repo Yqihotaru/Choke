@@ -13,11 +13,20 @@
     { "flag": "shortcut", "label": "解锁隐秘宝箱" }
   ],
   "nodes": {
-    "n1": { "type": "battle", "encounter": "frost-dancer", "rewards": "dungeon-node-coins", "title": "寒霜序曲", "pos": [0, 0], "next": ["n2"] },
-    "n2": { "type": "branch", "prompt": "回廊分岔：左边传出镜面碎裂声，右边亮着校准仪微光", "pos": [1, 0], "next": ["n3a", "n3b"] },
-    "n3a": { "type": "battle", "encounter": "mirror-warden", "rewards": "dungeon-chest-bonus", "title": "镜面重防（威胁 +2）", "threat": 2, "pos": [2, -1], "next": ["n5"] },
-    "n3b": { "type": "event", "event": "dungeon-shrine", "title": "回廊校准仪", "pos": [2, 1], "next": ["n4b", "n5"] },
-    "n4b": { "type": "treasure", "rewards": "dungeon-chest-bonus", "requires": { "flag": "shortcut" }, "title": "侧室藏箱", "pos": [3, 1], "next": ["n5"] },
-    "n5": { "type": "boss", "encounter": "halo-chorister", "rewards": "dungeon-node-coins", "title": "回响圣咏", "pos": [4, 0], "next": [] }
+    "n1": { "type": "battle", "encounter": "frost-dancer", "rewards": "dungeon-node-coins", "title": "寒霜序曲", "pos": [0, 0], "next": ["x11"] },
+    "x11": { "type": "empty", "title": "远处隐约的回声", "pos": [1, 0], "next": ["e1"] },
+    "e1": { "type": "empty", "title": "结霜的走廊", "pos": [2, 0], "next": ["e2"] },
+    "e2": { "type": "empty", "title": "空荡的回廊", "pos": [3, 0], "next": ["x12"] },
+    "x12": { "type": "empty", "title": "路边的旧脚印", "pos": [4, 0], "next": ["n2"] },
+    "n2": { "type": "branch", "prompt": "回廊分岔：左边传出镜面碎裂声，右边亮着校准仪微光", "pos": [5, 0], "next": ["n3a", "n3b"] },
+    "n3a": { "type": "battle", "encounter": "mirror-warden", "rewards": "dungeon-chest-bonus", "title": "镜面重防（威胁 +2）", "threat": 2, "pos": [6, -1], "next": ["x13"] },
+    "n3b": { "type": "event", "event": "dungeon-shrine", "title": "回廊校准仪", "pos": [6, 1], "next": ["n4b", "e5"] },
+    "x13": { "type": "empty", "title": "无人的转角", "pos": [7, -1], "next": ["e3"] },
+    "n4b": { "type": "treasure", "rewards": "dungeon-chest-bonus", "requires": { "flag": "shortcut" }, "title": "侧室藏箱", "pos": [7, 1], "next": ["x14"] },
+    "e3": { "type": "empty", "title": "碎镜之间", "pos": [8, -1], "next": ["e5"] },
+    "x14": { "type": "empty", "title": "短暂的喘息", "pos": [8, 1], "next": ["e5"] },
+    "e5": { "type": "empty", "title": "圣咏厅外", "pos": [9, 0], "next": ["x15"] },
+    "x15": { "type": "empty", "title": "一段缓坡", "pos": [10, 0], "next": ["n5"] },
+    "n5": { "type": "boss", "encounter": "halo-chorister", "rewards": "dungeon-node-coins", "title": "回响圣咏", "pos": [11, 0], "next": [] }
   }
 }

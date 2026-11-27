@@ -268,6 +268,11 @@ function shellThreshold(state: BattleState): number {
   return state.enemySupports.reduce((max, s) => (s.kind === "shell" ? Math.max(max, s.threshold ?? 0) : max), 0)
 }
 
+/** 我方每一段直接伤害（技能、侧面支援攻击、迅捷抢攻）最后都过这一道；持续伤害和反伤不过 */
+function applyShell(state: BattleState, damage: number): number {
+  return damage < shellThreshold(state) ? SHELL_MIN_DAMAGE : damage
+}
+
 function enemyDefence(state: BattleState, magic: boolean): number {
   const base = magic ? state.enemy.int : state.enemy.def
   const bonus = statusBonus(state.enemy.statuses, magic ? "int" : "def")
@@ -617,9 +622,7 @@ function applyDamageToEnemy(
         (crit ? 1.5 : 1),
     )
 
-    if (damage < shellThreshold(state)) {
-      damage = SHELL_MIN_DAMAGE
-    }
+    damage = applyShell(state, damage)
 
     hitCount += 1
     total += damage
@@ -1198,15 +1201,18 @@ function runPlayerTurnStartSequence(state: BattleState) {
         state.enemy.traits,
         activeWeaknesses(state.enemy),
       )
-      const damage = Math.max(
-        1,
-        Math.round(
-          (support.atk ?? 1200) *
-            (support.power ?? 0.5) *
-            comboMultiplier(state.combo) *
-            elMult *
-            (1 - mitigation(enemyDef)) *
-            random(state, "player", 0.95, 1.05),
+      const damage = applyShell(
+        state,
+        Math.max(
+          1,
+          Math.round(
+            (support.atk ?? 1200) *
+              (support.power ?? 0.5) *
+              comboMultiplier(state.combo) *
+              elMult *
+              (1 - mitigation(enemyDef)) *
+              random(state, "player", 0.95, 1.05),
+          ),
         ),
       )
       state.enemy.hp = Math.max(0, state.enemy.hp - damage)
@@ -1243,15 +1249,18 @@ function runPlayerTurnStartSequence(state: BattleState) {
       checkEnemyWakeUp(state)
       state.combo += 1
       state.maxCombo = Math.max(state.maxCombo, state.combo)
-      const damage = Math.max(
-        1,
-        Math.round(
-          statOf(state, card, "atk") *
-            PREEMPTIVE_POWER *
-            comboMultiplier(state.combo) *
-            elementMultiplier("physical", state.enemy.element, state.enemy.traits, activeWeaknesses(state.enemy)) *
-            (1 - mitigation(enemyDefence(state, false))) *
-            random(state, "player", 0.95, 1.05),
+      const damage = applyShell(
+        state,
+        Math.max(
+          1,
+          Math.round(
+            statOf(state, card, "atk") *
+              PREEMPTIVE_POWER *
+              comboMultiplier(state.combo) *
+              elementMultiplier("physical", state.enemy.element, state.enemy.traits, activeWeaknesses(state.enemy)) *
+              (1 - mitigation(enemyDefence(state, false))) *
+              random(state, "player", 0.95, 1.05),
+          ),
         ),
       )
       state.enemy.hp = Math.max(0, state.enemy.hp - damage)

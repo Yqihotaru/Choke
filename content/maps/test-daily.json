@@ -6,9 +6,9 @@
   "deckSize": 7,
   "rewards": "test-clear",
   "generate": {
-    "layers": 4,
+    "layers": 8,
     "branchRate": 0.7,
-    "weights": { "battle": 6, "rest": 2, "treasure": 2 },
+    "weights": { "battle": 6, "rest": 2, "treasure": 2, "empty": 12 },
     "battleRewards": "test-battle",
     "bossRewards": "test-boss",
     "battles": [

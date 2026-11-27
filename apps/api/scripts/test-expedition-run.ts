@@ -951,15 +951,13 @@ await test("资源本小远征与扫荡：未首通不能扫荡；手动走决�
   await must(start(me.id, "dungeon-exp", pool6))
   await fight(me.id, strongIds(me.ids))
 
-  // 走到校准仪事件，选破拆侧门拿 shortcut 标记（扣血解锁密道宝箱）
-  await must(call(me.id, "POST", `${base(me.id)}/current/node`, { to: "n2" }))
+  // 走过开头两个空地（自动通过），到校准仪事件，选破拆侧门拿 shortcut 标记（扣血解锁密道宝箱）
+  for (const to of ["x1", "e1", "e2", "x2", "n2"]) await must(call(me.id, "POST", `${base(me.id)}/current/node`, { to }))
   const view = await must(call(me.id, "POST", `${base(me.id)}/current/event`, { choice: 1 }))
   assert.deepEqual(view.flags, ["shortcut"])
 
-  // 走营火休整 -> 密道宝箱 -> Boss
-  await must(call(me.id, "POST", `${base(me.id)}/current/node`, { to: "n3b" }))
-  await must(call(me.id, "POST", `${base(me.id)}/current/node`, { to: "n4b" }))
-  await must(call(me.id, "POST", `${base(me.id)}/current/node`, { to: "n5" }))
+  // 走营火休整 -> 密道宝箱 -> 考场门前（空地）-> Boss
+  for (const to of ["n3b", "n4b", "x4", "e5", "x5", "n5"]) await must(call(me.id, "POST", `${base(me.id)}/current/node`, { to }))
   await fight(me.id, strongIds(me.ids))
 
   const settled = await call(me.id, "POST", `${base(me.id)}/current/settle`)

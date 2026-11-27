@@ -89,7 +89,7 @@ export function distances(from: string, edges: (id: string) => readonly string[]
   return dist
 }
 
-export type NodeKind = "battle" | "danger" | "boss" | "story" | "event" | "rest" | "treasure" | "branch"
+export type NodeKind = "battle" | "danger" | "boss" | "story" | "event" | "rest" | "treasure" | "branch" | "empty"
 
 /** 格子的颜色和图标类别：带威胁的战斗显示成「危险」 */
 export function kindOf(node: MapNode): NodeKind {
@@ -112,6 +112,7 @@ export const KIND_LABEL: Record<NodeKind, string> = {
   rest: "休息",
   treasure: "宝箱",
   branch: "分叉",
+  empty: "空地",
 }
 
 export function titleOf(node: MapNode): string {

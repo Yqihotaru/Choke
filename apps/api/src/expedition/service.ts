@@ -417,6 +417,7 @@ async function enterNode(tx: Tx, exp: ExpRow, nodeId: string): Promise<void> {
       set.nodeDone = true
       break
     case "branch":
+    case "empty":
       set.nodeDone = true
       break
     default:
