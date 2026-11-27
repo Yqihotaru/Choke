@@ -2,6 +2,7 @@ import { and, eq, getTableColumns, sql } from "drizzle-orm"
 import type { FastifyInstance } from "fastify"
 import { z } from "zod"
 
+import { IDLE_PACKS_DAILY_LIMIT, idlePacksEarned } from "@choke/shared/presence"
 import { resetDayKey } from "@choke/shared/reset"
 
 import { requireSelf, requireSession } from "../auth/guard"
@@ -9,6 +10,7 @@ import { DECK_SIZE } from "../config"
 import { db } from "../db/client"
 import { cards, ledgerEntries, userCards, users } from "../db/schema"
 import { recordLedger } from "../ledger"
+import { onlineSecondsToday } from "../presence"
 import { TxAbort, lockUser, runTx, type Tx } from "../tx"
 import { invalidatePublicCardRows } from "./cards"
 import { grantHeroCard, openPack } from "../gacha/open"
@@ -32,7 +34,28 @@ import {
 } from "../packs/inventory"
 
 const poolIds = Object.keys(PACKS) as [PackId, ...PackId[]]
-const IDLE_PACKS_DAILY_LIMIT = 60
+
+/** 挂机包进度：在线累计的秒数折成包数，减去今天已经领走的 */
+async function idleStatus(executor: Tx | typeof db, userId: string, now = Date.now()) {
+  const [user] = await executor
+    .select({ onlineDay: users.onlineDay, onlineSeconds: users.onlineSeconds })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+  const onlineSeconds = user ? onlineSecondsToday(user, now) : 0
+  const earned = idlePacksEarned(onlineSeconds)
+  const claimedToday = await countIdlePacksClaimedToday(executor, userId, resetDayKey(now))
+  return {
+    dailyLimit: IDLE_PACKS_DAILY_LIMIT,
+    onlineSeconds,
+    earned,
+    claimedToday,
+    /** 现在能领的数量 */
+    claimable: Math.max(0, earned - claimedToday),
+    /** 今天还能再攒的数量（含现在能领的） */
+    remaining: Math.max(0, IDLE_PACKS_DAILY_LIMIT - claimedToday),
+  }
+}
 
 async function countIdlePacksClaimedToday(
   executor: Tx | typeof db,
@@ -125,17 +148,13 @@ export async function packRoutes(app: FastifyInstance) {
     const userId = requireSelf(request, reply, params.userId)
     if (!userId) return
 
-    const dayKey = resetDayKey(Date.now())
-    const claimedToday = await countIdlePacksClaimedToday(db, userId, dayKey)
-    const remaining = Math.max(0, IDLE_PACKS_DAILY_LIMIT - claimedToday)
+    const status = await idleStatus(db, userId)
     const packs = await getPackCounts(userId)
 
     return {
       ok: true,
       data: {
-        dailyLimit: IDLE_PACKS_DAILY_LIMIT,
-        claimedToday,
-        remaining,
+        ...status,
         count: packs.idle,
       },
     }
@@ -156,13 +175,15 @@ export async function packRoutes(app: FastifyInstance) {
     const dayKey = resetDayKey(Date.now())
     const result = await runTx(reply, async (tx) => {
       await lockUser(tx, userId)
-      const claimedToday = await countIdlePacksClaimedToday(tx, userId, dayKey)
-      const remaining = Math.max(0, IDLE_PACKS_DAILY_LIMIT - claimedToday)
-      if (remaining <= 0) {
+      const status = await idleStatus(tx, userId)
+      if (status.remaining <= 0) {
         throw new TxAbort(400, "daily_limit_reached", `今日挂机包已领完（${IDLE_PACKS_DAILY_LIMIT} 包）`)
       }
+      if (status.claimable <= 0) {
+        throw new TxAbort(400, "nothing_to_claim", "还没攒到新的挂机包，在线满 1 分钟攒 1 个")
+      }
 
-      const grantCount = Math.min(remaining, body?.count ?? remaining)
+      const grantCount = Math.min(status.claimable, body?.count ?? status.claimable)
       await addPacks(userId, { idle: grantCount }, tx)
       await recordLedger(tx, userId, [{ kind: "pack", ref: "idle", delta: grantCount }], {
         source: "idle-pack",
@@ -171,9 +192,10 @@ export async function packRoutes(app: FastifyInstance) {
 
       return {
         claimed: grantCount,
-        claimedToday: claimedToday + grantCount,
-        remaining: remaining - grantCount,
-        dailyLimit: IDLE_PACKS_DAILY_LIMIT,
+        ...status,
+        claimedToday: status.claimedToday + grantCount,
+        claimable: status.claimable - grantCount,
+        remaining: status.remaining - grantCount,
       }
     })
     if (!result) return

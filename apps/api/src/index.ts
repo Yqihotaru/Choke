@@ -20,6 +20,7 @@ import { mailRoutes } from "./routes/mails"
 import { ledgerRoutes } from "./routes/ledger"
 import { marketRoutes } from "./routes/market"
 import { packRoutes } from "./routes/packs"
+import { presenceRoutes } from "./routes/presence"
 import { progressionRoutes } from "./routes/progression"
 import { progressRoutes } from "./routes/progress"
 import { questRoutes } from "./routes/quests"
@@ -39,6 +40,7 @@ app.addHook("onRequest", rejectSealedSession)
 await app.register(authRoutes)
 await app.register(accountRoutes)
 await app.register(packRoutes)
+await app.register(presenceRoutes)
 await app.register(battleRoutes)
 await app.register(cardRoutes)
 await app.register(deckRoutes)

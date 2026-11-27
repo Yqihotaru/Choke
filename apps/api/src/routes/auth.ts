@@ -35,6 +35,7 @@ import { upsertMirrorCard } from "../mirror"
 import { getPackCounts, grantPacks, grantStarterPacks } from "../packs/inventory"
 import { STARTER_PACKS } from "../gacha/packs"
 import { accountKind, beginBind } from "../account-binding"
+import { recordBeat } from "../presence"
 
 /** 登录时把 /me/osu 写成 hero-{id} 卡定义，并放进该用户的卡册 */
 async function claimHeroCard(
@@ -315,8 +316,8 @@ export async function authRoutes(app: FastifyInstance) {
     }
     if (isLegacySession(rawSession)) setSessionCookie(reply, userId)
 
-    // 镜像池按最近活跃筛选；/auth/me 是每次进桌面的必经请求。
-    await db.update(users).set({ lastSeenAt: new Date() }).where(eq(users.id, userId))
+    // 镜像池按最近活跃筛选；/auth/me 是每次进桌面的必经请求，顺便当一次心跳（同时累计挂机包的在线时间）。
+    await recordBeat(userId)
 
     let hero = null
     if (user.osuId != null) {
