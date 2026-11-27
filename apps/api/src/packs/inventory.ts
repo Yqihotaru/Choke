@@ -60,8 +60,12 @@ export async function grantPacks(
   })
 }
 
-export async function consumePack(userId: string, pool: PackPoolId): Promise<boolean> {
-  const updated = await db
+export async function consumePack(
+  userId: string,
+  pool: PackPoolId,
+  executor: Tx | typeof db = db,
+): Promise<boolean> {
+  const updated = await executor
     .update(userPacks)
     .set({ count: sql`${userPacks.count} - 1` })
     .where(and(eq(userPacks.userId, userId), eq(userPacks.pool, pool), gt(userPacks.count, 0)))
@@ -74,16 +78,18 @@ export async function grantStarterPacks(userId: string): Promise<void> {
   await grantPacks(userId, STARTER_PACKS, { source: "starter" })
 }
 
-/** 把背包里的一个卡包“拿到桌面”：先扣库存，生成一次性 token。 */
+/** 把背包里的一个卡包“拿到桌面”：先扣库存，生成一次性 token。扣库存和发 token 在同一个事务里 */
 export async function createPackToken(
   userId: string,
   pool: PackPoolId,
 ): Promise<string | null> {
-  const consumed = await consumePack(userId, pool)
-  if (!consumed) return null
-  const id = randomUUID()
-  await db.insert(packTokens).values({ id, userId, pool })
-  return id
+  return db.transaction(async (tx) => {
+    const consumed = await consumePack(userId, pool, tx)
+    if (!consumed) return null
+    const id = randomUUID()
+    await tx.insert(packTokens).values({ id, userId, pool })
+    return id
+  })
 }
 
 /** 打开桌面卡包时核销 token，不再重复扣库存。 */
@@ -91,8 +97,9 @@ export async function consumePackToken(
   userId: string,
   token: string,
   pool: PackPoolId,
+  executor: Tx | typeof db = db,
 ): Promise<boolean> {
-  const removed = await db
+  const removed = await executor
     .delete(packTokens)
     .where(
       and(
@@ -110,12 +117,14 @@ export async function returnPackToken(
   userId: string,
   token: string,
 ): Promise<PackPoolId | null> {
-  const [removed] = await db
-    .delete(packTokens)
-    .where(and(eq(packTokens.id, token), eq(packTokens.userId, userId)))
-    .returning({ pool: packTokens.pool })
-  if (!removed) return null
-  const pool = removed.pool as PackPoolId
-  await addPacks(userId, { [pool]: 1 })
-  return pool
+  return db.transaction(async (tx) => {
+    const [removed] = await tx
+      .delete(packTokens)
+      .where(and(eq(packTokens.id, token), eq(packTokens.userId, userId)))
+      .returning({ pool: packTokens.pool })
+    if (!removed) return null
+    const pool = removed.pool as PackPoolId
+    await addPacks(userId, { [pool]: 1 }, tx)
+    return pool
+  })
 }

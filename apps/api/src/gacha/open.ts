@@ -9,6 +9,8 @@ import { cards, packOpenings, packTokens, userCards, userPacks } from "../db/sch
 import { MIRROR_RATE, pickMirrorCard } from "../mirror"
 import { recordLedger } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
+import { consumePack, consumePackToken, type PackPoolId } from "../packs/inventory"
+import { TxAbort, lockUser } from "../tx"
 import { PACK_SIZE, PACKS, STARTER_GUARANTEE } from "./packs"
 import { RARITY_ORDER, mulberry32, rollRarity, type PoolId } from "./pools"
 
@@ -18,20 +20,20 @@ const rankOf = (rarity: string) => RARITY_ORDER.indexOf(rarity as (typeof RARITY
  * 新手包兜底是否要在这一包生效：调用时这包已经扣过库存，
  * 背包和桌面上都没有剩余新手包 = 这是最后一包；且之前的新手包里没出过 L 及以上。
  */
-async function starterGuaranteeDue(userId: string): Promise<boolean> {
+async function starterGuaranteeDue(userId: string, executor: Transaction): Promise<boolean> {
   const pool = STARTER_GUARANTEE.pool
-  const [left] = await db
+  const [left] = await executor
     .select({ count: userPacks.count })
     .from(userPacks)
     .where(and(eq(userPacks.userId, userId), eq(userPacks.pool, pool)))
   if ((left?.count ?? 0) > 0) return false
-  const onDesk = await db
+  const onDesk = await executor
     .select({ id: packTokens.id })
     .from(packTokens)
     .where(and(eq(packTokens.userId, userId), eq(packTokens.pool, pool)))
     .limit(1)
   if (onDesk.length > 0) return false
-  const opened = await db
+  const opened = await executor
     .select({ results: packOpenings.results })
     .from(packOpenings)
     .where(and(eq(packOpenings.userId, userId), eq(packOpenings.pool, pool)))
@@ -101,9 +103,12 @@ export async function grantCard(
   return { userCardId: inserted.id, serial: counted.pulled, rollBp, skillRefs }
 }
 
-/** 发本体卡并写流水；领取神秘卡包换来的那次，把扣掉的卡包也记进去 */
-export async function grantHeroCard(userId: string, cardId: string, spentPack?: string) {
-  return db.transaction(async (tx) => {
+/**
+ * 发本体卡并写流水；领取神秘卡包换来的那次，把扣掉的卡包也记进去。
+ * 传入 tx 就在调用方的事务里做（扣神秘包和发卡必须一起提交），不传则自己开事务。
+ */
+export async function grantHeroCard(userId: string, cardId: string, spentPack?: string, outer?: Transaction) {
+  const run = async (tx: Transaction) => {
     const granted = await grantCard(tx, { userId, cardId })
     await recordLedger(
       tx,
@@ -115,10 +120,25 @@ export async function grantHeroCard(userId: string, cardId: string, spentPack?: 
       { source: "hero-claim" },
     )
     return granted
-  })
+  }
+  return outer ? run(outer) : db.transaction(run)
 }
 
-export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) {
+/** 这一包从哪扣：背包库存，或者桌面上拿出来的那个卡包（token） */
+export type PackSpend = { kind: "inventory" } | { kind: "token"; token: string }
+
+/**
+ * 开一包。整套动作在一个事务里：锁玩家 → 扣这一包 → 判断保底 → 发卡 → 记流水。
+ * 任何一步失败都整体回滚，包不会丢；同一个玩家同时开包会排队，保底不会触发两次。
+ * 不传 outer 就自己开事务；传了就用调用方的（调用方要自己先 lockUser）。
+ */
+export async function openPack(
+  userId: string,
+  pool: PoolId,
+  count = PACK_SIZE,
+  spend: PackSpend = { kind: "inventory" },
+  outer?: Transaction,
+) {
   const seed = Math.floor(Math.random() * 2 ** 32)
   const random = mulberry32(seed)
   // 镜像卡用独立随机流，避免改变主卡包序列。
@@ -136,10 +156,19 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       ? await pickMirrorCard(pool, mirrorRandom)
       : null
 
-  const guarantee = pool === STARTER_GUARANTEE.pool && (await starterGuaranteeDue(userId))
   const floor = rankOf(STARTER_GUARANTEE.rarity)
 
-  return db.transaction(async (tx) => {
+  const run = async (tx: Transaction) => {
+    if (!outer) await lockUser(tx, userId)
+    if (spend.kind === "token") {
+      if (!(await consumePackToken(userId, spend.token, pool as PackPoolId, tx))) {
+        throw new TxAbort(400, "invalid_token", "这个桌面卡包已经失效")
+      }
+    } else if (!(await consumePack(userId, pool as PackPoolId, tx))) {
+      throw new TxAbort(400, "no_packs", "背包里没有这个卡包")
+    }
+    // 扣完这一包之后再判断，并且已经锁了玩家：不会有另一个请求同时认为自己是最后一包
+    const guarantee = pool === STARTER_GUARANTEE.pool && (await starterGuaranteeDue(userId, tx))
     const results: DrawnCard[] = []
 
     for (let i = 0; i < count; i += 1) {
@@ -226,7 +255,9 @@ export async function openPack(userId: string, pool: PoolId, count = PACK_SIZE) 
       results,
       bonus,
     }
-  })
+  }
+
+  return outer ? run(outer) : db.transaction(run)
 }
 
 export function invalidateCardCache() {

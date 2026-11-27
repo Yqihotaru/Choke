@@ -11,7 +11,7 @@ import { db } from "../db/client"
 import { cards, ledgerEntries, userCards, users } from "../db/schema"
 import { recordLedger } from "../ledger"
 import { onlineSecondsToday } from "../presence"
-import { TxAbort, lockUser, runTx, type Tx } from "../tx"
+import { TxAbort, guardAbort, lockUser, runTx, type Tx } from "../tx"
 import { invalidatePublicCardRows } from "./cards"
 import { grantHeroCard, openPack } from "../gacha/open"
 import {
@@ -26,7 +26,6 @@ import { MIRROR_RATE } from "../mirror"
 import {
   addPacks,
   consumePack,
-  consumePackToken,
   createPackToken,
   getPackCounts,
   returnPackToken,
@@ -283,61 +282,40 @@ export async function packRoutes(app: FastifyInstance) {
       })
     }
 
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
-    if (!user) {
-      return reply.code(401).send({
-        ok: false,
-        error: { code: "unauthorized", message: "用户不存在" },
-      })
-    }
-    if (!user.onboarded) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "onboarding_required", message: "先完成新手引导" },
-      })
-    }
-    if (user.osuId == null) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "no_osu", message: "这个账号没有绑定 osu!" },
-      })
-    }
+    const hero = await runTx(reply, async (tx) => {
+      // 锁住玩家：两个领取请求同时来，第二个要等第一个提交后重新判断
+      await lockUser(tx, userId)
+      const [user] = await tx.select().from(users).where(eq(users.id, userId)).limit(1)
+      if (!user) throw new TxAbort(401, "unauthorized", "用户不存在")
+      if (!user.onboarded) throw new TxAbort(400, "onboarding_required", "先完成新手引导")
+      if (user.osuId == null) throw new TxAbort(400, "no_osu", "这个账号没有绑定 osu!")
 
-    const heroId = `hero-${user.osuId}`
-    const [existing] = await db
-      .select({ id: userCards.id })
-      .from(userCards)
-      .where(and(eq(userCards.userId, userId), eq(userCards.cardId, heroId)))
-      .limit(1)
-    if (existing) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "hero_claimed", message: "本体卡已经领取过了" },
-      })
-    }
+      const heroId = `hero-${user.osuId}`
+      const [existing] = await tx
+        .select({ id: userCards.id })
+        .from(userCards)
+        .where(and(eq(userCards.userId, userId), eq(userCards.cardId, heroId)))
+        .limit(1)
+      if (existing) throw new TxAbort(400, "hero_claimed", "本体卡已经领取过了")
 
-    const [definition] = await db.select({ id: cards.id }).from(cards).where(eq(cards.id, heroId)).limit(1)
-    if (!definition) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "hero_not_ready", message: "本体卡还没生成，请重新登录一次 osu!" },
-      })
-    }
+      const [definition] = await tx.select({ id: cards.id }).from(cards).where(eq(cards.id, heroId)).limit(1)
+      if (!definition) {
+        throw new TxAbort(400, "hero_not_ready", "本体卡还没生成，请重新登录一次 osu!")
+      }
 
-    const consumed = await consumePack(userId, "mystery")
-    if (!consumed) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "no_packs", message: "背包里没有神秘卡包" },
-      })
-    }
-
-    await grantHeroCard(userId, heroId, "mystery")
+      // 扣神秘包和发本体卡在同一个事务里：发卡失败，包会原样回来
+      if (!(await consumePack(userId, "mystery", tx))) {
+        throw new TxAbort(400, "no_packs", "背包里没有神秘卡包")
+      }
+      await grantHeroCard(userId, heroId, "mystery", tx)
+      return heroId
+    })
+    if (!hero) return
 
     return {
       ok: true,
       data: {
-        hero: await loadHero(userId, heroId),
+        hero: await loadHero(userId, hero),
         answers: body.data.answers ?? [],
         packs: await getPackCounts(userId),
       },
@@ -374,43 +352,19 @@ export async function packRoutes(app: FastifyInstance) {
       })
     }
 
-    const pool = params.data.pool as PackPoolId
-    if (body.data.token) {
-      const valid = await consumePackToken(userId, body.data.token, pool)
-      if (!valid) {
-        return reply.code(400).send({
-          ok: false,
-          error: { code: "invalid_token", message: "这个桌面卡包已经失效" },
-        })
-      }
-    } else {
-      const consumed = await consumePack(userId, pool)
-      if (!consumed) {
-        return reply.code(400).send({
-          ok: false,
-          error: { code: "no_packs", message: "背包里没有这个卡包" },
-        })
-      }
-    }
-
-    try {
-      const result = await openPack(userId, params.data.pool, PACK_SIZE)
-      invalidatePublicCardRows()
-      return {
-        ok: true,
-        data: { ...result, packs: await getPackCounts(userId) },
-      }
-    } catch (error) {
-      // 开包失败时把卡包退回背包
-      await addPacks(userId, { [pool]: 1 })
-      request.log.error(error)
-      return reply.code(500).send({
-        ok: false,
-        error: {
-          code: "open_failed",
-          message: error instanceof Error ? error.message : "抽卡失败",
-        },
-      })
-    }
-  })
+    // 扣包、判断保底、发卡、记流水都在 openPack 的同一个事务里；失败整体回滚，不会丢包
+    const result = await guardAbort(reply, () =>
+      openPack(
+        userId,
+        params.data.pool,
+        PACK_SIZE,
+        body.data.token ? { kind: "token", token: body.data.token } : { kind: "inventory" },
+      ),
+    )
+    if (!result) return
+    invalidatePublicCardRows()
+    return {
+      ok: true,
+      data: { ...result, packs: await getPackCounts(userId) },
+    }  })
 }
