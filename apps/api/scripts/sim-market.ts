@@ -1,17 +1,14 @@
 // 市场与金币流动模拟（只读，不碰数据库）：投机者 / 普通玩家 / 推进度者 / 多号收割者，每天赚金币、开包、
 // 上架和购买、抽签名池，看金币发多宽会怎样。卡包和任务数值直接读 content/，市场规则（2% 上架税、5% 成交税、
 // 7 天过期、NPC 回收价）读 shared；"人怎么想"的部分都是假设，集中写在下面的 PROFILES 和常量里，改它们重跑即可。
-// 用法：pnpm --filter @choke/api exec tsx scripts/sim-market.ts [--pity=80] [--idle=120] [--days=90] [--price=1600]
-//       [--pass=10] [--route=5] [--seed=1] [--mults=1,3,6]
+// NPC 回收不限量；收购价方案、挂机额度可以一次跑好几组做对照。
+// 用法：pnpm --filter @choke/api exec tsx scripts/sim-market.ts [--pity=80] [--idle=60,120,180] [--days=90] [--price=1600]
+//       [--pass=10] [--route=5] [--seed=1] [--mults=1] [--schemes=current,low,half,quarter] [--inflate=1.08]
+//       [--seasonDays=30] [--alts=1] [--detail=1]
 import fs from "node:fs"
 import path from "node:path"
 
-import {
-  MARKET_LIST_TAX_RATE,
-  MARKET_TRADE_TAX_RATE,
-  NPC_RECYCLE_DAILY_LIMIT,
-  NPC_RECYCLE_PRICES,
-} from "@choke/shared/economy"
+import { MARKET_LIST_TAX_RATE, MARKET_TRADE_TAX_RATE, NPC_RECYCLE_PRICES } from "@choke/shared/economy"
 
 import { CONTENT_DIR } from "../src/content"
 
@@ -20,14 +17,17 @@ const argText = (name: string, fallback: string) => argv.find((a) => a.startsWit
 const argNum = (name: string, fallback: number) => Number(argText(name, String(fallback)))
 
 const PITY = argNum("pity", 80)
-const IDLE_LIMIT = argNum("idle", 120)
+const IDLE_LIMITS = argText("idle", "60,120,180").split(",").map(Number)
 const DAYS = argNum("days", 90)
 const PULL_PRICE = argNum("price", 1600)
 const PASS_TICKETS = argNum("pass", 10)
 const ROUTE_TICKETS = argNum("route", 5)
 const SEED = argNum("seed", 1)
-const MULTS = argText("mults", "1,3,6").split(",").map(Number)
-const SEASON_DAYS = 30
+const MULTS = argText("mults", "1").split(",").map(Number)
+const SEASON_DAYS = argNum("seasonDays", 30)
+const SEASON_PRICE_GROWTH = argNum("inflate", 1)
+const ALTS_PER_FARMER = argNum("alts", 1)
+const DETAIL = argNum("detail", 0) > 0
 const RATE = { ssr: argNum("ssrRate", 0.015), sr: argNum("srRate", 0.06), r: argNum("rRate", 0.2) }
 
 const RARITIES = ["C", "UC", "R", "E", "L", "Mythic", "Prismatic"] as const
@@ -35,6 +35,21 @@ const TRADE = ["E", "L", "Mythic", "Prismatic"] as const
 type Rarity = (typeof RARITIES)[number]
 type Trade = (typeof TRADE)[number]
 const TRADE_VALUE_DAYS: Record<Trade, number> = { E: 0.3, L: 1.5, Mythic: 6, Prismatic: 20 }
+
+// 收购价方案：只动 C～E，L 以上保持现价。low 是我建议的第一套；half / quarter 是现价的一半 / 四分之一（取整、最低 1）。
+const LOW_END: Rarity[] = ["C", "UC", "R", "E"]
+const scaled = (k: number): Record<Rarity, number> =>
+  Object.fromEntries(RARITIES.map((r) => [r, LOW_END.includes(r) ? Math.max(1, Math.round(NPC_RECYCLE_PRICES[r] * k)) : NPC_RECYCLE_PRICES[r]])) as Record<Rarity, number>
+const SCHEMES: Record<string, Record<Rarity, number>> = {
+  current: { ...NPC_RECYCLE_PRICES },
+  low: { ...NPC_RECYCLE_PRICES, C: 1, UC: 2, R: 4, E: 12 },
+  half: scaled(0.5),
+  quarter: scaled(0.25),
+  // 最低档（C、UC）只换碎片不给金币，R、E 给少量
+  shard: { ...NPC_RECYCLE_PRICES, C: 0, UC: 0, R: 4, E: 12 },
+  tiny: { ...NPC_RECYCLE_PRICES, C: 0, UC: 1, R: 3, E: 8 },
+}
+const SCHEME_NAMES = argText("schemes", "current,low,half,quarter,shard,tiny").split(",")
 
 const read = (name: string) => JSON.parse(fs.readFileSync(path.join(CONTENT_DIR, name), "utf8"))
 const packsJson = read("packs.json")
@@ -73,14 +88,14 @@ function routine() {
 }
 const ROUTINE = routine()
 
-function meanCardsPerDay(idleShare: number): Record<Rarity, number> {
+function meanCardsPerDay(idleShare: number, idleLimit: number): Record<Rarity, number> {
   const out = Object.fromEntries(RARITIES.map((r) => [r, 0])) as Record<Rarity, number>
   const add = (pool: string, packs: number) => {
     const w = weightsOf(pool)
     for (const r of RARITIES) out[r] += packs * PACK_SIZE * w[r]
   }
   for (const [pool, n] of ROUTINE.packsPerDay) if (packsJson.packs[pool]) add(pool, n)
-  add("idle", IDLE_LIMIT * idleShare)
+  add("idle", idleLimit * idleShare)
   return out
 }
 
@@ -158,7 +173,7 @@ const PROFILES: Record<Kind, Profile> = {
     routeTickets: 1,
   },
   alt: {
-    label: "多号收割者（小号，每人 4 个）",
+    label: "多号收割者（小号）",
     count: 100,
     quest: 0.9,
     idle: 0.8,
@@ -173,7 +188,6 @@ const PROFILES: Record<Kind, Profile> = {
   },
 }
 const KINDS = Object.keys(PROFILES) as Kind[]
-const ALTS_PER_FARMER = 4
 
 // ---------------- 随机数 ----------------
 function mulberry32(seed: number) {
@@ -222,7 +236,7 @@ const median = (xs: number[]) => {
 }
 const fmt = (n: number, d = 0) => n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })
 
-function run(mult: number) {
+function run(mult: number, npcPrices: Record<Rarity, number>, idleLimit: number) {
   const rng = mulberry32(SEED)
   const gauss = () => Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(2 * Math.PI * rng())
   const poisson = (mean: number) => {
@@ -241,7 +255,7 @@ function run(mult: number) {
   const income0 = ROUTINE.coinsPerDay
   const value = Object.fromEntries(TRADE.map((r) => [r, TRADE_VALUE_DAYS[r] * income0 * mult])) as Record<Trade, number>
   const refPrice = { ...value }
-  const means = Object.fromEntries(KINDS.map((k) => [k, meanCardsPerDay(PROFILES[k].idle)])) as Record<Kind, Record<Rarity, number>>
+  const means = Object.fromEntries(KINDS.map((k) => [k, meanCardsPerDay(PROFILES[k].idle, idleLimit)])) as Record<Kind, Record<Rarity, number>>
 
   const accounts: Account[] = []
   const newAccount = (kind: Kind, master: number): Account => {
@@ -275,6 +289,15 @@ function run(mult: number) {
     { trades: number; volume: number; listed: number; expired: number; prices: number[] }
   >
   const taxTotals = { list: 0, trade: 0, transfer: 0 }
+  const npcByRarity = Object.fromEntries(RARITIES.map((r) => [r, 0])) as Record<Rarity, number>
+  const recycle = (a: Account, rarity: Rarity, count = 1) => {
+    const gain = npcPrices[rarity] * count
+    a.coins += gain
+    a.earned.npc += gain
+    npcByRarity[rarity] += gain
+  }
+  // 挂出去扣完税还不如回收价的，不挂，直接卖给 NPC
+  const worthListing = (rarity: Trade) => refPrice[rarity] * (1 - MARKET_TRADE_TAX_RATE - MARKET_LIST_TAX_RATE) > npcPrices[rarity]
 
   const spendTax = (a: Account, amount: number) => {
     a.sunk.tax += amount
@@ -341,18 +364,14 @@ function run(mult: number) {
       a.earned.quest += quest
       const cards = Object.fromEntries(RARITIES.map((r) => [r, poisson(means[a.kind][r])])) as Record<Rarity, number>
       if (prof.npc) {
-        let slots = NPC_RECYCLE_DAILY_LIMIT
-        for (const r of ["R", "UC", "C"] as const) {
-          const n = Math.min(cards[r], slots)
-          slots -= n
-          const gain = n * NPC_RECYCLE_PRICES[r]
-          a.coins += gain
-          a.earned.npc += gain
-        }
+        for (const r of ["R", "UC", "C"] as const) recycle(a, r, cards[r])
       }
       for (const r of TRADE) {
         for (let i = 0; i < cards[r]; i += 1) {
-          if (rng() >= prof.keep[r]) list(a, r, null, a.kind === "spec")
+          if (rng() >= prof.keep[r]) {
+            if (a.kind !== "spec" && !worthListing(r)) recycle(a, r)
+            else list(a, r, null, a.kind === "spec")
+          }
         }
       }
     }
@@ -402,7 +421,7 @@ function run(mult: number) {
       }
     }
     for (const r of TRADE) {
-      if (todayPrices[r].length > 0) refPrice[r] = Math.max(NPC_RECYCLE_PRICES[r] * 1.2, refPrice[r] * 0.8 + median(todayPrices[r]) * 0.2)
+      if (todayPrices[r].length > 0) refPrice[r] = Math.max(npcPrices[r] * 1.2, refPrice[r] * 0.8 + median(todayPrices[r]) * 0.2)
     }
 
     const next: Listing[] = []
@@ -413,9 +432,11 @@ function run(mult: number) {
       if (l.age > 7) {
         market[l.rarity].expired += 1
         if (l.cost !== null && seller.kind === "spec") list(seller, l.rarity, l.cost, true)
+        else if (l.cost === null) recycle(seller, l.rarity)
         continue
       }
-      l.ask = Math.max(1, Math.round(l.cost !== null ? Math.max(l.cost * 1.02, l.ask * 0.98) : l.ask * 0.95))
+      const floor = npcPrices[l.rarity] / (1 - MARKET_TRADE_TAX_RATE)
+      l.ask = Math.max(1, Math.round(l.cost !== null ? Math.max(l.cost * 1.02, l.ask * 0.98) : Math.max(floor, l.ask * 0.95)))
       next.push(l)
     }
     listings = next
@@ -428,12 +449,13 @@ function run(mult: number) {
       const raise = Math.min(a.coins * 0.6, prof.breakthrough)
       a.coins -= raise
       a.sunk.breakthrough += raise
-      const pulls = a.tickets + Math.floor((a.coins * prof.pullShare) / PULL_PRICE)
+      const pullPrice = Math.round(PULL_PRICE * SEASON_PRICE_GROWTH ** Math.floor((day - 1) / SEASON_DAYS))
+      const pulls = a.tickets + Math.floor((a.coins * prof.pullShare) / pullPrice)
       for (let i = 0; i < pulls; i += 1) {
         if (a.tickets > 0) a.tickets -= 1
         else {
-          a.coins -= PULL_PRICE
-          a.sunk.pool += PULL_PRICE
+          a.coins -= pullPrice
+          a.sunk.pool += pullPrice
         }
         pull(a)
       }
@@ -453,31 +475,97 @@ function run(mult: number) {
     }
   }
 
-  return { accounts, market, taxTotals, refPrice, value }
+  return { accounts, market, taxTotals, refPrice, value, npcByRarity }
 }
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
 const avg = (xs: number[]) => (xs.length ? sum(xs) / xs.length : 0)
+const pct = (x: number) => `${(x * 100).toFixed(0)}%`
+
+type Run = ReturnType<typeof run>
+
+function summarize(r: Run) {
+  const per30 = 30 / DAYS
+  const of = (kind: Kind) => r.accounts.filter((a) => a.kind === kind)
+  const seasonsOf = (kind: Kind) => of(kind).flatMap((a) => a.seasons)
+  const casual = of("casual")
+  const prog = of("progressor")
+  const farmers = of("farmer")
+  const specs = of("spec")
+  const incomeOf = (a: Account) => a.earned.quest + a.earned.npc + a.earned.transfer + a.earned.market
+  const specProfit =
+    sum(specs.map((a) => a.flip.revenue - a.flip.tax)) -
+    sum(specs.map((a) => a.flip.spent * (a.flip.sold / Math.max(1, a.flip.bought))))
+  const npcTotal = sum(Object.values(r.npcByRarity))
+  const lowEnd = r.npcByRarity.C + r.npcByRarity.UC + r.npcByRarity.R + r.npcByRarity.E
+  return {
+    casualMonthly: avg(casual.map((a) => a.earned.quest + a.earned.npc)) * per30,
+    casualNpc: avg(casual.map((a) => a.earned.npc)) * per30,
+    specMonthly: avg(specs.map((a) => a.earned.quest + a.earned.npc + a.earned.market)) * per30,
+    progPulls: avg(seasonsOf("progressor").map((s) => s.pulls)),
+    progSsr1: seasonsOf("progressor").filter((s) => s.ssr >= 1).length / Math.max(1, seasonsOf("progressor").length),
+    casualPulls: avg(seasonsOf("casual").map((s) => s.pulls)),
+    casualSsr1: seasonsOf("casual").filter((s) => s.ssr >= 1).length / Math.max(1, seasonsOf("casual").length),
+    farmerRatio: avg(farmers.map(incomeOf)) / Math.max(1, avg(prog.map(incomeOf))),
+    specProfit: (specProfit / Math.max(1, specs.length)) * per30,
+    lowEndShare: npcTotal > 0 ? lowEnd / npcTotal : 0,
+    tradeRateE: r.market.E.trades / Math.max(1, r.market.E.listed),
+    tradeRateL: r.market.L.trades / Math.max(1, r.market.L.listed),
+  }
+}
 
 console.log(
-  `市场与金币模拟：${DAYS} 天（${Math.floor(DAYS / SEASON_DAYS)} 个赛季，每季 ${SEASON_DAYS} 天），挂机额度 ${IDLE_LIMIT}，抽价 ${PULL_PRICE}/抽，保底 SSR ${PITY} / SR ${PITY / 2} / R 10，` +
-    `通行证 ${PASS_TICKETS} 张 + 路线奖励最多 ${ROUTE_TICKETS} 张抽券。\n基础金币收入 ${fmt(ROUTINE.coinsPerDay)}/天（读 quests.json，全做完口径）。` +
-    `金币放大倍数：${MULTS.join(" / ")}。\n`,
+  `市场与金币模拟：${DAYS} 天（${Math.floor(DAYS / SEASON_DAYS)} 个赛季，每季 ${SEASON_DAYS} 天），抽价 ${PULL_PRICE}/抽` +
+    `${SEASON_PRICE_GROWTH !== 1 ? `（每季 ×${SEASON_PRICE_GROWTH}）` : ""}，保底 SSR ${PITY} / SR ${PITY / 2} / R 10，` +
+    `通行证 ${PASS_TICKETS} 张 + 路线奖励最多 ${ROUTE_TICKETS} 张抽券。NPC 回收不限量，小号每人 ${ALTS_PER_FARMER} 个。\n` +
+    `基础金币收入 ${fmt(ROUTINE.coinsPerDay)}/天（读 quests.json，全做完口径）。金币放大倍数：${MULTS.join(" / ")}。`,
 )
-console.log(`假设：SSR/SR/R 基础概率 ${RATE.ssr * 100}% / ${RATE.sr * 100}% / ${RATE.r * 100}%；卡的心理价值（日收入的倍数）E ${TRADE_VALUE_DAYS.E} / L ${TRADE_VALUE_DAYS.L} / Mythic ${TRADE_VALUE_DAYS.Mythic} / Prismatic ${TRADE_VALUE_DAYS.Prismatic}；签名卡不进市场。\n`)
+console.log(`假设：SSR/SR/R 基础概率 ${RATE.ssr * 100}% / ${RATE.sr * 100}% / ${RATE.r * 100}%；卡的心理价值（日收入的倍数）E ${TRADE_VALUE_DAYS.E} / L ${TRADE_VALUE_DAYS.L} / Mythic ${TRADE_VALUE_DAYS.Mythic} / Prismatic ${TRADE_VALUE_DAYS.Prismatic}；签名卡不进市场。`)
+for (const name of SCHEME_NAMES) {
+  const p = SCHEMES[name]
+  if (p) console.log(`收购价 ${name}：${RARITIES.map((r) => `${r} ${p[r]}`).join("  ")}`)
+}
+console.log("")
 
 for (const mult of MULTS) {
-  const r = run(mult)
-  const per30 = 30 / DAYS
+  const table: Record<string, Record<string, string>> = {}
+  for (const name of SCHEME_NAMES) {
+    const prices = SCHEMES[name]
+    if (!prices) throw new Error(`未知收购价方案 ${name}`)
+    for (const idle of IDLE_LIMITS) {
+      const r = run(mult, prices, idle)
+      const s = summarize(r)
+      table[`${name} / 额度 ${idle}`] = {
+        "普通玩家月金币": fmt(s.casualMonthly),
+        "其中卖 NPC": fmt(s.casualNpc),
+        "投机者月金币": fmt(s.specMonthly),
+        "NPC 里 C~E 占比": pct(s.lowEndShare),
+        "推进度者每季抽数": fmt(s.progPulls, 1),
+        "推进度者 SSR≥1": pct(s.progSsr1),
+        "普通玩家每季抽数": fmt(s.casualPulls, 1),
+        "普通玩家 SSR≥1": pct(s.casualSsr1),
+        "小号收割倍数": `${s.farmerRatio.toFixed(1)}x`,
+        "投机者月利润": fmt(s.specProfit),
+        "E 成交率": pct(s.tradeRateE),
+        "L 成交率": pct(s.tradeRateL),
+      }
+      if (DETAIL) printDetail(name, idle, mult, r)
+    }
+  }
   console.log(`================ 金币放大 ×${mult}（日收入约 ${fmt(ROUTINE.coinsPerDay * mult)} 金币/满额玩家）================`)
+  console.table(table)
+}
+
+function printDetail(name: string, idle: number, mult: number, r: Run) {
+  const per30 = 30 / DAYS
+  console.log(`---- 详细：收购价 ${name} / 额度 ${idle} / ×${mult} ----`)
   const rows: Record<string, Record<string, string>> = {}
   for (const kind of KINDS) {
     const accs = r.accounts.filter((a) => a.kind === kind)
     const seasons = accs.flatMap((a) => a.seasons)
-    const created = avg(accs.map((a) => a.earned.quest + a.earned.npc))
     rows[PROFILES[kind].label] = {
       账号数: fmt(accs.length),
-      "月系统金币收入": fmt(created * per30),
+      "月系统金币收入": fmt(avg(accs.map((a) => a.earned.quest + a.earned.npc)) * per30),
       "月市场净收入": fmt(avg(accs.map((a) => a.earned.market)) * per30),
       "月花在签名池": fmt(avg(accs.map((a) => a.sunk.pool)) * per30),
       "月花在药与突破": fmt(avg(accs.map((a) => a.sunk.potion + a.sunk.breakthrough)) * per30),
@@ -485,42 +573,22 @@ for (const mult of MULTS) {
       期末金币均值: fmt(avg(accs.map((a) => a.coins))),
       每季抽数: fmt(avg(seasons.map((s) => s.pulls)), 1),
       "每季 SSR": fmt(avg(seasons.map((s) => s.ssr)), 2),
-      "每季 SSR≥1 占比": `${((seasons.filter((s) => s.ssr >= 1).length / Math.max(1, seasons.length)) * 100).toFixed(0)}%`,
     }
   }
   console.table(rows)
-
   const mrows: Record<string, Record<string, string>> = {}
   for (const t of TRADE) {
     const m = r.market[t]
     mrows[t] = {
-      "心理价值": fmt(r.value[t]),
+      心理价值: fmt(r.value[t]),
       期末参考价: fmt(r.refPrice[t]),
       "参考价/心理价值": (r.refPrice[t] / r.value[t]).toFixed(2),
-      "NPC 回收价占参考价": `${((NPC_RECYCLE_PRICES[t] / r.refPrice[t]) * 100).toFixed(1)}%`,
       上架数: fmt(m.listed),
       成交数: fmt(m.trades),
-      成交率: `${((m.trades / Math.max(1, m.listed)) * 100).toFixed(0)}%`,
+      成交率: pct(m.trades / Math.max(1, m.listed)),
       过期数: fmt(m.expired),
-      成交金额: fmt(m.volume),
     }
   }
   console.table(mrows)
-
-  const specs = r.accounts.filter((a) => a.kind === "spec")
-  const spent = sum(specs.map((a) => a.flip.spent))
-  const profit = sum(specs.map((a) => a.flip.revenue - a.flip.tax)) - sum(specs.map((a) => a.flip.spent * (a.flip.sold / Math.max(1, a.flip.bought))))
-  console.log(
-    `投机者：${DAYS} 天共买入 ${fmt(sum(specs.map((a) => a.flip.bought)))} 张、卖出 ${fmt(sum(specs.map((a) => a.flip.sold)))} 张，` +
-      `已卖出部分利润约 ${fmt(profit / specs.length)} 金币/人（投入 ${fmt(spent / specs.length)}/人）。`,
-  )
-  const farmers = r.accounts.filter((a) => a.kind === "farmer")
-  const prog = r.accounts.filter((a) => a.kind === "progressor")
-  const farmerIncome = avg(farmers.map((a) => a.earned.quest + a.earned.npc + a.earned.transfer + a.earned.market))
-  const progIncome = avg(prog.map((a) => a.earned.quest + a.earned.npc + a.earned.market))
-  console.log(
-    `多号收割者：本号加 ${ALTS_PER_FARMER} 个小号，${DAYS} 天金币收入 ${fmt(farmerIncome)}，同期推进度者 ${fmt(progIncome)}（${(farmerIncome / Math.max(1, progIncome)).toFixed(1)} 倍）；` +
-      `转账交税合计 ${fmt(r.taxTotals.transfer)}。`,
-  )
-  console.log(`税：上架税 ${fmt(r.taxTotals.list)} + 成交税 ${fmt(r.taxTotals.trade)} + 小号转账税 ${fmt(r.taxTotals.transfer)}。\n`)
+  console.log(`NPC 回收金币按品质：${RARITIES.map((x) => `${x} ${fmt(r.npcByRarity[x])}`).join("  ")}\n`)
 }
