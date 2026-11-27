@@ -14,7 +14,6 @@ import {
 import { FOIL_COST, MARKET_MAX_PRICE, essenceOf } from "@/card/economy"
 import {
   breakthroughCoinCost,
-  breakthroughShardCost,
   constellationCap,
   expToNext,
   feedExpOf,
@@ -265,7 +264,6 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const maxed = current.level >= cap
   const canLevel = !maxed && current.exp >= need
   const btCoins = breakthroughCoinCost(current.level, hero)
-  const btShards = breakthroughShardCost(current.level, current.rarity, hero)
   const ownShardId = shardItemId(current.rarity)
   const ownShardCount = items?.[ownShardId] ?? 0
   const sameCardFuel = fuel.filter((row) => row.id === current.id).length
@@ -721,8 +719,8 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   >
                     {busy === "level"
                       ? "突破中…"
-                      : btCoins > 0 || btShards > 0
-                        ? `突破升级（${btCoins}金币${btShards > 0 ? ` + ${btShards} ${RARITY_LABEL[current.rarity]} 碎片` : ""}）`
+                      : btCoins > 0
+                        ? `突破升级（${btCoins} 金币）`
                         : `升级 · ${need} EXP`}
                   </button>
                 )}
@@ -802,11 +800,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                 <div className="card-detail__wallet">
                   <span>{RARITY_LABEL[current.rarity]} 碎片</span>
                   <b className="bk-num">{items ? ownShardCount : "—"}</b>
-                  <em>
-                    {btShards > 0
-                      ? `本级突破需 ${btShards} 片`
-                      : "用于 40+ 突破与洗技能"}
-                  </em>
+                  <em>用于洗技能</em>
                 </div>
               )}
               <div className="card-detail__wallet">

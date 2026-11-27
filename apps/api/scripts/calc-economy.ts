@@ -168,11 +168,8 @@ console.table(
   ),
 )
 
-console.log("⑤ 分解碎片月产（25% 的卡分解，每张 4 片）与单卡 40→80 突破需求")
-const need: Record<Rarity, number> = Object.fromEntries(
-  RARITIES.map((r) => [r, Object.values(progression.breakthroughShards[r] as Record<string, number>).reduce((a, b) => a + b, 0)]),
-) as Record<Rarity, number>
-console.log("  单卡突破碎片：", need)
+console.log("⑤ 分解碎片月产（25% 的卡分解，每张 4 片）；突破已改为只收金币，不再耗碎片")
+const need: Record<Rarity, number> = Object.fromEntries(RARITIES.map((r) => [r, 0])) as Record<Rarity, number>
 console.table(
   Object.fromEntries(
     scenarios.map((s) => [

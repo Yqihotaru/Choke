@@ -50,7 +50,6 @@ export const progressionSchema = z.strictObject({
     /** 特定等级突破金币消耗：等级 → 金币 */
     breakthroughCoins: levelCostMap,
     /** 特定等级突破同品质碎片消耗：品质 → (等级 → 碎片数) */
-    breakthroughShards: perRarity(levelCostMap),
     /** 碎片+金币「逢 N 自选」洗技能配置 */
     skillReroll: z.strictObject({
       pityInterval: int.min(2),
@@ -235,13 +234,6 @@ export const contentSchema = z
     for (const lvlStr of Object.keys(card.breakthroughCoins)) {
       if (Number(lvlStr) >= card.levelCap.normal) {
         issue(["progression", "card", "breakthroughCoins", lvlStr], `突破等级必须小于普通卡满级 ${card.levelCap.normal}`)
-      }
-    }
-    for (const r of RARITIES) {
-      for (const lvlStr of Object.keys(card.breakthroughShards[r])) {
-        if (Number(lvlStr) >= card.levelCap.normal) {
-          issue(["progression", "card", "breakthroughShards", r, lvlStr], `突破等级必须小于普通卡满级 ${card.levelCap.normal}`)
-        }
       }
     }
     if (player.tutorialGraduateLevel > player.maxLevel) {

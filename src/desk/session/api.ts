@@ -192,8 +192,6 @@ export function levelUpCard(
   card: ApiUserCard
   spent: number
   coinsSpent: number
-  shardsSpent: number
-  shardItemId?: ItemId
   coins: number
   items: ItemWallet
 }> {
@@ -245,10 +243,7 @@ export interface FeedResult {
   wasted: number
   levelsGained: number
   coinsSpent: number
-  shardsSpent: number
-  shardItemId?: ItemId
   blockedCost: number
-  blockedShards: number
   coins: number
   essenceGained: number
   /** 只有喂了闪卡才返回 */

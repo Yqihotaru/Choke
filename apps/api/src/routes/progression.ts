@@ -18,7 +18,6 @@ import {
   SKILL_REROLL_PITY_INTERVAL,
   applyExpWithBreakthrough,
   breakthroughCoinCost,
-  breakthroughShardCost,
   isSkillRerollSelectReady,
   skillRerollCost,
 } from "@choke/shared/progression"
@@ -244,10 +243,7 @@ export async function progressionRoutes(app: FastifyInstance) {
       })
     }
 
-    const rarity = target.rarity as Rarity
     const coinCost = breakthroughCoinCost(target.level, hero)
-    const shardCost = breakthroughShardCost(target.level, rarity, hero)
-    const shardId = shardItemId(rarity)
     const result = await runTx(reply, async (tx) => {
       await lockUser(tx, userId)
       if (coinCost > 0) {
@@ -264,9 +260,6 @@ export async function progressionRoutes(app: FastifyInstance) {
             coins,
           })
         }
-      }
-      if (shardCost > 0) {
-        await spendItems(tx, userId, [{ itemId: shardId, count: shardCost }])
       }
 
       const [leveled] = await tx
@@ -285,11 +278,8 @@ export async function progressionRoutes(app: FastifyInstance) {
         throw new TxAbort(409, "conflict", "卡牌状态刚刚变化了，请刷新后重试")
       }
 
-      const btLedger: LedgerEntryInput[] = []
-      if (coinCost > 0) btLedger.push({ kind: "coins", delta: -coinCost })
-      if (shardCost > 0) btLedger.push({ kind: "item", ref: shardId, delta: -shardCost })
-      if (btLedger.length > 0) {
-        await recordLedger(tx, userId, btLedger, {
+      if (coinCost > 0) {
+        await recordLedger(tx, userId, [{ kind: "coins", delta: -coinCost }], {
           source: "breakthrough",
           sourceRef: String(userCardId),
         })
@@ -307,8 +297,6 @@ export async function progressionRoutes(app: FastifyInstance) {
         card: await loadCard(userId, userCardId),
         spent: need,
         coinsSpent: coinCost,
-        shardsSpent: shardCost,
-        shardItemId: shardCost > 0 ? shardId : undefined,
         coins: result.coins,
         items: result.items,
       },
@@ -619,9 +607,6 @@ export async function progressionRoutes(app: FastifyInstance) {
         .limit(1)
       const availableCoins = userRow?.coins ?? 0
       const targetRarity = target.rarity as Rarity
-      const targetShardId = shardItemId(targetRarity)
-      const walletBeforeBt = await loadItems(userId, tx)
-      const availableShards = targetHero ? 0 : (walletBeforeBt[targetShardId] ?? 0)
 
       const next = applyExpWithBreakthrough(
         target.level,
@@ -630,7 +615,6 @@ export async function progressionRoutes(app: FastifyInstance) {
         targetRarity,
         targetHero,
         availableCoins,
-        availableShards,
       )
       await tx
         .update(userCards)
@@ -646,10 +630,6 @@ export async function progressionRoutes(app: FastifyInstance) {
           .returning({ coins: users.coins })
         coins = coinWallet?.coins ?? availableCoins - next.coinsSpent
         ledger.push({ kind: "coins", delta: -next.coinsSpent })
-      }
-      if (next.shardsSpent > 0) {
-        await spendItems(tx, userId, [{ itemId: targetShardId, count: next.shardsSpent }])
-        ledger.push({ kind: "item", ref: targetShardId, delta: -next.shardsSpent })
       }
 
       let essence: number | undefined
@@ -671,10 +651,7 @@ export async function progressionRoutes(app: FastifyInstance) {
         wasted: next.wasted,
         levelsGained: next.level - target.level,
         coinsSpent: next.coinsSpent,
-        shardsSpent: next.shardsSpent,
-        shardItemId: next.shardsSpent > 0 ? targetShardId : undefined,
         blockedCost: next.blockedCost,
-        blockedShards: next.blockedShards,
         coins,
         essenceGained,
         essence,

@@ -97,19 +97,9 @@ function toNumericMap(raw: Readonly<Record<string, number>>): Readonly<Record<nu
 /** 40+ 突破金币消耗（数值在 content/progression.json 的 card.breakthroughCoins） */
 export const BREAKTHROUGH_COIN_COST: Readonly<Record<number, number>> = toNumericMap(CARD.breakthroughCoins)
 
-/** 40+ 突破同品质碎片消耗（数值在 content/progression.json 的 card.breakthroughShards） */
-export const BREAKTHROUGH_SHARD_COST: Readonly<Record<Rarity, Readonly<Record<number, number>>>> = Object.fromEntries(
-  Object.entries(CARD.breakthroughShards).map(([r, table]) => [r, toNumericMap(table)]),
-) as Record<Rarity, Readonly<Record<number, number>>>
-
 export function breakthroughCoinCost(level: number, isHero: boolean): number {
   if (isHero) return 0
   return BREAKTHROUGH_COIN_COST[level] ?? 0
-}
-
-export function breakthroughShardCost(level: number, rarity: Rarity, isHero: boolean): number {
-  if (isHero) return 0
-  return BREAKTHROUGH_SHARD_COST[rarity]?.[level] ?? 0
 }
 
 /** 技能重洗「逢 N 自选」周期（数值在 content/progression.json 的 card.skillReroll） */
@@ -128,8 +118,8 @@ export function isSkillRerollSelectReady(count: number): boolean {
 }
 
 /**
- * 喂养连续升级（含 40+ 突破金币与同品质碎片消耗）：
- * 若经验够升到突破下一级但金币或碎片不足，则停在当前突破级，剩余经验保留在 exp 中。
+ * 喂养连续升级（含 40+ 突破金币消耗）：
+ * 若经验够升到突破下一级但金币不足，则停在当前突破级，剩余经验保留在 exp 中。
  */
 export function applyExpWithBreakthrough(
   level: number,
@@ -138,46 +128,36 @@ export function applyExpWithBreakthrough(
   rarity: Rarity,
   isHero: boolean,
   availableCoins: number,
-  availableShards = Number.POSITIVE_INFINITY,
 ): {
   level: number
   exp: number
   wasted: number
   coinsSpent: number
-  shardsSpent: number
   blockedCost: number
-  blockedShards: number
 } {
   const cap = levelCap(isHero)
   let nextLevel = level
   let nextExp = exp + gained
   let coinsLeft = Math.max(0, availableCoins)
-  let shardsLeft = Math.max(0, availableShards)
   let coinsSpent = 0
-  let shardsSpent = 0
   let blockedCost = 0
-  let blockedShards = 0
 
   while (nextLevel < cap) {
     const need = expToNext(nextLevel, rarity, isHero)
     if (nextExp < need) break
     const coinCost = breakthroughCoinCost(nextLevel, isHero)
-    const shardCost = breakthroughShardCost(nextLevel, rarity, isHero)
-    if (coinCost > coinsLeft || shardCost > shardsLeft) {
-      blockedCost = coinCost > coinsLeft ? coinCost : 0
-      blockedShards = shardCost > shardsLeft ? shardCost : 0
+    if (coinCost > coinsLeft) {
+      blockedCost = coinCost
       break
     }
     nextExp -= need
     coinsLeft -= coinCost
-    shardsLeft -= shardCost
     coinsSpent += coinCost
-    shardsSpent += shardCost
     nextLevel += 1
   }
 
   if (nextLevel >= cap) {
-    return { level: cap, exp: 0, wasted: nextExp, coinsSpent, shardsSpent, blockedCost: 0, blockedShards: 0 }
+    return { level: cap, exp: 0, wasted: nextExp, coinsSpent, blockedCost: 0 }
   }
-  return { level: nextLevel, exp: nextExp, wasted: 0, coinsSpent, shardsSpent, blockedCost, blockedShards }
+  return { level: nextLevel, exp: nextExp, wasted: 0, coinsSpent, blockedCost }
 }

@@ -22,7 +22,7 @@ const { packRoutes } = await import("../src/routes/packs")
 const { progressionRoutes } = await import("../src/routes/progression")
 const { marketRoutes } = await import("../src/routes/market")
 const { shopRoutes } = await import("../src/routes/shop")
-const { breakthroughCoinCost, breakthroughShardCost } = await import("@choke/shared/progression")
+const { breakthroughCoinCost } = await import("@choke/shared/progression")
 const { resetDayKey } = await import("@choke/shared/reset")
 
 const app = Fastify()
@@ -180,18 +180,12 @@ await test("NPC 回收：按稀有度给金币、每日限 20 张、本体卡禁
   assert.equal(trainedRes.json().data.coinsGained, 5)
 })
 
-await test("卡牌 40+ 突破金币与同品质碎片消耗：40→41 扣 300 金币 + 2 片同品质碎片", async () => {
+await test("卡牌 40+ 突破只收金币：40→41 扣 300 金币，不再要碎片", async () => {
   assert.equal(breakthroughCoinCost(40, false), 300)
   assert.equal(breakthroughCoinCost(50, false), 500)
   assert.equal(breakthroughCoinCost(60, false), 500)
   assert.equal(breakthroughCoinCost(70, false), 700)
   assert.equal(breakthroughCoinCost(40, true), 0)
-
-  assert.equal(breakthroughShardCost(40, "C", false), 2)
-  assert.equal(breakthroughShardCost(70, "L", false), 8)
-  assert.equal(breakthroughShardCost(70, "Mythic", false), 4)
-  assert.equal(breakthroughShardCost(70, "Prismatic", false), 2)
-  assert.equal(breakthroughShardCost(40, "L", true), 0)
 
   const userId = "p1-bt-user"
   await db.insert(users).values({ id: userId, username: userId, coins: 200, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
@@ -210,18 +204,8 @@ await test("卡牌 40+ 突破金币与同品质碎片消耗：40→41 扣 300 �
   assert.equal(failCoinRes.statusCode, 400)
   assert.equal(failCoinRes.json().error.code, "not_enough_coins")
 
-  // 补足金币但缺同品质碎片时被拦截，且金币不能被误扣
+  // 补足金币后直接突破成功，不需要碎片
   await db.update(users).set({ coins: 500 }).where(eq(users.id, userId))
-  const failShardRes = await app.inject({
-    method: "POST",
-    url: `/users/${userId}/cards/${uc!.id}/level`,
-    headers: auth(userId),
-  })
-  assert.equal(failShardRes.statusCode, 400)
-  assert.equal(failShardRes.json().error.code, "not_enough_items")
-
-  // 补足 2 片 C 碎片后突破成功
-  await db.insert(userItems).values({ userId, itemId: "shard-C", count: 3 })
   const okRes = await app.inject({
     method: "POST",
     url: `/users/${userId}/cards/${uc!.id}/level`,
@@ -230,16 +214,14 @@ await test("卡牌 40+ 突破金币与同品质碎片消耗：40→41 扣 300 �
   assert.equal(okRes.statusCode, 200)
   assert.equal(okRes.json().data.card.level, 41)
   assert.equal(okRes.json().data.coinsSpent, 300)
-  assert.equal(okRes.json().data.shardsSpent, 2)
   assert.equal(okRes.json().data.coins, 200)
-  assert.equal(okRes.json().data.items["shard-C"], 1)
 
-  // 喂养连续升级跨 40 级：缺碎片时停在 40 级、保留经验并返回 blockedShards；补足碎片后顺利突破
+  // 喂养连续升级跨 40 级：缺金币时停在 40 级、保留经验并返回 blockedCost；补足金币后顺利突破
   const [ucFeed] = await db
     .insert(userCards)
     .values({ userId, cardId: "p1-bt-c", level: 39, exp: 0, serial: 2 })
     .returning()
-  await db.update(users).set({ coins: 1000 }).where(eq(users.id, userId))
+  await db.update(users).set({ coins: 100 }).where(eq(users.id, userId))
   await db.insert(userItems).values({ userId, itemId: "exp-medium", count: 2 })
   const feedBlocked = await app.inject({
     method: "POST",
@@ -249,12 +231,12 @@ await test("卡牌 40+ 突破金币与同品质碎片消耗：40→41 扣 300 �
   })
   assert.equal(feedBlocked.statusCode, 200)
   assert.equal(feedBlocked.json().data.card.level, 40)
-  assert.equal(feedBlocked.json().data.blockedShards, 2)
-  assert.equal(feedBlocked.json().data.shardsSpent, 0)
+  assert.equal(feedBlocked.json().data.blockedCost, 300)
+  assert.equal(feedBlocked.json().data.coinsSpent, 0)
   assert.ok(feedBlocked.json().data.card.exp > 0)
 
-  // 补齐碎片后继续喂养，成功跨过 40 级并扣除金币与碎片
-  await db.update(userItems).set({ count: 2 }).where(eq(userItems.itemId, "shard-C"))
+  // 补齐金币后继续喂养，成功跨过 40 级并扣除金币
+  await db.update(users).set({ coins: 1000 }).where(eq(users.id, userId))
   const feedOk = await app.inject({
     method: "POST",
     url: `/users/${userId}/cards/${ucFeed!.id}/feed`,
@@ -264,8 +246,7 @@ await test("卡牌 40+ 突破金币与同品质碎片消耗：40→41 扣 300 �
   assert.equal(feedOk.statusCode, 200)
   assert.ok(feedOk.json().data.card.level > 40)
   assert.equal(feedOk.json().data.coinsSpent, 300)
-  assert.equal(feedOk.json().data.shardsSpent, 2)
-  assert.equal(feedOk.json().data.blockedShards, 0)
+  assert.equal(feedOk.json().data.blockedCost, 0)
 })
 
 await test("市场：±40% 价格带校验、7 天过期与成交历史", async () => {
