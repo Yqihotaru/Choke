@@ -427,20 +427,52 @@ export async function mailExpiredRewards(userId: string, now = Date.now()): Prom
       names.push(rule.name)
     }
     if (rewards.length === 0) return 0
-    const { playerExp = 0, ...attachment } = mergeQuestRewards(rewards)
-    await addPlayerExperience(tx, userId, playerExp, now)
-    await sendMail(
-      userId,
-      {
-        kind: "reward",
-        title: "任务奖励补发",
-        body: `这些任务在重置前完成了，但没来得及领取，奖励随这封邮件发给你：\n${names.join("、")}${
-          playerExp > 0 ? `\n另有 ${playerExp} 点玩家经验已直接加到账号上。` : ""
-        }`,
-        attachment: asAttachment(attachment),
-      },
-      tx,
-    )
+    const batchBuckets: { rewards: QuestReward[]; names: string[] }[] = []
+    let curRewards: QuestReward[] = []
+    let curNames: string[] = []
+    for (let i = 0; i < rewards.length; i += 1) {
+      const r = rewards[i]!
+      const n = names[i]!
+      const candidate = [...curRewards, r]
+      const merged = mergeQuestRewards(candidate)
+      const tooManyCoins = (merged.coins ?? 0) > 1_000_000
+      const tooManyEssence = (merged.essence ?? 0) > 1_000_000
+      const tooManyItems = Object.keys(merged.items ?? {}).length > 20
+      const tooManyPacks = Object.keys(merged.packs ?? {}).length > 20
+      if (curRewards.length > 0 && (tooManyCoins || tooManyEssence || tooManyItems || tooManyPacks)) {
+        batchBuckets.push({ rewards: curRewards, names: curNames })
+        curRewards = [r]
+        curNames = [n]
+      } else {
+        curRewards = candidate
+        curNames.push(n)
+      }
+    }
+    if (curRewards.length > 0) batchBuckets.push({ rewards: curRewards, names: curNames })
+
+    let totalPlayerExp = 0
+    for (const bucket of batchBuckets) {
+      const { playerExp = 0 } = mergeQuestRewards(bucket.rewards)
+      totalPlayerExp += playerExp
+    }
+    await addPlayerExperience(tx, userId, totalPlayerExp, now)
+
+    for (let idx = 0; idx < batchBuckets.length; idx += 1) {
+      const bucket = batchBuckets[idx]!
+      const { playerExp = 0, ...attachment } = mergeQuestRewards(bucket.rewards)
+      await sendMail(
+        userId,
+        {
+          kind: "reward",
+          title: batchBuckets.length > 1 ? `任务奖励补发 (${idx + 1}/${batchBuckets.length})` : "任务奖励补发",
+          body: `这些任务在重置前完成了，但没来得及领取，奖励随这封邮件发给你：\n${bucket.names.join("、")}${
+            playerExp > 0 ? `\n另有 ${playerExp} 点玩家经验已直接加到账号上。` : ""
+          }`,
+          attachment: asAttachment(attachment),
+        },
+        tx,
+      )
+    }
     return rewards.length
   })
 }

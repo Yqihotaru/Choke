@@ -73,21 +73,27 @@ const feedBodySchema = z
   .refine((body) => body.cards.length > 0 || body.items.length > 0, "至少选一张卡或一种物品")
   .refine((body) => new Set(body.cards).size === body.cards.length, "卡不能重复")
 
-/** 从卡册里移走一张卡：同时清掉布阵和在架的市场单。出征中的卡不能移走 */
+/** 从卡册里移走一张卡：拦截出征中与在售挂单；清掉布阵；删 0 行直接抛 409 冲突 */
 async function removeUserCard(tx: Tx, userId: string, userCardId: number) {
   if (await anyLocked(tx, userId, [userCardId])) {
     throw new TxAbort(400, "in_expedition", EXPEDITION_LOCK_MESSAGE)
+  }
+  const [listed] = await tx
+    .select({ id: marketListings.id })
+    .from(marketListings)
+    .where(and(eq(marketListings.userCardId, userCardId), eq(marketListings.status, "active")))
+    .limit(1)
+  if (listed) {
+    throw new TxAbort(400, "card_listed", "挂在市场上的卡不能消耗或分解")
   }
   const removed = await tx
     .delete(userCards)
     .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
     .returning({ id: userCards.id })
-  if (removed.length === 0) return false
+  if (removed.length === 0) {
+    throw new TxAbort(409, "conflict", "卡牌状态刚刚变化了，请刷新后重试")
+  }
   await tx.delete(deckSlots).where(eq(deckSlots.userCardId, userCardId))
-  await tx
-    .update(marketListings)
-    .set({ status: "cancelled" })
-    .where(eq(marketListings.userCardId, userCardId))
   return true
 }
 
@@ -884,11 +890,29 @@ export async function progressionRoutes(app: FastifyInstance) {
         throw new TxAbort(400, "hero_protected", "本体卡不能分解")
       }
 
+      const lockedIds = await lockedUserCardIds(tx, userId)
+      const listedRows = await tx
+        .select({ userCardId: marketListings.userCardId })
+        .from(marketListings)
+        .where(and(inArray(marketListings.userCardId, body.userCardIds), eq(marketListings.status, "active")))
+      const listedIds = new Set(listedRows.map((r) => r.userCardId))
+
+      const skipped: { userCardId: number; reason: "in_expedition" | "card_listed" }[] = []
       const rawItems: ItemStack[] = []
       let essenceGained = 0
       const ledger: LedgerEntryInput[] = []
+      const removedUserCardIds: number[] = []
       for (const target of targets) {
+        if (lockedIds.has(target.id)) {
+          skipped.push({ userCardId: target.id, reason: "in_expedition" })
+          continue
+        }
+        if (listedIds.has(target.id)) {
+          skipped.push({ userCardId: target.id, reason: "card_listed" })
+          continue
+        }
         await removeUserCard(tx, userId, target.id)
+        removedUserCardIds.push(target.id)
         const rarity = target.rarity as Rarity
         rawItems.push({ itemId: shardItemId(rarity), count: SHARDS_PER_DISMANTLE })
         rawItems.push(...expToItems(refundExpOf(target.level, target.exp, rarity, false)))
@@ -918,11 +942,14 @@ export async function progressionRoutes(app: FastifyInstance) {
         essence = wallet?.essence ?? 0
       }
 
-      await recordLedger(tx, userId, ledger, { source: "dismantle", sourceRef: "batch" })
-      await recordQuestEvent(tx, userId, "dismantle", { amount: targets.length })
+      if (removedUserCardIds.length > 0) {
+        await recordLedger(tx, userId, ledger, { source: "dismantle", sourceRef: "batch" })
+        await recordQuestEvent(tx, userId, "dismantle", { amount: removedUserCardIds.length })
+      }
 
       return {
-        removedUserCardIds: targets.map((t) => t.id),
+        removedUserCardIds,
+        skipped,
         itemsGained,
         essenceGained,
         items: await loadItems(userId, tx),
@@ -1195,10 +1222,14 @@ export async function progressionRoutes(app: FastifyInstance) {
 
       const previousSkillId = refs[body.slot]!.skillId
       const nextRefs = refs.map((ref, idx) => (idx === body.slot ? { skillId: pickedId } : ref))
-      await tx
+      const [updatedCard] = await tx
         .update(userCards)
         .set({ skillRefs: nextRefs, skillRerollCount: nextCount })
         .where(and(eq(userCards.id, userCardId), eq(userCards.userId, userId)))
+        .returning({ id: userCards.id })
+      if (!updatedCard) {
+        throw new TxAbort(409, "conflict", "卡牌状态刚刚变化了，请刷新后重试")
+      }
 
       const ledgerEntriesToAdd: LedgerEntryInput[] = [{ kind: "item", ref: shardId, delta: -cost.shards }]
       if (cost.coins > 0) ledgerEntriesToAdd.push({ kind: "coins", delta: -cost.coins })

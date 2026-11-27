@@ -11,13 +11,13 @@ import {
 } from "@choke/shared/economy"
 
 import { MARKET_MAX_PRICE } from "../shared/cards"
-import { requireSelf } from "../auth/guard"
+import { requireSelf, requireSession } from "../auth/guard"
 import { db } from "../db/client"
 import { EXPEDITION_LOCK_MESSAGE, anyLocked } from "../expedition/locks"
 import { cards, deckSlots, marketListings, userCards, users } from "../db/schema"
 import { recordLedger } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
-import { TxAbort, runTx } from "../tx"
+import { TxAbort, lockUser, runTx, type Tx } from "../tx"
 import { requireFeature } from "../unlocks"
 
 const cardColumns = {
@@ -35,8 +35,8 @@ const cardColumns = {
 const paramsSchema = z.object({ userId: z.string() })
 const listingParams = z.object({ userId: z.string(), listingId: z.coerce.number().int().positive() })
 
-async function loadCard(userId: string, userCardId: number) {
-  const [row] = await db
+async function loadCard(userId: string, userCardId: number, executor: Tx | typeof db = db) {
+  const [row] = await executor
     .select(cardColumns)
     .from(userCards)
     .innerJoin(cards, eq(cards.id, userCards.cardId))
@@ -45,8 +45,14 @@ async function loadCard(userId: string, userCardId: number) {
   return row ?? null
 }
 
-async function expireStaleListings() {
-  const expireBefore = new Date(Date.now() - MARKET_LISTING_TTL_MS)
+let lastExpirySweepAt = 0
+const EXPIRY_SWEEP_INTERVAL_MS = 60_000
+
+async function expireStaleListings(force = false) {
+  const now = Date.now()
+  if (!force && now - lastExpirySweepAt < EXPIRY_SWEEP_INTERVAL_MS) return
+  lastExpirySweepAt = now
+  const expireBefore = new Date(now - MARKET_LISTING_TTL_MS)
   await db.transaction(async (tx) => {
     const expired = await tx
       .update(marketListings)
@@ -72,8 +78,8 @@ async function expireStaleListings() {
   })
 }
 
-async function priceBandOf(cardId: string) {
-  const sold = await db
+async function priceBandOf(cardId: string, executor: Tx | typeof db = db) {
+  const sold = await executor
     .select({ price: marketListings.price })
     .from(marketListings)
     .innerJoin(userCards, eq(userCards.id, marketListings.userCardId))
@@ -116,7 +122,9 @@ export async function marketRoutes(app: FastifyInstance) {
     return { ok: true, data: { sales: rows, priceBand: band } }
   })
 
-  app.get("/market/listings", async () => {
+  app.get("/market/listings", async (request, reply) => {
+    const viewer = requireSession(request, reply)
+    if (!viewer) return
     await expireStaleListings()
     const expireBefore = new Date(Date.now() - MARKET_LISTING_TTL_MS)
     const rows = await db
@@ -242,71 +250,51 @@ export async function marketRoutes(app: FastifyInstance) {
       })
     }
 
-    const card = await loadCard(userId, body.data.userCardId)
-    if (!card) {
-      return reply.code(404).send({
-        ok: false,
-        error: { code: "not_found", message: "卡不在这个账号的卡册里" },
-      })
-    }
-    if (card.id.startsWith("hero-")) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "hero_not_tradable", message: "本体卡不能上架" },
-      })
-    }
-
-    const [inDeck] = await db
-      .select({ id: deckSlots.userCardId })
-      .from(deckSlots)
-      .where(and(eq(deckSlots.userId, userId), eq(deckSlots.userCardId, body.data.userCardId)))
-      .limit(1)
-    if (inDeck) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "in_deck", message: "先从卡组里移出再上架" },
-      })
-    }
-    if (await anyLocked(db, userId, [body.data.userCardId])) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "in_expedition", message: EXPEDITION_LOCK_MESSAGE },
-      })
-    }
-
-    const [listed] = await db
-      .select({ id: marketListings.id })
-      .from(marketListings)
-      .where(
-        and(
-          eq(marketListings.userCardId, body.data.userCardId),
-          eq(marketListings.status, "active"),
-        ),
-      )
-      .limit(1)
-    if (listed) {
-      return reply.code(400).send({
-        ok: false,
-        error: { code: "already_listed", message: "这张卡已经在市场里" },
-      })
-    }
-
-    const band = await priceBandOf(card.id)
-    if (band && (body.data.price < band.minPrice || body.data.price > band.maxPrice)) {
-      return reply.code(400).send({
-        ok: false,
-        error: {
-          code: "price_out_of_band",
-          message: `定价需在近期均价（${band.avgPrice}）的 ±40% 范围内（${band.minPrice}–${band.maxPrice}）`,
-          ...band,
-        },
-      })
-    }
-
     const listTax = Math.max(1, Math.floor(body.data.price * MARKET_LIST_TAX_RATE))
     const deposit = Math.max(1, Math.floor(body.data.price * MARKET_DEPOSIT_RATE))
     const upfrontTotal = listTax + deposit
     const listedResult = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+
+      const card = await loadCard(userId, body.data.userCardId, tx)
+      if (!card) {
+        throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
+      }
+      if (card.id.startsWith("hero-")) {
+        throw new TxAbort(400, "hero_not_tradable", "本体卡不能上架")
+      }
+
+      const [inDeck] = await tx
+        .select({ id: deckSlots.userCardId })
+        .from(deckSlots)
+        .where(and(eq(deckSlots.userId, userId), eq(deckSlots.userCardId, body.data.userCardId)))
+        .limit(1)
+      if (inDeck) {
+        throw new TxAbort(400, "in_deck", "先从卡组里移出再上架")
+      }
+      if (await anyLocked(tx, userId, [body.data.userCardId])) {
+        throw new TxAbort(400, "in_expedition", EXPEDITION_LOCK_MESSAGE)
+      }
+
+      const [listed] = await tx
+        .select({ id: marketListings.id })
+        .from(marketListings)
+        .where(and(eq(marketListings.userCardId, body.data.userCardId), eq(marketListings.status, "active")))
+        .limit(1)
+      if (listed) {
+        throw new TxAbort(400, "already_listed", "这张卡已经在市场里")
+      }
+
+      const band = await priceBandOf(card.id, tx)
+      if (band && (body.data.price < band.minPrice || body.data.price > band.maxPrice)) {
+        throw new TxAbort(
+          400,
+          "price_out_of_band",
+          `定价需在近期均价（${band.avgPrice}）的 ±40% 范围内（${band.minPrice}–${band.maxPrice}）`,
+          band,
+        )
+      }
+
       const [wallet] = await tx
         .update(users)
         .set({ coins: sql`${users.coins} - ${upfrontTotal}` })
@@ -328,15 +316,23 @@ export async function marketRoutes(app: FastifyInstance) {
         )
       }
 
-      const [created] = await tx
-        .insert(marketListings)
-        .values({
-          sellerId: userId,
-          userCardId: body.data.userCardId,
-          price: body.data.price,
-          deposit,
-        })
-        .returning()
+      let created: typeof marketListings.$inferSelect | undefined
+      try {
+        ;[created] = await tx
+          .insert(marketListings)
+          .values({
+            sellerId: userId,
+            userCardId: body.data.userCardId,
+            price: body.data.price,
+            deposit,
+          })
+          .returning()
+      } catch (err) {
+        if ((err as { code?: string })?.code === "23505") {
+          throw new TxAbort(400, "already_listed", "这张卡已经在市场里")
+        }
+        throw err
+      }
 
       await recordLedger(tx, userId, [{ kind: "coins", delta: -listTax }], {
         source: "market-tax",
@@ -347,7 +343,7 @@ export async function marketRoutes(app: FastifyInstance) {
         sourceRef: String(created!.id),
       })
 
-      return { created: created!, coins: wallet.coins }
+      return { created: created!, coins: wallet.coins, card }
     })
     if (!listedResult) return
 
@@ -359,7 +355,7 @@ export async function marketRoutes(app: FastifyInstance) {
         listTax,
         deposit,
         coins: listedResult.coins,
-        card,
+        card: listedResult.card,
       },
     }
   })
@@ -410,9 +406,9 @@ export async function marketRoutes(app: FastifyInstance) {
     if (!(await requireFeature(reply, userId, "market"))) return
 
     // 若已过 7 天有效期，先把超期挂单自动取消并退还押金（上架税不退）
-    await expireStaleListings()
+    await expireStaleListings(true)
 
-    // 先在事务里把上架从 active 抢成 sold，再扣款、过户；任何一步失败都整体回滚，
+    // 先在事务里把上架从 active 抢成 sold，再按序锁买卖双方、扣款、过户；任何一步失败都整体回滚，
     // 并发购买只有一个能抢到这条上架，金币也不会被扣成负数。
     const bought = await runTx(reply, async (tx) => {
       const [listing] = await tx
@@ -442,6 +438,11 @@ export async function marketRoutes(app: FastifyInstance) {
       }
       if (listing.sellerId === userId) {
         throw new TxAbort(400, "own_listing", "不能买自己的卡")
+      }
+
+      // 按 userId 字典序依次加锁，避免买家与卖家互买时死锁
+      for (const lockId of [userId, listing.sellerId].sort()) {
+        await lockUser(tx, lockId)
       }
 
       const [buyerWallet] = await tx

@@ -151,6 +151,14 @@ export async function shopRoutes(app: FastifyInstance) {
         if (settledStamina.value >= STAMINA_OVERFLOW_MAX) {
           throw new TxAbort(400, "stamina_full", `体力已达上限（${STAMINA_OVERFLOW_MAX}），无需购买`)
         }
+        if (settledStamina.value + (qty - 1) * staminaPerUnit >= STAMINA_OVERFLOW_MAX) {
+          const maxBottles = Math.ceil((STAMINA_OVERFLOW_MAX - settledStamina.value) / staminaPerUnit)
+          throw new TxAbort(
+            400,
+            "stamina_full",
+            `当前只需 ${maxBottles} 瓶即可回满体力上限（${STAMINA_OVERFLOW_MAX}），请减少购买数量`,
+          )
+        }
       }
 
       const coinCost = (def.cost.coins ?? 0) * qty

@@ -228,6 +228,20 @@ await test("附件格式校验：负数、未知物品、多余字段都被拒�
   await assert.rejects(mail.sendMail(userId, { title: "x", attachment: { gold: 1 } as never }))
 })
 
+await test("一键领取：坏邮件跳过并返回 failed，不阻塞其余好邮件", async () => {
+  const userId = await newUser({ coins: 0 })
+  await db.insert(mails).values({
+    userId,
+    title: "坏邮件",
+    attachment: { cards: [{ cardId: "non-existent-card", count: 1 }] },
+  })
+  await mail.sendMail(userId, { title: "好邮件", attachment: { coins: 250 } })
+  const res = await mail.claimAllMails(userId)
+  assert.equal(res.claimed, 1)
+  assert.equal(res.failed.length, 1)
+  assert.equal(await coinsOf(userId), 250)
+})
+
 console.log(`\n${passed} mail tests passed`)
 await cleanup()
 process.exit(0)

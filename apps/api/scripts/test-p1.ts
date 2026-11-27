@@ -23,6 +23,7 @@ const { progressionRoutes } = await import("../src/routes/progression")
 const { marketRoutes } = await import("../src/routes/market")
 const { shopRoutes } = await import("../src/routes/shop")
 const { breakthroughCoinCost, breakthroughShardCost } = await import("@choke/shared/progression")
+const { resetDayKey } = await import("@choke/shared/reset")
 
 const app = Fastify()
 app.setErrorHandler(handleError)
@@ -49,19 +50,29 @@ function auth(userId: string) {
   return { cookie: `${COOKIE_NAME}=${makeSession(userId)}` }
 }
 
-await test("挂机包：每日领取上限 60 包，领完后拦截", async () => {
+await test("挂机包：按在线时间累计，每日上限 60 包，领完后拦截", async () => {
   const userId = "p1-idle-user"
-  await db.insert(users).values({ id: userId, username: userId, tutorialDone: true, playerLevel: 60, staminaUpdatedAt: Date.now() })
+  // 今天已经在线 25 分钟
+  await db.insert(users).values({
+    id: userId,
+    username: userId,
+    tutorialDone: true,
+    playerLevel: 60,
+    staminaUpdatedAt: Date.now(),
+    onlineDay: resetDayKey(Date.now()),
+    onlineSeconds: 25 * 60,
+  })
 
   const r1 = await app.inject({
     method: "POST",
     url: `/users/${userId}/packs/idle/claim`,
     headers: auth(userId),
-    payload: { count: 25 },
+    payload: { count: 10 },
   })
   assert.equal(r1.statusCode, 200)
-  assert.equal(r1.json().data.claimed, 25)
-  assert.equal(r1.json().data.remaining, 35)
+  assert.equal(r1.json().data.claimed, 10)
+  assert.equal(r1.json().data.claimable, 15)
+  assert.equal(r1.json().data.remaining, 50)
 
   const r2 = await app.inject({
     method: "POST",
@@ -69,8 +80,28 @@ await test("挂机包：每日领取上限 60 包，领完后拦截", async () =
     headers: auth(userId),
   })
   assert.equal(r2.statusCode, 200)
-  assert.equal(r2.json().data.claimed, 35)
-  assert.equal(r2.json().data.count, 60)
+  assert.equal(r2.json().data.claimed, 15)
+  assert.equal(r2.json().data.count, 25)
+
+  // 攒的都领完了，再领要等继续在线
+  const r2b = await app.inject({
+    method: "POST",
+    url: `/users/${userId}/packs/idle/claim`,
+    headers: auth(userId),
+  })
+  assert.equal(r2b.statusCode, 400)
+  assert.equal(r2b.json().error.code, "nothing_to_claim")
+
+  // 在线满 1 小时：补到每日上限 60
+  await db.update(users).set({ onlineSeconds: 3600 }).where(eq(users.id, userId))
+  const r3a = await app.inject({
+    method: "POST",
+    url: `/users/${userId}/packs/idle/claim`,
+    headers: auth(userId),
+  })
+  assert.equal(r3a.statusCode, 200)
+  assert.equal(r3a.json().data.claimed, 35)
+  assert.equal(r3a.json().data.count, 60)
 
   const r3 = await app.inject({
     method: "POST",
@@ -522,6 +553,33 @@ await test("统一商店：日/周限购、体力药共用上限、碎片博弈�
   assert.equal(failHighBox.json().error.code, "not_enough_items")
   const [uAfterFail] = await db.select({ coins: users.coins }).from(users).where(eq(users.id, userId))
   assert.equal(uAfterFail!.coins, coinsBeforeFail)
+
+  // 体力接近 720 上限时（如 710/720）一次买 2 瓶体力药应被拦截，不空扣金币
+  const staminaUser = "p1-shop-stamina-cap"
+  await db.insert(users).values({
+    id: staminaUser,
+    username: staminaUser,
+    coins: 500,
+    stamina: 710,
+    tutorialDone: true,
+    playerLevel: 60,
+    staminaUpdatedAt: Date.now(),
+  })
+  const overStaminaBuy = await app.inject({
+    method: "POST",
+    url: `/users/${staminaUser}/shop/buy`,
+    headers: auth(staminaUser),
+    payload: { itemId: "stamina-potion", count: 2 },
+  })
+  assert.equal(overStaminaBuy.statusCode, 400)
+  assert.equal(overStaminaBuy.json().error.code, "stamina_full")
+  const [stUserAfter] = await db.select({ coins: users.coins }).from(users).where(eq(users.id, staminaUser))
+  assert.equal(stUserAfter!.coins, 500)
+})
+
+await test("市场列表需登录才能查看", async () => {
+  const anon = await app.inject({ method: "GET", url: "/market/listings" })
+  assert.equal(anon.statusCode, 401)
 })
 
 await test("批量分解：合并产出同品质碎片与闪卡精华、拦截本体卡", async () => {
@@ -565,10 +623,27 @@ await test("批量分解：合并产出同品质碎片与闪卡精华、拦截�
   assert.equal(okRes.statusCode, 200)
   const d = okRes.json().data
   assert.equal(d.removedUserCardIds.length, 3)
+  assert.equal(d.skipped.length, 0)
   assert.equal(d.items["shard-C"], 8)
   assert.equal(d.items["shard-E"], 4)
   assert.equal(d.essenceGained, 3)
   assert.equal(d.essence, 3)
+
+  // 批量分解遇到在售挂单卡：跳过在售卡并记录 skipped，其余照常分解
+  const [cKeep] = await db.insert(userCards).values({ userId, cardId: "p1-bd-c", serial: 3 }).returning()
+  const [cSell] = await db.insert(userCards).values({ userId, cardId: "p1-bd-c", serial: 4 }).returning()
+  await db.insert(marketListings).values({ sellerId: userId, userCardId: cSell!.id, price: 100, deposit: 5 })
+  const skipRes = await app.inject({
+    method: "POST",
+    url: `/users/${userId}/cards/dismantle`,
+    headers: auth(userId),
+    payload: { userCardIds: [cKeep!.id, cSell!.id] },
+  })
+  assert.equal(skipRes.statusCode, 200)
+  const sd2 = skipRes.json().data
+  assert.deepEqual(sd2.removedUserCardIds, [cKeep!.id])
+  assert.deepEqual(sd2.skipped, [{ userCardId: cSell!.id, reason: "card_listed" }])
+  assert.equal(sd2.items["shard-C"], 12)
 })
 
 console.log(`\n${passed} p1 tests passed`)

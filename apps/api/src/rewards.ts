@@ -70,7 +70,8 @@ export async function grantAttachment(
     ledger.push({ kind: "pack", ref: pool, delta: count })
   }
 
-  for (const { cardId, count, foil } of attachment.cards ?? []) {
+  const sortedCards = [...(attachment.cards ?? [])].sort((a, b) => a.cardId.localeCompare(b.cardId))
+  for (const { cardId, count, foil } of sortedCards) {
     for (let i = 0; i < count; i += 1) {
       let granted
       try {

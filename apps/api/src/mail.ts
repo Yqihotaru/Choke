@@ -23,7 +23,8 @@ import { TxAbort, lockUser, type Tx } from "./tx"
 type MailRow = typeof mails.$inferSelect
 
 const LIST_LIMIT = 200
-const CLAIM_ALL_LIMIT = 100
+const CLAIM_ALL_LIMIT = 20
+const CLEANUP_LIMIT = 100
 
 export interface NewMail {
   kind?: MailKind
@@ -84,7 +85,7 @@ export async function cleanupMails(userId: string, now = Date.now()): Promise<nu
     .from(mails)
     .where(and(eq(mails.userId, userId), eq(mails.pinned, false), lt(mails.createdAt, cutoff(now))))
     .orderBy(asc(mails.id))
-    .limit(CLAIM_ALL_LIMIT)
+    .limit(CLEANUP_LIMIT)
 
   let removed = 0
   for (const { id } of expired) {
@@ -243,30 +244,31 @@ export async function claimMail(userId: string, mailId: number): Promise<MailAtt
   })
 }
 
-/** 一键领取：最多 100 封，任何一封发放失败整批回滚 */
-export async function claimAllMails(userId: string): Promise<{ claimed: number }> {
-  return db.transaction(async (tx) => {
-    await lockUser(tx, userId)
-    const rows = await tx
-      .select()
-      .from(mails)
-      .where(and(eq(mails.userId, userId), isNull(mails.claimedAt), sql`${mails.attachment} IS NOT NULL`))
-      .orderBy(asc(mails.id))
-      .limit(CLAIM_ALL_LIMIT)
-      .for("update")
-    let claimed = 0
-    for (const row of rows) {
-      const attachment = readAttachment(row)
-      if (!attachment) continue
-      await grantAttachment(tx, userId, attachment, { source: "mail-claim", sourceRef: String(row.id) })
-      await tx
-        .update(mails)
-        .set({ claimedAt: sql`now()`, readAt: sql`coalesce(${mails.readAt}, now())` })
-        .where(eq(mails.id, row.id))
+/** 一键领取：单次最多 20 封，每封独立事务领取，坏邮件跳过不阻塞其余邮件 */
+export async function claimAllMails(
+  userId: string,
+): Promise<{ claimed: number; failed: { id: number; reason: string }[] }> {
+  const rows = await db
+    .select({ id: mails.id })
+    .from(mails)
+    .where(and(eq(mails.userId, userId), isNull(mails.claimedAt), sql`${mails.attachment} IS NOT NULL`))
+    .orderBy(asc(mails.id))
+    .limit(CLAIM_ALL_LIMIT)
+
+  let claimed = 0
+  const failed: { id: number; reason: string }[] = []
+  for (const { id } of rows) {
+    try {
+      await claimMail(userId, id)
       claimed += 1
+    } catch (error) {
+      failed.push({
+        id,
+        reason: error instanceof Error ? error.message : "领取失败",
+      })
     }
-    return { claimed }
-  })
+  }
+  return { claimed, failed }
 }
 
 export async function setPinned(userId: string, mailId: number, pinned: boolean) {

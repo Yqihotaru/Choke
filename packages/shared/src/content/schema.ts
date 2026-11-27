@@ -55,7 +55,7 @@ export const progressionSchema = z.strictObject({
     skillReroll: z.strictObject({
       pityInterval: int.min(2),
       shards: perRarity(positiveInt),
-      coins: perRarity(nonNegative),
+      coins: perRarity(int.nonnegative()),
     }),
   }),
   player: z.strictObject({

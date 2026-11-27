@@ -8,7 +8,6 @@ import {
   mailAttachmentSchema,
 } from "@choke/shared/mail"
 
-import { IS_PRODUCTION } from "../auth/env"
 import { requireSelf, requireSession } from "../auth/guard"
 import { claimAllMails, claimMail, deleteMail, listMails, mailSummary, markRead, sendMail, setPinned } from "../mail"
 import { guardAbort } from "../tx"
@@ -93,8 +92,8 @@ export async function mailRoutes(app: FastifyInstance) {
     return { ok: true, data: {} }
   })
 
-  // 开发用：给自己发一封邮件，方便调界面；生产环境不注册
-  if (!IS_PRODUCTION) {
+  // 开发用：给自己发一封邮件，方便调界面；需显式开启 ENABLE_DEV_ROUTES=1，默认关闭
+  if (process.env.ENABLE_DEV_ROUTES === "1") {
     app.post("/dev/mails", async (request, reply) => {
       const userId = requireSession(request, reply)
       if (!userId) return
