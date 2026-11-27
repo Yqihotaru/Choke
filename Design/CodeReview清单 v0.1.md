@@ -1,5 +1,7 @@
 # Choke! Code Review 问题清单 v0.1
 
+> 2026-11-27 更新：第一至二节为 11-26 的原清单；第三至五节并入 11-27 的全量复查新发现（后端路由、前端面板、远征与战斗各一轮）。编号延续。**商店和洗技能不设功能门是故意的（测试期不锁），不算问题。**
+
 > 整理时间：2026-11-26
 > 审查范围：近期落地的碎片突破、逢 5 自选洗技能、统一商店、批量分解、卡册/卡组/图鉴/卡牌详情页改造，以及战斗层破盾与去硬编码。
 > 审查结论：**战斗层（`battle/config.ts`、`battle/engine.ts`）与 `packages/shared/src/progression.ts` 纯函数零问题通过**；以下为待修的 3 个 P0、6 个 P1、4 个 P2 实锤问题（已排除确认故意放行的「商店解锁校验」）。
@@ -82,3 +84,79 @@
 
 13. **`DeckPanel` 冗余 `setReload` + 批量分解提示遗漏经验乐谱 + `api.ts` 返回类型补全**
     - **位置**：`DeckPanel.tsx` L744–747（`fetchDeck` 已监听 `book.revision`，无需再调 `setReload`）；`AlbumPanel.tsx` L204–209（批量分解提示可顺带显示返还的经验乐谱）；`src/desk/session/api.ts` L181–212（补齐后端已返回的 `coins / coinsSpent / shardsSpent / blockedCost / blockedShards` 字段）。
+
+---
+
+## 三、2026-11-27 新增：后端（`apps/api/`）
+
+> 标注「已读确认」的是人工读代码核实过，「待复核」的是子代理审查结果，动手前先看一眼代码再改。
+
+### P0 / P1
+
+14. **在售的卡被消耗时押金被吞**（已读确认，并入第 1 条一起修）
+    - **位置**：`progression.ts` 的 `removeUserCard`（L76–91）；喂养、融合、分解、批量分解、NPC 回收都会走到。
+    - **问题**：挂单被改成 `cancelled`，押金不退，`expireStaleListings` 又只退 `active` 单，押金永远收不回。
+    - **修法**：与 `reroll-skill` 一致，**在售的卡直接拒绝**（`card_listed`）。这样不用退押金，也不会误改历史单。
+15. **批量分解遇到出征中的卡，整批（最多 60 张）回滚；也不检查在售**（已读确认）
+    - **位置**：`progression.ts` 约 L890。
+    - **修法**：出征中、在售的卡跳过，在返回里列出 `skipped` 和原因，其余照常分解。
+16. **分页排序没有兜底字段，翻页会重复或漏卡**（疑似前端 key 重复警告的来源）
+    - **位置**：`cards.ts` 三处 `orderBy`。**已由主线修好，不用再动**，只需在浏览器里确认警告是否消失（见第 30 条）。
+17. **邮件一键领取，一封坏邮件让整批永远领不了**（待复核）
+    - **位置**：`mail.ts` 约 L247–270。按 id 升序取前 100 封，坏邮件总在最前。
+    - **修法**：每封用嵌套事务单独领，失败的跳过并返回失败列表；批量上限降到 20 封左右。
+18. **上架没加锁，检查都在事务外**（待复核）
+    - **位置**：`market.ts` 约 L245–292（检查）、L309–351（事务）。
+    - **问题**：并发上架返回 500 而不是 `already_listed`；上架与分解同时发生可能留下指向已删卡的挂单；上架与出征同时发生，同一张卡可能既在售又在出征。
+    - **修法**：事务开头 `lockUser`，在事务里重新查归属、卡组、出征、已上架；捕获唯一索引冲突转成 `TxAbort(400, "already_listed")`。
+19. **`market/listings` 每次访问都开写事务做过期清理**（待复核）
+    - **位置**：`market.ts` 约 L48–73、L119。
+    - **修法**：内存里做 1 分钟节流，或放到定时任务。是否允许未登录浏览市场，请先问用户，不要擅自加登录门。
+
+### P2
+
+20. **500 错误把数据库原文带给客户端，格式也不统一**（待复核）：`error-handler.ts` L5–17，非业务错误统一回 `{ok:false,error:{code:"internal",message:"服务器出错了"}}`，细节只写日志。
+21. **`/dev/mails` 只靠 `NODE_ENV` 控制**（待复核）：`routes/mails.ts` L97–105，改成显式开关（如 `ENABLE_DEV_ROUTES=1`），默认关。
+22. **体力药水在体力 661～719 时只加到 720 仍扣满 100 金币**（已读确认，与第 3 条同类）：按实际能加的瓶数算，或不足一瓶时拒绝。
+23. **买家和卖家互买可能死锁**（待复核）：`market.ts` 约 L447–481，两个 userId 排序后再依次 `lockUser`。
+24. **邮件附件里多种卡的发放可能死锁**（待复核）：`gacha/open.ts` L83–88 的 `grantCard` 更新 `cards.pulled`，发放前先按卡 id 排序。
+25. **任务过期补发邮件合并后可能超过邮件校验上限**（待复核）：`quests.ts` 约 L430–441，金币超 1,000,000 或物品超 20 种时每次读任务都重试且永远失败。
+
+### 主线自己处理，不在这份任务里
+
+- 新手包"最后一包保底"并发多触发、神秘包领本体卡不在事务里（都在 `packs.ts`，和挂机包改造同一文件）。
+- 挂机包改按时间累计（要改 `db/schema.ts`）。
+- `maxStars` 估算不准（`packages/shared/src/expedition/content.ts`）。
+- 战斗快速连点"结束回合"动画错乱（`src/battle`）。
+
+---
+
+## 四、2026-11-27 新增：前端（`src/desk/`）
+
+### P1
+
+26. **镜像卡（第 6 张）前端没演出**（待复核）
+    - **位置**：后端 `gacha/open.ts` L179–197、L224–228 返回 `bonus`；前端 `src/desk/session/api.ts` L554–564 的 `OpenPackResult` 没有这个字段，`DeskPage.tsx` 约 L1299、L1416 和 `GachaPanel.tsx` 约 L204 只处理 `results`。
+    - **修法**：演完 5 张后，用同一套 `resolvePulledCards` 再演第 6 张；至少先用提示告知"额外获得 xxx"。
+27. **切号后背包、市场先显示上个账号的数据**（待复核）：`BackpackPanel.tsx` L76–130、`MarketPanel.tsx` L63–90。给面板加 `key={userId}` 最省事。市场的 `fetchMe` 失败不应让整页判为加载失败，`unlist` 失败也要重新拉列表。
+28. **道具名查表没有兜底，遇到新道具白屏**（待复核）：`BattlePanel.tsx` 约 L82、`CardDetail.tsx` 约 L103，改成 `ITEMS[id]?.name ?? id`。
+29. **多处 `.catch(() => {})` 吞错，界面无提示**（待复核）：`BattlePanel.tsx` L51/54/64、`MailBox.tsx` L143/L181（已读失败要回滚本地已读）、`AccountPanel.tsx` L105/113/141、`useDeskSession.ts` L84/107。
+30. **找出"Encountered two children with the same key"的来源**：key 值出现过 1、2、4、40 到 46。先确认第 16 条修复后是否还有；若有，在浏览器控制台复制完整组件栈，从 `DeskDrawer.tsx` L184、`DeskBook.tsx` L496、`PackOpener.tsx` 的 `keyOf` 查起。
+
+### P2
+
+31. **前端几乎没按 `error.code` 分支**（待复核）：`feature_locked`、`in_expedition`、`already_listed`、`in_deck`、`price_out_of_band`、`not_enough_coins`、`not_enough_stamina`、`not_enough_exp`、`already_foil` 现在只靠 `message` 展示。至少对 `feature_locked`、`in_expedition`、`already_listed` 做"刷新状态 + 提示"。
+32. **市场下架按钮在交易未解锁时仍可点**（待复核）：`MarketPanel.tsx` L230–236，先确认后端下架是否受锁影响再决定禁用。
+33. **`BattlePanel` 副本状态拉取失败时按钮仍可点**（待复核）：L51/54/64，失败要显示"加载失败，重试"并禁用依赖按钮；切号时清状态。
+34. **`useDeskSession` 的 `refreshPacks` 依赖整个 `user` 对象，会重复拉库存**（待复核）：依赖改成 `user?.id`。
+35. **`api.ts` 的 `fetchMails`、`fetchMailSummary`、`fetchLedger` 不接 `signal`；`fetchProgress` 吞掉所有错误返回 `null`**（待复核）。
+
+---
+
+## 五、复查后已排除的疑点
+
+- `BattleStage` 的 hooks 顺序报错：所有 hooks 都在提前 return 之前，现在的文件没有 `useMemo`，那是热更新残留，刷新即消失。
+- 远征服务端：跳格、重复领宝箱、重复结算、放弃后继续操作、并发、地图生成死循环，均未发现问题。
+- 战斗"同归于尽"判定前后不一：回合顺序是我方先敌方后，该情形不存在，不处理。
+- 硬壳低于 100 的伤害按 100 算：按设计，不改。
+- 商店与洗技能没有功能门：故意放行。

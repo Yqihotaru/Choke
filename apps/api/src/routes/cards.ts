@@ -89,6 +89,7 @@ async function queryPublicCards(query: {
       : query.sort === "name"
         ? [asc(cards.name)]
         : [sql`${cards.pp} desc nulls last`]
+  orderBy.push(asc(cards.id))
   const rowsPromise = db
     .select()
     .from(cards)
@@ -289,6 +290,7 @@ export async function cardRoutes(app: FastifyInstance) {
         : query.sort === "name"
           ? [asc(cards.name)]
           : [sql`${cards.pp} desc nulls last`]
+    orderBy.push(asc(cards.id))
 
     // 三条查询互不依赖，一次并发发出去，避免三次串行往返。
     const [rows, [{ value: total }], [{ value: ownedTotal }]] = await Promise.all([
@@ -370,6 +372,7 @@ export async function cardRoutes(app: FastifyInstance) {
           : query.sort === "name"
             ? [asc(cards.name)]
             : [desc(userCards.obtainedAt)]
+    orderBy.push(desc(userCards.id))
 
     const rows = await db
       .select({
