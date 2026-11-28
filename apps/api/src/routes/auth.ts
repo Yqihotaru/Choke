@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
 
 import { and, eq, getTableColumns, sql } from "drizzle-orm"
-import type { FastifyInstance } from "fastify"
+import type { FastifyInstance, FastifyRequest } from "fastify"
 import { z } from "zod"
 
 import {
@@ -97,8 +97,13 @@ async function claimHeroCard(
 }
 
 export async function authRoutes(app: FastifyInstance) {
-  const loginLimit = rateLimit({ max: 10, windowMs: 60_000 })
-  const registerLimit = rateLimit({ max: 5, windowMs: 10 * 60_000 })
+  /** 登录 / 注册除了按 IP，也按邮箱单独计数，避免一个出口 IP 下互相拖累或单账号被狂试 */
+  const emailAccount = (request: FastifyRequest) => {
+    const body = request.body as { email?: unknown } | null
+    return typeof body?.email === "string" ? normalizeEmail(body.email) : null
+  }
+  const loginLimit = rateLimit({ max: 10, windowMs: 60_000, accountOf: emailAccount })
+  const registerLimit = rateLimit({ max: 5, windowMs: 10 * 60_000, accountOf: emailAccount })
   const guestLimit = rateLimit({ max: 10, windowMs: 60_000 })
 
   app.get("/auth/osu", async (_request, reply) => {
@@ -151,7 +156,7 @@ export async function authRoutes(app: FastifyInstance) {
           id: userId,
           username,
           email,
-          passwordHash: hashPassword(body.data.password),
+          passwordHash: await hashPassword(body.data.password),
           onboarded: false,
         })
         .returning()
@@ -195,7 +200,7 @@ export async function authRoutes(app: FastifyInstance) {
       .where(sql`lower(${users.email}) = ${email}`)
       .limit(1)
 
-    if (!user || !verifyPassword(body.data.password, user.passwordHash)) {
+    if (!user || !(await verifyPassword(body.data.password, user.passwordHash))) {
       return reply.code(401).send({
         ok: false,
         error: { code: "bad_credentials", message: "邮箱或密码不正确" },
@@ -217,8 +222,9 @@ export async function authRoutes(app: FastifyInstance) {
   /**
    * 游客账号：跳过 osu! OAuth，直接创建一个 guest-xxxx 用户并进入桌面。
    * 没有 osuId，所以没有本体卡；只发普通卡包，神秘卡包依赖 osu! 数据，不发放。
+   * 用 POST：GET 会被预取 / 跨站导航触发，等于替访问者切换登录态。
    */
-  app.get("/auth/guest", { preHandler: guestLimit }, async (request, reply) => {
+  app.post("/auth/guest", { preHandler: guestLimit }, async (request, reply) => {
     const suffix = randomBytes(6).toString("hex")
     const userId = `guest-${suffix}`
 
@@ -237,8 +243,7 @@ export async function authRoutes(app: FastifyInstance) {
     request.log.info({ userId }, "guest account created")
 
     setSessionCookie(reply, userId)
-
-    return reply.redirect(`${WEB_BASE}/`)
+    return { ok: true, data: { id: userId } }
   })
 
   app.get("/auth/osu/callback", async (request, reply) => {

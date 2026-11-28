@@ -90,7 +90,7 @@ export async function accountRoutes(app: FastifyInstance) {
       })
     }
     const done = await guardAbort(reply, async () => {
-      await bindEmail(userId, email, hashPassword(body.data.password))
+      await bindEmail(userId, email, await hashPassword(body.data.password))
       return true
     })
     if (!done) return

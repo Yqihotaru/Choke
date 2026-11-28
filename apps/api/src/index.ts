@@ -26,7 +26,19 @@ import { shopRoutes } from "./routes/shop"
 import { questRoutes } from "./routes/quests"
 import { client, sql } from "./db/client"
 
-const app = Fastify({ logger: true })
+/**
+ * 反向代理（Nginx / Cloudflare 等）后面的部署要显式开 TRUST_PROXY，
+ * 否则 request.ip 全是代理地址，限流会退化成全局共享一个桶。
+ * 支持 `1` / `true`，也支持逗号分隔的 IP / CIDR 列表。
+ */
+function trustProxySetting(): boolean | string[] {
+  const raw = process.env.TRUST_PROXY?.trim()
+  if (!raw) return false
+  if (raw === "1" || raw.toLowerCase() === "true") return true
+  return raw.split(",").map((item) => item.trim()).filter(Boolean)
+}
+
+const app = Fastify({ logger: true, trustProxy: trustProxySetting() })
 app.log.info({ contentVersion: CONTENT_VERSION }, "content loaded")
 
 app.setErrorHandler(handleError)

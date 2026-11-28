@@ -10,7 +10,7 @@ import { setupTestDb } from "./test-db"
 
 const dropTestDb = await setupTestDb("account-binding")
 
-const { and, eq } = await import("drizzle-orm")
+const { and, eq, sql } = await import("drizzle-orm")
 const { default: Fastify } = await import("fastify")
 const { default: cookie } = await import("@fastify/cookie")
 
@@ -150,7 +150,7 @@ await test("游客绑定没人用过的 osu! 号：直接挂上，补发一个�
 })
 
 await test("邮箱号手上已有神秘卡包：绑定不重复补发", async () => {
-  const mail = await newUser({ id: "email-bindtest2", email: "a@test.dev", passwordHash: hashPassword("password1") })
+  const mail = await newUser({ id: "email-bindtest2", email: "a@test.dev", passwordHash: await hashPassword("password1") })
   await db.insert(userPacks).values({ userId: mail, pool: "mystery", count: 1 })
   assert.deepEqual(await bindAs(mail, freshOsu()), { bind: "linked", reason: null })
   assert.equal(await packsOf(mail), 1)
@@ -277,7 +277,7 @@ await test("保留 osu! 账号：当前账号封存，邮箱和密码跟着走�
   const mail = await newUser({
     id: "email-bindtest6",
     email: "Keep@Test.dev".toLowerCase(),
-    passwordHash: hashPassword("password1"),
+    passwordHash: await hashPassword("password1"),
     playerLevel: 3,
   })
   await bindAs(mail, veteran.me)
@@ -303,8 +303,8 @@ await test("保留 osu! 账号：当前账号封存，邮箱和密码跟着走�
 })
 
 await test("保留 osu! 账号：对方已有邮箱时，当前账号的邮箱只是释放", async () => {
-  const veteran = await progressedOsuUser({ email: "owner@test.dev", passwordHash: hashPassword("password1") })
-  const mail = await newUser({ email: "loser@test.dev", passwordHash: hashPassword("password2") })
+  const veteran = await progressedOsuUser({ email: "owner@test.dev", passwordHash: await hashPassword("password1") })
+  const mail = await newUser({ email: "loser@test.dev", passwordHash: await hashPassword("password2") })
   await bindAs(mail, veteran.me)
   await api("POST", "/auth/bind/resolve", mail, { choice: "keep-osu", confirm: true })
   assert.equal((await rowOf(veteran.id)).email, "owner@test.dev")
@@ -326,6 +326,24 @@ await test("并发注册同一邮箱：一个成功，另一个 409 而不是 50
   assert.equal(failed.json().error.code, "email_taken")
   const rows = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
   assert.equal(rows.length, 1)
+})
+
+await test("游客入口只接受 POST：GET 不再建号 / 覆盖登录态", async () => {
+  const countGuests = async () =>
+    (await db.select({ id: users.id }).from(users).where(sql`${users.id} like 'guest-%'`)).length
+  const before = await countGuests()
+
+  const post = await api("POST", "/auth/guest")
+  assert.equal(post.statusCode, 200, post.body)
+  const id = post.json().data.id as string
+  assert.ok(id.startsWith("guest-"))
+  assert.ok(post.cookies.find((c) => c.name === COOKIE_NAME), "POST 要写登录态")
+  assert.equal(await countGuests(), before + 1, "POST 要建一个游客号")
+
+  const get = await api("GET", "/auth/guest")
+  assert.equal(get.statusCode, 404)
+  assert.equal(get.cookies.find((c) => c.name === COOKIE_NAME), undefined)
+  assert.equal(await countGuests(), before + 1, "GET 不能再建一个游客号")
 })
 
 await test("取消待确认：什么都不变", async () => {

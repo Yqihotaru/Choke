@@ -411,6 +411,11 @@ export function fetchMe(signal?: AbortSignal): Promise<AccountMe> {
   return request<AccountMe>("/auth/me", { signal })
 }
 
+/** 创建游客账号并写登录态；成功后由调用方跳回桌面 */
+export function createGuest(): Promise<{ id: string }> {
+  return request("/auth/guest", { method: "POST" })
+}
+
 /* ============================ 账号绑定 ============================ */
 
 export type AccountKind = "guest" | "email" | "osu"
