@@ -634,6 +634,12 @@ export function BattleStage({
           return
         }
 
+        if (event.type === "shield_break") {
+          sweepBanner("SHIELD BREAK", "player")
+          hitBurst("light", 0.25, true)
+          return
+        }
+
         // 胜负：等最后一击的演出收完再亮结算；三星一颗一颗盖上去
         if (event.type === "won" || event.type === "lost") {
           const won = event.type === "won"
@@ -1016,6 +1022,21 @@ export function BattleStage({
               </div>
             </div>
             <HpBar side="enemy" pct={bossPct} flashes={hpFlashes} />
+            {(battle.enemy.shieldMax ?? 0) > 0 && (
+              <div
+                className="choke-shield-bar"
+                role="img"
+                aria-label={`弱点护盾 ${battle.enemy.shield ?? 0} / ${battle.enemy.shieldMax}`}
+              >
+                {Array.from({ length: battle.enemy.shieldMax ?? 0 }, (_, i) => (
+                  <span
+                    key={i}
+                    className="choke-shield-seg"
+                    data-active={i < (battle.enemy.shield ?? 0) ? "true" : undefined}
+                  />
+                ))}
+              </div>
+            )}
             <div className="choke-boss-head__row choke-boss-head__row--sub">
               <WeaknessRibbon
                 open={battle.enemy.weaknesses}

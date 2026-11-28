@@ -1101,6 +1101,39 @@
   animation-direction: reverse;
 }
 
+/* 敌方弱点护盾条（经典折线血条下方左侧，银白色斜切块状条） */
+.choke-shield-bar--classic {
+  position: absolute;
+  left: 1.5cqw;
+  bottom: -0.78cqw;
+  width: 24.4cqw;
+  height: 0.52cqw;
+  display: flex;
+  gap: 0.28cqw;
+  z-index: 4;
+  pointer-events: none;
+}
+.choke-shield-seg {
+  flex: 1 1 0;
+  height: 100%;
+  transform: skewX(-28deg);
+  border-radius: 0.06cqw;
+  background: rgb(14 12 16 / 0.88);
+  box-shadow:
+    inset 0 1px 1px rgb(0 0 0 / 0.8),
+    inset 0 0 0 1px rgb(255 255 255 / 0.16);
+  transition: background 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  opacity: 0.55;
+}
+.choke-shield-seg[data-active="true"] {
+  opacity: 1;
+  background: linear-gradient(180deg, #ffffff 0%, #dde6f0 46%, #9fb0c4 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    0 0 0.42cqw rgb(225 238 255 / 0.5),
+    0 0.12cqw 0.28cqw rgb(0 0 0 / 0.75);
+}
+
 /* 实条立刻缩到位，红白残影停一拍再追上去：这一下掉了多少血，看残影的长度就知道 */
 .choke-bent-ghost {
   transition:

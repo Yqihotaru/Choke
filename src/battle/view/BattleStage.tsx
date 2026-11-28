@@ -644,6 +644,12 @@ export function BattleStage({
           return
         }
 
+        if (event.type === "shield_break") {
+          sweepBanner("SHIELD BREAK", "player")
+          hitBurst("light", 0.25, true)
+          return
+        }
+
         // 胜负：等最后一击的演出收完再亮结算；三星一颗一颗盖上去
         if (event.type === "won" || event.type === "lost") {
           const won = event.type === "won"
@@ -1255,6 +1261,21 @@ export function BattleStage({
             ))}
             {/* 左：BOSS 阶梯折线血条 */}
             <BentGauge side="boss" polygon={BOSS_GAUGE_POLYGON} pct={bossPct} fillX={4} fillWidth={bossFillWidth} />
+            {(battle.enemy.shieldMax ?? 0) > 0 && (
+              <div
+                className="choke-shield-bar--classic"
+                role="img"
+                aria-label={`弱点护盾 ${battle.enemy.shield ?? 0} / ${battle.enemy.shieldMax}`}
+              >
+                {Array.from({ length: battle.enemy.shieldMax ?? 0 }, (_, i) => (
+                  <span
+                    key={i}
+                    className="choke-shield-seg"
+                    data-active={i < (battle.enemy.shield ?? 0) ? "true" : undefined}
+                  />
+                ))}
+              </div>
+            )}
 
             <button type="button" className="choke-center-orb" disabled>
               <i className="choke-orb-round">Round</i>
