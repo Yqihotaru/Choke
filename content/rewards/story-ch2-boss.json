@@ -1,0 +1,12 @@
+{
+  "fixed": {
+    "coins": 260,
+    "cardExp": 450,
+    "expPool": 2200
+  },
+  "starBonus": {
+    "1": { "expPool": 660, "cardExp": 135 },
+    "2": { "expPool": 440, "cardExp": 90 },
+    "3": { "expPool": 1100, "cardExp": 225 }
+  }
+}

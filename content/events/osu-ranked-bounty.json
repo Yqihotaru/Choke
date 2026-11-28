@@ -1,0 +1,16 @@
+{
+  "title": "社区 Ranked 赏金榜",
+  "text": "路边的社区公告栏贴着一张刚 Ranked 的热门新图悬赏令。",
+  "options": [
+    {
+      "text": "接下悬赏拼手速（威胁 +1，金币 +260，经验池 +350）",
+      "threat": 1,
+      "reward": { "coins": 260, "expPool": 350 },
+      "set": ["bounty-hunter"]
+    },
+    {
+      "text": "顺手摸走角落里的补给箱（金币 +150）",
+      "reward": { "coins": 150 }
+    }
+  ]
+}

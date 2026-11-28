@@ -1,0 +1,120 @@
+{
+  "kind": "main",
+  "name": "第 2 章 · 变速迷雾与社区淘金",
+  "summary": "SV 变速与社区悬赏交织！顶住凝霜舞者与余烬书记官的夹击，在日蚀中击败蚀拍日蚀。",
+  "deckSize": 5,
+  "start": "n1",
+  "rewards": "story-ch2-clear",
+  "objectives": [
+    { "label": "硬读 0.5× 绿线变速不慌", "flag": "sv-master" },
+    { "label": "以高威胁档位通关（≥ 2 档）", "tierAtLeast": 2 },
+    { "label": "接下社区 Ranked 悬赏榜", "flag": "bounty-hunter" }
+  ],
+  "nodes": {
+    "n1": {
+      "type": "story",
+      "story": "ch2-intro",
+      "title": "变速迷雾入口",
+      "pos": [0, 0],
+      "next": ["n2"]
+    },
+    "n2": { "type": "empty", "title": "迷雾前廊", "pos": [1, 0], "next": ["n3"] },
+    "n3": {
+      "type": "battle",
+      "encounter": "frost-dancer",
+      "rewards": "story-ch2-battle",
+      "title": "冰霜滑步 · 凝霜舞者",
+      "pos": [2, 0],
+      "next": ["n4"]
+    },
+    "n4": { "type": "empty", "title": "绿线转角", "pos": [3, 0], "next": ["n5"] },
+    "n5": {
+      "type": "event",
+      "event": "osu-sv-gimmick",
+      "title": "0.5× 绿线变速",
+      "pos": [4, 0],
+      "next": ["n6"]
+    },
+    "n6": { "type": "empty", "title": "社区分岔口", "pos": [5, 0], "next": ["n7"] },
+    "n7": {
+      "type": "branch",
+      "prompt": "左路是高赏金 Ranked 悬赏 + 余烬书记官，右路是毒藤琴师 + 休整补给",
+      "pos": [6, 0],
+      "next": ["n8a", "n8b"]
+    },
+    "n8a": {
+      "type": "event",
+      "event": "osu-ranked-bounty",
+      "title": "Ranked 赏金榜",
+      "threat": 1,
+      "pos": [7, -1],
+      "next": ["n9a"]
+    },
+    "n9a": { "type": "empty", "title": "炽热长廊", "pos": [8, -1], "next": ["n10a"] },
+    "n10a": {
+      "type": "battle",
+      "encounter": "ember-scribe",
+      "rewards": "story-ch2-chest",
+      "title": "精英 · 余烬书记官",
+      "threat": 1,
+      "pos": [9, -1],
+      "next": ["n11"]
+    },
+    "n8b": { "type": "empty", "title": "老图藤廊", "pos": [7, 1], "next": ["n9b"] },
+    "n9b": {
+      "type": "battle",
+      "encounter": "vine-fiddler",
+      "rewards": "story-ch2-battle",
+      "title": "毒藤琴师 · 缠弦藤妖",
+      "pos": [8, 1],
+      "next": ["n10b"]
+    },
+    "n10b": {
+      "type": "rest",
+      "title": "社区咖啡角休整",
+      "pos": [9, 1],
+      "next": ["n11"]
+    },
+    "n11": { "type": "empty", "title": "淘金广场", "pos": [10, 0], "next": ["n12"] },
+    "n12": {
+      "type": "treasure",
+      "rewards": "story-ch1-chest",
+      "title": "社区精选补给箱",
+      "pos": [11, 0],
+      "next": ["n13"]
+    },
+    "n13": { "type": "empty", "title": "镜面回廊", "pos": [12, 0], "next": ["n14"] },
+    "n14": {
+      "type": "battle",
+      "encounter": "mirror-warden",
+      "rewards": "story-ch2-battle",
+      "title": "精英 · 镜面守望者",
+      "threat": 1,
+      "pos": [13, 0],
+      "next": ["n15"]
+    },
+    "n15": { "type": "empty", "title": "日蚀前室", "pos": [14, 0], "next": ["n16"] },
+    "n16": {
+      "type": "rest",
+      "title": "校准 Offset 整备",
+      "pos": [15, 0],
+      "next": ["n17"]
+    },
+    "n17": { "type": "empty", "title": "日蚀祭坛", "pos": [16, 0], "next": ["n18"] },
+    "n18": {
+      "type": "story",
+      "story": "ch2-boss-pre",
+      "title": "蚀拍日蚀降临",
+      "pos": [17, 0],
+      "next": ["n19"]
+    },
+    "n19": {
+      "type": "boss",
+      "encounter": "tempo-eclipse",
+      "rewards": "story-ch2-boss",
+      "title": "关底 BOSS · 蚀拍日蚀",
+      "pos": [18, 0],
+      "next": []
+    }
+  }
+}

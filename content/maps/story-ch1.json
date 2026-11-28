@@ -16,20 +16,22 @@
       "story": "ch1-intro",
       "title": "踏入试炼场",
       "pos": [0, 0],
-      "next": ["n2"]
+      "next": ["n1e"]
     },
+    "n1e": { "type": "empty", "title": "选图前厅", "pos": [1, 0], "next": ["n2"] },
     "n2": {
       "type": "battle",
       "encounter": "chill-wisps",
       "rewards": "story-ch1-battle",
       "title": "手冷初试 · 谱面鬼火",
-      "pos": [1, 0],
-      "next": ["n3"]
+      "pos": [2, 0],
+      "next": ["n2e"]
     },
+    "n2e": { "type": "empty", "title": "试炼长廊", "pos": [3, 0], "next": ["n3"] },
     "n3": {
       "type": "branch",
       "prompt": "Pick & Ban：左路是高风险农图冲刺线，右路是稳扎稳打基本功线",
-      "pos": [2, 0],
+      "pos": [4, 0],
       "next": ["n4a", "n4b"]
     },
     "n4a": {
@@ -38,52 +40,57 @@
       "title": "727 · WYSI",
       "hint": "农图冲刺线：刺激高赏金",
       "threat": 1,
-      "pos": [3, -1],
-      "next": ["n5a"]
+      "pos": [5, -1],
+      "next": ["n4ae"]
     },
+    "n4ae": { "type": "empty", "title": "1-2 大跳坡道", "pos": [6, -1], "next": ["n5a"] },
     "n5a": {
       "type": "battle",
       "encounter": "wind-chime",
       "rewards": "story-ch1-battle",
       "title": "偏拍 50 噪点",
-      "pos": [4, -1],
-      "next": ["n6"]
+      "pos": [7, -1],
+      "next": ["n5e"]
     },
     "n4b": {
       "type": "event",
       "event": "osu-toxic-cheer",
       "title": "语音毒奶",
       "hint": "基本功线：稳健控血",
-      "pos": [3, 1],
-      "next": ["n5b"]
+      "pos": [5, 1],
+      "next": ["n4be"]
     },
+    "n4be": { "type": "empty", "title": "单敲练习廊", "pos": [6, 1], "next": ["n5b"] },
     "n5b": {
       "type": "battle",
       "encounter": "rock-drummer",
       "rewards": "story-ch1-battle",
       "title": "OD10 重拍单敲",
-      "pos": [4, 1],
-      "next": ["n6"]
+      "pos": [7, 1],
+      "next": ["n5e"]
     },
+    "n5e": { "type": "empty", "title": "中场汇合点", "pos": [8, 0], "next": ["n6"] },
     "n6": {
       "type": "rest",
       "title": "中场暂停 · 擦手汗换笔尖",
-      "pos": [5, 0],
-      "next": ["n7"]
+      "pos": [9, 0],
+      "next": ["n6e"]
     },
+    "n6e": { "type": "empty", "title": "先锋哨卡前", "pos": [10, 0], "next": ["n7"] },
     "n7": {
       "type": "battle",
       "encounter": "vanguard",
       "rewards": "story-ch1-chest",
       "title": "守门精英 · 1-2 大跳先锋",
       "threat": 1,
-      "pos": [6, 0],
-      "next": ["n8"]
+      "pos": [11, 0],
+      "next": ["n7e"]
     },
+    "n7e": { "type": "empty", "title": "战后岔路", "pos": [12, 0], "next": ["n8"] },
     "n8": {
       "type": "branch",
       "prompt": "精英战后：左边有数位板奇遇，右边直奔补给宝箱",
-      "pos": [7, 0],
+      "pos": [13, 0],
       "next": ["n9a", "n9b"]
     },
     "n9a": {
@@ -91,35 +98,38 @@
       "event": "osu-tablet-crash",
       "title": "数位板驱动崩溃",
       "hint": "奇遇分支：换碎片或途中经验",
-      "pos": [8, -1],
-      "next": ["n10"]
+      "pos": [14, -1],
+      "next": ["n9e"]
     },
     "n9b": {
       "type": "treasure",
       "rewards": "story-ch1-chest",
       "title": "图池补给箱",
       "hint": "稳妥路线：直取物资",
-      "pos": [8, 1],
-      "next": ["n10"]
+      "pos": [14, 1],
+      "next": ["n9e"]
     },
+    "n9e": { "type": "empty", "title": "尾杀前走廊", "pos": [15, 0], "next": ["n10"] },
     "n10": {
       "type": "event",
       "event": "osu-last-three-circles",
       "title": "最后三个圈的诅咒",
-      "pos": [9, 0],
-      "next": ["n11"]
+      "pos": [16, 0],
+      "next": ["n10e"]
     },
+    "n10e": { "type": "empty", "title": "休息区入口", "pos": [17, 0], "next": ["n11"] },
     "n11": {
       "type": "rest",
       "title": "决战前整备 · 深呼吸",
-      "pos": [10, 0],
-      "next": ["n12"]
+      "pos": [18, 0],
+      "next": ["n11e"]
     },
+    "n11e": { "type": "empty", "title": "暴君殿堂大门", "pos": [19, 0], "next": ["n12"] },
     "n12": {
       "type": "story",
       "story": "ch1-boss-pre",
       "title": "节奏暴君现身",
-      "pos": [11, 0],
+      "pos": [20, 0],
       "next": ["n13"]
     },
     "n13": {
@@ -127,7 +137,7 @@
       "encounter": "colossus-metronome",
       "rewards": "story-ch1-boss",
       "title": "关底 BOSS · 巨像节拍器",
-      "pos": [12, 0],
+      "pos": [21, 0],
       "next": []
     }
   }

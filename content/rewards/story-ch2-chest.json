@@ -1,0 +1,14 @@
+{
+  "fixed": {
+    "coins": 220,
+    "expPool": 1200,
+    "items": [{ "itemId": "shard-E", "count": 2 }]
+  },
+  "random": {
+    "rolls": 1,
+    "entries": [
+      { "weight": 2, "reward": { "packs": [{ "pool": "normal", "count": 1 }] } },
+      { "weight": 3, "reward": { "coins": 120, "expPool": 500 } }
+    ]
+  }
+}

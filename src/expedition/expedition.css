@@ -685,10 +685,11 @@
   flex: none;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface2) 55%, var(--surface)), var(--surface));
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.16);
 }
 .ex-run__title {
   min-width: 0;
@@ -696,14 +697,31 @@
 }
 .ex-run__title b {
   display: block;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .ex-run__title span {
-  font-size: 12px;
+  font-family: "JetBrains Mono Variable", "JetBrains Mono", monospace;
+  font-size: 11px;
   color: var(--muted);
+}
+.ex-step-bar {
+  margin-top: 4px;
+  max-width: 220px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+.ex-step-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-d));
+  transition: width 0.3s ease;
 }
 .ex-chip--thr i {
   font-style: normal;
@@ -775,7 +793,10 @@
   position: relative;
   flex: 1;
   overflow: hidden;
-  background: radial-gradient(var(--dot) 1.2px, transparent 1.4px) 0 0 / 22px 22px, var(--stage);
+  background:
+    radial-gradient(ellipse 65% 55% at 45% 55%, color-mix(in srgb, var(--primary) 13%, transparent), transparent 72%),
+    radial-gradient(var(--dot) 1.3px, transparent 1.5px) 0 0 / 24px 24px,
+    var(--stage);
 }
 .ex-svgmap {
   position: absolute;

@@ -219,8 +219,11 @@ export function RunView({
           <div className="ex-run__title">
             <b>{view.map.name}</b>
             <span>
-              第 {step} / {steps} 步 · ★ {view.stars}/{view.maxStars}
+              STEP {step} / {steps} · ★ {view.stars}/{view.maxStars} · HP {pct}%
             </span>
+            <div className="ex-step-bar" aria-hidden>
+              <i style={{ width: `${Math.min(100, Math.round((step / Math.max(1, steps)) * 100))}%` }} />
+            </div>
           </div>
           <span className="ex-chip ex-chip--thr" title="威胁值越高，敌人越硬、掉落越多">
             威胁 <i>{diff.tier} 档</i>
@@ -272,12 +275,19 @@ export function RunView({
             </div>
             <div className="ex-squad__slots" style={{ "--n": Math.min(8, view.pool.length) } as React.CSSProperties}>
               {view.pool.map(({ userCardId, face }) => (
-                <div className="ex-slot" key={userCardId} title={`${face.name} · Lv${face.level} · ${JOB_LABEL[face.job] ?? face.job}`}>
+                <div
+                  className="ex-slot"
+                  key={userCardId}
+                  style={{ borderLeft: `3px solid ${RARITY_COLOR[face.rarity]}` }}
+                  title={`${face.name} · Lv${face.level} · ${JOB_LABEL[face.job] ?? face.job}`}
+                >
                   <div className="ex-slot__av" style={{ background: RARITY_COLOR[face.rarity] }}>
                     {[...face.name][0]}
                   </div>
                   <div className="ex-slot__name">{face.name}</div>
-                  <div className="ex-slot__rar">{RARITY_LABEL[face.rarity]}</div>
+                  <div className="ex-slot__rar">
+                    Lv.{face.level} · {JOB_LABEL[face.job] ?? face.job} · {RARITY_LABEL[face.rarity]}
+                  </div>
                   <div className="ex-slot__hp">
                     <i className={hpClass} style={{ width: `${pct}%` }} />
                   </div>
