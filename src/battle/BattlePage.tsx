@@ -12,7 +12,7 @@ import {
 } from "@/desk/session/api"
 import { GuestLoginButton } from "@/desk/login/GuestLoginButton"
 import { pickLineup } from "@/desk/lib/lineup"
-import { advanceTutorial, useTutorialProgress } from "@/tutorial/store"
+import { advanceTutorial, flushTutorialQueue, useTutorialProgress } from "@/tutorial/store"
 
 import { createBattle } from "@choke/shared/battle/engine"
 import { BASE_SLOTS, FREE_ALLOCATION, apMaxOf } from "@choke/shared/expedition-points"
@@ -22,6 +22,7 @@ import type { BattleState } from "@choke/shared/battle/types"
 import { randomSeed } from "@choke/shared/rng"
 import { playSfx } from "@/audio/sfx"
 import { ClassicStage, ModernStage, readBattleUiMode, saveBattleUiMode, type BattleUiMode } from "./stages"
+import type { BattleHostHooks } from "./host"
 import "./battle-gate.css"
 
 /** 进不了战斗时的整页提示（没登录、没卡、出错、加载中）：和战斗舞台同一套配色，都带回桌面的路 */
@@ -59,6 +60,7 @@ export function BattlePage() {
   const [error, setError] = useState<string | null>(null)
   const [battle, setBattle] = useState<BattleState | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [returning, setReturning] = useState(false)
 
   const searchParams = new URLSearchParams(window.location.search)
   const [uiMode, setUiMode] = useState(() => readBattleUiMode(searchParams))
@@ -266,6 +268,50 @@ export function BattlePage() {
   const swap = (slot: number, benchUid: number) => act({ type: "swap", slot, benchUid })
   const finishTurn = () => act({ type: "endTurn" })
 
+  const finishTutorialAndReturn = async () => {
+    if (returning) return
+    setReturning(true)
+    try {
+      if (progress.tutorialStep === "battle-view") {
+        advanceTutorial("battle-view")
+      }
+      await flushTutorialQueue()
+    } finally {
+      window.location.href = "/"
+    }
+  }
+
+  const tutorialDoneInStage =
+    tutorialFinished || (tutorialMode && (battle?.phase === "won" || battle?.phase === "lost"))
+  const tutorialHost: BattleHostHooks | undefined =
+    tutorialMode && (tutorialRun || tutorialDoneInStage)
+      ? {
+          exitLabel: "返回桌面",
+          onExit: () => {
+            if (tutorialDoneInStage) {
+              void finishTutorialAndReturn()
+            } else {
+              window.location.href = "/"
+            }
+          },
+          canRestart: !tutorialDoneInStage,
+          resultNote: (
+            <p style={{ margin: 0, opacity: 0.85, fontSize: "0.9em" }}>
+              教学战已完成，回桌面找阿图领取 Lv.3 毕业结算。
+            </p>
+          ),
+          resultActions: (
+            <button
+              type="button"
+              disabled={returning}
+              onClick={() => void finishTutorialAndReturn()}
+            >
+              {returning ? "正在同步进度…" : "完成教学 · 返回桌面"}
+            </button>
+          ),
+        }
+      : undefined
+
   const StageComponent = uiMode === "modern" ? ModernStage : ClassicStage
 
   const switchUi = () => {
@@ -289,6 +335,7 @@ export function BattlePage() {
         encounter={encounter}
         encounters={pool}
         tutorial={tutorialRun}
+        host={tutorialHost}
         testMode={testMode && import.meta.env.DEV}
         onToggleTest={import.meta.env.DEV ? () => setTestMode((on) => !on) : undefined}
         actionError={actionError}

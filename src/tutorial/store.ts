@@ -118,6 +118,11 @@ function enqueue(task: () => Promise<void>) {
   })
 }
 
+/** 等待当前排队中的教程推进请求落库（硬跳转回桌面前调用，避免页面卸载中止请求） */
+export async function flushTutorialQueue(): Promise<void> {
+  await queue
+}
+
 function applyServer(ownerId: string, remote: ServerProgress) {
   if (owner !== ownerId) return
   const next = normalize(remote, ownerId)
