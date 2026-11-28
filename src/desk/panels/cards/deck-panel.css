@@ -199,10 +199,11 @@
 }
 .deck-filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .deck-filters .bk-input {
-  flex: 1 1 0;
+  flex: 1 1 120px;
 }
 /* 候选卡一页 4×3，占满右页剩下的高度不滚动；--w 由 FitArea 写入（px） */
 .deck-picks {

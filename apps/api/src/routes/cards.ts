@@ -6,6 +6,7 @@ import {
   desc,
   eq,
   getTableColumns,
+  gte,
   ilike,
   inArray,
   isNotNull,
@@ -32,6 +33,7 @@ const RARITY_RANK = sql`CASE ${cards.rarity}
 END`
 
 const SORTS = ["recent", "rarity", "pp", "name"] as const
+const USER_CARD_SORTS = ["recent", "rarity", "pp", "level", "name"] as const
 
 interface PublicCardsPayload {
   rows: (typeof cards.$inferSelect)[]
@@ -346,8 +348,11 @@ export async function cardRoutes(app: FastifyInstance) {
     const query = z
       .object({
         rarity: z.string().optional(),
+        job: z.enum(["tank", "warrior", "mage", "support"]).optional(),
+        minLevel: z.coerce.number().int().min(1).max(200).optional(),
         q: z.string().optional(),
-        sort: z.enum(SORTS).default("recent"),
+        sort: z.enum(USER_CARD_SORTS).default("recent"),
+        order: z.enum(["asc", "desc"]).optional(),
         limit: z.coerce.number().int().min(1).max(60).default(24),
         offset: z.coerce.number().int().min(0).default(0),
         ids: z.string().optional(),
@@ -358,6 +363,8 @@ export async function cardRoutes(app: FastifyInstance) {
 
     const filters = [eq(userCards.userId, userId)]
     if (query.rarity) filters.push(eq(cards.rarity, query.rarity))
+    if (query.job) filters.push(eq(cards.job, query.job))
+    if (query.minLevel) filters.push(gte(userCards.level, query.minLevel))
     if (query.cardType) filters.push(eq(cards.cardType, query.cardType))
     if (query.foil) filters.push(eq(userCards.foil, query.foil === "true"))
     if (query.q) filters.push(ilike(cards.name, `%${query.q}%`))
@@ -368,15 +375,25 @@ export async function cardRoutes(app: FastifyInstance) {
     }
     const where = and(...filters)
 
+    const dir = query.order ?? (query.sort === "name" ? "asc" : "desc")
+    const isAsc = dir === "asc"
     const orderBy =
       query.sort === "rarity"
-        ? [desc(RARITY_RANK), sql`${cards.pp} desc nulls last`]
+        ? [
+            isAsc ? asc(RARITY_RANK) : desc(RARITY_RANK),
+            isAsc ? sql`${cards.pp} asc nulls last` : sql`${cards.pp} desc nulls last`,
+          ]
         : query.sort === "pp"
-          ? [sql`${cards.pp} desc nulls last`]
-          : query.sort === "name"
-            ? [asc(cards.name)]
-            : [desc(userCards.obtainedAt)]
-    orderBy.push(desc(userCards.id))
+          ? [isAsc ? sql`${cards.pp} asc nulls last` : sql`${cards.pp} desc nulls last`]
+          : query.sort === "level"
+            ? [
+                isAsc ? asc(userCards.level) : desc(userCards.level),
+                desc(RARITY_RANK),
+              ]
+            : query.sort === "name"
+              ? [isAsc ? asc(cards.name) : desc(cards.name)]
+              : [isAsc ? asc(userCards.obtainedAt) : desc(userCards.obtainedAt)]
+    orderBy.push(isAsc ? asc(userCards.id) : desc(userCards.id))
 
     const rows = await db
       .select({

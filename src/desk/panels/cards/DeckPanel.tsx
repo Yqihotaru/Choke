@@ -2,8 +2,8 @@ import { memo, useCallback, useEffect, useRef, useState } from "react"
 
 import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
-import { RARITY_LABEL, battlePower } from "@/card/data"
-import { RARITIES, type Rarity } from "@/card/types"
+import { JOB_LABEL, JOB_ORDER, RARITY_LABEL, battlePower } from "@/card/data"
+import { RARITIES, type Job, type Rarity } from "@/card/types"
 import { emitTutorialEvent } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
 import { TUTORIAL_ENCOUNTER_ID, type Recommend } from "@choke/shared/battle/content"
@@ -18,6 +18,8 @@ import {
   toFace,
   type ApiDeck,
   type ApiUserCard,
+  type CardSort,
+  type SortOrder,
 } from "@/desk/session/api"
 import {
   CARD_POINTER_DROP_EVENT,
@@ -82,6 +84,10 @@ export const DeckPanel = memo(function DeckPanel({
   }
   const [deferredQuery, setDeferredQuery] = useState("")
   const [rarity, setRarity] = useState<Rarity | "">("")
+  const [job, setJob] = useState<Job | "">("")
+  const [minLevel, setMinLevel] = useState<number>(0)
+  const [sort, setSort] = useState<CardSort>("pp")
+  const [order, setOrder] = useState<SortOrder>("desc")
   const [pickPage, setPickPage] = useState(0)
 
   const assignRef = useRef<
@@ -127,7 +133,7 @@ export const DeckPanel = memo(function DeckPanel({
   }, [query])
 
   const pickerKey = userId
-    ? `${userId}|${deferredQuery}|${rarity}|${book.revision}`
+    ? `${userId}|${deferredQuery}|${rarity}|${job}|${minLevel}|${sort}|${order}|${book.revision}`
     : ""
   const loadPage = useCallback(
     async (index: number, signal: AbortSignal): Promise<PickerResult> => {
@@ -135,7 +141,10 @@ export const DeckPanel = memo(function DeckPanel({
         const data = await fetchUserCards(userId!, {
           q: deferredQuery || undefined,
           rarity: rarity || undefined,
-          sort: "pp",
+          job: job || undefined,
+          minLevel: minLevel > 0 ? minLevel : undefined,
+          sort,
+          order,
           limit: PICK_SIZE,
           page: index,
           signal,
@@ -150,7 +159,7 @@ export const DeckPanel = memo(function DeckPanel({
         }
       }
     },
-    [userId, deferredQuery, rarity]
+    [userId, deferredQuery, rarity, job, minLevel, sort, order]
   )
   const cachedPages = usePageCache(pickerKey, pickPage, PICK_SIZE, loadPage)
   const currentResult = cachedPages.find(([index]) => index === pickPage)?.[1]
@@ -645,6 +654,66 @@ export const DeckPanel = memo(function DeckPanel({
                   </option>
                 ))}
               </select>
+              <select
+                className="bk-select"
+                value={job}
+                onChange={(event) => {
+                  setJob(event.target.value as Job | "")
+                  setPickPage(0)
+                }}
+                aria-label="按职业筛选"
+              >
+                <option value="">全部职业</option>
+                {JOB_ORDER.map((item) => (
+                  <option key={item} value={item}>
+                    {JOB_LABEL[item]}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="bk-select"
+                value={minLevel}
+                onChange={(event) => {
+                  setMinLevel(Number(event.target.value))
+                  setPickPage(0)
+                }}
+                aria-label="按等级筛选"
+              >
+                <option value={0}>全部等级</option>
+                <option value={20}>Lv.20+</option>
+                <option value={40}>Lv.40+</option>
+                <option value={60}>Lv.60+</option>
+                <option value={80}>Lv.80+</option>
+              </select>
+              <select
+                className="bk-select"
+                value={sort}
+                onChange={(event) => {
+                  const nextSort = event.target.value as CardSort
+                  setSort(nextSort)
+                  setOrder(nextSort === "name" ? "asc" : "desc")
+                  setPickPage(0)
+                }}
+                aria-label="排序字段"
+              >
+                <option value="pp">按 pp</option>
+                <option value="level">按等级</option>
+                <option value="rarity">按稀有度</option>
+                <option value="recent">按获得时间</option>
+                <option value="name">按名字</option>
+              </select>
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                onClick={() => {
+                  playSfx("tick")
+                  setOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+                  setPickPage(0)
+                }}
+                title="切换正序 / 倒序"
+              >
+                {order === "desc" ? "↓ 倒序" : "↑ 正序"}
+              </button>
             </div>
 
             {!pickerResult ? (

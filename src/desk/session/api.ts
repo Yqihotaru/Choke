@@ -39,7 +39,8 @@ export interface ApiUserCard {
   obtainedAt?: string
 }
 
-export type CardSort = "recent" | "rarity" | "pp" | "name"
+export type CardSort = "recent" | "rarity" | "pp" | "level" | "name"
+export type SortOrder = "asc" | "desc"
 
 export interface CardPage {
   rows: ApiUserCard[]
@@ -133,10 +134,13 @@ export function fetchUserCards(
   userId: string,
   params: {
     rarity?: string
+    job?: Job
+    minLevel?: number
     cardType?: "pool" | "hero" | "mirror"
     foil?: boolean
     q?: string
     sort?: CardSort
+    order?: SortOrder
     page?: number
     limit?: number
     signal?: AbortSignal
@@ -144,16 +148,19 @@ export function fetchUserCards(
     ids?: number[]
   } = {},
 ): Promise<CardPage> {
-  const { rarity, cardType, foil, q, sort = "recent", page = 0, limit = 24, signal, ids } = params
+  const { rarity, job, minLevel, cardType, foil, q, sort = "recent", order, page = 0, limit = 24, signal, ids } = params
   const search = new URLSearchParams({
     sort,
     limit: String(limit),
     offset: String(page * limit),
   })
   if (rarity) search.set("rarity", rarity)
+  if (job) search.set("job", job)
+  if (minLevel != null && minLevel > 1) search.set("minLevel", String(minLevel))
   if (cardType) search.set("cardType", cardType)
   if (foil !== undefined) search.set("foil", String(foil))
   if (q) search.set("q", q)
+  if (order) search.set("order", order)
   if (ids?.length) search.set("ids", ids.join(","))
   return request<CardPage>(`/api/users/${userId}/cards?${search.toString()}`, { signal })
 }
