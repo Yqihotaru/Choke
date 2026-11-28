@@ -1,0 +1,11 @@
+{
+  "enemy": "practice-dummy-knight",
+  "supports": [],
+  "stars": [
+    { "type": "turnsAtMost", "value": 5 },
+    { "type": "noDown" },
+    { "type": "apSpentAtMost", "value": 12 }
+  ],
+  "summary": "12,500 HP 的金属见习骑士，适合练习火/雷破盾与节奏配合。",
+  "listed": true
+}

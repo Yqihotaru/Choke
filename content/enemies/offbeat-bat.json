@@ -1,0 +1,48 @@
+{
+  "name": "抢拍夜蝠",
+  "title": "总比节奏快半拍的小妖",
+  "tier": "normal",
+  "element": "thunder",
+  "weaknesses": ["earth", "ice"],
+  "hiddenWeaknesses": ["physical"],
+  "shieldMax": 3,
+  "stats": {
+    "hp": 8600,
+    "atk": 250,
+    "int": 220,
+    "def": 540
+  },
+  "ai": {
+    "moves": {
+      "flutter": {
+        "kind": "attack",
+        "label": "乱拍振翅",
+        "element": "physical",
+        "power": 0.4,
+        "hits": 2,
+        "desc": "2 段轻量物理攻击"
+      },
+      "screech": {
+        "kind": "magic",
+        "label": "高频啸叫",
+        "element": "thunder",
+        "power": 0.8,
+        "hits": 1,
+        "desc": "雷属性音波攻击"
+      },
+      "dive": {
+        "kind": "heavy_phys",
+        "label": "俯冲抢拍",
+        "element": "physical",
+        "power": 1.15,
+        "hits": 1,
+        "desc": "每 3 回合一次的俯冲重击（建议抬防）"
+      }
+    },
+    "script": [
+      { "always": "flutter" },
+      { "when": { "turnMod": [3, 0] }, "use": "dive" },
+      { "otherwise": "screech" }
+    ]
+  }
+}

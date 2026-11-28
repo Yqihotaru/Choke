@@ -15,9 +15,9 @@
     },
     "n2": {
       "type": "battle",
-      "encounter": "tutorial-ghost",
+      "encounter": "slider-slime",
       "rewards": "story-ch1-battle",
-      "title": "2★ 热身图残影",
+      "title": "2★ 热身滑条软泥",
       "pos": [1, 0],
       "next": ["n3"]
     },
@@ -30,9 +30,9 @@
     },
     "n4": {
       "type": "boss",
-      "encounter": "ghost",
+      "encounter": "slider-wraith",
       "rewards": "story-prologue-clear",
-      "title": "5★ 折返滑条怨灵",
+      "title": "4★ 折返滑条怨灵",
       "pos": [3, 0],
       "next": ["n5"]
     },

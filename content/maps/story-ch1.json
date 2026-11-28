@@ -20,9 +20,9 @@
     },
     "n2": {
       "type": "battle",
-      "encounter": "ghost",
+      "encounter": "chill-wisps",
       "rewards": "story-ch1-battle",
-      "title": "Sliderbreak 漏尾怨灵",
+      "title": "手冷初试 · 谱面鬼火",
       "pos": [1, 0],
       "next": ["n3"]
     },

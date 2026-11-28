@@ -1,0 +1,11 @@
+{
+  "enemy": "metronome-spark",
+  "supports": [],
+  "stars": [
+    { "type": "turnsAtMost", "value": 4 },
+    { "type": "noDown" },
+    { "type": "apSpentAtMost", "value": 10 }
+  ],
+  "summary": "7,200 HP 的入门火雷节拍怪，双段轻击与偶发灼烧，适合 Lv.1～2 练习。",
+  "listed": true
+}

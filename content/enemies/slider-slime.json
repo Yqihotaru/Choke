@@ -1,0 +1,40 @@
+{
+  "name": "滑条软泥怪",
+  "title": "2★ 黏糊糊的入门靶子",
+  "tier": "normal",
+  "element": "dark",
+  "weaknesses": ["fire", "light"],
+  "hiddenWeaknesses": ["physical"],
+  "shieldMax": 2,
+  "stats": {
+    "hp": 5800,
+    "atk": 210,
+    "int": 140,
+    "def": 460
+  },
+  "ai": {
+    "moves": {
+      "ooze": {
+        "kind": "attack",
+        "label": "软泥拍击",
+        "element": "physical",
+        "power": 0.75,
+        "hits": 1,
+        "desc": "基础物理拍击"
+      },
+      "sticky": {
+        "kind": "debuff",
+        "label": "黏液减速",
+        "element": "dark",
+        "power": 0,
+        "hits": 1,
+        "status": "fear",
+        "desc": "施加畏惧，轻微干扰节奏"
+      }
+    },
+    "script": [
+      { "always": "ooze" },
+      { "when": { "turnMod": [3, 0] }, "use": "sticky" }
+    ]
+  }
+}

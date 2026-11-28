@@ -1,0 +1,11 @@
+{
+  "enemy": "chill-wisps",
+  "supports": [],
+  "stars": [
+    { "type": "turnsAtMost", "value": 5 },
+    { "type": "noDown" },
+    { "type": "apSpentAtMost", "value": 13 }
+  ],
+  "summary": "15,000 HP 的第 1 章入门冰系灵体，怕火与物理，注意第 3 回合的冻结。",
+  "listed": true
+}

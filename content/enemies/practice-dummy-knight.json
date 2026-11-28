@@ -1,0 +1,48 @@
+{
+  "name": "木桩见习骑士",
+  "title": "举盾练习生 · 偶有破绽",
+  "tier": "normal",
+  "element": "metal",
+  "weaknesses": ["fire", "thunder"],
+  "hiddenWeaknesses": ["earth"],
+  "shieldMax": 3,
+  "stats": {
+    "hp": 12500,
+    "atk": 300,
+    "int": 160,
+    "def": 720
+  },
+  "ai": {
+    "moves": {
+      "slash": {
+        "kind": "attack",
+        "label": "木剑横斩",
+        "element": "metal",
+        "power": 0.8,
+        "hits": 1,
+        "desc": "常规金属性斩击"
+      },
+      "guard-up": {
+        "kind": "buff",
+        "label": "练习架势",
+        "element": "metal",
+        "power": 0,
+        "hits": 1,
+        "desc": "自我强化防御"
+      },
+      "bash": {
+        "kind": "heavy_phys",
+        "label": "盾牌冲撞",
+        "element": "physical",
+        "power": 1.2,
+        "hits": 1,
+        "desc": "每 3 回合一次的物理重击"
+      }
+    },
+    "script": [
+      { "always": "slash" },
+      { "when": { "turnMod": [3, 1] }, "use": "guard-up" },
+      { "when": { "turnMod": [3, 0] }, "use": "bash" }
+    ]
+  }
+}

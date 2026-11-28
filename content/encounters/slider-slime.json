@@ -1,0 +1,11 @@
+{
+  "enemy": "slider-slime",
+  "supports": [],
+  "stars": [
+    { "type": "turnsAtMost", "value": 4 },
+    { "type": "noDown" },
+    { "type": "apSpentAtMost", "value": 9 }
+  ],
+  "summary": "2★ 萌新入门靶子（5,800 HP），1 级卡组即可轻松练手。",
+  "listed": true
+}

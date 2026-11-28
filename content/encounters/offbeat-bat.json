@@ -1,0 +1,11 @@
+{
+  "enemy": "offbeat-bat",
+  "supports": [],
+  "stars": [
+    { "type": "turnsAtMost", "value": 5 },
+    { "type": "noDown" },
+    { "type": "apSpentAtMost", "value": 11 }
+  ],
+  "summary": "8,600 HP 的抢拍夜蝠，每 3 回合一次俯冲重击，适合练习看意图抬防。",
+  "listed": true
+}

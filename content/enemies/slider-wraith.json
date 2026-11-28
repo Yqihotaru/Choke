@@ -1,0 +1,50 @@
+{
+  "name": "折返滑条怨灵",
+  "title": "序章关底 · 轻量化灵体",
+  "tier": "normal",
+  "element": "dark",
+  "weaknesses": ["light", "physical"],
+  "hiddenWeaknesses": ["fire"],
+  "shieldMax": 3,
+  "traits": ["spirit"],
+  "stats": {
+    "hp": 10500,
+    "atk": 280,
+    "int": 300,
+    "def": 600
+  },
+  "ai": {
+    "moves": {
+      "whip": {
+        "kind": "attack",
+        "label": "滑条尾鞭",
+        "element": "physical",
+        "power": 0.75,
+        "hits": 1,
+        "desc": "基础物理抽击"
+      },
+      "wail": {
+        "kind": "magic",
+        "label": "断连哀鸣",
+        "element": "dark",
+        "power": 0.8,
+        "hits": 1,
+        "desc": "暗属性法术攻击"
+      },
+      "snapback": {
+        "kind": "heavy_phys",
+        "label": "折返重压",
+        "element": "physical",
+        "power": 1.25,
+        "hits": 1,
+        "causesDown": true,
+        "desc": "偶数回合的折返重击（附带 DOWN 威胁，记得抬高防御档位）"
+      }
+    },
+    "script": [
+      { "always": "whip" },
+      { "when": { "turnMod": [2, 0] }, "use": "snapback" },
+      { "otherwise": "wail" }
+    ]
+  }
+}

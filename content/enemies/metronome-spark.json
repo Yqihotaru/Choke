@@ -1,0 +1,49 @@
+{
+  "name": "火花节拍器",
+  "title": "高 BPM 灼热小节拍",
+  "tier": "normal",
+  "element": "fire",
+  "weaknesses": ["ice"],
+  "hiddenWeaknesses": ["earth"],
+  "shieldMax": 2,
+  "stats": {
+    "hp": 7200,
+    "atk": 230,
+    "int": 260,
+    "def": 500
+  },
+  "ai": {
+    "moves": {
+      "tick": {
+        "kind": "attack",
+        "label": "双拍火星",
+        "element": "fire",
+        "power": 0.4,
+        "hits": 2,
+        "desc": "2 段轻量火属性连击"
+      },
+      "spark": {
+        "kind": "magic",
+        "label": "跳拍电弧",
+        "element": "thunder",
+        "power": 0.75,
+        "hits": 1,
+        "desc": "雷属性法术攻击"
+      },
+      "burn": {
+        "kind": "debuff",
+        "label": "灼烧节拍",
+        "element": "fire",
+        "power": 0,
+        "hits": 1,
+        "status": "burn",
+        "desc": "施加灼烧持续伤害"
+      }
+    },
+    "script": [
+      { "always": "tick" },
+      { "when": { "turnMod": [2, 0] }, "use": "spark" },
+      { "when": { "turnMod": [3, 0] }, "use": "burn" }
+    ]
+  }
+}

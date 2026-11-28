@@ -1,0 +1,50 @@
+{
+  "name": "微寒谱面鬼火",
+  "title": "第 1 章入门 · 冰系灵体",
+  "tier": "normal",
+  "element": "ice",
+  "weaknesses": ["fire", "physical"],
+  "hiddenWeaknesses": ["metal"],
+  "shieldMax": 3,
+  "traits": ["spirit"],
+  "stats": {
+    "hp": 15000,
+    "atk": 220,
+    "int": 340,
+    "def": 660
+  },
+  "ai": {
+    "moves": {
+      "frost-tap": {
+        "kind": "magic",
+        "label": "霜星轻弹",
+        "element": "ice",
+        "power": 0.75,
+        "hits": 1,
+        "desc": "基础冰属性法术"
+      },
+      "chill": {
+        "kind": "debuff",
+        "label": "手冷冻结",
+        "element": "ice",
+        "power": 0,
+        "hits": 1,
+        "status": "freeze",
+        "desc": "施加冻结，考验手冷应对"
+      },
+      "shatter": {
+        "kind": "magic",
+        "label": "冰晶爆裂",
+        "element": "ice",
+        "power": 1.05,
+        "hits": 1,
+        "desc": "偶数回合的较高伤害冰法术"
+      }
+    },
+    "script": [
+      { "always": "frost-tap" },
+      { "when": { "turnMod": [2, 0] }, "use": "shatter" },
+      { "when": { "turnMod": [3, 0] }, "use": "chill" }
+    ]
+  }
+}
