@@ -51,7 +51,6 @@ const EXPIRY_SWEEP_INTERVAL_MS = 60_000
 async function expireStaleListings(force = false) {
   const now = Date.now()
   if (!force && now - lastExpirySweepAt < EXPIRY_SWEEP_INTERVAL_MS) return
-  lastExpirySweepAt = now
   const expireBefore = new Date(now - MARKET_LISTING_TTL_MS)
   await db.transaction(async (tx) => {
     const expired = await tx
@@ -76,6 +75,8 @@ async function expireStaleListings(force = false) {
       }
     }
   })
+  // 落库成功后才推进节流时间：事务失败时下一次请求还会重试
+  lastExpirySweepAt = now
 }
 
 async function priceBandOf(cardId: string, executor: Tx | typeof db = db) {
@@ -405,8 +406,8 @@ export async function marketRoutes(app: FastifyInstance) {
     if (!userId) return
     if (!(await requireFeature(reply, userId, "market"))) return
 
-    // 若已过 7 天有效期，先把超期挂单自动取消并退还押金（上架税不退）
-    await expireStaleListings(true)
+    // 过期清扫由列表请求按 60 秒节流触发；这里不强制全表扫描，目标挂单在事务内单独判断
+    await expireStaleListings()
 
     // 先在事务里把上架从 active 抢成 sold，再按序锁买卖双方、扣款、过户；任何一步失败都整体回滚，
     // 并发购买只有一个能抢到这条上架，金币也不会被扣成负数。
@@ -434,7 +435,24 @@ export async function marketRoutes(app: FastifyInstance) {
         throw new TxAbort(404, "not_found", "这条上架已经不存在")
       }
       if (Date.now() - listing.createdAt.getTime() > MARKET_LISTING_TTL_MS) {
-        throw new TxAbort(400, "listing_expired", "这条上架已超过 7 天，已自动取消")
+        // 目标挂单自己过期了：在同一个事务里取消并退押金（和列表清扫效果一致，但不做全表扫描）。
+        // 返回哨兵让事务先提交，再在事务外回错误，否则这里抛错会把退还押金一起回滚。
+        await lockUser(tx, listing.sellerId)
+        await tx
+          .update(marketListings)
+          .set({ status: "expired" })
+          .where(eq(marketListings.id, params.listingId))
+        if (listing.deposit > 0) {
+          await tx
+            .update(users)
+            .set({ coins: sql`${users.coins} + ${listing.deposit}` })
+            .where(eq(users.id, listing.sellerId))
+          await recordLedger(tx, listing.sellerId, [{ kind: "coins", delta: listing.deposit }], {
+            source: "market-deposit-refund",
+            sourceRef: String(params.listingId),
+          })
+        }
+        return { expired: true as const }
       }
       if (listing.sellerId === userId) {
         throw new TxAbort(400, "own_listing", "不能买自己的卡")
@@ -509,6 +527,7 @@ export async function marketRoutes(app: FastifyInstance) {
       await recordQuestEvent(tx, userId, "market-buy")
       await recordQuestEvent(tx, listing.sellerId, "market-sell")
       return {
+        expired: false as const,
         coins: buyerWallet.coins,
         price: listing.price,
         tradeTax,
@@ -517,6 +536,12 @@ export async function marketRoutes(app: FastifyInstance) {
       }
     })
     if (!bought) return
+    if (bought.expired) {
+      return reply.code(400).send({
+        ok: false,
+        error: { code: "listing_expired", message: "这条上架已超过 7 天，已自动取消" },
+      })
+    }
 
     return {
       ok: true,
