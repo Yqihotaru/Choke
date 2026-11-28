@@ -140,6 +140,34 @@ await test("闪卡强化：精华 −n", async () => {
   assert.equal(await sumOf(userId, "essence"), -res.body.data.cost)
 })
 
+await test("分配经验池：池子 −n、卡经验 +n，流水带卡实例；超过满级和池子不够都拒绝", async () => {
+  const userId = await newUser({ expPool: 500 })
+  const card = await give(userId, "lt-R")
+  const res = await call(userId, "POST", `/users/${userId}/exp-pool/allocate`, { userCardId: card, amount: 200 })
+  assert.equal(res.status, 200, JSON.stringify(res.body))
+  assert.equal(res.body.data.expPool, 300)
+  assert.equal(res.body.data.card.exp, 200)
+  assert.equal((await userOf(userId)).expPool, 300)
+  const rows = (await entriesOf(userId)).filter((e) => e.source === "exp-allocate")
+  assert.equal(rows.length, 1)
+  assert.deepEqual([rows[0]!.kind, rows[0]!.delta, rows[0]!.userCardId], ["expPool", -200, card])
+
+  const tooMuch = await call(userId, "POST", `/users/${userId}/exp-pool/allocate`, { userCardId: card, amount: 301 })
+  assert.equal(tooMuch.status, 400)
+  assert.equal(tooMuch.body.error.code, "not_enough_exp_pool")
+  assert.equal((await userOf(userId)).expPool, 300)
+
+  const rich = await newUser({ expPool: 10_000_000 })
+  const other = await give(rich, "lt-C")
+  const over = await call(rich, "POST", `/users/${rich}/exp-pool/allocate`, { userCardId: other, amount: 10_000_000 })
+  assert.equal(over.status, 400)
+  assert.equal(over.body.error.code, "exp_over_cap")
+  assert.equal((await userOf(rich)).expPool, 10_000_000)
+
+  const stranger = await call(rich, "POST", `/users/${rich}/exp-pool/allocate`, { userCardId: card, amount: 1 })
+  assert.equal(stranger.status, 404)
+})
+
 await test("市场：买家扣金币得卡，卖家扣 2% 上架税 + 5% 押金，成交后退押金并收 95% 货款", async () => {
   const seller = await newUser({ coins: 100 })
   const buyer = await newUser({ coins: 1000 })
