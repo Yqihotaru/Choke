@@ -48,6 +48,8 @@ export function Prepare({
   onStarted: (view: ExpeditionView) => void
 }) {
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [cardsTotal, setCardsTotal] = useState<number | null>(null)
+  const [cardsTruncated, setCardsTruncated] = useState(false)
   const [deckIds, setDeckIds] = useState<number[]>([])
   const [level, setLevel] = useState<number | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -77,8 +79,10 @@ export function Prepare({
       fetchDeck(userId, ctl.signal).catch(() => null),
     ])
       .then(([cards, progress, deck]) => {
+        setCardsTotal(cards.total)
+        setCardsTruncated(cards.truncated)
         setRows(
-          cards
+          cards.rows
             .map((row) => {
               const face = toFace(row)
               return { row, face, power: battlePower(face), isHero: !!face.isHero }
@@ -369,6 +373,11 @@ export function Prepare({
 
           {!rows && !loadError && <div className="ex-note">正在读取你的卡……</div>}
           {rows && rows.length === 0 && <div className="ex-note">你还没有卡，先去开包。</div>}
+          {cardsTruncated && (
+            <div className="ex-note">
+              卡太多，只加载了前 {rows?.length ?? 0} 张（共 {cardsTotal ?? "?"} 张），筛选和自动编队可能不完整。
+            </div>
+          )}
           <div className="ex-cards">
             {shown.map((r) => {
               const id = r.row.userCardId
