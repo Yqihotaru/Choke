@@ -7,7 +7,7 @@
 >
 > 阅读顺序按你的要求调整：**第一节是已修复（全部前置并标 ✅）**，第二节起才是待修问题；第五节单独记录「故意为之 / 已排除」，防止下次复查重复报（空白节点已按设计说明移到这里）。
 > 编号延续 v0.1，新问题从 **#39** 开始。
-> 2026-11-28：**#39 / #40 / #41 / #42 已修复**，证据见 §1.4。
+> 2026-11-28：**#39 / #40 / #41 / #42 / #43 / #44 已修复**，证据见 §1.4。
 
 ---
 
@@ -59,7 +59,9 @@
 - **#40 ✅ 战斗上传失败的中途提示**：`BattleHostHooks` 新增 `syncNote`，经典 / 新版两个舞台在顶部渲染同步横幅。`ExpeditionBattle` 在队列非空且上传失败时显示「还有 N 步没传到服务器」+「重试上传」，并禁止继续出招；`out_of_sync` / `invalid_action` / `too_many_actions` / `no_battle` 统一按服务端进度自动 `resync()` 一次，`resync` 期间锁操作；服务端已经没有这场战斗时给出明确提示。结算层原有的报错/重试按钮保留。验证：`pnpm typecheck`、`pnpm lint`、`pnpm build` 通过。
 - **#41 ✅ onboard 原子化**：`grantPacks` / `grantStarterPacks` 增加可选 `tx`；`/auth/onboard` 的条件 UPDATE 与发新手包放进同一个事务。发包失败会回滚 `onboarded`，用户可以重试补领。测试：`test-account-binding` 覆盖重复引导只发一次、背包与流水不变。
 - **#42 ✅ Ch2 宝箱奖励表**：`content/maps/story-ch2.json` 的 `n12` 改为 `story-ch2-chest`。
-- **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm content:check`（版本 `b4bdf8bba927`）、`pnpm test:fast`（10/10）、`pnpm test:db`（12/12）全部通过。
+- **#43 ✅ 卡组写入与市场 / 出征规则对称**：`PUT /deck` 改成在事务内 `lockUser` 后重查归属，并对 `ids` 做 `listedUserCardIds`（`card_listed`）与 `anyLocked`（`in_expedition`）校验，和上架 / 出征共用同一把用户锁；被拒时原卡组保持不变。卡牌列表接口 `/users/:userId/cards` 为本人返回 `listed` / `locked` 标记，`Prepare` 据此标出「已上架 / 出征中」并禁用，`autoPick` / `applyDeck` 也会跳过并在提示里说明原因。测试：新增 `test-deck`（保存读回、挂单拒绝、出征拒绝、越权拒绝、被拒不清空原卡组）。
+- **#44 ✅ 邮箱唯一索引 23505 收口**：新增 `apps/api/src/db/errors.ts` 的 `isUniqueViolation`；`/auth/email/register` 与 `bindEmail` 捕获 `23505` 转 `409 email_taken`，不再落成 500。`db/schema.ts` 补回 `users_email_unique_idx`（`lower(email)`，部分索引），与 `migrations/0002_email_auth.sql` 对齐。测试：`test-account-binding` 新增并发注册同一邮箱，断言结果是一个 200、一个 409。
+- **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm content:check`（版本 `b4bdf8bba927`）、`pnpm test:fast`（10/10）、`pnpm test:db`（13/13）全部通过。
 
 ---
 
@@ -69,21 +71,7 @@
 
 ---
 
-## 三、P2（6 项）
-
-### #43 【新增】卡组写入与市场 / 出征规则不对称
-
-- **位置**：`apps/api/src/routes/decks.ts:82-94`（归属校验在事务外）、`:96-113`（写入事务只做 delete + insert）；对照 `apps/api/src/routes/market.ts:267-277`（上架拒绝 `in_deck` + `anyLocked`）
-- **问题**：市场规定「在卡组里的卡不能上架」，卡组侧没有反向约束：`PUT /deck` 可接受正在挂单或出征中的卡；归属查询在事务外，卡在两步之间被卖掉时仍会被写进卡组（`loadDeck` 的内连接会让它静默消失，不泄露数据，但留下脏 `deckSlots`）。
-- **影响**：`src/expedition/Prepare.tsx:158-176` 的「自动编队 / 套用卡组」不区分上架与出征状态，一键出战会收到「有卡正在市场里挂着」却不知道是哪张；卖卡时 `market.ts:483` 还会顺手删掉卖家的卡组槽位。
-- **建议**：`PUT /deck` 事务内 `lockUser` 后重查归属，并对 `ids` 做 `anyLocked` 与 `marketListings(status='active')` 排除（与上架校验对称）；前端在编队面板标出「已上架 / 出征中」并禁用。
-
-### #44 【新增】邮箱注册 / 补绑的「先查后写」会撞唯一索引，返回 500
-
-- **位置**：`apps/api/src/routes/auth.ts:131-154`、`apps/api/src/account-binding.ts:316-322`；唯一索引只在 `apps/api/migrations/0002_email_auth.sql:4-5`（`users_email_unique_idx` on `lower(email)`）
-- **问题**：两处都是 `SELECT ... WHERE lower(email)=?` 判重后再 `INSERT/UPDATE`，并发同邮箱请求会命中唯一索引抛 `23505`，被统一脱敏成「服务器出错了」。另外 `apps/api/src/db/schema.ts:70-115` 没有这个索引定义，`schema.ts` 与真实库已漂移（`public_id` 序列等同样），后续若用 schema 生成迁移会漏约束。
-- **影响**：用户侧看到 500；并发下 `email_taken` 的判重行为不一致。schema 漂移是长期隐患。另外注册没有邮箱验证，可被抢注他人邮箱（对方之后 `bindEmail` 会一直 `email_taken`），系统也没有找回密码路径。
-- **建议**：两处捕获 `23505` 转 `TxAbort(409, "email_taken")`；把 `uniqueIndex(...).on(sql\`lower(email)\`)` 补进 `schema.ts`；邮箱验证 / 找回密码单独排期。
+## 三、P2（4 项）
 
 ### #45 【新增】出征准备页最多只加载 1800 张卡，超出部分静默丢失
 
@@ -173,7 +161,6 @@
 
 ## 七、建议修复顺序
 
-> #39 / #40 / #41 / #42 已于 2026-11-28 完成（见 1.4）。
+> #39 / #40 / #41 / #42 / #43 / #44 已于 2026-11-28 完成（见 1.4）。
 
-1. **#43 / #44**（规则对称 + 唯一索引收口）
-2. 其余 P2 / P3 按迭代排。
+1. 其余 P2 / P3 按迭代排（#45 卡池截断、#46 同步 scrypt + trustProxy、#47 guest GET、#48 备用数据静默失败）。
