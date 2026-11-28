@@ -9,7 +9,7 @@ import { authRoutes } from "./routes/auth"
 import { accountRoutes } from "./routes/account"
 import { rejectSealedSession } from "./account-binding"
 import { CORS_ORIGINS } from "./auth/env"
-import { handleError } from "./error-handler"
+import { handleError, notFoundHandler } from "./error-handler"
 import { battleRoutes } from "./routes/battle"
 import { cardRoutes } from "./routes/cards"
 import { deckRoutes } from "./routes/decks"
@@ -42,6 +42,7 @@ const app = Fastify({ logger: true, trustProxy: trustProxySetting() })
 app.log.info({ contentVersion: CONTENT_VERSION }, "content loaded")
 
 app.setErrorHandler(handleError)
+app.setNotFoundHandler(notFoundHandler)
 
 // 白名单见 auth/env.ts：CORS_ORIGINS > 开发环境本地端口 > 生产默认同源（不发 CORS 头）
 await app.register(cors, { origin: CORS_ORIGINS, credentials: true })

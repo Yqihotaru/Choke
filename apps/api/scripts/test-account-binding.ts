@@ -18,13 +18,14 @@ const { db } = await import("../src/db/client")
 const { cards, ledgerEntries, marketListings, userCards, userPacks, users } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession, readSession } = await import("../src/auth/osu")
 const { hashPassword } = await import("../src/auth/email")
-const { handleError } = await import("../src/error-handler")
+const { handleError, notFoundHandler } = await import("../src/error-handler")
 const { authRoutes } = await import("../src/routes/auth")
 const { accountRoutes } = await import("../src/routes/account")
 const { rejectSealedSession } = await import("../src/account-binding")
 
 const app = Fastify()
 app.setErrorHandler(handleError)
+app.setNotFoundHandler(notFoundHandler)
 await app.register(cookie)
 app.addHook("onRequest", rejectSealedSession)
 await app.register(authRoutes)
@@ -428,6 +429,22 @@ await test("账号引导：重复领取只发一次新手包", async () => {
   assert.deepEqual(await packs(), packsAfterFirst)
   assert.equal(await ledgers(), ledgerAfterFirst)
   assert.equal((await rowOf(user)).onboarded, true)
+})
+
+await test("未匹配路由和非法 JSON 都返回统一错误结构", async () => {
+  const missing = await app.inject({ method: "GET", url: "/nope" })
+  assert.equal(missing.statusCode, 404)
+  assert.deepEqual(missing.json(), { ok: false, error: { code: "not_found", message: "接口不存在" } })
+
+  const bad = await app.inject({
+    method: "POST",
+    url: "/auth/email/login",
+    headers: { "content-type": "application/json" },
+    payload: "{",
+  })
+  assert.equal(bad.statusCode, 400)
+  assert.equal(bad.json().error.code, "bad_request")
+  assert.equal(bad.json().ok, false)
 })
 
 console.log(`\n${passed} passed`)
