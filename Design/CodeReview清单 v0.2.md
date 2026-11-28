@@ -7,7 +7,7 @@
 >
 > 阅读顺序按你的要求调整：**第一节是已修复（全部前置并标 ✅）**，第二节起才是待修问题；第五节单独记录「故意为之 / 已排除」，防止下次复查重复报（空白节点已按设计说明移到这里）。
 > 编号延续 v0.1，新问题从 **#39** 开始。
-> 2026-11-28：**#39 / #40 / #41 / #42 / #43 / #44 已修复**，证据见 §1.4。
+> 2026-11-28：**#39–#48 已修复**，证据见 §1.4；剩余 P2 为 #49–#53。
 
 ---
 
@@ -61,7 +61,11 @@
 - **#42 ✅ Ch2 宝箱奖励表**：`content/maps/story-ch2.json` 的 `n12` 改为 `story-ch2-chest`。
 - **#43 ✅ 卡组写入与市场 / 出征规则对称**：`PUT /deck` 改成在事务内 `lockUser` 后重查归属，并对 `ids` 做 `listedUserCardIds`（`card_listed`）与 `anyLocked`（`in_expedition`）校验，和上架 / 出征共用同一把用户锁；被拒时原卡组保持不变。卡牌列表接口 `/users/:userId/cards` 为本人返回 `listed` / `locked` 标记，`Prepare` 据此标出「已上架 / 出征中」并禁用，`autoPick` / `applyDeck` 也会跳过并在提示里说明原因。测试：新增 `test-deck`（保存读回、挂单拒绝、出征拒绝、越权拒绝、被拒不清空原卡组）。
 - **#44 ✅ 邮箱唯一索引 23505 收口**：新增 `apps/api/src/db/errors.ts` 的 `isUniqueViolation`；`/auth/email/register` 与 `bindEmail` 捕获 `23505` 转 `409 email_taken`，不再落成 500。`db/schema.ts` 补回 `users_email_unique_idx`（`lower(email)`，部分索引），与 `migrations/0002_email_auth.sql` 对齐。测试：`test-account-binding` 新增并发注册同一邮箱，断言结果是一个 200、一个 409。
-- **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm content:check`（版本 `b4bdf8bba927`）、`pnpm test:fast`（10/10）、`pnpm test:db`（13/13）全部通过。
+- **#45 ✅ 出征卡池按 `total` 翻页 + 截断提示**：`src/expedition/cards.ts` 改为翻到 `rows.length >= total` 为止，保留 `MAX_PAGES = 200` 作异常保护，并返回 `{ rows, total, truncated }`。`Prepare` 在 `truncated` 时显示「卡太多，只加载了前 N 张（共 M 张）」；正常账号不再受 1800 张上限影响。
+- **#46 ✅ 异步 scrypt + 并发闸 + trustProxy + 账号维度限流**：`auth/email.ts` 改用 `promisify(scrypt)`，并加进程级闸门（同时最多 2 个 scrypt，排队不占事件循环）；`hashPassword` / `verifyPassword` 变 Promise，注册、登录、绑定邮箱、测试全部 `await`。`index.ts` 从 `TRUST_PROXY` 环境变量读取 `trustProxy`（支持 `1` / `true` / IP/CIDR 列表），默认关闭。`rate-limit.ts` 新增 `accountOf`，登录 / 注册同时按「IP + 路由」和「规范化邮箱 + 路由」计数，避免共享出口 IP 互相拖累。
+- **#47 ✅ 游客入口改为 POST**：`GET /auth/guest` 改为 `POST /auth/guest`，不再 302，直接返回 `{ ok: true, data: { id } }` 并写登录态。`GuestLoginButton` 改为 `<button>`，走 `createGuest()` fetch，成功后再跳首页；失败显示「进入失败，点此重试」。测试：`test-account-binding` 断言 POST 建号、GET 返回 404 且不再新增游客号。
+- **#48 ✅ 备用数据加载失败可见可重试**：`CardDetail` 为 `fetchMe`（精华 / 经验池 / 金币）、可熔卡、洗技能信息分别记录失败态，汇总成错误条 + 「重试」；同名卡按钮的 `title` 在读取失败时改为提示重试。`AccountPanel` 为 `fetchMe` / `fetchPendingBind` 记录失败态，显示「读取失败：账号资料 / 待确认绑定」+ 重试，不再静默退化成空资料。
+- **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm content:check`（版本 `b4bdf8bba927`）、`pnpm test:fast`（10/10）、`pnpm test:db`（13/13）、`pnpm build` 全部通过。
 
 ---
 
@@ -71,38 +75,13 @@
 
 ---
 
-## 三、P2（4 项）
+## 三、P2（0 项）
 
-### #45 【新增】出征准备页最多只加载 1800 张卡，超出部分静默丢失
-
-- **位置**：`src/expedition/cards.ts:4-11`（`for (let page = 0; page < 30; ...)`）
-- **问题**：服务端单页上限 60（`apps/api/src/routes/cards.ts:356`），30 页正好 1800。卡超过 1800 张的账号会拿到被截断的卡池，`Prepare` 的筛选、自动编队、套用卡组都会少卡且无提示。
-- **影响**：「数据在但用不了」的静默错误；配合 `autoPick` 按战力取前 N，高战力卡被漏掉时更严重。
-- **建议**：改成 `while (rows.length < res.total)` + 足够大的安全上限，或按 `total` 计算页数；确实截断时显示「卡太多，仅显示前 N 张」。
-
-### #46 【新增】登录 / 注册用同步 `scryptSync`，限流按 `request.ip` 却未配 `trustProxy`
-
-- **位置**：`apps/api/src/auth/email.ts:6-19`、`apps/api/src/auth/rate-limit.ts:9-21`、`apps/api/src/index.ts:29`
-- **问题**：`scryptSync` 在请求线程里跑（约几十到上百毫秒），登录 / 注册虽按 IP 限 10 次/分、5 次/10 分，但单进程 Node 是单线程，连续请求会卡住所有用户。另外 `rate-limit.ts` 注释自己写了「反向代理后需要 trustProxy」，`index.ts` 没配：部署到 Nginx / Cloudflare 后所有请求共享代理 IP，限流退化成全局计数（正常用户被一起限死，攻击者反而不受限）。
-- **建议**：改用异步 `crypto.scrypt`（或 `promisify`）并给登录加进程级并发闸；部署侧显式开启 `trustProxy`（建议用 `TRUST_PROXY` 环境变量控制），限流 key 改成「IP + 账号标识」。
-
-### #47 【新增】`/auth/guest` 是带副作用的 GET，可被跨站触发
-
-- **位置**：`apps/api/src/routes/auth.ts:210-231`
-- **问题**：`GET` 请求会创建账号、发新手包、写 session cookie 并 302 回首页。GET 会被预取、爬虫、`<img>` / `<a>` 触发；跨站顶层导航也能接受这个 Set-Cookie，效果是把受害者「切换登录」成一个全新游客号（login CSRF / 会话覆盖），并持续产生垃圾账号。
-- **影响**：玩家误点后像突然丢号（数据还在，但桌面状态全变）；无成本建号也会污染 `users` 与活跃统计。
-- **建议**：改成 `POST /auth/guest`（前端按钮走 fetch），或加短期 nonce + `Origin` 校验；保留现有 IP 限流。
-
-### #48 【新增】卡牌详情 / 账号面板的备用数据加载静默失败
-
-- **位置**：`src/desk/panels/cards/CardDetail.tsx:145`（`fetchMe` → 精华 / 经验池 / 金币）、`:161`、`:172`（可熔卡）、`:183`（洗技能信息）；`src/desk/panels/player/AccountPanel.tsx:113`（`fetchMe`）、`:121`（`fetchPendingBind`）
-- **问题**：`catch(() => {})` 吞掉失败，state 停在初始 `null`。精华、经验池、可熔卡失败时按钮变灰或显示为空，玩家无法区分「确实是 0」和「没加载出来」；`AccountPanel` 的 `me` 失败时整个面板退化成「未登录 / 空资料」，看起来像掉登录。
-- **影响**：用户反复刷新或以为账号异常；这类「看起来像空数据」的错误比直接报错更难排查。
-- **建议**：改成 `setLoadError(...)` + 可重试错误条（`CardDetail.tsx:194-200` 的 `fetchResonance` 已是正确范式），至少把按钮 `title` 从「数据为空」改成「读取失败，点击重试」。
+暂无。#45–#48 已修复，见 §1.4。
 
 ---
 
-## 四、P3（5 项）
+## 四、P2（5 项）
 
 ### #49 【新增】`requireBattle` 用 `TxAbort(500)` 报「找不到这场战斗」
 
@@ -161,6 +140,6 @@
 
 ## 七、建议修复顺序
 
-> #39 / #40 / #41 / #42 / #43 / #44 已于 2026-11-28 完成（见 1.4）。
+> #39–#48 已于 2026-11-28 完成（见 1.4）。
 
-1. 其余 P2 / P3 按迭代排（#45 卡池截断、#46 同步 scrypt + trustProxy、#47 guest GET、#48 备用数据静默失败）。
+1. 剩余 P2 按迭代排（#49 战斗缺失返回 500、#50 战斗节点唯一索引冲突、#51 购买强制清扫过期挂单、#52 404 / 非法 JSON 结构、#53 卡池缺卡断言）。
