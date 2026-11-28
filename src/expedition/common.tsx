@@ -60,6 +60,8 @@ export const endsWithinHour = (iso: string, now = Date.now()) => {
 export function RewardChips({ reward }: { reward: Reward }) {
   const chips: ReactNode[] = []
   if (reward.playerExp) chips.push(<span key="exp">玩家经验 +{reward.playerExp}</span>)
+  if (reward.cardExp) chips.push(<span key="cardExp">出战卡经验 +{reward.cardExp}</span>)
+  if (reward.expPool) chips.push(<span key="expPool">经验池 +{reward.expPool}</span>)
   if (reward.coins) chips.push(<span key="coins">金币 +{reward.coins}</span>)
   if (reward.essence) chips.push(<span key="essence">精华 +{reward.essence}</span>)
   reward.items?.forEach((item) =>
