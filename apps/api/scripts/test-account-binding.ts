@@ -15,7 +15,7 @@ const { default: Fastify } = await import("fastify")
 const { default: cookie } = await import("@fastify/cookie")
 
 const { db } = await import("../src/db/client")
-const { cards, marketListings, userCards, userPacks, users } = await import("../src/db/schema")
+const { cards, ledgerEntries, marketListings, userCards, userPacks, users } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession, readSession } = await import("../src/auth/osu")
 const { hashPassword } = await import("../src/auth/email")
 const { handleError } = await import("../src/error-handler")
@@ -369,6 +369,33 @@ await test("游客也能补邮箱（等于把游客号升级成邮箱号）", as
   const guest = await newUser({ id: "guest-bindtest7" })
   assert.equal((await api("POST", "/auth/email/bind", guest, { email: "g@test.dev", password: "password1" })).statusCode, 200)
   assert.equal((await api("GET", "/auth/me", guest)).json().data.kind, "email")
+})
+
+await test("账号引导：重复领取只发一次新手包", async () => {
+  const user = await newUser({ id: "onboard-test", onboarded: false })
+  const packs = async () =>
+    (
+      await db
+        .select({ pool: userPacks.pool, count: userPacks.count })
+        .from(userPacks)
+        .where(eq(userPacks.userId, user))
+    ).sort((a, b) => a.pool.localeCompare(b.pool))
+  const ledgers = async () =>
+    (await db.select({ id: ledgerEntries.id }).from(ledgerEntries).where(eq(ledgerEntries.userId, user))).length
+
+  const first = await api("POST", "/auth/onboard", user)
+  assert.equal(first.statusCode, 200, first.body)
+  assert.equal(first.json().data.starterGranted, true)
+  const packsAfterFirst = await packs()
+  const ledgerAfterFirst = await ledgers()
+  assert.ok(packsAfterFirst.length > 0, "第一次引导要真的发到包")
+
+  const second = await api("POST", "/auth/onboard", user)
+  assert.equal(second.statusCode, 200, second.body)
+  assert.equal(second.json().data.starterGranted, false)
+  assert.deepEqual(await packs(), packsAfterFirst)
+  assert.equal(await ledgers(), ledgerAfterFirst)
+  assert.equal((await rowOf(user)).onboarded, true)
 })
 
 console.log(`\n${passed} passed`)

@@ -374,17 +374,17 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(401).send({ ok: false, error: { code: "unauthorized", message: "用户不存在" } })
     }
 
-    // 条件更新保证并发点击“领取/跳过”时只有一个请求真正发礼包
-    const claimed = await db
-      .update(users)
-      .set({ onboarded: true })
-      .where(and(eq(users.id, userId), eq(users.onboarded, false)))
-      .returning({ id: users.id })
-    const starterGranted = claimed.length > 0
-
-    if (starterGranted) {
-      await grantStarterPacks(userId)
-    }
+    // 条件更新 + 发新手包在同一个事务里：发包失败会回滚 onboarded，用户可以重试补领
+    const { starterGranted } = await db.transaction(async (tx) => {
+      const claimed = await tx
+        .update(users)
+        .set({ onboarded: true })
+        .where(and(eq(users.id, userId), eq(users.onboarded, false)))
+        .returning({ id: users.id })
+      if (claimed.length === 0) return { starterGranted: false }
+      await grantStarterPacks(userId, tx)
+      return { starterGranted: true }
+    })
 
     return {
       ok: true,

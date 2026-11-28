@@ -43,20 +43,26 @@ export async function addPacks(
   }
 }
 
-/** 发卡包并在同一个事务里写流水 */
+/** 发卡包并在同一个事务里写流水；传入 tx 时并入调用方的事务 */
 export async function grantPacks(
   userId: string,
   grants: Partial<Record<PackPoolId, number>>,
   origin: LedgerSource,
+  tx?: Tx,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
+  const entries = Object.entries(grants).map(([pool, count]) => ({
+    kind: "pack" as const,
+    ref: pool,
+    delta: count ?? 0,
+  }))
+  if (tx) {
     await addPacks(userId, grants, tx)
-    await recordLedger(
-      tx,
-      userId,
-      Object.entries(grants).map(([pool, count]) => ({ kind: "pack" as const, ref: pool, delta: count ?? 0 })),
-      origin,
-    )
+    await recordLedger(tx, userId, entries, origin)
+    return
+  }
+  await db.transaction(async (inner) => {
+    await addPacks(userId, grants, inner)
+    await recordLedger(inner, userId, entries, origin)
   })
 }
 
@@ -73,9 +79,9 @@ export async function consumePack(
   return updated.length > 0
 }
 
-/** 新号 OOBE 完成时发放：30 新手包 + 1 神秘卡包 */
-export async function grantStarterPacks(userId: string): Promise<void> {
-  await grantPacks(userId, STARTER_PACKS, { source: "starter" })
+/** 新号 OOBE 完成时发放：30 新手包 + 1 神秘卡包；传入 tx 时并入调用方的事务 */
+export async function grantStarterPacks(userId: string, tx?: Tx): Promise<void> {
+  await grantPacks(userId, STARTER_PACKS, { source: "starter" }, tx)
 }
 
 /** 把背包里的一个卡包“拿到桌面”：先扣库存，生成一次性 token。扣库存和发 token 在同一个事务里 */
