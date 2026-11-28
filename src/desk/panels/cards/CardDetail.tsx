@@ -16,8 +16,10 @@ import {
   breakthroughCoinCost,
   constellationCap,
   expToNext,
+  investedExp,
   isHeroCardId,
   levelCap,
+  totalExpAtLevel,
 } from "@choke/shared/progression"
 import { ITEMS, SHARDS_PER_DISMANTLE, shardItemId, type ItemStack } from "@choke/shared/items"
 import { skillById } from "@choke/shared/skills"
@@ -34,6 +36,7 @@ import { isModuleUnlocked, lockHintOf } from "@/tutorial/unlocks"
 
 import {
   ApiError,
+  allocateExpPool,
   ascendCard,
   dismantleCard,
   enhanceCard,
@@ -90,6 +93,8 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [pending, setPending] = useState<Pending | null>(null)
   const [listed, setListed] = useState(false)
   const [essence, setEssence] = useState<number | null>(null)
+  const [expPool, setExpPool] = useState<number | null>(null)
+  const [expAllocInput, setExpAllocInput] = useState("")
   const [items, setItems] = useState<ItemWallet | null>(null)
   const [coins, setCoins] = useState<number | null>(null)
   const [rerollInfo, setRerollInfo] = useState<SkillRerollInfo | null>(null)
@@ -131,6 +136,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       .then((data) => {
         if (!cancelled) {
           setEssence(data.essence)
+          setExpPool(data.expPool ?? 0)
           setItems(data.items ?? {})
           setCoins(data.coins)
         }
@@ -248,6 +254,10 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const canAscend =
     current.constellation < conCap && (hero ? availableMirrors.length > 0 : sameCardFuel > 0)
   const expPct = maxed ? 100 : Math.min(100, (current.exp / Math.max(1, need)) * 100)
+  const expRoom = Math.max(
+    0,
+    totalExpAtLevel(cap, current.rarity, hero) - investedExp(current.level, current.exp, current.rarity, hero),
+  )
   const dismantleEssence = essenceOf(current.rarity, current.foil)
   const bp = battlePower(face)
 
@@ -308,6 +318,48 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       (result) => `升级成功，消耗 ${result.spent} EXP`,
       () => playSfx("levelup"),
     )
+  }
+
+  const allocateExp = async (amount: number) => {
+    if (!userId || busy !== null || listed) return
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setMessage({ text: "请输入大于 0 的整数经验值", error: true })
+      return
+    }
+    setBusy("exp-pool")
+    setMessage(null)
+    try {
+      const result = await allocateExpPool(userId, current.userCardId, amount)
+      playSfx("levelup")
+      setCurrent(result.card)
+      setExpPool(result.expPool)
+      setExpAllocInput("")
+      setMessage({ text: `已从经验池分配 +${result.spent.toLocaleString("en-US")} EXP` })
+      onChanged?.()
+      emitDeskData("user")
+    } catch (error) {
+      playSfx("error")
+      const code = error instanceof ApiError ? error.code : undefined
+      if (code === "not_enough_exp_pool") {
+        fetchMe()
+          .then((me) => setExpPool(me.expPool ?? 0))
+          .catch(() => {})
+      }
+      let text: string
+      if (code === "card_listed") {
+        setListed(true)
+        text = "挂在市场上的卡不能分配经验，请先下架"
+      } else if (code === "max_level") {
+        text = "已经满级，不需要经验了"
+      } else if (code === "exp_over_cap" || code === "not_enough_exp_pool") {
+        text = error instanceof ApiError ? error.message : "经验分配失败"
+      } else {
+        text = error instanceof Error ? error.message : "经验分配失败"
+      }
+      setMessage({ text, error: true })
+    } finally {
+      setBusy(null)
+    }
   }
 
   const ascend = async (material?: ApiUserCard) => {
@@ -666,6 +718,59 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   {busy === "ascend" ? "升命中…" : `升命座 ${current.constellation}/${conCap}`}
                 </button>
               </div>
+              <div className="card-detail__wallet">
+                <span>经验池</span>
+                <b className="bk-num">{expPool != null ? expPool.toLocaleString("en-US") : "—"}</b>
+                <em>远征累计获得，可自由分给任意卡</em>
+              </div>
+              {!maxed && expRoom > 0 && (expPool ?? 0) > 0 && !listed && (
+                <div className="card-detail__actions">
+                  {!canLevel && (
+                    <button
+                      type="button"
+                      className="bk-btn bk-btn--sm bk-btn--main"
+                      disabled={busy !== null}
+                      onClick={() =>
+                        void allocateExp(Math.min(expPool ?? 0, Math.max(1, need - current.exp)))
+                      }
+                    >
+                      {busy === "exp-pool"
+                        ? "分配中…"
+                        : `补到下一级 (+${Math.min(expPool ?? 0, Math.max(1, need - current.exp)).toLocaleString("en-US")})`}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="bk-btn bk-btn--sm"
+                    disabled={busy !== null}
+                    onClick={() => void allocateExp(Math.min(expPool ?? 0, expRoom))}
+                  >
+                    {expPool! >= expRoom
+                      ? `一次喂到满级 (+${expRoom.toLocaleString("en-US")})`
+                      : `全部投入 (+${(expPool ?? 0).toLocaleString("en-US")})`}
+                  </button>
+                  <div className="card-detail__market-row">
+                    <input
+                      className="bk-input bk-num"
+                      type="number"
+                      min={1}
+                      max={Math.min(expPool ?? 0, expRoom)}
+                      placeholder="自定义"
+                      value={expAllocInput}
+                      onChange={(event) => setExpAllocInput(event.target.value)}
+                      aria-label="自定义分配经验值"
+                    />
+                    <button
+                      type="button"
+                      className="bk-btn bk-btn--sm"
+                      disabled={busy !== null || !expAllocInput.trim()}
+                      onClick={() => void allocateExp(Number(expAllocInput))}
+                    >
+                      分配
+                    </button>
+                  </div>
+                </div>
+              )}
               {!hero && (
                 <div className="card-detail__wallet">
                   <span>{RARITY_LABEL[current.rarity]} 碎片</span>

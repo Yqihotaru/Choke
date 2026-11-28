@@ -28,19 +28,21 @@ const EXIT_MS = 170
 const FILTERS: readonly { kind: LedgerKind | null; label: string }[] = [
   { kind: null, label: "全部" },
   { kind: "coins", label: LEDGER_KIND_LABEL.coins },
+  { kind: "expPool", label: LEDGER_KIND_LABEL.expPool },
   { kind: "essence", label: LEDGER_KIND_LABEL.essence },
   { kind: "item", label: LEDGER_KIND_LABEL.item },
   { kind: "pack", label: LEDGER_KIND_LABEL.pack },
   { kind: "card", label: LEDGER_KIND_LABEL.card },
 ]
 
-const KIND_ICON = {
+const KIND_ICON: Record<LedgerKind, typeof GiTwoCoins> = {
   coins: GiTwoCoins,
+  expPool: GiNotebook,
   essence: GiCutDiamond,
   item: GiCrystalShine,
   pack: GiOpenTreasureChest,
   card: GiCardRandom,
-} as const
+}
 
 const pad = (n: number) => String(n).padStart(2, "0")
 

@@ -200,6 +200,18 @@ export function levelUpCard(
   )
 }
 
+export function allocateExpPool(
+  userId: string,
+  userCardId: number,
+  amount: number,
+): Promise<{ card: ApiUserCard; spent: number; expPool: number }> {
+  return request(`/api/users/${userId}/exp-pool/allocate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userCardId, amount }),
+  })
+}
+
 export function ascendCard(
   userId: string,
   userCardId: number,
@@ -353,7 +365,9 @@ export interface AccountMe {
   profileUrl: string | null
   onboarded: boolean
   essence: number
-  /** 碎片、经验道具等；旧后端没有这个字段 */
+  /** 远征累计的自由经验池；旧后端没有这个字段 */
+  expPool?: number
+  /** 碎片等；旧后端没有这个字段 */
   items?: ItemWallet
   coins: number
   hero: ApiUserCard | null
