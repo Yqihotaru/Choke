@@ -213,105 +213,142 @@ export function Prepare({
 
       <div className="ex-prep">
         <section>
-          <div className="ex-toolbar">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="按名字找卡"
-              aria-label="按名字找卡"
-            />
-            <button
-              type="button"
-              className="ex-btn ex-btn--sm"
-              onClick={applyDeck}
-              disabled={!rows || deckIds.length === 0}
-              title={deckIds.length === 0 ? "卡组里还没有卡" : "按卡组槽位顺序套用当前编队"}
-            >
-              套用当前卡组
-            </button>
-            <button type="button" className="ex-btn ex-btn--sm" onClick={autoPick} disabled={!rows}>
-              自动选最强
-            </button>
-            <button
-              type="button"
-              className="ex-btn ex-btn--sm"
-              onClick={() => {
-                setDeckNotice(null)
-                setPicked([])
-              }}
-              disabled={picked.length === 0}
-            >
-              清空
-            </button>
-            <span className="ex-chip">
-              已选 {picked.length} / {map.deckSize}
-            </span>
-          </div>
-
-          <div className="ex-toolbar">
-            {deckIds.length > 0 && (
+          <div className="ex-toolbar-wrap">
+            <div className="ex-toolbar">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="按名字找卡"
+                aria-label="按名字找卡"
+              />
               <button
                 type="button"
                 className="ex-btn ex-btn--sm"
-                aria-pressed={deckOnly}
-                onClick={() => setDeckOnly((v) => !v)}
+                onClick={applyDeck}
+                disabled={!rows || deckIds.length === 0}
+                title={deckIds.length === 0 ? "卡组里还没有卡" : "按卡组槽位顺序套用当前编队"}
               >
-                只看卡组内
+                套用当前卡组
               </button>
-            )}
-            <select
-              value={jobFilter}
-              onChange={(e) => setJobFilter(e.target.value)}
-              aria-label="按职业筛选"
-            >
-              <option value="all">全部职业</option>
-              {Object.keys(JOB_LABEL).map((j) => (
-                <option key={j} value={j}>
-                  {JOB_LABEL[j]}
-                </option>
-              ))}
-            </select>
-            <select
-              value={rarityFilter}
-              onChange={(e) => setRarityFilter(e.target.value as Rarity | "all")}
-              aria-label="按品质筛选"
-            >
-              <option value="all">全部品质</option>
-              {RARITIES.map((r) => (
-                <option key={r} value={r}>
-                  {RARITY_LABEL[r]}
-                </option>
-              ))}
-            </select>
-            <select
-              value={minLevel}
-              onChange={(e) => setMinLevel(Number(e.target.value))}
-              aria-label="按最低等级筛选"
-            >
-              <option value={0}>全部等级</option>
-              <option value={5}>Lv.5+</option>
-              <option value={10}>Lv.10+</option>
-              <option value={20}>Lv.20+</option>
-              <option value={30}>Lv.30+</option>
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "power" | "level" | "rarity" | "pp")}
-              aria-label="排序方式"
-            >
-              <option value="power">按战力</option>
-              <option value="level">按等级</option>
-              <option value="rarity">按品质</option>
-              <option value="pp">按 PP</option>
-            </select>
-            <button
-              type="button"
-              className="ex-btn ex-btn--sm"
-              onClick={() => setSortOrder((o) => (o === "desc" ? "asc" : "desc"))}
-              aria-label="切换排序方向"
-            >
-              {sortOrder === "desc" ? "倒序 ↓" : "正序 ↑"}
-            </button>
+              <button type="button" className="ex-btn ex-btn--sm" onClick={autoPick} disabled={!rows}>
+                自动选最强
+              </button>
+              <button
+                type="button"
+                className="ex-btn ex-btn--sm"
+                onClick={() => {
+                  setDeckNotice(null)
+                  setPicked([])
+                }}
+                disabled={picked.length === 0}
+              >
+                清空
+              </button>
+              <span className="ex-chip">
+                已选 {picked.length} / {map.deckSize}
+              </span>
+            </div>
+
+            <div className="ex-toolbar">
+              {deckIds.length > 0 && (
+                <button
+                  type="button"
+                  className="ex-btn ex-btn--sm"
+                  aria-pressed={deckOnly}
+                  onClick={() => setDeckOnly((v) => !v)}
+                >
+                  只看卡组内
+                </button>
+              )}
+              <select
+                value={jobFilter}
+                onChange={(e) => setJobFilter(e.target.value)}
+                aria-label="按职业筛选"
+              >
+                <option value="all">全部职业</option>
+                {Object.keys(JOB_LABEL).map((j) => (
+                  <option key={j} value={j}>
+                    {JOB_LABEL[j]}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={rarityFilter}
+                onChange={(e) => setRarityFilter(e.target.value as Rarity | "all")}
+                aria-label="按品质筛选"
+              >
+                <option value="all">全部品质</option>
+                {RARITIES.map((r) => (
+                  <option key={r} value={r}>
+                    {RARITY_LABEL[r]}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={minLevel}
+                onChange={(e) => setMinLevel(Number(e.target.value))}
+                aria-label="按最低等级筛选"
+              >
+                <option value={0}>全部等级</option>
+                <option value={5}>Lv.5+</option>
+                <option value={10}>Lv.10+</option>
+                <option value={20}>Lv.20+</option>
+                <option value={30}>Lv.30+</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as "power" | "level" | "rarity" | "pp")}
+                aria-label="排序方式"
+              >
+                <option value="power">按战力</option>
+                <option value="level">按等级</option>
+                <option value="rarity">按品质</option>
+                <option value="pp">按 PP</option>
+              </select>
+              <button
+                type="button"
+                className="ex-btn ex-btn--sm"
+                onClick={() => setSortOrder((o) => (o === "desc" ? "asc" : "desc"))}
+                aria-label="切换排序方向"
+              >
+                {sortOrder === "desc" ? "倒序 ↓" : "正序 ↑"}
+              </button>
+            </div>
+          </div>
+
+          <div className="ex-picked-bar" aria-label="已选出战编队">
+            <div className="ex-picked-bar__meta">
+              <span>编队总战力</span>
+              <b>
+                {picked
+                  .reduce((sum, id) => sum + (rows?.find((r) => r.row.userCardId === id)?.power ?? 0), 0)
+                  .toLocaleString("en-US")}
+              </b>
+            </div>
+            {Array.from({ length: map.deckSize }, (_, i) => {
+              const id = picked[i]
+              const item = id != null ? rows?.find((r) => r.row.userCardId === id) : undefined
+              if (!item) {
+                return (
+                  <div className="ex-picked-slot" key={`empty-${i}`}>
+                    <span>空位 {i + 1}</span>
+                  </div>
+                )
+              }
+              return (
+                <button
+                  type="button"
+                  className="ex-picked-slot"
+                  data-filled="true"
+                  key={item.row.userCardId}
+                  title="点击移出编队"
+                  onClick={() => toggle(item)}
+                >
+                  <span className="ex-picked-slot__name">{item.row.name}</span>
+                  <span className="ex-picked-slot__bp">Lv.{item.row.level}</span>
+                </button>
+              )
+            })}
           </div>
 
           {deckNotice && <div className="ex-note" style={{ marginBottom: 10 }}>{deckNotice}</div>}

@@ -5,7 +5,7 @@ import { RARITY_COLOR } from "@/desk/lib/rarity"
 import type { ExpeditionView } from "@choke/shared/expedition/view"
 
 import { moveExpedition, submitEvent, submitStory } from "./api"
-import { errorText } from "./common"
+import { RewardChips, errorText } from "./common"
 import { KIND_LABEL, kindOf, layoutMap, titleOf } from "./layout"
 import { MapStage } from "./MapStage"
 import { EventPanel, StoryPanel } from "./Panels"
@@ -260,6 +260,9 @@ export function RunView({
           </div>
           <div className="ex-run__panel">
             {panel}
+            <div style={{ marginTop: 10 }}>
+              <RewardChips reward={view.pending} />
+            </div>
             {(error ?? menu.error) && <div className="ex-note ex-note--error">{error ?? menu.error}</div>}
           </div>
           <div className="ex-run__squad">

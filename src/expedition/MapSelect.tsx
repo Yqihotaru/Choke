@@ -49,27 +49,29 @@ export function MapSelect({
         {shown.map((map) => {
           return (
             <article className="ex-map" key={map.id} data-locked={!map.startable}>
+              <div className="ex-map__head">
+                <span className="ex-map__kind">{KIND_LABEL[map.kind]}</span>
+                <span className="ex-map__stars">
+                  ★ {map.bestStars} / {map.maxStars}
+                </span>
+              </div>
               <h3>{map.name}</h3>
               {map.summary && <p>{map.summary}</p>}
               <div className="ex-map__chips">
-                <span className="ex-chip">带 {map.deckSize} 张卡</span>
+                <span className="ex-chip">编队 {map.deckSize} 人</span>
                 <span className="ex-chip">{map.fights} 场战斗</span>
-                <span className="ex-chip">
-                  ★ {map.bestStars} / {map.maxStars}
-                </span>
                 {map.objectiveCount > 0 && (
                   <span className="ex-chip">
                     目标 {map.bestObjectives} / {map.objectiveCount}
                   </span>
                 )}
-                <span className="ex-chip">通关 {map.clears} 次</span>
               </div>
               {(map.kind === "daily" || map.kind === "weekly") && (
                 <p>这一期还剩 {remainingText(map.endsAt)}</p>
               )}
               {!map.startable && map.lockedReason && <div className="ex-note">{map.lockedReason}</div>}
               <div className="ex-map__foot">
-                <span />
+                <span className="ex-chip">已通关 {map.clears} 次</span>
                 <button
                   type="button"
                   className="ex-btn ex-btn--primary"
