@@ -37,6 +37,10 @@ export interface ApiUserCard {
   /** 实例个体值，千分比 970–1030 */
   rollBp?: number
   obtainedAt?: string
+  /** 正在市场挂单（卡牌列表接口返回，编队页据此禁用） */
+  listed?: boolean
+  /** 正在出征中（卡牌列表接口返回，编队页据此禁用） */
+  locked?: boolean
 }
 
 export type CardSort = "recent" | "rarity" | "pp" | "level" | "name"

@@ -6,6 +6,8 @@ import { requireSelf } from "../auth/guard"
 import { DECK_SIZE } from "../config"
 import { db } from "../db/client"
 import { cards, decks, deckSlots, userCards } from "../db/schema"
+import { EXPEDITION_LOCK_MESSAGE, anyLocked, listedUserCardIds } from "../expedition/locks"
+import { TxAbort, lockUser, runTx } from "../tx"
 
 type DeckCardRow = Record<string, unknown>
 
@@ -79,21 +81,26 @@ export async function deckRoutes(app: FastifyInstance) {
       })
     }
 
-    if (ids.length > 0) {
-      const owned = await db
-        .select({ id: userCards.id })
-        .from(userCards)
-        .where(and(eq(userCards.userId, userId), inArray(userCards.id, ids)))
+    // 归属、上架、出征状态都在事务内重查：和上架 / 出征走同一把用户锁，避免两边同时通过
+    const saved = await runTx(reply, async (tx) => {
+      if (ids.length > 0) {
+        await lockUser(tx, userId)
+        const owned = await tx
+          .select({ id: userCards.id })
+          .from(userCards)
+          .where(and(eq(userCards.userId, userId), inArray(userCards.id, ids)))
 
-      if (owned.length !== ids.length) {
-        return reply.code(400).send({
-          ok: false,
-          error: { code: "card_not_owned", message: "有卡不在这个账号的卡册里" },
-        })
+        if (owned.length !== ids.length) {
+          throw new TxAbort(400, "card_not_owned", "有卡不在这个账号的卡册里")
+        }
+        if ((await listedUserCardIds(tx, ids)).size > 0) {
+          throw new TxAbort(400, "card_listed", "有卡正在市场里挂着，先下架再放进卡组")
+        }
+        if (await anyLocked(tx, userId, ids)) {
+          throw new TxAbort(400, "in_expedition", EXPEDITION_LOCK_MESSAGE)
+        }
       }
-    }
 
-    await db.transaction(async (tx) => {
       await tx
         .insert(decks)
         .values({ userId, name: "主卡组" })
@@ -110,7 +117,9 @@ export async function deckRoutes(app: FastifyInstance) {
       if (rows.length > 0) {
         await tx.insert(deckSlots).values(rows)
       }
+      return true
     })
+    if (!saved) return
 
     return { ok: true, data: await loadDeck(userId) }
   })

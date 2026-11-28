@@ -20,6 +20,7 @@ import { requireSelf } from "../auth/guard"
 import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
 import { cards, userCards } from "../db/schema"
+import { listedUserCardIds, lockedUserCardIds } from "../expedition/locks"
 
 const RARITY_RANK = sql`CASE ${cards.rarity}
   WHEN 'C' THEN 0
@@ -421,9 +422,23 @@ export async function cardRoutes(app: FastifyInstance) {
       .innerJoin(cards, eq(cards.id, userCards.cardId))
       .where(where)
 
+    const ids = rows.map((row) => row.userCardId)
+    const listed = await listedUserCardIds(db, ids)
+    const locked = await lockedUserCardIds(db, userId)
+
     return {
       ok: true,
-      data: { rows, total: Number(total), limit: query.limit, offset: query.offset },
+      data: {
+        // 编队页要据此标出「已上架 / 出征中」，避免一键编队后才在开战时被拒
+        rows: rows.map((row) => ({
+          ...row,
+          listed: listed.has(row.userCardId),
+          locked: locked.has(row.userCardId),
+        })),
+        total: Number(total),
+        limit: query.limit,
+        offset: query.offset,
+      },
     }
   })
 }

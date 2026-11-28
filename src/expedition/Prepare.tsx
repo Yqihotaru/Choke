@@ -97,6 +97,8 @@ export function Prepare({
   }, [userId])
 
   const allowed = (r: Row) => cardAllowed(alloc, { rarity: r.row.rarity, isHero: r.isHero })
+  /** 正在市场挂单或出征中的卡：服务端开战时会拒，编队页直接标出来 */
+  const unavailable = (r: Row) => r.row.listed === true || r.row.locked === true
 
   // 稀有度权限降低后，已选的卡里没权限的要拿掉
   const [prevFilterKey, setPrevFilterKey] = useState({ alloc, rows })
@@ -148,6 +150,10 @@ export function Prepare({
 
   const toggle = (r: Row) => {
     setDeckNotice(null)
+    if (unavailable(r)) {
+      setDeckNotice(r.row.listed ? "这张卡正在市场挂单，先下架再加入编队。" : "这张卡正在出征中，结束出征后才能再次使用。")
+      return
+    }
     const id = r.row.userCardId
     setPicked((current) => {
       if (current.includes(id)) return current.filter((x) => x !== id)
@@ -157,7 +163,7 @@ export function Prepare({
   }
   const autoPick = () => {
     setDeckNotice(null)
-    const best = (rows ?? []).filter(allowed).slice(0, map.deckSize)
+    const best = (rows ?? []).filter((r) => allowed(r) && !unavailable(r)).slice(0, map.deckSize)
     setPicked(best.map((r) => r.row.userCardId))
   }
   const applyDeck = () => {
@@ -165,9 +171,14 @@ export function Prepare({
     const byId = new Map(rows.map((r) => [r.row.userCardId, r]))
     const eligible: number[] = []
     let blockedCount = 0
+    let busyCount = 0
     for (const id of deckIds) {
       const r = byId.get(id)
       if (!r) continue
+      if (unavailable(r)) {
+        busyCount += 1
+        continue
+      }
       if (!allowed(r)) {
         blockedCount += 1
         continue
@@ -175,8 +186,11 @@ export function Prepare({
       if (eligible.length < map.deckSize) eligible.push(id)
     }
     setPicked(eligible)
-    if (blockedCount > 0) {
-      setDeckNotice(`已套用当前卡组，有 ${blockedCount} 张因超出稀有度权限未带入（可在右侧调高稀有度权限）。`)
+    const reasons: string[] = []
+    if (blockedCount > 0) reasons.push(`${blockedCount} 张超出稀有度权限`)
+    if (busyCount > 0) reasons.push(`${busyCount} 张已上架或出征中`)
+    if (reasons.length > 0) {
+      setDeckNotice(`已套用当前卡组，有 ${reasons.join("、")}未带入。`)
     } else if (deckIds.length > map.deckSize) {
       setDeckNotice(`已按卡组顺序套用前 ${map.deckSize} 张卡。`)
     } else {
@@ -360,7 +374,8 @@ export function Prepare({
               const id = r.row.userCardId
               const on = picked.includes(id)
               const ok = allowed(r)
-              const blocked = !ok || (!on && picked.length >= map.deckSize)
+              const busy = unavailable(r)
+              const blocked = !ok || busy || (!on && picked.length >= map.deckSize)
               return (
                 <button
                   key={id}
@@ -369,11 +384,20 @@ export function Prepare({
                   aria-pressed={on}
                   aria-label={`${r.row.name}，战力 ${r.power}`}
                   disabled={blocked && !on}
-                  title={ok ? undefined : "超出了你分配的稀有度权限"}
+                  title={
+                    busy
+                      ? r.row.listed
+                        ? "这张卡正在市场挂单，先下架再加入编队"
+                        : "这张卡正在出征中，结束出征后才能再次使用"
+                      : ok
+                        ? undefined
+                        : "超出了你分配的稀有度权限"
+                  }
                   onClick={() => toggle(r)}
                 >
                   <GameCardFace card={r.face} />
-                  {!ok && <span className="ex-tile__lock">稀有度不够</span>}
+                  {!ok && !busy && <span className="ex-tile__lock">稀有度不够</span>}
+                  {busy && <span className="ex-tile__lock">{r.row.listed ? "已上架" : "出征中"}</span>}
                 </button>
               )
             })}
