@@ -5,9 +5,9 @@
 > 验证：`pnpm typecheck`、`pnpm lint`、`pnpm content:check`、`pnpm test:fast`、`pnpm test:db` 全部通过（DB 测试 12/12）。
 > 本文件取代 v0.1 中尚未闭环的条目；v0.1 保留为历史记录。
 >
-> 阅读顺序按你的要求调整：**第一节是已修复（全部前置并标 ✅）**，第二节起才是待修问题；第五节单独记录「故意为之 / 已排除」，防止下次复查重复报（空白节点已按设计说明移到这里）。
+> 阅读顺序按你的要求调整：**第一节是已修复（全部前置并标 ✅）**，第二节起才是待修问题；第四节单独记录「故意为之 / 已排除」，防止下次复查重复报（空白节点已按设计说明移到这里）。
 > 编号延续 v0.1，新问题从 **#39** 开始。
-> 2026-11-28：**#39–#48 已修复**，证据见 §1.4；剩余 P2 为 #49–#53。
+> 2026-11-28：**#39–#53 已全部修复**，证据见 §1.4；当前无待修项。
 
 ---
 
@@ -65,7 +65,12 @@
 - **#46 ✅ 异步 scrypt + 并发闸 + trustProxy + 账号维度限流**：`auth/email.ts` 改用 `promisify(scrypt)`，并加进程级闸门（同时最多 2 个 scrypt，排队不占事件循环）；`hashPassword` / `verifyPassword` 变 Promise，注册、登录、绑定邮箱、测试全部 `await`。`index.ts` 从 `TRUST_PROXY` 环境变量读取 `trustProxy`（支持 `1` / `true` / IP/CIDR 列表），默认关闭。`rate-limit.ts` 新增 `accountOf`，登录 / 注册同时按「IP + 路由」和「规范化邮箱 + 路由」计数，避免共享出口 IP 互相拖累。
 - **#47 ✅ 游客入口改为 POST**：`GET /auth/guest` 改为 `POST /auth/guest`，不再 302，直接返回 `{ ok: true, data: { id } }` 并写登录态。`GuestLoginButton` 改为 `<button>`，走 `createGuest()` fetch，成功后再跳首页；失败显示「进入失败，点此重试」。测试：`test-account-binding` 断言 POST 建号、GET 返回 404 且不再新增游客号。
 - **#48 ✅ 备用数据加载失败可见可重试**：`CardDetail` 为 `fetchMe`（精华 / 经验池 / 金币）、可熔卡、洗技能信息分别记录失败态，汇总成错误条 + 「重试」；同名卡按钮的 `title` 在读取失败时改为提示重试。`AccountPanel` 为 `fetchMe` / `fetchPendingBind` 记录失败态，显示「读取失败：账号资料 / 待确认绑定」+ 重试，不再静默退化成空资料。
-- **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm content:check`（版本 `b4bdf8bba927`）、`pnpm test:fast`（10/10）、`pnpm test:db`（13/13）、`pnpm build` 全部通过。
+- **#49 ✅ 战斗缺失改为 409**：`requireBattle` 找不到战斗行时抛 `409 battle_missing`；前端 `ExpeditionBattle` 收到后清空未上传队列，横幅提示「这场战斗在服务器上已经不存在，请返回地图重新进入」，不再显示会反复失败的「重试上传」。
+- **#50 ✅ 战斗节点插入容忍重复**：`enterNode` 的 `expedition_battles` 插入加 `onConflictDoNothing()`；同一请求重放、或以后加可回头的图时会复用已有战斗快照，不再 `23505` → 500。
+- **#51 ✅ 购买不再强制全表清扫**：购买路径改回节流后的非强制清扫，目标挂单在事务内单独判断 TTL；过期时在同一事务里置为 `expired` 并退还押金（返回哨兵让事务先提交，再回 `400 listing_expired`），效果与列表清扫一致但不扫全表。`lastExpirySweepAt` 改为事务成功后再推进。
+- **#52 ✅ 统一 404 / 非法 JSON 结构**：新增 `notFoundHandler` 并挂到 `index.ts`，未匹配路由返回 `{ ok:false, error:{ code:"not_found" } }`；`handleError` 把 `FST_ERR_CTP_*` 请求体解析错误统一成 `400 bad_request`。
+- **#53 ✅ 卡池缺卡显式报错**：`viewById` 在出征行缺失时回 `404 no_expedition`；`inputsOf` 发现阵容卡不在卡池时回 `409 pool_mismatch`，不再非空断言；前端 `Fight` 检测到卡池缺阵容卡时停在提示页（返回地图 / 刷新），不再静默少卡重放。
+- **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm content:check`（版本 `b4bdf8bba927`）、`pnpm test:fast`（10/10）、`pnpm test:db`（13/13）、`pnpm build` 全部通过。新增覆盖：`test-expedition-run` 的 `battle_missing` / 重复进入战斗节点 / `pool_mismatch`，`test-account-binding` 的 404 与非法 JSON 结构。
 
 ---
 
@@ -77,45 +82,11 @@
 
 ## 三、P2（0 项）
 
-暂无。#45–#48 已修复，见 §1.4。
+暂无。#45–#53 已修复，见 §1.4。
 
 ---
 
-## 四、P2（5 项）
-
-### #49 【新增】`requireBattle` 用 `TxAbort(500)` 报「找不到这场战斗」
-
-- **位置**：`apps/api/src/expedition/service.ts:487`
-- **问题**：这是状态不一致（战斗行缺失 / 已结束），不是服务器内部错误；500 会被脱敏成「服务器出错了」，前端没有可操作信息。
-- **建议**：改 `409 battle_missing`，客户端引导「返回地图重新进入」。
-
-### #50 【新增】战斗节点插入没有处理唯一索引冲突
-
-- **位置**：`apps/api/src/expedition/service.ts:370-377`；索引见 `apps/api/migrations/*` 的 `expedition_battles_node_idx (expedition_id, node_id)`
-- **问题**：当前地图都是 DAG，正常流程不会二次进入同一战斗节点，所以暂时碰不到；以后加可回头的图、或同一请求被重试两次时，这里会抛 `23505` → 500，而不是复用已有战斗。
-- **建议**：`onConflictDoNothing()` 后重查，或先查后插；与 `#49` 共用「找不到 / 已存在」的 409 分支。
-
-### #51 【新增】每次购买都强制全表扫过期挂单，且节流时间戳先于事务落库
-
-- **位置**：`apps/api/src/routes/market.ts:409`（`expireStaleListings(true)`）、`:51-54`（先写 `lastExpirySweepAt` 再开事务）
-- **问题**：购买路径用 `force = true` 绕过 60 秒节流，每次买都全量扫描 active 挂单并逐行退押金；事务失败时时间戳已推进，后面 60 秒的列表请求都不会再清扫。
-- **建议**：购买路径改用非强制清扫（事务内 `market.ts:436-438` 已有 TTL 二次校验），或把清扫挪到后台任务；`lastExpirySweepAt` 改为事务成功后再赋值。
-
-### #52 【新增】未匹配路由 / 非法 JSON 返回 Fastify 默认结构
-
-- **位置**：`apps/api/src/index.ts`（没有 `setNotFoundHandler`）；前端 `src/desk/session/api.ts:118`
-- **问题**：404 走 Fastify 默认 `{"statusCode":404,"error":"Not Found",...}`，不是统一的 `{ok:false,error:{code,message}}`；前端只能落到「请求失败」。
-- **建议**：加 `setNotFoundHandler` 回统一结构，顺带把 body 解析失败也转成 `bad_request`。
-
-### #53 【新增】卡池缺卡时服务端非空断言、客户端静默丢卡
-
-- **位置**：`apps/api/src/expedition/service.ts:193-196`（`row!`）、`:491-493`（`byId.get(uid)!`）；`src/expedition/ExpeditionBattle.tsx:20-26`（客户端 `flatMap` 静默丢卡）
-- **问题**：服务端靠非空断言，卡池与 lineup 不一致时直接 500；客户端则静默少一张卡重放，本地局面与服务端不同步（只在内容版本变化 / 数据损坏时出现）。
-- **建议**：两侧都显式校验，服务端回 `409 pool_mismatch` 并提示刷新重进，客户端缺卡时直接 `resync`。
-
----
-
-## 五、故意为之 / 已排除（不是问题）
+## 四、故意为之 / 已排除（不是问题）
 
 - **主线里的「空白节点」是故意的**：作用是拖长单次出征时长，并给后续「可能有的对话 / 事件」预留位置。Ch1 目前 26 个节点里 10 个 empty、Ch2 22 个里 9 个 empty，属于预期密度。**不作为问题、不改**。如果之后玩家反馈节奏拖沓，可以再讨论「连续空地自动穿过」之类的调优，但那是体验调整，不是 bug。
 - **商店与洗技能不设功能门**：测试期故意放行（`content/unlocks.json` 里 `level: 1`）。
@@ -126,7 +97,7 @@
 
 ---
 
-## 六、仍待主线处理（不在本轮清单）
+## 五、仍待主线处理（不在本轮清单）
 
 这些是 v0.1 明确划给主线、或依赖后续引擎 / 经济定稿的事项，本轮只记状态：
 
@@ -138,8 +109,8 @@
 
 ---
 
-## 七、建议修复顺序
+## 六、建议修复顺序
 
-> #39–#48 已于 2026-11-28 完成（见 1.4）。
+> #39–#53 已于 2026-11-28 完成（见 1.4）。
 
-1. 剩余 P2 按迭代排（#49 战斗缺失返回 500、#50 战斗节点唯一索引冲突、#51 购买强制清扫过期挂单、#52 404 / 非法 JSON 结构、#53 卡池缺卡断言）。
+当前清单内没有待修项；后续新问题继续追加编号。
