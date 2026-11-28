@@ -91,7 +91,7 @@ const scaleCount = (n: number, mult: number) => Math.max(1, Math.round(n * mult)
 export function scaleReward(reward: Reward, mult: number): Reward {
   if (mult === 1) return reward
   const out: Reward = { ...reward }
-  for (const key of ["coins", "essence", "playerExp", "cardExp"] as const) {
+  for (const key of ["coins", "essence", "playerExp", "cardExp", "expPool"] as const) {
     if (reward[key]) out[key] = scaleCount(reward[key]!, mult)
   }
   if (reward.items) out.items = reward.items.map((item) => ({ ...item, count: scaleCount(item.count, mult) })) as Reward["items"]
