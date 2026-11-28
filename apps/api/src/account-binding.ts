@@ -3,6 +3,7 @@ import type { FastifyReply, FastifyRequest } from "fastify"
 
 import { COOKIE_NAME, readSession } from "./auth/osu"
 import { db } from "./db/client"
+import { isUniqueViolation } from "./db/errors"
 import { cards, marketListings, userCards, userPacks, users } from "./db/schema"
 import { abandonExpedition } from "./expedition/service"
 import { RARITY_ORDER } from "./gacha/pools"
@@ -65,11 +66,6 @@ export type BeginBindResult =
   | { kind: "linked" }
   | { kind: "choose" }
   | { kind: "rejected"; reason: "already_linked" | "unknown_user" }
-
-function isUniqueViolation(error: unknown): boolean {
-  const e = error as { code?: string; cause?: { code?: string } } | null
-  return e?.code === "23505" || e?.cause?.code === "23505"
-}
 
 /**
  * 补发一个神秘卡包让这个号去领本体卡。
@@ -304,23 +300,29 @@ export async function resolveBind(userId: string, choice: BindChoice, now = Date
 
 /** 反向绑定：没有邮箱的账号（游客或 osu! 号）补一个邮箱和密码 */
 export async function bindEmail(userId: string, email: string, passwordHash: string): Promise<void> {
-  await db.transaction(async (tx) => {
-    await lockUser(tx, userId)
-    const [user] = await tx
-      .select({ email: users.email, sealedAt: users.sealedAt })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
-    if (!user || user.sealedAt) throw new TxAbort(401, "unauthorized", "用户不存在")
-    if (user.email) throw new TxAbort(409, "email_already_bound", "这个账号已经绑定过邮箱了")
-    const [taken] = await tx
-      .select({ id: users.id })
-      .from(users)
-      .where(sql`lower(${users.email}) = ${email}`)
-      .limit(1)
-    if (taken) throw new TxAbort(409, "email_taken", "这个邮箱已经注册过了")
-    await tx.update(users).set({ email, passwordHash }).where(eq(users.id, userId))
-  })
+  try {
+    await db.transaction(async (tx) => {
+      await lockUser(tx, userId)
+      const [user] = await tx
+        .select({ email: users.email, sealedAt: users.sealedAt })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1)
+      if (!user || user.sealedAt) throw new TxAbort(401, "unauthorized", "用户不存在")
+      if (user.email) throw new TxAbort(409, "email_already_bound", "这个账号已经绑定过邮箱了")
+      const [taken] = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`lower(${users.email}) = ${email}`)
+        .limit(1)
+      if (taken) throw new TxAbort(409, "email_taken", "这个邮箱已经注册过了")
+      await tx.update(users).set({ email, passwordHash }).where(eq(users.id, userId))
+    })
+  } catch (error) {
+    // 并发补绑 / 注册同一邮箱：唯一索引兜底，别让玩家看到 500
+    if (isUniqueViolation(error)) throw new TxAbort(409, "email_taken", "这个邮箱已经注册过了")
+    throw error
+  }
 }
 
 /* ============================ 封存的账号不能用 ============================ */

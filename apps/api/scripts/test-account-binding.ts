@@ -314,6 +314,20 @@ await test("保留 osu! 账号：对方已有邮箱时，当前账号的邮箱�
   assert.equal(again.statusCode, 200, again.body)
 })
 
+await test("并发注册同一邮箱：一个成功，另一个 409 而不是 500", async () => {
+  const email = "race@test.dev"
+  const [a, b] = await Promise.all([
+    api("POST", "/auth/email/register", undefined, { email, password: "password1" }),
+    api("POST", "/auth/email/register", undefined, { email, password: "password2" }),
+  ])
+  const statuses = [a.statusCode, b.statusCode].sort((x, y) => x - y)
+  assert.deepEqual(statuses, [200, 409], `实际是 ${statuses.join(" / ")}：${a.body} | ${b.body}`)
+  const failed = a.statusCode === 409 ? a : b
+  assert.equal(failed.json().error.code, "email_taken")
+  const rows = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
+  assert.equal(rows.length, 1)
+})
+
 await test("取消待确认：什么都不变", async () => {
   const veteran = await progressedOsuUser()
   const guest = await newUser()

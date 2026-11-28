@@ -112,7 +112,12 @@ export const users = pgTable("users", {
   sealedOsuId: bigint("sealed_osu_id", { mode: "number" }),
   sealedEmail: text("sealed_email"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-})
+}, (table) => [
+  // 与 migrations/0002_email_auth.sql 保持一致：邮箱不区分大小写唯一（空邮箱不算重复）
+  uniqueIndex("users_email_unique_idx")
+    .on(sql`lower(${table.email})`)
+    .where(sql`${table.email} is not null`),
+])
 
 export const userCards = pgTable(
   "user_cards",

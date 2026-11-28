@@ -26,6 +26,7 @@ import { setSessionCookie } from "../auth/guard"
 import { rateLimit } from "../auth/rate-limit"
 import { CARD_TYPES } from "../card-types"
 import { db } from "../db/client"
+import { isUniqueViolation } from "../db/errors"
 import { cards, userCards, userPacks, users } from "../db/schema"
 import { grantHeroCard } from "../gacha/open"
 import { loadItems } from "../items"
@@ -142,16 +143,26 @@ export async function authRoutes(app: FastifyInstance) {
 
     const userId = newEmailUserId()
     const username = body.data.username || email.split("@")[0]!.slice(0, 24)
-    const [user] = await db
-      .insert(users)
-      .values({
-        id: userId,
-        username,
-        email,
-        passwordHash: hashPassword(body.data.password),
-        onboarded: false,
+    let user: typeof users.$inferSelect | undefined
+    try {
+      ;[user] = await db
+        .insert(users)
+        .values({
+          id: userId,
+          username,
+          email,
+          passwordHash: hashPassword(body.data.password),
+          onboarded: false,
+        })
+        .returning()
+    } catch (error) {
+      // 并发注册同一邮箱：唯一索引兜底，别让玩家看到 500
+      if (!isUniqueViolation(error)) throw error
+      return reply.code(409).send({
+        ok: false,
+        error: { code: "email_taken", message: "这个邮箱已经注册过了" },
       })
-      .returning()
+    }
 
     if (!user) throw new Error("邮箱账号写入失败")
     request.log.info({ userId }, "email account created")
