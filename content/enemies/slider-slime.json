@@ -30,11 +30,21 @@
         "hits": 1,
         "status": "fear",
         "desc": "施加畏惧，轻微干扰节奏"
+      },
+      "gel": {
+        "kind": "heal",
+        "label": "软泥凝聚",
+        "element": "dark",
+        "power": 0,
+        "hits": 0,
+        "healPct": 0.08,
+        "desc": "回复少量生命，熟悉敌方回复意图"
       }
     },
     "script": [
       { "always": "ooze" },
-      { "when": { "turnMod": [3, 0] }, "use": "sticky" }
+      { "when": { "turnMod": [3, 0] }, "use": "sticky" },
+      { "when": { "all": [{ "hpBelow": 0.6 }, { "turnMod": [4, 0] }] }, "use": "gel" }
     ]
   }
 }

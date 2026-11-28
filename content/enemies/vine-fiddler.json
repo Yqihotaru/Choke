@@ -33,6 +33,15 @@
         "hits": 1,
         "status": "poison",
         "desc": "木属性魔法，附加 3 回合【中毒】"
+      },
+      "sap": {
+        "kind": "heal",
+        "label": "根须汲取",
+        "element": "wood",
+        "power": 0,
+        "hits": 0,
+        "healPct": 0.08,
+        "desc": "半血后每 3 回合汲取生命回复 8%"
       }
     },
     "script": [
@@ -47,6 +56,15 @@
           ]
         },
         "use": "venom"
+      },
+      {
+        "when": {
+          "all": [
+            { "hpBelow": 0.5 },
+            { "turnMod": [3, 0] }
+          ]
+        },
+        "use": "sap"
       }
     ]
   }

@@ -5,6 +5,12 @@
   "element": "dark",
   "weaknesses": ["light", "physical"],
   "hiddenWeaknesses": ["fire"],
+  "weaknessWindows": [
+    {
+      "when": { "turnMod": [2, 0] },
+      "elements": ["thunder"]
+    }
+  ],
   "shieldMax": 3,
   "traits": ["spirit"],
   "stats": {

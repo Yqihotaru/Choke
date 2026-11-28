@@ -23,7 +23,15 @@
         "element": "earth",
         "power": 0.9,
         "hits": 1,
-        "desc": "土属性物理重击"
+        "desc": "土属性物理重击（半血后变为双连鼓）",
+        "variants": [
+          {
+            "when": { "hpBelow": 0.5 },
+            "label": "狂暴双连鼓",
+            "power": 0.55,
+            "hits": 2
+          }
+        ]
       },
       "rubble": {
         "kind": "attack",
