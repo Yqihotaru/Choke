@@ -1,5 +1,7 @@
 {
   "kind": "main",
+  "order": 2,
+  "after": "story-ch1",
   "name": "第 2 章 · 变速迷雾与社区淘金",
   "summary": "SV 变速与社区悬赏交织！顶住凝霜舞者与余烬书记官的夹击，在日蚀中击败蚀拍日蚀。",
   "deckSize": 5,
@@ -78,7 +80,7 @@
     "n11": { "type": "empty", "title": "淘金广场", "pos": [10, 0], "next": ["n12"] },
     "n12": {
       "type": "treasure",
-      "rewards": "story-ch1-chest",
+      "rewards": "story-ch2-chest",
       "title": "社区精选补给箱",
       "pos": [11, 0],
       "next": ["n13"]

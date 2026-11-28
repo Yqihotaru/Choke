@@ -1,5 +1,7 @@
 {
   "kind": "main",
+  "order": 1,
+  "after": "story-prologue",
   "name": "第 1 章 · 农场与手汗的试炼",
   "summary": "告别 2★ 萌新期！穿过农图冲刺线与基本功试炼，顶住 727 与群友毒奶，在关底击败巨像节拍器。",
   "deckSize": 5,

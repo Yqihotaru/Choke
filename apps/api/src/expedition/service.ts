@@ -260,6 +260,18 @@ export async function startExpedition(userId: string, input: StartInput, now = D
       .limit(1)
     if (!user) throw new TxAbort(404, "not_found", "用户不存在")
 
+    if (rawMap.after) {
+      const [prev] = await tx
+        .select({ clears: mapClears.clears })
+        .from(mapClears)
+        .where(and(eq(mapClears.userId, userId), eq(mapClears.mapId, rawMap.after)))
+        .limit(1)
+      if (!prev || prev.clears <= 0) {
+        const name = WORLD_CONTENT.maps[rawMap.after]?.name ?? rawMap.after
+        throw new TxAbort(409, "map_locked", `先通关《${name}》才能开始这张图`)
+      }
+    }
+
     const problem = allocationError(input.allocation, user.level)
     if (problem) throw new TxAbort(400, "bad_allocation", problem)
     const { allocation } = input
@@ -856,9 +868,17 @@ export async function listMaps(userId: string, now = Date.now()): Promise<MapLis
   const records = await db.select().from(mapClears).where(eq(mapClears.userId, userId))
   const byMap = new Map(records.map((row) => [row.mapId, row]))
   const unlockCtx = await loadUnlockContext(userId)
-  return Object.entries(WORLD_CONTENT.maps).map(([id, map]) => {
+  const ordered = Object.entries(WORLD_CONTENT.maps).sort(([aId, a], [bId, b]) => {
+    const diff = (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER)
+    return diff !== 0 ? diff : aId.localeCompare(bId)
+  })
+  return ordered.map(([id, map]) => {
     const feature = mapFeature(map)
     const reason = feature && unlockCtx ? lockReason(feature, unlockCtx) : null
+    const chapterLock =
+      map.after && (byMap.get(map.after)?.clears ?? 0) <= 0
+        ? `先通关《${WORLD_CONTENT.maps[map.after]?.name ?? map.after}》`
+        : null
     return {
       id,
       kind: map.kind,
@@ -868,8 +888,8 @@ export async function listMaps(userId: string, now = Date.now()): Promise<MapLis
       fights: countMapFights(map),
       maxStars: maxMapStars(map),
       endsAt: new Date(expiryOf(map, now)).toISOString(),
-      startable: reason === null,
-      lockedReason: feature && reason ? lockMessage(feature, reason) : null,
+      startable: reason === null && chapterLock === null,
+      lockedReason: feature && reason ? lockMessage(feature, reason) : chapterLock,
       clears: byMap.get(id)?.clears ?? 0,
       bestStars: byMap.get(id)?.bestStars ?? 0,
       objectiveCount: map.objectives?.length ?? 0,

@@ -16,7 +16,7 @@ const { default: Fastify } = await import("fastify")
 const { default: cookie } = await import("@fastify/cookie")
 
 const { db } = await import("../src/db/client")
-const { users, expeditions } = await import("../src/db/schema")
+const { users, expeditions, mapClears } = await import("../src/db/schema")
 const { COOKIE_NAME, makeSession } = await import("../src/auth/osu")
 const { handleError } = await import("../src/error-handler")
 const { questRoutes } = await import("../src/routes/quests")
@@ -201,10 +201,55 @@ await test("出征地图列表：没完成引导的图标 startable=false 并带
   assert.equal(byId.get("test-daily")?.lockedReason, null)
 
   const high = await newUser({ playerLevel: 60 })
-  const all: Array<{ startable: boolean; lockedReason: string | null }> = (
+  const all: Array<{ id: string; startable: boolean; lockedReason: string | null }> = (
     await call(high, "GET", `/users/${high}/expeditions/maps`)
   ).body.data
-  assert.ok(all.every((m) => m.startable && m.lockedReason === null))
+  const highById = new Map(all.map((m) => [m.id, m]))
+  // 没通关前面章节的新号，主线图按章节顺序锁住；日常图不受影响
+  assert.equal(highById.get("story-prologue")?.startable, true)
+  assert.equal(highById.get("story-ch1")?.startable, false)
+  assert.equal(highById.get("story-ch2")?.startable, false)
+  assert.equal(highById.get("test-daily")?.startable, true)
+})
+
+await test("地图列表：主线按 order 排序，通关上一章后才解锁下一章", async () => {
+  const user = await newUser({ playerLevel: 60 })
+  const load = async () =>
+    (await call(user, "GET", `/users/${user}/expeditions/maps`)).body.data as Array<{
+      id: string
+      kind: string
+      startable: boolean
+      lockedReason: string | null
+    }>
+
+  const maps = await load()
+  assert.deepEqual(
+    maps.filter((m) => m.kind === "main").map((m) => m.id),
+    ["story-prologue", "story-ch1", "story-ch2", "test-trial", "test-threat"],
+  )
+  const byId = new Map(maps.map((m) => [m.id, m]))
+  assert.equal(byId.get("story-prologue")?.startable, true)
+  assert.equal(byId.get("story-ch1")?.startable, false)
+  assert.match(byId.get("story-ch1")?.lockedReason ?? "", /序章/)
+  assert.equal(byId.get("story-ch2")?.startable, false)
+
+  const body = (mapId: string) => ({
+    mapId,
+    cardIds: [1],
+    allocation: { slots: 4, apUpgrade: false, maxRarity: "L" },
+  })
+  const rejected = await call(user, "POST", `/users/${user}/expeditions`, body("story-ch1"))
+  assert.equal(rejected.status, 409, JSON.stringify(rejected.body))
+  assert.equal(rejected.body.error.code, "map_locked")
+
+  await db.insert(mapClears).values({ userId: user, mapId: "story-prologue", clears: 1 })
+  const afterPrologue = new Map((await load()).map((m) => [m.id, m]))
+  assert.equal(afterPrologue.get("story-ch1")?.startable, true)
+  assert.equal(afterPrologue.get("story-ch2")?.startable, false)
+
+  await db.insert(mapClears).values({ userId: user, mapId: "story-ch1", clears: 1 })
+  const afterCh1 = new Map((await load()).map((m) => [m.id, m]))
+  assert.equal(afterCh1.get("story-ch2")?.startable, true)
 })
 
 await test("/progress 带上每个功能的锁状态，和服务端实际校验一致", async () => {

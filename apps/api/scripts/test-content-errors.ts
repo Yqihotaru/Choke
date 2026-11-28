@@ -175,6 +175,13 @@ const CASES: Case[] = [
   { name: "通关目标的标记没人能设置", breakIt: editJson("maps/test-threat.json", (d) => (d.objectives[1].flag = "never-set")), expect: "never-set" },
   { name: "日常图通关目标写了标记", breakIt: editJson("maps/test-daily.json", (d) => (d.objectives = [{ flag: "x" }])), expect: "只能写档位" },
   { name: "格子威胁值超出范围", breakIt: editJson("maps/test-threat.json", (d) => (d.nodes.n3a.threat = 99)), expect: "threat" },
+  // ---- 主线排序与章节前置 ----
+  { name: "主线地图缺 order", breakIt: editJson("maps/test-trial.json", (d) => delete d.order), expect: "主线地图必须写 order" },
+  { name: "主线地图 order 重复", breakIt: editJson("maps/test-trial.json", (d) => (d.order = 1)), expect: "重复" },
+  { name: "前置地图不存在", breakIt: editJson("maps/story-ch2.json", (d) => (d.after = "nope")), expect: "前置地图 nope 不存在" },
+  { name: "前置地图 order 不小于本图", breakIt: editJson("maps/story-ch1.json", (d) => (d.after = "story-ch2")), expect: "order 必须小于本图" },
+  { name: "把自己设为前置", breakIt: editJson("maps/story-ch1.json", (d) => (d.after = "story-ch1")), expect: "不能把自己设为前置" },
+  { name: "非主线地图设置前置", breakIt: editJson("maps/test-daily.json", (d) => (d.after = "story-ch1")), expect: "只有主线地图能设置前置" },
   // ---- 文件层面 ----
   { name: "目录里有非 JSON 文件", breakIt: (root) => fs.writeFileSync(path.join(root, "enemies/notes.txt"), "x"), expect: "没接入：enemies/notes.txt" },
   {

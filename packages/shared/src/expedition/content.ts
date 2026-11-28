@@ -247,6 +247,10 @@ export const mapSchema = z.strictObject({
   objectives: z.array(objectiveSchema).max(3).optional(),
   /** 开始这张图要先解锁的功能（unlocks.json 的 id）；不写就按 kind：main 看 mainline，season 看 season，日常和周常不设限 */
   unlock: id.optional(),
+  /** 主线章节的显示顺序；kind=main 必填且不能重复，数字小的排前面 */
+  order: int.nonnegative().optional(),
+  /** 要先通关哪张地图才能开始；只能指向 order 更小的主线地图 */
+  after: id.optional(),
 })
 export type MapDef = z.infer<typeof mapSchema>
 export type MapNode = z.infer<typeof mapNodeSchema>
@@ -380,6 +384,21 @@ export function parseWorldContent(
     if (map.unlock && !Object.hasOwn(CONTENT.unlocks, map.unlock)) {
       issue([...base, "unlock"], `功能 ${map.unlock} 不在 unlocks.json 里`)
     }
+    if (map.kind === "main" && map.order === undefined) {
+      issue([...base, "order"], "主线地图必须写 order")
+    }
+    if (map.after) {
+      const prev = world.maps[map.after]
+      if (!prev) {
+        issue([...base, "after"], `前置地图 ${map.after} 不存在`)
+      } else if (map.after === mapId) {
+        issue([...base, "after"], "不能把自己设为前置")
+      } else if (map.kind !== "main" || prev.kind !== "main") {
+        issue([...base, "after"], "只有主线地图能设置前置")
+      } else if (map.order !== undefined && prev.order !== undefined && prev.order >= map.order) {
+        issue([...base, "after"], `前置地图 ${map.after} 的 order 必须小于本图`)
+      }
+    }
     for (const [poolId, entries] of Object.entries(map.pools ?? {})) {
       entries.forEach((entry, i) => {
         const path = [...base, "pools", poolId, i, "node"]
@@ -474,6 +493,14 @@ export function parseWorldContent(
         issue([...base, "objectives", i, "flag"], `标记 ${objective.flag} 没有任何剧情或事件能设置`)
       }
     })
+  }
+
+  const mainOrders = new Map<number, string>()
+  for (const [mapId, map] of Object.entries(world.maps)) {
+    if (map.kind !== "main" || map.order === undefined) continue
+    const duplicate = mainOrders.get(map.order)
+    if (duplicate) issue(["maps", mapId, "order"], `主线 order ${map.order} 和 ${duplicate} 重复`)
+    else mainOrders.set(map.order, mapId)
   }
 
   if (problems.length > 0) throw new Error(`出征内容校验失败：\n${problems.join("\n")}`)
