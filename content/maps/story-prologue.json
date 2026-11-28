@@ -1,0 +1,47 @@
+{
+  "kind": "main",
+  "name": "序章 · 鼠标萌新与神秘 MP 房",
+  "summary": "刚装好 osu! 就被拉进 1 号 MP 房暴打？组起你的 4 人初始投影小队，先把眼前的 2★ 谱面残影打穿。",
+  "deckSize": 4,
+  "start": "n1",
+  "rewards": "story-prologue-clear",
+  "nodes": {
+    "n1": {
+      "type": "story",
+      "story": "prologue-intro",
+      "title": "1 号 MP 房的惨败",
+      "pos": [0, 0],
+      "next": ["n2"]
+    },
+    "n2": {
+      "type": "battle",
+      "encounter": "tutorial-ghost",
+      "rewards": "story-ch1-battle",
+      "title": "2★ 热身图残影",
+      "pos": [1, 0],
+      "next": ["n3"]
+    },
+    "n3": {
+      "type": "event",
+      "event": "osu-sweaty-hands",
+      "title": "手汗打滑",
+      "pos": [2, 0],
+      "next": ["n4"]
+    },
+    "n4": {
+      "type": "boss",
+      "encounter": "ghost",
+      "rewards": "story-prologue-clear",
+      "title": "5★ 折返滑条怨灵",
+      "pos": [3, 0],
+      "next": ["n5"]
+    },
+    "n5": {
+      "type": "story",
+      "story": "prologue-clear",
+      "title": "第一次 Full Combo",
+      "pos": [4, 0],
+      "next": []
+    }
+  }
+}

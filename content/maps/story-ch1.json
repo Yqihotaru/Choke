@@ -1,0 +1,134 @@
+{
+  "kind": "main",
+  "name": "第 1 章 · 农场与手汗的试炼",
+  "summary": "告别 2★ 萌新期！穿过农图冲刺线与基本功试炼，顶住 727 与群友毒奶，在关底击败巨像节拍器。",
+  "deckSize": 5,
+  "start": "n1",
+  "rewards": "story-ch1-clear",
+  "objectives": [
+    { "label": "全队顶住毒奶或赌赢 WYSI", "flag": "wysi" },
+    { "label": "以高威胁档位通关（≥ 2 档）", "tierAtLeast": 2 },
+    { "label": "无惧最后三圈手抖（触发不 Choke）", "flag": "no-choke-spirit" }
+  ],
+  "nodes": {
+    "n1": {
+      "type": "story",
+      "story": "ch1-intro",
+      "title": "踏入试炼场",
+      "pos": [0, 0],
+      "next": ["n2"]
+    },
+    "n2": {
+      "type": "battle",
+      "encounter": "ghost",
+      "rewards": "story-ch1-battle",
+      "title": "Sliderbreak 漏尾怨灵",
+      "pos": [1, 0],
+      "next": ["n3"]
+    },
+    "n3": {
+      "type": "branch",
+      "prompt": "Pick & Ban：左路是高风险农图冲刺线，右路是稳扎稳打基本功线",
+      "pos": [2, 0],
+      "next": ["n4a", "n4b"]
+    },
+    "n4a": {
+      "type": "event",
+      "event": "osu-727-wysi",
+      "title": "727 · WYSI",
+      "hint": "农图冲刺线：刺激高赏金",
+      "threat": 1,
+      "pos": [3, -1],
+      "next": ["n5a"]
+    },
+    "n5a": {
+      "type": "battle",
+      "encounter": "wind-chime",
+      "rewards": "story-ch1-battle",
+      "title": "偏拍 50 噪点",
+      "pos": [4, -1],
+      "next": ["n6"]
+    },
+    "n4b": {
+      "type": "event",
+      "event": "osu-toxic-cheer",
+      "title": "语音毒奶",
+      "hint": "基本功线：稳健控血",
+      "pos": [3, 1],
+      "next": ["n5b"]
+    },
+    "n5b": {
+      "type": "battle",
+      "encounter": "rock-drummer",
+      "rewards": "story-ch1-battle",
+      "title": "OD10 重拍单敲",
+      "pos": [4, 1],
+      "next": ["n6"]
+    },
+    "n6": {
+      "type": "rest",
+      "title": "中场暂停 · 擦手汗换笔尖",
+      "pos": [5, 0],
+      "next": ["n7"]
+    },
+    "n7": {
+      "type": "battle",
+      "encounter": "vanguard",
+      "rewards": "story-ch1-chest",
+      "title": "守门精英 · 1-2 大跳先锋",
+      "threat": 1,
+      "pos": [6, 0],
+      "next": ["n8"]
+    },
+    "n8": {
+      "type": "branch",
+      "prompt": "精英战后：左边有数位板奇遇，右边直奔补给宝箱",
+      "pos": [7, 0],
+      "next": ["n9a", "n9b"]
+    },
+    "n9a": {
+      "type": "event",
+      "event": "osu-tablet-crash",
+      "title": "数位板驱动崩溃",
+      "hint": "奇遇分支：换碎片或途中经验",
+      "pos": [8, -1],
+      "next": ["n10"]
+    },
+    "n9b": {
+      "type": "treasure",
+      "rewards": "story-ch1-chest",
+      "title": "图池补给箱",
+      "hint": "稳妥路线：直取物资",
+      "pos": [8, 1],
+      "next": ["n10"]
+    },
+    "n10": {
+      "type": "event",
+      "event": "osu-last-three-circles",
+      "title": "最后三个圈的诅咒",
+      "pos": [9, 0],
+      "next": ["n11"]
+    },
+    "n11": {
+      "type": "rest",
+      "title": "决战前整备 · 深呼吸",
+      "pos": [10, 0],
+      "next": ["n12"]
+    },
+    "n12": {
+      "type": "story",
+      "story": "ch1-boss-pre",
+      "title": "节奏暴君现身",
+      "pos": [11, 0],
+      "next": ["n13"]
+    },
+    "n13": {
+      "type": "boss",
+      "encounter": "colossus-metronome",
+      "rewards": "story-ch1-boss",
+      "title": "关底 BOSS · 巨像节拍器",
+      "pos": [12, 0],
+      "next": []
+    }
+  }
+}

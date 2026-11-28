@@ -1,0 +1,13 @@
+{
+  "fixed": {
+    "coins": 120,
+    "items": [{ "itemId": "shard-R", "count": 2 }]
+  },
+  "random": {
+    "rolls": 1,
+    "entries": [
+      { "weight": 2, "reward": { "packs": [{ "pool": "normal", "count": 1 }] } },
+      { "weight": 3, "reward": { "coins": 80 } }
+    ]
+  }
+}

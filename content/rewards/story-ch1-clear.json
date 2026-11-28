@@ -1,0 +1,14 @@
+{
+  "fixed": {
+    "coins": 160,
+    "cardExp": 80
+  },
+  "starBonus": {
+    "2": { "coins": 120 },
+    "3": { "packs": [{ "pool": "golden", "count": 1 }] }
+  },
+  "firstClear": {
+    "expPool": 600,
+    "packs": [{ "pool": "golden", "count": 1 }]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "fixed": {
+    "coins": 40,
+    "cardExp": 35
+  },
+  "random": {
+    "rolls": 1,
+    "entries": [
+      { "weight": 3, "reward": { "items": [{ "itemId": "shard-C", "count": 2 }] } },
+      { "weight": 2, "reward": { "items": [{ "itemId": "shard-UC", "count": 1 }] } },
+      { "weight": 2 }
+    ]
+  }
+}

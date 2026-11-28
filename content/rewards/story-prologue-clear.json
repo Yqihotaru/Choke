@@ -1,0 +1,10 @@
+{
+  "fixed": {
+    "coins": 80,
+    "cardExp": 40
+  },
+  "firstClear": {
+    "expPool": 200,
+    "packs": [{ "pool": "normal", "count": 2 }]
+  }
+}

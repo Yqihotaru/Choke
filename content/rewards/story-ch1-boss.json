@@ -1,0 +1,12 @@
+{
+  "fixed": {
+    "coins": 180,
+    "cardExp": 90,
+    "items": [{ "itemId": "shard-E", "count": 2 }]
+  },
+  "firstClear": {
+    "expPool": 500,
+    "coins": 220,
+    "packs": [{ "pool": "normal", "count": 2 }]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "title": "最后三个圈的手抖诅咒",
+  "text": "进度条走到 99%，只剩最后三个大圆圈，心跳已经飙到 180。",
+  "options": [
+    {
+      "text": "赌一把全压爆发！（威胁 +2，掉 18% 血，拿 280 金币与 1 个 LEGENDARY 碎片）",
+      "threat": 2,
+      "hpLossPct": 0.18,
+      "reward": { "coins": 280, "items": [{ "itemId": "shard-L", "count": 1 }] },
+      "set": ["no-choke-spirit"]
+    },
+    {
+      "text": "放慢呼吸求稳收尾（安全通过）"
+    }
+  ]
+}
