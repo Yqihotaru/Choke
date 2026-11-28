@@ -50,7 +50,7 @@ function Test-Port([int]$port) {
   }
 }
 
-Write-Host "[1/4] 检查运行环境与依赖..."
+Write-Host "[1/4] Checking environment and dependencies..."
 
 if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
   Write-Host "[Choke!] pnpm was not found."
@@ -84,16 +84,16 @@ if (-not (Test-Path ".env")) {
 }
 
 $dbPort = Get-Port (Read-EnvValue "DATABASE_URL") 55432
-Write-Host "[2/4] 检查数据库 PostgreSQL (127.0.0.1:$dbPort)..."
+Write-Host "[2/4] Checking PostgreSQL (127.0.0.1:$dbPort)..."
 if (-not (Test-Port $dbPort) -and (Test-Path "$PSScriptRoot\postgres.ps1")) {
-  Write-Host "[2/4] 正在拉起 PostgreSQL（若上次直接关窗，会先做几秒日志恢复，请勿关闭）..."
+  Write-Host "[2/4] Starting PostgreSQL (may take a few seconds for WAL recovery, please wait)..."
   & "$PSScriptRoot\postgres.ps1" start
   if ($LASTEXITCODE -ne 0) {
     Write-Host "[Choke!] Failed to start PostgreSQL."
     exit 1
   }
 }
-Write-Host "[2/4] PostgreSQL 已就绪。"
+Write-Host "[2/4] PostgreSQL is ready."
 
 # Read ports from .env so the web server and the osu! redirect stay in sync.
 $webBase = Read-EnvValue "WEB_BASE_URL"
@@ -114,48 +114,48 @@ if (-not (Test-Url "$apiUrl/health")) {
     Write-Host "[Choke!] Stop the process using that port first."
     exit 1
   }
-  Write-Host "[3/4] 正在新窗口启动后端 API ($apiUrl/health)..."
+  Write-Host "[3/4] Starting API in a new window ($apiUrl/health)..."
   Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "pnpm dev:api" -WorkingDirectory $root
   $apiStart = Get-Date
   $apiDeadline = $apiStart.AddSeconds(90)
   while ((Get-Date) -lt $apiDeadline) {
     if (Test-Url "$apiUrl/health") { break }
     $elapsed = [int]((Get-Date) - $apiStart).TotalSeconds
-    Write-Host -NoNewline ("`r[3/4] 等待后端 API 加载内容并监听端口... ({0}s)" -f $elapsed)
+    Write-Host -NoNewline ("`r[3/4] Waiting for API server to load content and listen... ({0}s)" -f $elapsed)
     Start-Sleep -Milliseconds 400
   }
   Write-Host ""
   if (Test-Url "$apiUrl/health") {
-    Write-Host "[3/4] 后端 API 已就绪。"
+    Write-Host "[3/4] API server is ready."
   } else {
-    Write-Host "[3/4] 后端 API 仍在启动中（请看 API 窗口日志），继续启动前端..."
+    Write-Host "[3/4] API is still booting (check the API window), continuing to Web..."
   }
 } else {
-  Write-Host "[3/4] 后端 API 已在运行 ($apiUrl/health)。"
+  Write-Host "[3/4] API is already running ($apiUrl/health)."
 }
 
 if (-not (Test-Url "$webUrl/")) {
   if (-not (Test-Port $webPort)) {
-    Write-Host "[4/4] 正在新窗口启动前端 Web ($webUrl/)..."
+    Write-Host "[4/4] Starting Web in a new window ($webUrl/)..."
     Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "pnpm exec vite --host localhost" -WorkingDirectory $root
   } else {
-    Write-Host "[4/4] 端口 $webPort 已被占用，等待前端响应..."
+    Write-Host "[4/4] Port $webPort is occupied, waiting for Web response..."
   }
   $webStart = Get-Date
   $deadline = $webStart.AddSeconds(120)
   while ((Get-Date) -lt $deadline) {
     if (Test-Url "$webUrl/") {
       Write-Host ""
-      Write-Host "[4/4] 前端 Web 已就绪，正在打开浏览器..."
+      Write-Host "[4/4] Web server is ready, opening browser..."
       Start-Process $webUrl
       break
     }
     $elapsed = [int]((Get-Date) - $webStart).TotalSeconds
-    Write-Host -NoNewline ("`r[4/4] 等待前端 Vite 编译就绪... ({0}s)" -f $elapsed)
+    Write-Host -NoNewline ("`r[4/4] Waiting for Vite dev server... ({0}s)" -f $elapsed)
     Start-Sleep -Milliseconds 400
   }
 } else {
-  Write-Host "[4/4] 前端 Web 已在运行 ($webUrl/)，正在打开浏览器..."
+  Write-Host "[4/4] Web is already running ($webUrl/), opening browser..."
   Start-Process $webUrl
 }
 
