@@ -17,6 +17,9 @@ import { titleOf } from "./layout"
 
 const elementName = (element: string) => (ELEMENT_LABEL as Record<string, string>)[element] ?? element
 
+/** 这些错误说明本地操作和服务端已经分叉，直接按服务端进度恢复 */
+const RESYNC_CODES = new Set(["out_of_sync", "invalid_action", "too_many_actions", "no_battle"])
+
 function inputsOf(view: ExpeditionView, ids: number[]): BattleInputCard[] {
   const byId = new Map(view.pool.map((entry) => [entry.userCardId, entry.face]))
   return ids.flatMap((uid) => {
@@ -212,18 +215,24 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
   const [initialExpPool] = useState(() => view.pending.expPool ?? 0)
 
   /** 和服务端对不上时：丢掉本地没确认的操作，按服务端的进度重放 */
+  const resyncing = useRef(false)
   const resync = useCallback(async () => {
-    const fresh = await fetchCurrentExpedition(userId)
-    if (!fresh?.battle) return
-    confirmed.current = fresh.battle.actions.length
-    queue.current = []
-    const next = replayFrom(fresh)
-    stateRef.current = next
-    setState(next)
-    setPending(0)
-    setSyncError(null)
-    setActionError("操作和服务端进度对不上，已按服务端的进度恢复")
-    onViewRef.current(fresh)
+    resyncing.current = true
+    try {
+      const fresh = await fetchCurrentExpedition(userId)
+      if (!fresh?.battle) throw new Error("服务端已经没有这场战斗了，请返回地图重新进入")
+      confirmed.current = fresh.battle.actions.length
+      queue.current = []
+      const next = replayFrom(fresh)
+      stateRef.current = next
+      setState(next)
+      setPending(0)
+      setSyncError(null)
+      setActionError("操作和服务端进度对不上，已按服务端的进度恢复")
+      onViewRef.current(fresh)
+    } finally {
+      resyncing.current = false
+    }
   }, [userId])
 
   const pump = useCallback((): Promise<void> => {
@@ -239,7 +248,8 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
           setSyncError(null)
           onViewRef.current(next)
         } catch (reason) {
-          if (reason instanceof ApiError && reason.code === "out_of_sync") {
+          const code = reason instanceof ApiError ? reason.code : undefined
+          if (code && RESYNC_CODES.has(code)) {
             await resync().catch((again) => setSyncError(errorText(again)))
           } else {
             setSyncError(errorText(reason))
@@ -256,6 +266,14 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
   }, [userId, resync])
 
   const act = (action: BattleAction) => {
+    if (resyncing.current) {
+      setActionError("正在同步服务器进度，稍等一下再出招")
+      return
+    }
+    if (syncError) {
+      setActionError("有操作还没保存到服务器，先点上方横幅的「重试上传」")
+      return
+    }
     const { state: next, error } = withAction(stateRef.current, action)
     if (!error) {
       stateRef.current = next
@@ -294,6 +312,18 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
     exitLabel: "返回地图",
     onExit: () => void leave(),
     canRestart: false,
+    syncNote:
+      syncError && pending > 0 ? (
+        <>
+          <b>操作未保存</b>
+          <span>
+            {syncError}（还有 {pending} 步没传到服务器）
+          </span>
+          <button type="button" onClick={() => void pump()} data-sfx="none">
+            重试上传
+          </button>
+        </>
+      ) : undefined,
     resultNote: won ? (
       serverStatus === "won" && synced ? (
         <div>

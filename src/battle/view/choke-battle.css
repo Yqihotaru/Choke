@@ -2187,6 +2187,40 @@
   background: linear-gradient(to bottom, transparent 25%, rgb(148 42 54 / 0.16));
   opacity: 0;
 }
+/* 远征：操作上传失败时的同步横幅（z-index 放在结算层 40 下面） */
+.choke-sync-note {
+  position: absolute;
+  top: 3.5cqw;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 0.55cqw;
+  max-width: 46cqw;
+  padding: 0.45cqw 0.8cqw;
+  border: 1px solid rgb(255 176 84 / 0.55);
+  border-radius: 0.4cqw;
+  background: rgb(44 25 8 / 0.94);
+  box-shadow: 0 0.35cqw 1.2cqw rgb(0 0 0 / 0.45);
+  color: #ffd7a1;
+  font-size: 0.72cqw;
+  line-height: 1.35;
+}
+.choke-sync-note b { color: #ffb054; white-space: nowrap; }
+.choke-sync-note span { min-width: 0; }
+.choke-sync-note button {
+  flex: none;
+  padding: 0.25cqw 0.55cqw;
+  border: 1px solid rgb(255 176 84 / 0.65);
+  border-radius: 0.25cqw;
+  background: rgb(255 176 84 / 0.16);
+  color: #ffe0b3;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.choke-sync-note button:hover { background: rgb(255 176 84 / 0.3); }
 /* 队伍血量不到四分之一：指令台四边常驻一圈暗红，慢慢呼吸。伪元素只动 opacity */
 .choke-stage[data-danger="true"] .choke-deck {
   position: relative;

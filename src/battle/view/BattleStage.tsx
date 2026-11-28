@@ -999,6 +999,11 @@ export function BattleStage({
         ref={stageRef}
       >
         <div className="choke-hurt-vignette" ref={hurtTintRef} aria-hidden />
+        {host?.syncNote && (
+          <div className="choke-sync-note" role="alert">
+            {host.syncNote}
+          </div>
+        )}
         {/* ================= 1. 上半区：BOSS 舞台 + 梯形侧面支援铭牌（仅在有支援时显示，无空表框） ================= */}
         <section className="choke-boss-zone" ref={bossRef} style={bossBgStyle(encounter.background)}>
           <div

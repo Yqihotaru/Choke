@@ -15,6 +15,8 @@ export interface BattleHostHooks {
   resultActions?: ReactNode
   /** 结算层标题下面多说一句（比如远征里的星数、缺什么） */
   resultNote?: ReactNode
+  /** 战斗中持续同步状态（远征里上传失败时显示在舞台顶部的横幅）；不传不显示 */
+  syncNote?: ReactNode
 }
 
 /** 教学战顶部实时 4 步战术教练提示，随战局自动切换 */

@@ -909,6 +909,11 @@ export function BattleStage({
         ref={stageRef}
       >
         <div className="choke-hurt-vignette" ref={hurtTintRef} aria-hidden />
+        {host?.syncNote && (
+          <div className="choke-sync-note" role="alert">
+            {host.syncNote}
+          </div>
+        )}
         {/* ================= 1. 顶栏：工具在两头，回合在正中 ================= */}
         <header className="choke-topbar">
           <div className="choke-topbar__side">
