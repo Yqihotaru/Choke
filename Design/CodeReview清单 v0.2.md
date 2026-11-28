@@ -7,7 +7,7 @@
 >
 > 阅读顺序按你的要求调整：**第一节是已修复（全部前置并标 ✅）**，第二节起才是待修问题；第五节单独记录「故意为之 / 已排除」，防止下次复查重复报（空白节点已按设计说明移到这里）。
 > 编号延续 v0.1，新问题从 **#39** 开始。
-> 2026-11-28：**#39 / #41 / #42 已修复**，证据见 §1.4。
+> 2026-11-28：**#39 / #40 / #41 / #42 已修复**，证据见 §1.4。
 
 ---
 
@@ -56,20 +56,16 @@
 ### 1.4 v0.2 落地修复（2026-11-28）
 
 - **#39 ✅ 地图排序 + 章节前置**：`mapSchema` 新增 `order` / `after`（主线必须有唯一 `order`；`after` 只能指向 `order` 更小的主线图；`content:check` 会拦缺 `order`、自指、倒序）。序章 / Ch1 / Ch2 的 `order` 为 0 / 1 / 2，Ch1 `after: story-prologue`、Ch2 `after: story-ch1`。`listMaps` 按 `order` 排序并把章节锁并入 `startable` / `lockedReason`；`startExpedition` 在事务内校验前置通关，未满足返回 `409 map_locked`。按讨论采用**严格模式**：没有「已通关本章可绕过前置」的豁免（测试库可丢弃，不需要照顾老号）。`MapSelect` 本来就按 API 顺序渲染并显示 `lockedReason`，无需改动。测试：`test-feature-locks` 覆盖排序、逐章解锁、直接开图 409；`test-content-errors` 新增 6 条反向用例。
+- **#40 ✅ 战斗上传失败的中途提示**：`BattleHostHooks` 新增 `syncNote`，经典 / 新版两个舞台在顶部渲染同步横幅。`ExpeditionBattle` 在队列非空且上传失败时显示「还有 N 步没传到服务器」+「重试上传」，并禁止继续出招；`out_of_sync` / `invalid_action` / `too_many_actions` / `no_battle` 统一按服务端进度自动 `resync()` 一次，`resync` 期间锁操作；服务端已经没有这场战斗时给出明确提示。结算层原有的报错/重试按钮保留。验证：`pnpm typecheck`、`pnpm lint`、`pnpm build` 通过。
 - **#41 ✅ onboard 原子化**：`grantPacks` / `grantStarterPacks` 增加可选 `tx`；`/auth/onboard` 的条件 UPDATE 与发新手包放进同一个事务。发包失败会回滚 `onboarded`，用户可以重试补领。测试：`test-account-binding` 覆盖重复引导只发一次、背包与流水不变。
 - **#42 ✅ Ch2 宝箱奖励表**：`content/maps/story-ch2.json` 的 `n12` 改为 `story-ch2-chest`。
 - **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm content:check`（版本 `b4bdf8bba927`）、`pnpm test:fast`（10/10）、`pnpm test:db`（12/12）全部通过。
 
 ---
 
-## 二、P1（1 项）
+## 二、P1（0 项）
 
-### #40 【新增】战斗操作上传失败时，中途完全没有提示
-
-- **位置**：`src/expedition/ExpeditionBattle.tsx:241-247`（失败只 `setSyncError`）、`:258-266`（`act` 继续入队）、`:288-312`（`syncError` 只出现在 `host.resultNote`）；`src/battle/host.ts:8-17` 只有 `resultNote / resultActions`，没有中途提示位
-- **问题**：网络断开或 4xx（除 `out_of_sync`）时，玩家在本地引擎里正常打完一整场，队列一直积压、服务端一条操作都没收到，界面上却没有任何异常；直到战斗结束才在结算区看到报错。
-- **影响**：玩家以为战果已记录，点「继续前进」时按钮永远是灰的；若是 `invalid_action`（400），「重试上传」会永远失败，只能退出战斗重进。这是最容易产生「我明明打赢了却没算」投诉的路径。
-- **建议**：把 `syncError` / `pending` 提升为舞台级横幅（给 `BattleHostHooks` 加 `syncNote`），失败时禁用 `onPlay/onEndTurn`；所有 4xx 上传错误按 `out_of_sync` 处理，自动 `resync()` 一次。
+暂无。#40 已修复，见 §1.4。
 
 ---
 
@@ -177,8 +173,7 @@
 
 ## 七、建议修复顺序
 
-> #39 / #41 / #42 已于 2026-11-28 完成（见 1.4）。
+> #39 / #40 / #41 / #42 已于 2026-11-28 完成（见 1.4）。
 
-1. **#40**（战斗同步提示，要动 `BattleHostHooks`，建议单独一批）
-2. **#43 / #44**（规则对称 + 唯一索引收口）
-3. 其余 P2 / P3 按迭代排。
+1. **#43 / #44**（规则对称 + 唯一索引收口）
+2. 其余 P2 / P3 按迭代排。
