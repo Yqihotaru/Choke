@@ -356,6 +356,7 @@ export async function authRoutes(app: FastifyInstance) {
         /** 只用来决定要不要显示后台入口；真正的权限每次请求都在服务端查 */
         isAdmin: user.isAdmin,
         essence: user.essence,
+        expPool: user.expPool,
         items: await loadItems(user.id),
         coins: user.coins,
         hero,

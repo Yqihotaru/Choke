@@ -66,6 +66,7 @@ import {
 } from "../db/schema"
 import { recordQuestEvent } from "../quest-events"
 import { sendMail } from "../mail"
+import { addCardExperience, addExpPool } from "../card-exp"
 import { addPlayerExperience } from "../player-exp"
 import { grantAttachment } from "../rewards"
 import { TxAbort, lockUser, type Tx } from "../tx"
@@ -676,7 +677,7 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
     rewards = mergeRewards(...parts)
   }
 
-  const { playerExp = 0, ...attachment } = rewards
+  const { playerExp = 0, cardExp = 0, expPool = 0, ...attachment } = rewards
   const viaMail = end === "expired"
   if (viaMail && !isAttachmentEmpty(attachment)) {
     await sendMail(
@@ -693,6 +694,15 @@ async function finalize(tx: Tx, exp: ExpRow, end: ExpeditionEnd, now: number): P
     await grantAttachment(tx, exp.userId, attachment, { source: "expedition", sourceRef: String(exp.id) })
   }
   await addPlayerExperience(tx, exp.userId, playerExp, now)
+  await addCardExperience(
+    tx,
+    exp.userId,
+    exp.pool.map((entry) => entry.userCardId),
+    cardExp,
+  )
+  if (expPool > 0) {
+    await addExpPool(tx, exp.userId, expPool, { source: "expedition", sourceRef: String(exp.id) })
+  }
 
   if (cleared) {
     const questContext = { mapKind: exp.map.kind, mapId: exp.mapId, now }

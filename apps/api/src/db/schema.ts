@@ -84,6 +84,8 @@ export const users = pgTable("users", {
   heroBonus: integer("hero_bonus").notNull().default(0),
   /** 闪卡精华：只来自闪卡，只用于镀闪 */
   essence: integer("essence").notNull().default(0),
+  /** 经验池：可以随意分给任何一张卡，不能交易、不能转赠 */
+  expPool: integer("exp_pool").notNull().default(0),
   /** 市场用金币 */
   coins: integer("coins").notNull().default(100),
   /** 玩家等级 / 教程进度（由前端同步，市场等服务端校验） */

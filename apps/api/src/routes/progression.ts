@@ -38,8 +38,9 @@ import {
   type Rarity,
 } from "../shared/cards"
 import { db } from "../db/client"
-import { EXPEDITION_LOCK_MESSAGE, anyLocked, lockedUserCardIds } from "../expedition/locks"
+import { EXPEDITION_LOCK_MESSAGE, anyLocked, listedUserCardIds, lockedUserCardIds } from "../expedition/locks"
 import { cards, deckSlots, heroResonance, ledgerEntries, marketListings, userCards, users } from "../db/schema"
+import { expRoomOf } from "../card-exp"
 import { grantItems, loadItems, mergeStacks, spendItems } from "../items"
 import { recordLedger, type LedgerEntryInput } from "../ledger"
 import { recordQuestEvent } from "../quest-events"
@@ -274,6 +275,65 @@ export async function progressionRoutes(app: FastifyInstance) {
         coins: result.coins,
         items: result.items,
       },
+    }
+  })
+
+  /** 从经验池分经验给一张卡；分多少自己定，最多分到这张卡满级 */
+  app.post("/users/:userId/exp-pool/allocate", async (request, reply) => {
+    const params = z.object({ userId: z.string() }).parse(request.params)
+    const userId = requireSelf(request, reply, params.userId)
+    if (!userId) return
+    const body = z
+      .object({ userCardId: z.number().int().positive(), amount: z.number().int().min(1).max(10_000_000) })
+      .parse(request.body)
+
+    const result = await runTx(reply, async (tx) => {
+      await lockUser(tx, userId)
+      const [target] = await tx
+        .select({ id: userCards.id, cardId: userCards.cardId, level: userCards.level, exp: userCards.exp, rarity: cards.rarity })
+        .from(userCards)
+        .innerJoin(cards, eq(cards.id, userCards.cardId))
+        .where(and(eq(userCards.id, body.userCardId), eq(userCards.userId, userId)))
+        .limit(1)
+      if (!target) throw new TxAbort(404, "not_found", "卡不在这个账号的卡册里")
+      if ((await listedUserCardIds(tx, [target.id])).size > 0) {
+        throw new TxAbort(400, "card_listed", "挂在市场上的卡不能分配经验，先下架")
+      }
+
+      const room = expRoomOf(target)
+      if (room <= 0) throw new TxAbort(400, "max_level", "已经满级，不需要经验了")
+      if (body.amount > room) {
+        throw new TxAbort(400, "exp_over_cap", `这张卡最多还能吃 ${room} 点经验`, { room })
+      }
+
+      const [wallet] = await tx
+        .update(users)
+        .set({ expPool: sql`${users.expPool} - ${body.amount}` })
+        .where(and(eq(users.id, userId), gte(users.expPool, body.amount)))
+        .returning({ expPool: users.expPool })
+      if (!wallet) {
+        const [u] = await tx.select({ expPool: users.expPool }).from(users).where(eq(users.id, userId)).limit(1)
+        const have = u?.expPool ?? 0
+        throw new TxAbort(400, "not_enough_exp_pool", `经验池不足：${have} / ${body.amount}`, {
+          need: body.amount,
+          expPool: have,
+        })
+      }
+      await tx
+        .update(userCards)
+        .set({ exp: sql`${userCards.exp} + ${body.amount}` })
+        .where(eq(userCards.id, target.id))
+      await recordLedger(tx, userId, [{ kind: "expPool", delta: -body.amount, userCardId: target.id }], {
+        source: "exp-allocate",
+        sourceRef: String(target.id),
+      })
+      return { expPool: wallet.expPool }
+    })
+    if (!result) return
+
+    return {
+      ok: true,
+      data: { card: await loadCard(userId, body.userCardId), spent: body.amount, expPool: result.expPool },
     }
   })
 
