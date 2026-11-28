@@ -55,6 +55,24 @@ if (-not (Test-Path ".env")) {
   Write-Host "[Choke!] otherwise osu! login will fail."
   Write-Host "[Choke!] WEB_BASE_URL will fall back to http://localhost:5207."
   Write-Host ""
+} else {
+  $osuId = Read-EnvValue "OSU_CLIENT_ID"
+  $osuSecret = Read-EnvValue "OSU_CLIENT_SECRET"
+  if (-not $osuId -or -not $osuSecret) {
+    Write-Host "[Choke!] NOTE: OSU_CLIENT_ID or OSU_CLIENT_SECRET is empty in .env."
+    Write-Host "[Choke!] osu! OAuth login will not work (guest/email login still works)."
+    Write-Host ""
+  }
+}
+
+$dbPort = Get-Port (Read-EnvValue "DATABASE_URL") 55432
+if (-not (Test-Port $dbPort) -and (Test-Path "$PSScriptRoot\postgres.ps1")) {
+  Write-Host "[Choke!] PostgreSQL is not listening on port $dbPort. Starting via scripts/postgres.ps1..."
+  & "$PSScriptRoot\postgres.ps1" start
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "[Choke!] Failed to start PostgreSQL."
+    exit 1
+  }
 }
 
 # Read ports from .env so the web server and the osu! redirect stay in sync.
@@ -77,6 +95,7 @@ if (-not (Test-Url "$apiUrl/health")) {
   if (Test-Port $apiPort) {
     Write-Host "[Choke!] Port $apiPort is occupied but /health is not responding."
     Write-Host "[Choke!] Stop the process using that port first."
+    exit 1
   }
   Write-Host "[Choke!] Starting API in a new window..."
   Start-Process -FilePath "cmd.exe" -ArgumentList "/k", "pnpm dev:api" -WorkingDirectory $root
