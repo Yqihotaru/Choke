@@ -11,6 +11,7 @@ import type { BattleState } from "@choke/shared/battle/types"
 import type { ExpeditionView } from "@choke/shared/expedition/view"
 
 import { fetchCurrentExpedition, retryBattle, submitLineup, uploadBattleActions } from "./api"
+import { CardExpStrip } from "./CardExpStrip"
 import { errorText } from "./common"
 import { titleOf } from "./layout"
 
@@ -206,6 +207,9 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
   const [actionError, setActionError] = useState<string | null>(null)
   const [working, setWorking] = useState(false)
   const [uiMode, setUiMode] = useState<BattleUiMode>(() => readBattleUiMode())
+  const [initialPool] = useState(() => view.pool)
+  const [initialCardExp] = useState(() => view.pending.cardExp ?? 0)
+  const [initialExpPool] = useState(() => view.pending.expPool ?? 0)
 
   /** 和服务端对不上时：丢掉本地没确认的操作，按服务端的进度重放 */
   const resync = useCallback(async () => {
@@ -283,6 +287,8 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
   const serverStatus = battleView.status
   const synced = pending === 0 && !syncError
   const won = state.phase === "won"
+  const gainedCardExp = Math.max(0, (view.pending.cardExp ?? 0) - initialCardExp)
+  const gainedExpPool = Math.max(0, (view.pending.expPool ?? 0) - initialExpPool)
 
   const host: BattleHostHooks = {
     exitLabel: "返回地图",
@@ -290,7 +296,14 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
     canRestart: false,
     resultNote: won ? (
       serverStatus === "won" && synced ? (
-        <>本场 ★ {battleView.stars ?? 0}，战果已记录</>
+        <div>
+          <div>
+            本场 ★ {battleView.stars ?? 0}，战果已记录
+            {gainedCardExp > 0 ? ` · 卡牌 EXP +${gainedCardExp}` : ""}
+            {gainedExpPool > 0 ? ` · 经验池 +${gainedExpPool}` : ""}
+          </div>
+          {gainedCardExp > 0 && <CardExpStrip cards={initialPool} gainedExp={gainedCardExp} />}
+        </div>
       ) : (
         <>{syncError ?? "正在记录战果……"}</>
       )

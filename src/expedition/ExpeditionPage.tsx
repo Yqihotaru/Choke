@@ -14,6 +14,7 @@ import {
   type MapListing,
 } from "./api"
 import { RewardChips, errorText, useExpeditionTheme } from "./common"
+import { CardExpStrip } from "./CardExpStrip"
 import { Fight, LineupPicker } from "./ExpeditionBattle"
 import { MapSelect } from "./MapSelect"
 import { Prepare } from "./Prepare"
@@ -24,7 +25,7 @@ type Screen =
   | { name: "select" }
   | { name: "prepare"; map: MapListing }
   | { name: "run"; view: ExpeditionView }
-  | { name: "settled"; result: ExpeditionSettlement }
+  | { name: "settled"; result: ExpeditionSettlement; pool: ExpeditionView["pool"] }
 
 const END_TEXT: Record<ExpeditionSettlement["end"], string> = {
   cleared: "通关结算",
@@ -91,9 +92,10 @@ export function ExpeditionPage() {
   }
 
   const goSettled = async (result: ExpeditionSettlement) => {
+    const pool = screen.name === "run" ? screen.view.pool : []
     setUnfinished(null)
     setInBattle(false)
-    setScreen({ name: "settled", result })
+    setScreen({ name: "settled", result, pool })
     if (userId) await refresh(userId).catch(() => undefined)
   }
 
@@ -169,6 +171,9 @@ export function ExpeditionPage() {
         <div className="ex-box" style={{ maxWidth: 520 }}>
           <h4>获得</h4>
           <RewardChips reward={result.rewards} />
+          {(result.rewards.cardExp ?? 0) > 0 && screen.pool.length > 0 && (
+            <CardExpStrip cards={screen.pool} gainedExp={result.rewards.cardExp ?? 0} />
+          )}
           {result.viaMail && <p className="ex-sub" style={{ marginTop: 8 }}>奖励已通过邮件发放。</p>}
           {result.objectives.length > 0 && (
             <>

@@ -1,7 +1,13 @@
 {
   "fixed": {
-    "coins": 40,
-    "cardExp": 35
+    "coins": 80,
+    "cardExp": 200,
+    "expPool": 1000
+  },
+  "starBonus": {
+    "1": { "expPool": 300, "cardExp": 60 },
+    "2": { "expPool": 200, "cardExp": 40 },
+    "3": { "expPool": 500, "cardExp": 100 }
   },
   "random": {
     "rolls": 1,

@@ -16,19 +16,17 @@ const int = z.number().int()
 // ---------- 奖励 / 掉落表 ----------
 
 /**
- * 一份奖励：邮件附件能装的东西，加上玩家经验和途中经验。
- * cardExp 是出征的每一张卡各得多少（途中经验，重复打也有）。
+ * 一份奖励：邮件附件能装的东西，加上玩家经验、途中经验与经验池。
+ * cardExp 是出征的每一张卡各得多少；expPool 进全局经验池，可自由分配给任意卡。
  */
 export const rewardSchema = mailAttachmentSchema.extend({
   playerExp: int.min(1).max(1_000_000).optional(),
   cardExp: int.min(1).max(1_000_000).optional(),
-})
-
-/** 首通奖励才能带经验池：重复打只给途中经验，不能有经验肥图 */
-export const firstClearRewardSchema = rewardSchema.extend({
   expPool: int.min(1).max(1_000_000).optional(),
 })
-export type Reward = z.infer<typeof firstClearRewardSchema>
+
+export const firstClearRewardSchema = rewardSchema
+export type Reward = z.infer<typeof rewardSchema>
 
 /**
  * 掉落表。发放顺序：固定 → 随机 → 星级加成；首通奖励只在整张图第一次通关时给。

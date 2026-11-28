@@ -5,8 +5,8 @@
     "expPool": 1500
   },
   "starBonus": {
-    "1": { "expPool": 375, "cardExp": 80 },
-    "2": { "expPool": 375, "cardExp": 80 },
+    "1": { "expPool": 450, "cardExp": 96 },
+    "2": { "expPool": 300, "cardExp": 64 },
     "3": { "expPool": 750, "cardExp": 160 }
   }
 }
