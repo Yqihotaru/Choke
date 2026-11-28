@@ -365,7 +365,7 @@ export const DeckPanel = memo(function DeckPanel({
       if (filled === 0) {
         const [spec, page] = await Promise.all([
           fetchEncounter(TUTORIAL_ENCOUNTER_ID),
-          fetchUserCards(userId, { sort: "pp", limit: 200 }),
+          fetchUserCards(userId, { sort: "pp", limit: 60 }),
         ])
         const { rows } = pickLineup(page.rows, spec.recommend, BASE_SLOTS)
         if (rows.length === 0) {
