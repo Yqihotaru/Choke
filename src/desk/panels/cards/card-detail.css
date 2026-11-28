@@ -194,6 +194,16 @@
 .card-detail__message.is-error {
   color: var(--bk-bad);
 }
+.card-detail__load-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  color: var(--bk-bad);
+  font-size: 12px;
+  line-height: 1.4;
+}
 
 /* 上架市场 */
 .card-detail__market {

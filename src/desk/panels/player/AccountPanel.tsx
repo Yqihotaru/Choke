@@ -81,9 +81,15 @@ export function AccountPanel({
   /** 账号类型以服务端为准（绑定之后邮箱号的 id 前缀不会变），没取回来前是 null */
   const [meState, setMe] = useState<AccountMe | null>(null)
   const [pendingState, setPending] = useState<PendingBind | null>(null)
+  const [meLoadFailed, setMeLoadFailed] = useState(false)
+  const [pendingLoadFailed, setPendingLoadFailed] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const me = userId ? meState : null
   const pending = userId ? pendingState : null
   const kind = me ? kindOf(me) : null
+  const loadFailedText = [meLoadFailed && "账号资料", pendingLoadFailed && "待确认绑定"]
+    .filter(Boolean)
+    .join("、")
   const isGuest = kind === "guest"
   /** 从 osu! 授权回来的结果：只在面板第一次打开时显示一次 */
   const [bindReturn] = useState(peekBindReturn)
@@ -109,18 +115,28 @@ export function AccountPanel({
     if (!userId) return
     const controller = new AbortController()
     fetchMe(controller.signal)
-      .then((data) => setMe(data))
-      .catch(() => {})
+      .then((data) => {
+        if (controller.signal.aborted) return
+        setMeLoadFailed(false)
+        setMe(data)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setMeLoadFailed(true)
+      })
     fetchPendingBind(controller.signal)
       .then((data) => {
+        if (controller.signal.aborted) return
+        setPendingLoadFailed(false)
         setPending(data.pending)
         if (bindReturn?.result === "choose" && !data.pending) {
           setBindMessage({ text: "这次绑定的确认已经过期，请重新点一次绑定 osu!", error: true })
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!controller.signal.aborted) setPendingLoadFailed(true)
+      })
     return () => controller.abort()
-  }, [userId, bindReturn])
+  }, [userId, bindReturn, reloadKey])
 
   const handleBindEmail = async () => {
     if (emailBusy) return
@@ -348,6 +364,19 @@ export function AccountPanel({
               </span>
             </div>
           </div>
+
+          {loadFailedText && (
+            <div className="account-load-error" role="alert">
+              <span className="bk-error">读取失败：{loadFailedText}。部分信息可能显示为空。</span>
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                onClick={() => setReloadKey((key) => key + 1)}
+              >
+                重试
+              </button>
+            </div>
+          )}
 
           <div className="account-stats">
             <div className="bk-box bk-stat">

@@ -99,6 +99,10 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const [items, setItems] = useState<ItemWallet | null>(null)
   const [coins, setCoins] = useState<number | null>(null)
   const [rerollInfo, setRerollInfo] = useState<SkillRerollInfo | null>(null)
+  const [meLoadFailed, setMeLoadFailed] = useState(false)
+  const [fuelLoadFailed, setFuelLoadFailed] = useState(false)
+  const [rerollLoadFailed, setRerollLoadFailed] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [resonance, setResonance] = useState<ResonanceOverview | null>(null)
   const [mirrorCards, setMirrorCards] = useState<ApiUserCard[]>([])
   const [mirrorPickerOpen, setMirrorPickerOpen] = useState(false)
@@ -112,6 +116,11 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
   const closeTimer = useRef<number | undefined>(undefined)
 
   const face = useMemo(() => toFace(current), [current])
+  const loadFailures = [
+    meLoadFailed && "精华 / 经验池 / 金币",
+    fuelLoadFailed && "可熔卡",
+    rerollLoadFailed && "洗技能信息",
+  ].filter((item): item is string => Boolean(item))
 
   /** 玩家自己关掉（×、点外面、Esc）：合上的一声 */
   const close = () => {
@@ -136,17 +145,20 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
     fetchMe()
       .then((data) => {
         if (!cancelled) {
+          setMeLoadFailed(false)
           setEssence(data.essence)
           setExpPool(data.expPool ?? 0)
           setItems(data.items ?? {})
           setCoins(data.coins)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setMeLoadFailed(true)
+      })
     return () => {
       cancelled = true
     }
-  }, [readOnly, userId])
+  }, [readOnly, userId, reloadKey])
 
   /** 重新拉可熔卡：新请求顶掉还没回来的旧请求，关弹窗时一并取消 */
   const loadFuel = (userCardId: number) => {
@@ -156,9 +168,14 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
     fuelController.current = controller
     fetchFuel(userId, userCardId, controller.signal)
       .then((data) => {
-        if (!controller.signal.aborted) setFuel(data.rows)
+        if (!controller.signal.aborted) {
+          setFuelLoadFailed(false)
+          setFuel(data.rows)
+        }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!controller.signal.aborted) setFuelLoadFailed(true)
+      })
   }
 
   useEffect(() => {
@@ -167,22 +184,32 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
     fuelController.current = controller
     fetchFuel(userId, card.userCardId, controller.signal)
       .then((data) => {
-        if (!controller.signal.aborted) setFuel(data.rows)
+        if (!controller.signal.aborted) {
+          setFuelLoadFailed(false)
+          setFuel(data.rows)
+        }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!controller.signal.aborted) setFuelLoadFailed(true)
+      })
     return () => controller.abort()
-  }, [readOnly, userId, card.userCardId])
+  }, [readOnly, userId, card.userCardId, reloadKey])
 
   useEffect(() => {
     if (readOnly || !userId || isHeroCardId(card.id)) return
     const controller = new AbortController()
     fetchSkillRerollInfo(userId, card.userCardId, controller.signal)
       .then((info) => {
-        if (!controller.signal.aborted) setRerollInfo(info)
+        if (!controller.signal.aborted) {
+          setRerollLoadFailed(false)
+          setRerollInfo(info)
+        }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!controller.signal.aborted) setRerollLoadFailed(true)
+      })
     return () => controller.abort()
-  }, [readOnly, userId, card.id, card.userCardId])
+  }, [readOnly, userId, card.id, card.userCardId, reloadKey])
 
   useEffect(() => {
     if (readOnly || !userId || !isHeroCardId(card.id)) return
@@ -678,6 +705,19 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
             </p>
           )}
 
+          {loadFailures.length > 0 && (
+            <p className="card-detail__load-error" role="alert">
+              <span>读取失败：{loadFailures.join("、")}，相关按钮可能被误判为不可用。</span>
+              <button
+                type="button"
+                className="bk-btn bk-btn--sm"
+                onClick={() => setReloadKey((key) => key + 1)}
+              >
+                重试
+              </button>
+            </p>
+          )}
+
           {!readOnly && tab === "train" && (
             <div className="bk-box card-detail__level">
               <div className="card-detail__level-head">
@@ -716,9 +756,11 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                       ? availableMirrors.length > 0
                         ? `选择 1 张镜像卡升命座（可用 ${availableMirrors.length} 张）`
                         : "没有可用的未共鸣镜像卡"
-                      : sameCardFuel > 0
-                        ? `消耗 1 张同名卡（剩余 ${sameCardFuel}）`
-                        : "没有同名卡"
+                      : fuelLoadFailed
+                        ? "可熔卡读取失败，点上方「重试」"
+                        : sameCardFuel > 0
+                          ? `消耗 1 张同名卡（剩余 ${sameCardFuel}）`
+                          : "没有同名卡"
                   }
                 >
                   {busy === "ascend" ? "升命中…" : `升命座 ${current.constellation}/${conCap}`}

@@ -147,6 +147,14 @@
   font-size: 12px;
   line-height: 1.6;
 }
+.account-load-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
 .account-bind {
   display: flex;
   flex-direction: column;
