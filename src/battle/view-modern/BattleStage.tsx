@@ -215,7 +215,8 @@ export function BattleStage({
   const [swapOpen, setSwapOpen] = useState(false)
   const [swapOutIdx, setSwapOutIdx] = useState(0)
   const { label, hint, cycle, stepGap } = usePlaybackSpeed()
-  const autoEnd = useAutoEndTurn({ battle, allowed: !tutorial, onEndTurn })
+  const [turnAnimating, setTurnAnimating] = useState(false)
+  const autoEnd = useAutoEndTurn({ battle, allowed: !tutorial && !turnAnimating, onEndTurn })
   /** 胜负已定后，等最后一击演完才亮结算层 */
   const [resultShown, setResultShown] = useState(battle?.phase === "won" || battle?.phase === "lost")
 
@@ -402,6 +403,7 @@ export function BattleStage({
       later(() => {
         setHpView({})
         setTurnView(null)
+        setTurnAnimating(false)
       }, 0)
       return
     }
@@ -648,10 +650,15 @@ export function BattleStage({
       }, delay)
     })
 
+    if (battle.events.some((event) => event.type === "turn")) {
+      later(() => setTurnAnimating(true), 0)
+    }
+
     // 事件全部播完后回落到引擎真实值，保证长时间挂机也不会和状态脱节
     later(() => {
       setHpView(hpTruth.current)
       setTurnView(null)
+      setTurnAnimating(false)
     }, battle.events.length * stepGap + 520)
   }, [battle, flash, flashLoss, hitBurst, hurt, later, popup, stepGap, sweepBanner])
 
@@ -1322,10 +1329,11 @@ export function BattleStage({
               className="choke-btn-end"
               data-auto-end={autoEnd.pending ? "true" : undefined}
               onClick={() => {
+                if (turnAnimating) return
                 playSfx("whoosh")
                 onEndTurn()
               }}
-              disabled={!playerTurn}
+              disabled={!playerTurn || turnAnimating}
             >
               结束回合
             </button>
