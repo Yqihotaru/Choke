@@ -4,13 +4,12 @@
     "gacha-entry",
     "gacha-open",
     "album",
-    "album-view",
-    "deck",
-    "deck-view",
-    "deck-review",
+    "album-detail",
+    "card-train",
     "battle-tab",
     "battle-view",
     "battle-result",
+    "expedition-entry",
     "graduation"
   ],
   "scripts": {
@@ -24,11 +23,11 @@
         },
         {
           "mood": "happy",
-          "text": "规则很简单：开包收卡 → 组一套卡组 → 上桌打一场。打不过也别慌，这里不掉 pp。"
+          "text": "这回我们把整套流程一次摸清：开包收卡 → 经验池养成与技能搭配 → 实战教学 → 远征出征。"
         },
         {
           "mood": "smug",
-          "text": "新手礼包已经塞进你背包了。先把第一包开了——手气这东西，越紧张越 choke。"
+          "text": "新手礼包、300 点经验池和 200 金币已经备好了。先把第一包开了——手气这东西，越紧张越 choke。"
         }
       ]
     },
@@ -64,7 +63,7 @@
         },
         {
           "mood": "idle",
-          "text": "如果出重复卡，别哭——重复卡能熔成经验。收藏家的第一课。"
+          "text": "记住每张卡都有职业和 2 个技能；重复卡以后可以分解或升命座。"
         }
       ]
     },
@@ -72,88 +71,60 @@
     "album": {
       "target": { "desktop": "album-entry", "book": "book-tab-album" },
       "advanceOn": "click",
-      "next": "album-view",
+      "next": "album-detail",
       "lines": [
         {
           "mood": "idle",
-          "text": "抽完的卡已经进卡册了。走，去认认脸。"
+          "text": "抽完的卡已经进卡册了。去卡册点开一张卡看看它的面板和技能。"
         }
       ]
     },
 
-    "album-view": {
-      "target": "album-grid",
-      "advanceOn": "continue",
-      "next": "deck",
-      "lines": [
-        {
-          "mood": "happy",
-          "text": "这些就是你的第一批收藏。点卡面能看详情，拖到桌面还能摆着玩。"
-        },
-        {
-          "mood": "smug",
-          "text": "很好，Lv.2。卡组和对战垫已经解锁了，接下来该组一套能打的牌。"
-        }
-      ]
-    },
-
-    "deck": {
-      "target": { "desktop": "deck-entry", "book": "book-tab-deck" },
-      "advanceOn": "click",
-      "next": "deck-view",
-      "lines": [
-        {
-          "mood": "idle",
-          "text": "点开卡组。右边是你的卡，左边是上阵的槽位。"
-        },
-        {
-          "mood": "smug",
-          "text": "新手别追求满编。教学战最多带 {lineupSize} 张，够用了。"
-        }
-      ]
-    },
-
-    "deck-view": {
-      "target": { "desktop": "deck-entry", "book": "deck-tutorial-confirm" },
+    "album-detail": {
+      "target": { "desktop": "album-entry", "book": ["album-first-card", "album-grid"] },
       "advanceOn": "event",
-      "event": "deck-confirmed",
-      "next": "deck-review",
+      "event": "card-detail-opened",
+      "next": "card-train",
       "lines": [
         {
-          "mood": "idle",
-          "text": "看到『按推荐一键上阵』了吗？点它，我按对手的脾气替你挑 {lineupSize} 张。"
-        },
-        {
           "mood": "happy",
-          "text": "规矩是：每个职业先挑一张最强的，再看谁带着对口的属性。以后出征也是这套思路。"
+          "text": "点一下卡册里的任意一张卡，打开详情页。我们看看怎么养成和配技能。"
         }
       ]
     },
 
-    "deck-review": {
-      "target": "deck-slots",
-      "advanceOn": "continue",
+    "card-train": {
+      "target": {
+        "desktop": "album-entry",
+        "book": ["card-detail-pool-alloc", "card-detail-upgrade", "card-detail-skills"]
+      },
+      "advanceOn": "event",
+      "event": "card-upgraded",
       "next": "battle-tab",
       "lines": [
         {
+          "mood": "idle",
+          "text": "每张卡自带职业（坦克扛伤、战士/法师输出、辅助回血加攻）和 2 个技能；属性克制能快速破敌人的弱点盾。"
+        },
+        {
           "mood": "happy",
-          "text": "挑好了。每张卡为什么上场，我写在下面了，自己看一眼。"
+          "text": "下方『经验池』全队共享！点『补到下一级』或『升级』，用刚才发的 300 经验试着把这张卡升 1 级。"
         },
         {
           "mood": "smug",
-          "text": "卡组不用完美，先上场挨打，才知道缺什么。"
+          "text": "以后刷到不顺手的技能，也能在右侧技能栏消耗碎片和金币『洗技能』，每 5 次还有自选保底。"
         }
       ]
     },
 
     "battle-tab": {
-      "target": "book-tab-battle",
+      "target": { "desktop": "battle-entry", "book": "book-tab-battle" },
       "advanceOn": "click",
       "next": "battle-view",
       "lines": [
         {
           "mood": "idle",
-          "text": "现在翻到战斗页。对手是练习用的谱面幽灵，不会真的咬人。"
+          "text": "练好卡了，现在翻到战斗页。真正去打一场教学战，熟悉 AP、Combo、防御档位和弱点破盾。"
         }
       ]
     },
@@ -161,37 +132,49 @@
     "battle-view": {
       "target": {
         "desktop": "battle-entry",
-        "book": ["battle-tutorial-start", "battle-go-deck"]
+        "book": ["battle-tutorial-start"]
       },
       "advanceOn": "external",
       "next": "battle-result",
       "lines": [
         {
           "mood": "serious",
-          "text": "点『进入教学对战』，会跳到真正的对战页。这一场我陪你打，输了也算我的。"
+          "text": "点『进入教学对战』，系统会自动替你挑最合适的前排上阵。战斗里顶部会有实时战术提示陪你打完。"
         },
         {
           "mood": "smug",
-          "text": "教学战不计排名，掉不了你的 pp。放心按下去。"
-        },
-        {
-          "mood": "idle",
-          "text": "对了，这只幽灵身上藏着一个看不见的弱点——弱点条里那个『？』。用对的属性打中它一次，就会揭开。提示：幽灵怕火。"
+          "text": "记住：每回合看清敌方意图，有重击就抬高防御档位；用克制属性打中隐藏弱点『？』能直接破盾。"
         }
       ]
     },
 
     "battle-result": {
       "advanceOn": "continue",
+      "next": "expedition-entry",
+      "lines": [
+        {
+          "mood": "happy",
+          "text": "教学战拿下！你已经摸清了出招、Combo、破盾和抬防的核心节奏。"
+        },
+        {
+          "mood": "smug",
+          "text": "现在 Lv.3 达成，全桌面功能与远征已经提前对你开放！"
+        }
+      ]
+    },
+
+    "expedition-entry": {
+      "target": { "desktop": "battle-entry", "book": ["expedition-entry", "book-tab-battle"] },
+      "advanceOn": "continue",
       "next": "graduation",
       "lines": [
         {
           "mood": "happy",
-          "text": "教学战结束！练习赛不计胜负，你已经完整走了一遍战斗流程。"
+          "text": "真正的主玩法在『远征』里：选图 → 分配点数（上场卡槽 / AP 上限 / 稀有度权限）→ 挑卡出征，一路打节点拿经验池和奖励。"
         },
         {
-          "mood": "smug",
-          "text": "Lv.3 达成。新手教程，毕业！"
+          "mood": "idle",
+          "text": "推荐毕业后直接点『进入远征』，从『序章 · 鼠标萌新与神秘 MP 房』开始你的第一次完整远征。"
         }
       ]
     },
@@ -203,15 +186,11 @@
       "lines": [
         {
           "mood": "idle",
-          "text": "背包、图鉴、邀请函现在都开放了。随便逛，别把卡册弄乱。"
-        },
-        {
-          "mood": "serious",
-          "text": "继续做任务、打对战升级，融合、远征会随等级陆续开放。市场要绑定 osu! 账号才能买卖，没绑的话只能看。"
+          "text": "背包、图鉴、分解、融合、任务和远征现在都已解锁。市场只要绑定 osu! 账号就能买卖。"
         },
         {
           "mood": "happy",
-          "text": "去吧。记得——别 choke。"
+          "text": "去吧，祝你远征一路 Full Combo——别 choke。"
         }
       ]
     }

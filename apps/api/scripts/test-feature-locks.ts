@@ -164,16 +164,16 @@ await test("市场：游客也能看（浏览挂单不受限）", async () => {
   assert.equal(res.status, 200, JSON.stringify(res.body))
 })
 
-await test("任务：Lv2 被拒，Lv3 放行", async () => {
-  const early = await newUser({ playerLevel: 2 })
+await test("任务：没完成引导被拒，完成引导放行", async () => {
+  const early = await newUser({ playerLevel: 1, tutorialDone: false })
   const res = await call(early, "GET", `/users/${early}/quests`)
   assert.ok(isLocked(res))
-  const open = await newUser({ playerLevel: 3 })
+  const open = await newUser({ playerLevel: 1, tutorialDone: true })
   assert.equal((await call(open, "GET", `/users/${open}/quests`)).status, 200)
 })
 
-await test("出征：主线要 Lv5，日常和周常不设限；被拒时不会留下出征", async () => {
-  const user = await newUser({ playerLevel: 4 })
+await test("出征：没完成引导时主线被拒，日常和周常不设限；被拒时不会留下出征", async () => {
+  const user = await newUser({ playerLevel: 1, tutorialDone: false })
   const base = `/users/${user}/expeditions`
   const body = (mapId: string) => ({
     mapId,
@@ -189,8 +189,8 @@ await test("出征：主线要 Lv5，日常和周常不设限；被拒时不会�
   assert.equal(rows.length, 0)
 })
 
-await test("出征地图列表：没解锁的图标 startable=false 并带原因，日常图照常可开", async () => {
-  const user = await newUser({ playerLevel: 4 })
+await test("出征地图列表：没完成引导的图标 startable=false 并带原因，日常图照常可开", async () => {
+  const user = await newUser({ playerLevel: 1, tutorialDone: false })
   const res = await call(user, "GET", `/users/${user}/expeditions/maps`)
   assert.equal(res.status, 200, JSON.stringify(res.body))
   const maps: Array<{ id: string; startable: boolean; lockedReason: string | null }> = res.body.data
@@ -216,8 +216,7 @@ await test("/progress 带上每个功能的锁状态，和服务端实际校验�
   assert.deepEqual(Object.keys(locks).sort(), [...FEATURE_IDS].sort())
   assert.equal(locks["dismantle"], null)
   assert.equal(locks["mainline"], null)
-  assert.equal(locks["fuse"]?.reason, "level")
-  assert.equal(locks["fuse"]?.level, CONTENT.unlocks.fuse.level)
+  assert.equal(locks["fuse"], null)
   assert.equal(locks["market"]?.reason, "account")
   assert.equal(typeof locks["market"]?.message, "string")
 })

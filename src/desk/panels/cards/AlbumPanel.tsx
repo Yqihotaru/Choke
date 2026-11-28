@@ -26,6 +26,7 @@ import {
 } from "@/desk/session/api"
 import { npcRecycleValue } from "@choke/shared/economy"
 import { ITEMS, SHARDS_PER_DISMANTLE } from "@choke/shared/items"
+import { emitTutorialEvent } from "@/tutorial/events"
 import { Pages, useBook, usePageCache } from "@/desk/shell/BookPages"
 import { CardDetail } from "@/desk/panels/cards/CardDetail"
 import { FitArea } from "@/desk/shell/FitArea"
@@ -129,7 +130,10 @@ export const AlbumPanel = memo(function AlbumPanel({
   const maxBatchSelect =
     batchMode === "recycle" ? Math.max(0, recycleQuota?.remaining ?? 0) : 60
 
-  const openDetail = useCallback((row: ApiUserCard) => setDetail(row), [])
+  const openDetail = useCallback((row: ApiUserCard) => {
+    setDetail(row)
+    emitTutorialEvent("card-detail-opened")
+  }, [])
   const toggleSelect = useCallback(
     (row: ApiUserCard) => {
       if (batchBusy || isHeroCardId(row.id)) return
@@ -232,13 +236,14 @@ export const AlbumPanel = memo(function AlbumPanel({
     const empty = ready && rows !== null && rows.length === 0
 
     const selectedSet = new Set(selectedIds)
-    const slot = (row: ApiUserCard) => (
+    const slot = (row: ApiUserCard, cardIndex: number) => (
       <AlbumSlot
         key={row.userCardId}
         row={row}
         onDesk={deskIds.has(row.userCardId)}
         batchMode={batchMode !== null}
         selected={selectedSet.has(row.userCardId)}
+        tutorialId={index === page && cardIndex === 0 ? "album-first-card" : undefined}
         onDetail={openDetail}
         onToggleSelect={toggleSelect}
       />
@@ -622,6 +627,7 @@ const AlbumSlot = memo(function AlbumSlot({
   onDesk,
   batchMode,
   selected,
+  tutorialId,
   onDetail,
   onToggleSelect,
 }: {
@@ -629,6 +635,7 @@ const AlbumSlot = memo(function AlbumSlot({
   onDesk: boolean
   batchMode: boolean
   selected: boolean
+  tutorialId?: string
   onDetail: (row: ApiUserCard) => void
   onToggleSelect: (row: ApiUserCard) => void
 }) {
@@ -649,6 +656,7 @@ const AlbumSlot = memo(function AlbumSlot({
     <div
       className={`album-slot ${onDesk ? "is-on-desk" : ""} ${batchMode ? "is-batch" : ""} ${disabledInBatch ? "is-batch-disabled" : ""} ${selected ? "is-selected" : ""}`}
       data-user-card={row.userCardId}
+      data-tutorial-id={tutorialId}
       role="button"
       tabIndex={disabledInBatch ? -1 : 0}
       aria-pressed={batchMode ? selected : undefined}

@@ -197,16 +197,17 @@ export function BattlePage() {
   if (!encounter || (!battle && encounter.id !== encounterId)) return <Loading label="加载关卡" />
 
   const deckCards = deck.slots.flatMap((slot) => (slot.card ? [slot.card] : []))
-  // 教学战最多 4 张：卡组里多的话按推荐挑，不改动存着的卡组；教学战没有替补
+  // 教学战最多 4 张：若玩家还没组卡组则直接从卡册里按推荐挑，不改动存着的卡组；教学战没有替补
+  const tutorialPool = deckCards.length > 0 ? deckCards : extraCards
   const cards = tutorialRun
-    ? pickLineup(deckCards, encounter.recommend, BASE_SLOTS).rows
+    ? pickLineup(tutorialPool, encounter.recommend, BASE_SLOTS).rows
     : deckCards
   const deckCardUids = new Set(cards.map((c) => c.userCardId))
   const benchCards = tutorialRun
     ? []
     : extraCards.filter((c) => !deckCardUids.has(c.userCardId)).slice(0, 8)
 
-  if (deckCards.length === 0) {
+  if (cards.length === 0) {
     return (
       <Gate tag="CHOKE! · BATTLE" title="卡组里还没有卡" text="回桌面，把卡拖进卡组；至少 1 张就能出战。">
         <div className="choke-gate__actions">
@@ -286,30 +287,30 @@ export function BattlePage() {
   const tutorialHost: BattleHostHooks | undefined =
     tutorialMode && (tutorialRun || tutorialDoneInStage)
       ? {
-          exitLabel: "返回桌面",
-          onExit: () => {
-            if (tutorialDoneInStage) {
-              void finishTutorialAndReturn()
-            } else {
-              window.location.href = "/"
-            }
-          },
-          canRestart: !tutorialDoneInStage,
-          resultNote: (
-            <p style={{ margin: 0, opacity: 0.85, fontSize: "0.9em" }}>
-              教学战已完成，回桌面找阿图领取 Lv.3 毕业结算。
-            </p>
-          ),
-          resultActions: (
-            <button
-              type="button"
-              disabled={returning}
-              onClick={() => void finishTutorialAndReturn()}
-            >
-              {returning ? "正在同步进度…" : "完成教学 · 返回桌面"}
-            </button>
-          ),
-        }
+        exitLabel: "返回桌面",
+        onExit: () => {
+          if (tutorialDoneInStage) {
+            void finishTutorialAndReturn()
+          } else {
+            window.location.href = "/"
+          }
+        },
+        canRestart: !tutorialDoneInStage,
+        resultNote: (
+          <p style={{ margin: 0, opacity: 0.85, fontSize: "0.9em" }}>
+            教学战已完成，回桌面找阿图领取 Lv.3 毕业结算。
+          </p>
+        ),
+        resultActions: (
+          <button
+            type="button"
+            disabled={returning}
+            onClick={() => void finishTutorialAndReturn()}
+          >
+            {returning ? "正在同步进度…" : "完成教学 · 返回桌面"}
+          </button>
+        ),
+      }
       : undefined
 
   const StageComponent = uiMode === "modern" ? ModernStage : ClassicStage

@@ -34,11 +34,9 @@ check("新号：开包可用", isUnlocked("packs", ctx()))
 check("没完成引导：背包锁，原因是引导", lockReason("backpack", ctx({ level: 3 }))?.kind === "tutorial")
 check("完成引导且到等级：背包开", isUnlocked("backpack", ctx({ level: 3, tutorialDone: true })))
 check(
-  "完成引导但等级不够：融合锁，原因带所需等级",
-  (() => {
-    const reason = lockReason("fuse", ctx({ level: 3, tutorialDone: true }))
-    return reason?.kind === "level" && reason.level === unlockLevelOf("fuse")
-  })(),
+  "完成引导后：融合、主线远征均已取消等级锁",
+  isUnlocked("fuse", ctx({ level: 1, tutorialDone: true })) &&
+    isUnlocked("mainline", ctx({ level: 1, tutorialDone: true })),
 )
 check(
   "市场：游客锁，原因是账号（即使等级和引导都够）",

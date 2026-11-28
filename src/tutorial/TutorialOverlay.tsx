@@ -403,7 +403,7 @@ export function TutorialOverlay({
     if (next === "done") onFinish?.("complete")
   }, [script, progress.tutorialStep, onFinish])
 
-  // 业务事件推进：pack-opened / deck-confirmed
+  // 业务事件推进：pack-opened / card-detail-opened / card-upgraded
   useEffect(() => {
     if (!script || script.advanceOn !== "event" || !script.event) return
     const onEvent = (event: Event) => {

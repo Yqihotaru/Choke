@@ -4,8 +4,6 @@ import { playSfx } from "@/audio/sfx"
 import { GameCardFace } from "@/card/GameCardFace"
 import { JOB_LABEL, JOB_ORDER, RARITY_LABEL, battlePower } from "@/card/data"
 import { RARITIES, type Job, type Rarity } from "@/card/types"
-import { emitTutorialEvent } from "@/tutorial/events"
-import { useTutorialProgress } from "@/tutorial/store"
 import { TUTORIAL_ENCOUNTER_ID, type Recommend } from "@choke/shared/battle/content"
 import { BASE_SLOTS } from "@choke/shared/expedition-points"
 import { pickReason, recommendText } from "@choke/shared/lineup"
@@ -57,7 +55,6 @@ export const DeckPanel = memo(function DeckPanel({
   userId: string | null
 }) {
   const book = useBook()
-  const tutorial = useTutorialProgress(userId)
   const [deck, setDeck] = useState<ApiDeck | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -67,7 +64,7 @@ export const DeckPanel = memo(function DeckPanel({
   const [reload, setReload] = useState(0)
   const [busyHint, setBusyHint] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
-  const [reviewRecommend, setReviewRecommend] = useState<Recommend | null>(null)
+  const reviewRecommend: Recommend | null = null
   const hoverSlotRef = useRef<number | null>(null)
   const deskIds = useDeskCardIds()
   const config = useGameConfig()
@@ -110,19 +107,6 @@ export const DeckPanel = memo(function DeckPanel({
       })
     return () => controller.abort()
   }, [userId, book.revision, reload])
-
-  useEffect(() => {
-    if (tutorial.tutorialStep !== "deck-review") return
-    let cancelled = false
-    fetchEncounter(TUTORIAL_ENCOUNTER_ID)
-      .then((spec) => {
-        if (!cancelled) setReviewRecommend(spec.recommend)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [tutorial.tutorialStep])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -348,8 +332,8 @@ export const DeckPanel = memo(function DeckPanel({
   // 没点槽位时，点右页的卡放进第一个空槽
   const firstEmpty = deck.slots.findIndex((slot) => !slot.card)
   const targetSlot = pickerSlot ?? (firstEmpty >= 0 ? firstEmpty : null)
-  const tutorialDeckStep = tutorial.tutorialStep === "deck-view"
-  const tutorialReview = tutorial.tutorialStep === "deck-review"
+  const tutorialDeckStep = false
+  const tutorialReview = false
   const reviewLineup =
     tutorialReview && reviewRecommend
       ? pickLineup(
@@ -394,7 +378,6 @@ export const DeckPanel = memo(function DeckPanel({
         )
       }
       playSfx("success")
-      emitTutorialEvent("deck-confirmed")
     } catch (reason) {
       playSfx("error")
       setNotice(reason instanceof Error ? reason.message : "上阵失败")

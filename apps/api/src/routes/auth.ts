@@ -432,7 +432,11 @@ export async function authRoutes(app: FastifyInstance) {
     await db.transaction(async (tx) => {
       const claimed = await tx
         .update(users)
-        .set({ tutorialPackClaimed: true })
+        .set({
+          tutorialPackClaimed: true,
+          expPool: sql`${users.expPool} + 300`,
+          coins: sql`${users.coins} + 200`,
+        })
         .where(
           and(
             eq(users.id, userId),

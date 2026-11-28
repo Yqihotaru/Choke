@@ -40,9 +40,9 @@
     "expGrowthRate": 1.12,
     "tutorialGraduateLevel": 3,
     "tutorialStepExp": {
-      "album-view": 100,
-      "deck-view": 80,
-      "battle-view": 70
+      "album-detail": 90,
+      "card-train": 80,
+      "battle-view": 80
     }
   },
   "expedition": {

@@ -31,6 +31,7 @@ import {
 } from "@choke/shared/resonance"
 import { useModal } from "@/ui/useModal"
 
+import { emitTutorialEvent } from "@/tutorial/events"
 import { useTutorialProgress } from "@/tutorial/store"
 import { isModuleUnlocked, lockHintOf } from "@/tutorial/unlocks"
 
@@ -316,7 +317,10 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       "level",
       () => levelUpCard(userId, current.userCardId),
       (result) => `升级成功，消耗 ${result.spent} EXP`,
-      () => playSfx("levelup"),
+      () => {
+        playSfx("levelup")
+        emitTutorialEvent("card-upgraded")
+      },
     )
   }
 
@@ -335,6 +339,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
       setExpPool(result.expPool)
       setExpAllocInput("")
       setMessage({ text: `已从经验池分配 +${result.spent.toLocaleString("en-US")} EXP` })
+      emitTutorialEvent("card-upgraded")
       onChanged?.()
       emitDeskData("user")
     } catch (error) {
@@ -687,6 +692,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                   <button
                     type="button"
                     className="bk-btn bk-btn--main"
+                    data-tutorial-id="card-detail-upgrade"
                     onClick={() => void levelUp()}
                     disabled={busy !== null}
                   >
@@ -729,6 +735,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
                     <button
                       type="button"
                       className="bk-btn bk-btn--sm bk-btn--main"
+                      data-tutorial-id="card-detail-pool-alloc"
                       disabled={busy !== null}
                       onClick={() =>
                         void allocateExp(Math.min(expPool ?? 0, Math.max(1, need - current.exp)))
@@ -943,7 +950,7 @@ export function CardDetail({ card, userId, readOnly = false, onClose, onChanged 
           )}
 
           {(readOnly || tab === "skills") && (
-            <div className="card-detail__skills">
+            <div className="card-detail__skills" data-tutorial-id="card-detail-skills">
               <div className="card-detail__reroll-head">
                 <div className="bk-label">技能</div>
                 {!readOnly && !hero && rerollInfo && (

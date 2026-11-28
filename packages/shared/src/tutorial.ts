@@ -7,7 +7,7 @@
  * - 推进时发多少经验、下一步是谁
  *
  * 业务组件不需要知道“现在是第几步”，只需要在关键动作发生时
- * emitTutorialEvent("pack-opened" / "deck-confirmed")。
+ * emitTutorialEvent("pack-opened" / "card-detail-opened" / "card-upgraded")。
  */
 
 export const TUTORIAL_STEPS = [
@@ -16,13 +16,12 @@ export const TUTORIAL_STEPS = [
   "gacha-entry",
   "gacha-open",
   "album",
-  "album-view",
-  "deck",
-  "deck-view",
-  "deck-review",
+  "album-detail",
+  "card-train",
   "battle-tab",
   "battle-view",
   "battle-result",
+  "expedition-entry",
   "graduation",
   "done",
 ] as const
@@ -32,7 +31,7 @@ export type TutorialStep = (typeof TUTORIAL_STEPS)[number]
 /** 真正会显示台词 / 遮罩的步骤（idle 和 done 不显示） */
 export type TutorialPlayableStep = Exclude<TutorialStep, "idle" | "done">
 
-export type TutorialEventType = "pack-opened" | "deck-confirmed"
+export type TutorialEventType = "pack-opened" | "card-detail-opened" | "card-upgraded"
 
 export type TutorialMood = "idle" | "happy" | "smug" | "serious"
 

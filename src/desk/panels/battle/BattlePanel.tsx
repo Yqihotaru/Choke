@@ -215,32 +215,18 @@ export function BattlePanel({
             个子职业分池，卡组不满也可以出战。
           </p>
           {tutorialBattleStep ? (
-            cards.length > 0 ? (
-              <>
-                <p className="bk-note">教学战 · 不计排名，不会掉 pp。</p>
-                <a
-                  className="bk-btn bk-btn--main bk-btn--block battle-start"
-                  data-tutorial-id="battle-tutorial-start"
-                  href="/battle?tutorial=1"
-                >
-                  进入教学对战
-                </a>
-              </>
-            ) : (
-              <>
-                <p className="bk-note">
-                  教学战至少需要 1 张卡，先去卡组上阵再回来。
-                </p>
-                <button
-                  type="button"
-                  className="bk-btn bk-btn--main bk-btn--block"
-                  data-tutorial-id="battle-go-deck"
-                  onClick={onOpenDeck}
-                >
-                  去卡组上阵
-                </button>
-              </>
-            )
+            <>
+              <p className="bk-note">
+                教学战 · 不计排名，不会掉 pp。系统会自动为你挑最合适的前排上阵。
+              </p>
+              <a
+                className="bk-btn bk-btn--main bk-btn--block battle-start"
+                data-tutorial-id="battle-tutorial-start"
+                href="/battle?tutorial=1"
+              >
+                进入教学对战
+              </a>
+            </>
           ) : activeEncounter ? (
             <a
               className="bk-btn bk-btn--main bk-btn--block battle-start"
@@ -259,7 +245,7 @@ export function BattlePanel({
               <hr className="bk-divider" />
               <span className="bk-label">远征</span>
               <p className="bk-note">走地图、做选择、连打几场战斗，奖励攒到最后一次结算。</p>
-              <a className="bk-btn bk-btn--block" href="/expedition">
+              <a className="bk-btn bk-btn--block" data-tutorial-id="expedition-entry" href="/expedition">
                 进入远征
               </a>
             </>

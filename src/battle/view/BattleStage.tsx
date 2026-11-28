@@ -36,7 +36,7 @@ import { ELEMENT_COLOR, ELEMENT_LABEL, JOB_LABEL, battlePower } from "@/card/dat
 import { pointerCommand, useSkillRows } from "../useSkillRows"
 import { usePlaybackSpeed } from "../usePlaybackSpeed"
 import { useAutoEndTurn } from "../useAutoEndTurn"
-import type { BattleHostHooks } from "../host"
+import { tutorialBattleHint, type BattleHostHooks } from "../host"
 import { impact, reducedImpactMotion, sustainHurtTint } from "../impact"
 import type { CardFaceData, Element } from "@/card/types"
 
@@ -961,10 +961,11 @@ export function BattleStage({
   const apMax = battle.apMax
   const comboPct = Math.round((comboMultiplier(battle.combo) - 1) * 100)
   const stars = evaluateStars(battle)
+  const tutorialHint = tutorial ? tutorialBattleHint(battle) : null
   const ticker = actionError
     ? `⚠️ ${actionError}`
-    : tutorial && battle.phase === "player" && battle.hiddenFound.length === 0
-      ? "💡 教学提示：弱点条里的“？”是隐藏弱点，用对应属性打中一次才会揭开。幽灵最怕火；没有火属性的卡也不影响通关。"
+    : tutorialHint
+      ? tutorialHint
       : (battle.log[0] ?? "战斗开始")
 
   const skillHint = swapOpen ? null : skillRows.hint

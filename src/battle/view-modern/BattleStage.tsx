@@ -35,7 +35,7 @@ import { ELEMENT_COLOR, ELEMENT_LABEL, JOB_LABEL, battlePower } from "@/card/dat
 import { pointerCommand, useSkillRows } from "../useSkillRows"
 import { usePlaybackSpeed } from "../usePlaybackSpeed"
 import { useAutoEndTurn } from "../useAutoEndTurn"
-import type { BattleHostHooks } from "../host"
+import { tutorialBattleHint, type BattleHostHooks } from "../host"
 import { impact, reducedImpactMotion, sustainHurtTint } from "../impact"
 import type { CardFaceData, Element } from "@/card/types"
 
@@ -874,10 +874,11 @@ export function BattleStage({
   const shownRound = turnView?.round ?? battle.turn
   // 引擎没有「敌方回合」这个阶段，只有演出里的 turn 事件说得出现在轮到谁
   const shownOwner = turnView?.owner ?? "player"
+  const tutorialHint = tutorial ? tutorialBattleHint(battle) : null
   const ticker = actionError
     ? `⚠️ ${actionError}`
-    : tutorial && battle.phase === "player" && battle.hiddenFound.length === 0
-      ? "💡 教学提示：弱点里的“？”是隐藏弱点，用对应属性打中一次才会揭开。幽灵最怕火；没有火属性的卡也不影响通关。"
+    : tutorialHint
+      ? tutorialHint
       : turnView?.owner === "enemy"
         ? "敌方行动中…"
         : (battle.log[0] ?? "战斗开始")
