@@ -23,6 +23,7 @@ import { presenceRoutes } from "./routes/presence"
 import { progressionRoutes } from "./routes/progression"
 import { progressRoutes } from "./routes/progress"
 import { shopRoutes } from "./routes/shop"
+import { supplyRoutes } from "./routes/supply"
 import { questRoutes } from "./routes/quests"
 import { client, sql } from "./db/client"
 
@@ -65,6 +66,7 @@ await app.register(expeditionRoutes)
 await app.register(questRoutes)
 await app.register(progressRoutes)
 await app.register(shopRoutes)
+await app.register(supplyRoutes)
 
 app.get("/health", async () => ({ ok: true, data: { status: "up", contentVersion: CONTENT_VERSION } }))
 

@@ -53,6 +53,7 @@ export const SOURCE_LABELS: Readonly<Record<string, string>> = {
   "sign-in": "签到",
   "skill-reroll": "洗技能",
   "exp-allocate": "分配经验",
+  "supply-box": "补给箱",
   resonance: "吞噬共鸣",
 }
 

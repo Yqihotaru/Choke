@@ -384,6 +384,26 @@ export const expeditionBattles = pgTable(
   (table) => [uniqueIndex("expedition_battles_node_idx").on(table.expeditionId, table.nodeId)],
 )
 
+/** 离线补给箱存档：从 accrued_from 起继续攒，stock 是已结算还没领的数量（可带小数）；stock_hours 是 stock 折算的小时数 */
+export const supplyBoxes = pgTable(
+  "supply_boxes",
+  {
+    userId: text("user_id").notNull(),
+    boxId: text("box_id").notNull(),
+    accruedFrom: timestamp("accrued_from", { withTimezone: true }).notNull(),
+    stockHours: doublePrecision("stock_hours").notNull().default(0),
+    stock: jsonb("stock").$type<Record<string, number>>().notNull().default(sql`'{}'::jsonb`),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.boxId] })],
+)
+
+/** 补给箱倾向：玩家选的资源 id（所有箱子共用），null 是不偏 */
+export const supplyPrefs = pgTable("supply_prefs", {
+  userId: text("user_id").primaryKey(),
+  focus: text("focus"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+})
+
 export const mapClears = pgTable(
   "map_clears",
   {

@@ -1,0 +1,16 @@
+{
+  "boxes": {
+    "prologue": {
+      "name": "金币 / 走量包箱",
+      "summary": "离线也会自己攒，最多攒 3 天，上线一键领。可以选这几天偏重金币还是卡包。",
+      "unlock": {},
+      "capHours": 72,
+      "valuePerHour": 20,
+      "focusShare": 70,
+      "resources": [
+        { "id": "coins", "kind": "coins", "name": "金币", "worth": 1, "share": 50 },
+        { "id": "normal-pack", "kind": "pack", "pool": "normal", "name": "普通卡包", "worth": 120, "share": 50 }
+      ]
+    }
+  }
+}

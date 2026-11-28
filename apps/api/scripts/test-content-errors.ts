@@ -202,6 +202,17 @@ const CASES: Case[] = [
     breakIt: (root) => fs.appendFileSync(path.join(root, "encounters/ghost.json"), ","),
     expect: "content/encounters/ghost.json 不是合法的 JSON",
   },
+  {
+    name: "补给箱放了高稀有度卡包",
+    breakIt: editJson("supply.json", (d) => (d.boxes.prologue.resources[1].pool = "golden")),
+    expect: "L 及以上占比超过",
+  },
+  {
+    name: "补给箱引用不存在的地图",
+    breakIt: editJson("supply.json", (d) => (d.boxes.prologue.unlock = { map: "nowhere" })),
+    expect: "地图 nowhere 不存在",
+  },
+  { name: "缺 supply.json", breakIt: (root) => fs.rmSync(path.join(root, "supply.json")), expect: "缺少：supply.json" },
   { name: "缺 enemy-supports.json", breakIt: (root) => fs.rmSync(path.join(root, "enemy-supports.json")), expect: "缺少：enemy-supports.json" },
 ]
 

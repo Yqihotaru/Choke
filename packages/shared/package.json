@@ -27,6 +27,7 @@
     "./quests": "./src/quests.ts",
     "./quest-content": "./src/quest-content.ts",
     "./osu-daily": "./src/osu-daily.ts",
+    "./supply": "./src/supply.ts",
     "./expedition/content": "./src/expedition/content.ts",
     "./expedition/difficulty": "./src/expedition/difficulty.ts",
     "./expedition/generator": "./src/expedition/generator.ts",
