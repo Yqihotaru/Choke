@@ -18,7 +18,7 @@ import { titleOf } from "./layout"
 const elementName = (element: string) => (ELEMENT_LABEL as Record<string, string>)[element] ?? element
 
 /** 这些错误说明本地操作和服务端已经分叉，直接按服务端进度恢复 */
-const RESYNC_CODES = new Set(["out_of_sync", "invalid_action", "too_many_actions", "no_battle"])
+const RESYNC_CODES = new Set(["out_of_sync", "invalid_action", "too_many_actions", "no_battle", "pool_mismatch"])
 
 function inputsOf(view: ExpeditionView, ids: number[]): BattleInputCard[] {
   const byId = new Map(view.pool.map((entry) => [entry.userCardId, entry.face]))
@@ -249,6 +249,13 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
           onViewRef.current(next)
         } catch (reason) {
           const code = reason instanceof ApiError ? reason.code : undefined
+          if (code === "battle_missing") {
+            // 服务端已经没有这场战斗：丢掉本地队列，别让「重试上传」一直撞同一个错误
+            queue.current = []
+            setPending(0)
+            setSyncError("这场战斗在服务器上已经不存在，请返回地图重新进入")
+            return
+          }
           if (code && RESYNC_CODES.has(code)) {
             await resync().catch((again) => setSyncError(errorText(again)))
           } else {
@@ -302,6 +309,12 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
     }
   }
 
+  /** 服务端卡池缺卡时本地复算会少人：停在提示页，避免两边局面静默分叉 */
+  const missingPoolCards = useMemo(() => {
+    const inPool = new Set(view.pool.map((entry) => entry.userCardId))
+    return [...battleView.lineup, ...battleView.bench].filter((uid) => !inPool.has(uid))
+  }, [view.pool, battleView.lineup, battleView.bench])
+
   const serverStatus = battleView.status
   const synced = pending === 0 && !syncError
   const won = state.phase === "won"
@@ -313,15 +326,18 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
     onExit: () => void leave(),
     canRestart: false,
     syncNote:
-      syncError && pending > 0 ? (
+      syncError ? (
         <>
-          <b>操作未保存</b>
+          <b>{pending > 0 ? "操作未保存" : "战斗状态异常"}</b>
           <span>
-            {syncError}（还有 {pending} 步没传到服务器）
+            {syncError}
+            {pending > 0 ? `（还有 ${pending} 步没传到服务器）` : ""}
           </span>
-          <button type="button" onClick={() => void pump()} data-sfx="none">
-            重试上传
-          </button>
+          {pending > 0 && (
+            <button type="button" onClick={() => void pump()} data-sfx="none">
+              重试上传
+            </button>
+          )}
         </>
       ) : undefined,
     resultNote: won ? (
@@ -384,6 +400,20 @@ export function Fight({ userId, userName, view, onView, onExit, onSettle, onAban
 
   const Stage = uiMode === "modern" ? ModernStage : ClassicStage
   const noop = () => undefined
+
+  if (missingPoolCards.length > 0) {
+    return (
+      <div className="ex" data-theme="dark">
+        <div className="ex-center">
+          <p>出征卡池缺少 {missingPoolCards.length} 张阵容卡，本地局面可能和服务端不一致。</p>
+          <p className="ex-sub">请返回地图后重新进入这场战斗；如果仍然出现，请刷新页面。</p>
+          <button type="button" className="ex-btn" onClick={onExit}>
+            ‹ 返回地图
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <Suspense

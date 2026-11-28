@@ -192,7 +192,8 @@ async function buildView(exec: Exec, exp: ExpRow): Promise<ExpeditionView> {
 
 async function viewById(exec: Exec, id: number): Promise<ExpeditionView> {
   const [row] = await exec.select().from(expeditions).where(eq(expeditions.id, id)).limit(1)
-  return buildView(exec, row!)
+  if (!row) throw new TxAbort(404, "no_expedition", "找不到这次出征，请刷新后重试")
+  return buildView(exec, row)
 }
 
 /** 锁住用户和他的未结束出征；没有就报错。调用方已经开好了事务 */
@@ -379,14 +380,18 @@ async function enterNode(tx: Tx, exp: ExpRow, nodeId: string): Promise<void> {
     case "boss": {
       const encounter = resolveEncounter(BATTLE_CONTENT, node.encounter)
       if (!encounter) throw new TxAbort(500, "content_missing", `遭遇 ${node.encounter} 不存在`)
-      await tx.insert(expeditionBattles).values({
-        expeditionId: exp.id,
-        nodeId,
-        encounter: scaleEncounterHp(encounter, status.hpMult),
-        seed: `${exp.seed}/battle-${nodeId}`,
-        apMax: apMaxOf(exp.allocation),
-        hpRatioStart: exp.hpRatio,
-      })
+      await tx
+        .insert(expeditionBattles)
+        .values({
+          expeditionId: exp.id,
+          nodeId,
+          encounter: scaleEncounterHp(encounter, status.hpMult),
+          seed: `${exp.seed}/battle-${nodeId}`,
+          apMax: apMaxOf(exp.allocation),
+          hpRatioStart: exp.hpRatio,
+        })
+        // 同一节点已经开过战斗（重试 / 重复请求）就复用旧快照，别把操作记录覆盖掉
+        .onConflictDoNothing()
       break
     }
     case "story":
@@ -496,13 +501,17 @@ async function requireBattle(tx: Tx, exp: ExpRow): Promise<BattleRow> {
     .from(expeditionBattles)
     .where(and(eq(expeditionBattles.expeditionId, exp.id), eq(expeditionBattles.nodeId, exp.position)))
     .limit(1)
-  if (!battle) throw new TxAbort(500, "no_battle", "找不到这场战斗")
+  if (!battle) throw new TxAbort(409, "battle_missing", "这场战斗已经不在了，请返回地图重新进入")
   return battle
 }
 
 function inputsOf(exp: ExpRow, ids: number[]): BattleInputCard[] {
   const byId = new Map(exp.pool.map((entry) => [entry.userCardId, entry.face]))
-  return ids.map((uid) => ({ uid, cardId: byId.get(uid)!.id, face: byId.get(uid)! }))
+  return ids.map((uid) => {
+    const face = byId.get(uid)
+    if (!face) throw new TxAbort(409, "pool_mismatch", "出征卡池和阵容对不上，请刷新后重新进入")
+    return { uid, cardId: face.id, face }
+  })
 }
 
 function replayInput(exp: ExpRow, battle: BattleRow): ReplayInput {

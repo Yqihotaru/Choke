@@ -874,5 +874,48 @@ await test("镜像卡抽取：不排除自己，且候选池有活跃玩家时�
   assert.equal(picked!.rarity, "R")
 })
 
+await test("战斗行缺失：返回 409 battle_missing，而不是 500", async () => {
+  const { id, ids } = await newPlayer()
+  const started = await must(start(id, "test-trial", ids))
+  await must(story(id, [0]))
+  await must(move(id, "n2"))
+  await db.delete(expeditionBattles).where(eq(expeditionBattles.expeditionId, started.id))
+  const res = await pickLineup(id, strongIds(ids))
+  assert.equal(res.status, 409, JSON.stringify(res.body))
+  assert.equal(res.body.error.code, "battle_missing")
+})
+
+await test("重复进入同一战斗节点：复用旧战斗，不报唯一索引冲突", async () => {
+  const { id, ids } = await newPlayer()
+  const started = await must(start(id, "test-trial", ids))
+  await must(story(id, [0]))
+  const atBattle = await must(move(id, "n2"))
+  // 模拟同一个移动请求被重放：退回上一个节点，再走一次 n2
+  await db
+    .update(expeditions)
+    .set({ position: started.position, nodeDone: true })
+    .where(eq(expeditions.id, atBattle.id))
+  const again = await move(id, "n2")
+  assert.equal(again.status, 200, JSON.stringify(again.body))
+  const rows = await db.select().from(expeditionBattles).where(eq(expeditionBattles.expeditionId, atBattle.id))
+  assert.equal(rows.filter((row) => row.nodeId === "n2").length, 1)
+})
+
+await test("卡池和阵容对不上：上传操作返回 409 pool_mismatch，不再 500", async () => {
+  const { id, ids } = await newPlayer()
+  await must(start(id, "test-trial", ids))
+  await must(story(id, [0]))
+  await must(move(id, "n2"))
+  const view = await must(pickLineup(id, strongIds(ids)))
+  const missing = view.battle!.lineup[0]!
+  const [row] = await db.select().from(expeditions).where(eq(expeditions.id, view.id))
+  const pool = row!.pool.filter((entry) => entry.userCardId !== missing)
+  await db.update(expeditions).set({ pool }).where(eq(expeditions.id, view.id))
+
+  const res = await uploadActions(id, 0, [{ type: "endTurn" }])
+  assert.equal(res.status, 409, JSON.stringify(res.body))
+  assert.equal(res.body.error.code, "pool_mismatch")
+})
+
 console.log(`${passed} 项通过`)
 await cleanup()
