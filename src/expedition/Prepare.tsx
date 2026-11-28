@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 
-import { RARITY_LABEL, battlePower } from "@/card/data"
+import { JOB_LABEL, RARITY_LABEL, battlePower } from "@/card/data"
 import { GameCardFace } from "@/card/GameCardFace"
 import type { CardFaceData } from "@/card/types"
-import { fetchProgress, toFace, type ApiUserCard } from "@/desk/session/api"
+import { fetchDeck, fetchProgress, toFace, type ApiUserCard } from "@/desk/session/api"
 import {
   BASE_AP_MAX,
   BASE_SLOTS,
@@ -16,7 +16,7 @@ import {
   totalPoints,
   type ExpeditionAllocation,
 } from "@choke/shared/expedition-points"
-import { type Rarity } from "@choke/shared/types"
+import { RARITIES, type Rarity } from "@choke/shared/types"
 import type { ExpeditionView } from "@choke/shared/expedition/view"
 
 import { startExpedition, type MapListing } from "./api"
@@ -48,6 +48,7 @@ export function Prepare({
   onStarted: (view: ExpeditionView) => void
 }) {
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [deckIds, setDeckIds] = useState<number[]>([])
   const [level, setLevel] = useState<number | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [alloc, setAlloc] = useState<ExpeditionAllocation>({
@@ -57,14 +58,25 @@ export function Prepare({
   })
   const [picked, setPicked] = useState<number[]>([])
   const [query, setQuery] = useState("")
+  const [jobFilter, setJobFilter] = useState("all")
+  const [rarityFilter, setRarityFilter] = useState<Rarity | "all">("all")
+  const [minLevel, setMinLevel] = useState(0)
+  const [deckOnly, setDeckOnly] = useState(false)
+  const [sortBy, setSortBy] = useState<"power" | "level" | "rarity" | "pp">("power")
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc")
+  const [deckNotice, setDeckNotice] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const ctl = new AbortController()
-    Promise.all([loadAllCards(userId, ctl.signal), fetchProgress(userId, ctl.signal)])
-      .then(([cards, progress]) => {
+    Promise.all([
+      loadAllCards(userId, ctl.signal),
+      fetchProgress(userId, ctl.signal),
+      fetchDeck(userId, ctl.signal).catch(() => null),
+    ])
+      .then(([cards, progress, deck]) => {
         setRows(
           cards
             .map((row) => {
@@ -74,6 +86,9 @@ export function Prepare({
             .sort((a, b) => b.power - a.power),
         )
         setLevel(progress?.level ?? null)
+        setDeckIds(
+          deck ? deck.slots.flatMap((s) => (s.card ? [s.card.userCardId] : [])) : [],
+        )
       })
       .catch((reason: unknown) => {
         if (!ctl.signal.aborted) setLoadError(errorText(reason))
@@ -107,12 +122,32 @@ export function Prepare({
   const maxSlots = Math.min(MAX_SLOTS, map.deckSize)
   const slotChoices = Array.from({ length: maxSlots - BASE_SLOTS + 1 }, (_, i) => BASE_SLOTS + i)
 
+  const deckSet = useMemo(() => new Set(deckIds), [deckIds])
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return (rows ?? []).filter((r) => !q || r.row.name.toLowerCase().includes(q))
-  }, [rows, query])
+    const filtered = (rows ?? []).filter((r) => {
+      if (q && !r.row.name.toLowerCase().includes(q)) return false
+      if (jobFilter !== "all" && r.row.job !== jobFilter) return false
+      if (rarityFilter !== "all" && r.row.rarity !== rarityFilter) return false
+      if (minLevel > 0 && r.row.level < minLevel) return false
+      if (deckOnly && !deckSet.has(r.row.userCardId)) return false
+      return true
+    })
+    const dir = sortOrder === "asc" ? 1 : -1
+    return [...filtered].sort((a, b) => {
+      let diff: number
+      if (sortBy === "power") diff = a.power - b.power
+      else if (sortBy === "level") diff = a.row.level - b.row.level
+      else if (sortBy === "rarity") diff = RARITIES.indexOf(a.row.rarity) - RARITIES.indexOf(b.row.rarity)
+      else diff = Number(a.row.pp ?? 0) - Number(b.row.pp ?? 0)
+      if (diff !== 0) return diff * dir
+      return (a.power - b.power) * dir
+    })
+  }, [rows, query, jobFilter, rarityFilter, minLevel, deckOnly, deckSet, sortBy, sortOrder])
 
   const toggle = (r: Row) => {
+    setDeckNotice(null)
     const id = r.row.userCardId
     setPicked((current) => {
       if (current.includes(id)) return current.filter((x) => x !== id)
@@ -121,8 +156,32 @@ export function Prepare({
     })
   }
   const autoPick = () => {
+    setDeckNotice(null)
     const best = (rows ?? []).filter(allowed).slice(0, map.deckSize)
     setPicked(best.map((r) => r.row.userCardId))
+  }
+  const applyDeck = () => {
+    if (!rows || deckIds.length === 0) return
+    const byId = new Map(rows.map((r) => [r.row.userCardId, r]))
+    const eligible: number[] = []
+    let blockedCount = 0
+    for (const id of deckIds) {
+      const r = byId.get(id)
+      if (!r) continue
+      if (!allowed(r)) {
+        blockedCount += 1
+        continue
+      }
+      if (eligible.length < map.deckSize) eligible.push(id)
+    }
+    setPicked(eligible)
+    if (blockedCount > 0) {
+      setDeckNotice(`已套用当前卡组，有 ${blockedCount} 张因超出稀有度权限未带入（可在右侧调高稀有度权限）。`)
+    } else if (deckIds.length > map.deckSize) {
+      setDeckNotice(`已按卡组顺序套用前 ${map.deckSize} 张卡。`)
+    } else {
+      setDeckNotice(null)
+    }
   }
 
   const full = picked.length === map.deckSize
@@ -161,16 +220,101 @@ export function Prepare({
               placeholder="按名字找卡"
               aria-label="按名字找卡"
             />
+            <button
+              type="button"
+              className="ex-btn ex-btn--sm"
+              onClick={applyDeck}
+              disabled={!rows || deckIds.length === 0}
+              title={deckIds.length === 0 ? "卡组里还没有卡" : "按卡组槽位顺序套用当前编队"}
+            >
+              套用当前卡组
+            </button>
             <button type="button" className="ex-btn ex-btn--sm" onClick={autoPick} disabled={!rows}>
               自动选最强
             </button>
-            <button type="button" className="ex-btn ex-btn--sm" onClick={() => setPicked([])} disabled={picked.length === 0}>
+            <button
+              type="button"
+              className="ex-btn ex-btn--sm"
+              onClick={() => {
+                setDeckNotice(null)
+                setPicked([])
+              }}
+              disabled={picked.length === 0}
+            >
               清空
             </button>
             <span className="ex-chip">
               已选 {picked.length} / {map.deckSize}
             </span>
           </div>
+
+          <div className="ex-toolbar">
+            {deckIds.length > 0 && (
+              <button
+                type="button"
+                className="ex-btn ex-btn--sm"
+                aria-pressed={deckOnly}
+                onClick={() => setDeckOnly((v) => !v)}
+              >
+                只看卡组内
+              </button>
+            )}
+            <select
+              value={jobFilter}
+              onChange={(e) => setJobFilter(e.target.value)}
+              aria-label="按职业筛选"
+            >
+              <option value="all">全部职业</option>
+              {Object.keys(JOB_LABEL).map((j) => (
+                <option key={j} value={j}>
+                  {JOB_LABEL[j]}
+                </option>
+              ))}
+            </select>
+            <select
+              value={rarityFilter}
+              onChange={(e) => setRarityFilter(e.target.value as Rarity | "all")}
+              aria-label="按品质筛选"
+            >
+              <option value="all">全部品质</option>
+              {RARITIES.map((r) => (
+                <option key={r} value={r}>
+                  {RARITY_LABEL[r]}
+                </option>
+              ))}
+            </select>
+            <select
+              value={minLevel}
+              onChange={(e) => setMinLevel(Number(e.target.value))}
+              aria-label="按最低等级筛选"
+            >
+              <option value={0}>全部等级</option>
+              <option value={5}>Lv.5+</option>
+              <option value={10}>Lv.10+</option>
+              <option value={20}>Lv.20+</option>
+              <option value={30}>Lv.30+</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "power" | "level" | "rarity" | "pp")}
+              aria-label="排序方式"
+            >
+              <option value="power">按战力</option>
+              <option value="level">按等级</option>
+              <option value="rarity">按品质</option>
+              <option value="pp">按 PP</option>
+            </select>
+            <button
+              type="button"
+              className="ex-btn ex-btn--sm"
+              onClick={() => setSortOrder((o) => (o === "desc" ? "asc" : "desc"))}
+              aria-label="切换排序方向"
+            >
+              {sortOrder === "desc" ? "倒序 ↓" : "正序 ↑"}
+            </button>
+          </div>
+
+          {deckNotice && <div className="ex-note" style={{ marginBottom: 10 }}>{deckNotice}</div>}
 
           {!rows && !loadError && <div className="ex-note">正在读取你的卡……</div>}
           {rows && rows.length === 0 && <div className="ex-note">你还没有卡，先去开包。</div>}

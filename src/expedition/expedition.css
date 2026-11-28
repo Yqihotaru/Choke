@@ -397,6 +397,19 @@
   color: var(--text);
   font: inherit;
 }
+.ex-toolbar select {
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.ex-toolbar .ex-btn[aria-pressed="true"] {
+  border-color: var(--accent, #ff66aa);
+  color: var(--accent, #ff66aa);
+}
 .ex-cards {
   display: grid;
   gap: 8px;
